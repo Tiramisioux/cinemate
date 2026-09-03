@@ -11,15 +11,26 @@ import socket
 from PIL import Image, ImageDraw, ImageFont
 import glob
 
-from module.config_loader import SettingsLoadError, auto_storage_preroll_enabled, load_settings
+from module.config_loader import (
+    SettingsLoadError,
+    auto_storage_preroll_enabled,
+    clearhdr_startup_values,
+    thumbnail_startup_value,
+    rec_tone_config,
+    load_settings,
+    DEFAULT_CONFORM_FRAME_RATE,
+    DEFAULT_SETTINGS_PATH,
+)
+from module.https_settings import ssl_context_for
 from module.logger import configure_logging, log_directory
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
 from module.gpio_output import GPIOOutput
+from module.installed_files import log_installed_file_drift
 from module.cinepi_controller import CinePiController
 from module.simple_gui import SimpleGUI
-from module.sensor_detect import SensorDetect
+from module.sensor_detect import SensorDetect, pi_family
 from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
@@ -45,7 +56,7 @@ from module.console_display import (
 from module.framebuffer import acquire_framebuffer
 
 # Constants
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 STARTUP_MESSAGE_MIN_DURATION = 3.0
 CLI_COLOR_RED = "\033[1;31m"
 CLI_COLOR_YELLOW = "\033[1;33m"
@@ -69,6 +80,17 @@ SYSTEM_SHUTDOWN_TARGETS = frozenset(
     }
 )
 CINEMATE_LOCKFILE = "/tmp/cinemate.lock"
+# This file is <repo>/src/main.py, so the repo root is one level up.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def camera_present_from_cameras_value(raw) -> bool:
+    """True when start_all()'s ParameterKey.CAMERAS write indicates at least
+    one discovered camera. That key is written unconditionally, before the
+    early-return that follows when discovery finds nothing, so it is JSON
+    "[]" on a no-camera boot, and None if the key was never written (fresh
+    Redis) -- which is why both are checked here."""
+    return raw not in (None, "[]")
 
 
 def _release_run_lock() -> None:
@@ -242,15 +264,28 @@ def restore_local_console_prompt() -> bool:
     """Restore a visible tty1 prompt after Cinemate stop (SSH or local launch)."""
     systemctl = shutil.which("systemctl")
     if systemctl:
-        # Restart getty@tty1 to ensure it's running and rendering
+        # Restart getty@tty1 to ensure it's running and rendering.
+        #
+        # --job-mode=fail is load-bearing, not cosmetic. cinemate-autostart
+        # declares Conflicts=getty@tty1.service, and in systemd's default
+        # "replace" job mode this request may reverse an already-queued start
+        # job for cinemate-autostart -- during `systemctl restart` that cancels
+        # the restart's own start half, leaving the unit inactive/dead with
+        # Result=success, so Restart= never fires and nothing retries it. In
+        # "fail" mode systemd refuses the reversal and this call fails instead,
+        # which is the harmless outcome: a restarting cinemate reclaims tty1
+        # moments later. The same flag is set on the ExecStopPost handoff
+        # script, which is the other getty-start site on the stop path.
         commands = []
         sudo = shutil.which("sudo")
         if sudo:
             commands.append(
-                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
+                [sudo, "-n", systemctl, "--no-block", "--no-ask-password",
+                 "--job-mode=fail", "restart", "getty@tty1.service"]
             )
         commands.append(
-            [systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
+            [systemctl, "--no-block", "--no-ask-password",
+             "--job-mode=fail", "restart", "getty@tty1.service"]
         )
 
         for command in commands:
@@ -511,17 +546,13 @@ def blank_framebuffer(fb):
         logging.warning(f"Failed to blank framebuffer cleanly: {exc}")
 
 def get_raspberry_pi_model():
-    try:
-        with open('/proc/device-tree/model', 'r') as f:
-            model = f.read()
-            if 'Raspberry Pi 5' in model:
-                return 'pi5'
-            elif 'Raspberry Pi 4' in model:
-                return 'pi4'
-            else:
-                return 'other'
-    except FileNotFoundError:
-        return 'unknown'
+    """Platform family for the pi_model Redis key and the GPIO tone output.
+
+    Delegates to sensor_detect, which owns the canonical model markers, so the
+    launch command, the GUI/telemetry and the PWM channel mapping cannot drift
+    apart on which board this is.
+    """
+    return pi_family()
 
 def check_hotspot_status():
     """Return True if a Wi-Fi hotspot connection is active."""
@@ -601,25 +632,27 @@ def start_hotspot(settings) -> None:
 
 def initialize_system(settings, pi_model="unknown"):
     """Initialize core system components."""
-    conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
+    conf_rate = settings.get("settings", {}).get(
+        "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
-    usb_monitor = USBMonitor(ssd_monitor, settings=settings)
+    usb_monitor = USBMonitor(ssd_monitor, settings=settings, redis_controller=redis_controller)
 
     gpio_cfg = settings["hardware_outputs"]
-    rec_tone_pins = gpio_cfg.get("rec_tone_pin")
+    rec_tone_cfg = rec_tone_config(gpio_cfg)
+    rec_tone_pins = rec_tone_cfg["pin"]
     if rec_tone_pins in (None, []):
-        # Backward compatibility: if no explicit rec_tone_pin is configured,
+        # Backward compatibility: if no explicit rec_tone pin is configured,
         # fall back to pwm_pin for REC sync tone output.
         rec_tone_pins = gpio_cfg.get("pwm_pin")
 
     gpio_output = GPIOOutput(
         rec_out_pins=gpio_cfg["rec_out_pin"],
         rec_tone_pins=rec_tone_pins,
-        rec_tone_frequency_hz=gpio_cfg.get("rec_tone_frequency_hz", 1000),
-        rec_tone_duty_cycle=gpio_cfg.get("rec_tone_duty_cycle", 50),
-        rec_tone_relay_drop_frames=gpio_cfg.get("rec_tone_relay_drop_frames", False),
+        rec_tone_frequency_hz=rec_tone_cfg["frequency_hz"],
+        rec_tone_duty_cycle=rec_tone_cfg["duty_cycle"],
+        rec_tone_relay_drop_frames=rec_tone_cfg["relay_drop_frames"],
         pi_model=pi_model,
     )
     dmesg_monitor = DmesgMonitor()
@@ -678,7 +711,16 @@ def run_application(args, log_queue):
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
     logging.info(f"Detected Raspberry Pi model: {pi_model}")
-    set
+
+    # The systemd unit and the /usr/local/bin helpers are COPIED into place
+    # by `sudo make install`, not symlinked -- so an operator who updates by
+    # pulling keeps whatever was installed the day they ran the installer.
+    # Warn, loudly and with the exact remedy; never act. (This is advisory
+    # only: it must not be able to stop a boot.)
+    try:
+        log_installed_file_drift(REPO_ROOT)
+    except Exception as exc:
+        logging.debug("Installed-file drift check skipped: %s", exc)
 
     # Start WiFi hotspot if configured
     start_hotspot(settings)
@@ -717,11 +759,31 @@ def run_application(args, log_queue):
     # re-applies these from Redis once a ClearHDR mode is actually selected;
     # seeding them here just means the first `set hdr threshold/blend/gain
     # adder` read (pot, quad, CLI) already sees the configured default.
-    _hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
-    redis_controller.set_value(ParameterKey.HDR_THRESHOLD_LOW.value, _hdr_cfg.get("threshold_low", 0))
-    redis_controller.set_value(ParameterKey.HDR_THRESHOLD_HIGH.value, _hdr_cfg.get("threshold_high", 0))
-    redis_controller.set_value(ParameterKey.HDR_BLEND.value, _hdr_cfg.get("blend", 0))
-    redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, _hdr_cfg.get("gain_adder", 1))
+    # An unconfigured threshold seeds "" -- write nothing, keep the driver's
+    # own pair. See clearhdr_startup_values() for why 0/0 was not harmless.
+    for _hdr_key, _hdr_value in clearhdr_startup_values(settings).items():
+        redis_controller.set_value(_hdr_key, _hdr_value)
+
+    # Embedded DNG thumbnail mode (image_capture.thumbnail): 0 off, 1 mono,
+    # 2 colour. cinepi-raw's own compiled-in default (CP_DEF_THUMBNAIL) is 0
+    # if this key is never seeded at all -- for a standalone launch with no
+    # CineMate in front of it. Seeding it here means the shipped default is
+    # what a fresh boot actually applies. thumbnail_startup_value() clamps
+    # the same way set_thumbnail() does (B-1): the raw settings.jsonc value
+    # used to reach redis unvalidated, where a bool crashed at startup and a
+    # non-numeric string crashed cinepi-raw's sync() instead of set_thumbnail's
+    # int(value) coercion ever running on it.
+    redis_controller.set_value(
+        ParameterKey.THUMBNAIL.value,
+        thumbnail_startup_value(settings)
+    )
+    # thumbnail_size (0 = full lores plane size) is not exposed via CLI or
+    # settings-editor -- seeded only, so a stale pre-Phase-0 resident value
+    # (PI-008: thumbnail_size=50) doesn't survive a fresh boot and collapse
+    # the thumbnail before cinepi-raw's own sync() guard (C-2) would catch
+    # it. CineMate owns this key now that it means something; nothing in
+    # settings.jsonc governs it yet.
+    redis_controller.set_value(ParameterKey.THUMBNAIL_SIZE.value, 0)
 
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)
@@ -731,9 +793,13 @@ def run_application(args, log_queue):
     ssd_monitor.refresh()
     
     # Initialize CinePi application
-    cinepi = CinePi(redis_controller, sensor_detect)
+    cinepi = CinePi(redis_controller, sensor_detect, settings=settings)
     
     cinepi.start_all()
+
+    camera_present = camera_present_from_cameras_value(
+        redis_controller.get_value(ParameterKey.CAMERAS.value)
+    )
 
     # cinepi.set_log_level('INFO')
     # cinepi.message.subscribe(handle_vu_output)
@@ -748,6 +814,9 @@ def run_application(args, log_queue):
         anamorphic_steps=settings["hdmi_display"]["preview"]["anamorphic"]["steps"],
         default_anamorphic_factor=settings["hdmi_display"]["preview"]["anamorphic"]["default_factor"]
     )
+    # Back-reference so CinePiManager's ClearHDR self-heal can call the real
+    # set_shutter_a() (see cinepi_multi.py's CinePiManager.__init__).
+    cinepi.controller = cinepi_controller
 
     storage_preroll = StoragePreroll(
         cinepi_controller=cinepi_controller,
@@ -758,7 +827,7 @@ def run_application(args, log_queue):
     )
 
     gpio_cfg = settings.get("hardware_outputs", {})
-    rec_tone_pins = gpio_cfg.get("rec_tone_pin")
+    rec_tone_pins = rec_tone_config(gpio_cfg)["pin"]
     if rec_tone_pins in (None, []):
         rec_tone_pins = gpio_cfg.get("pwm_pin")
 
@@ -885,9 +954,13 @@ def run_application(args, log_queue):
         splash_thread.join()
         claim_console_for_framebuffer()
 
-    if restart_camera_after_startup_handoff:
+    if restart_camera_after_startup_handoff and camera_present:
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
+    elif restart_camera_after_startup_handoff:
+        logging.info(
+            "No camera detected -- skipping post-Plymouth preview restart"
+        )
 
     tol_cfg = settings.get("settings", {}).get("sync_tolerances", {})
     redis_listener = RedisListener(
@@ -934,7 +1007,17 @@ def run_application(args, log_queue):
             redis_controller, cinepi_controller, simple_gui, sensor_detect,
             command_executor, settings,
         )
-        stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True})
+        run_kwargs = {'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True}
+        # Flask-SocketIO's threading async mode forwards **kwargs to
+        # app.run(), which hands ssl_context to Werkzeug. None of that is
+        # reached unless system.https.enabled is true, and ssl_context_for()
+        # returns None (rather than raising) if a certificate cannot be
+        # issued -- a camera answering on plain HTTP beats one not answering.
+        ssl_context = ssl_context_for(settings)
+        if ssl_context:
+            run_kwargs['ssl_context'] = (str(ssl_context[0]), str(ssl_context[1]))
+            logging.info("Web UI on https://<host>:5000 (self-signed certificate)")
+        stream = threading.Thread(target=socketio.run, args=(app,), kwargs=run_kwargs)
         stream.start()
         logging.info("Stream module loaded")
     else:

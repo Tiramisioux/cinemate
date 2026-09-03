@@ -15,6 +15,23 @@
       // its web UI on wlan0/eth0 if that interface already has an IP.
       "enabled": true
     },
+    "https": {
+      // Serve the web UI over TLS instead of plain HTTP. Off by default, and
+      // not simply "more secure": cinepi.local and the hotspot's 10.42.0.1
+      // can never hold a publicly-trusted certificate, so this always means a
+      // self-signed one and a browser interstitial on first visit.
+      //
+      // Turn it on when you need a secure browser context -- the RAW pane's
+      // "download into a folder" uses the File System Access API, which
+      // browsers only expose on a secure origin.
+      //
+      // The certificate is minted on first start if missing, and re-issued
+      // when it expires. Relative paths resolve against the repo root.
+      "enabled": false,
+      "cert_file": "resources/certs/cinemate.crt",
+      "key_file": "resources/certs/cinemate.key",
+      "valid_days": 3650
+    },
     "web_api": {
       // Wireless control API (ESP32/Pico/M5Stack etc. over the hotspot).
       "enabled": true,
@@ -136,7 +153,7 @@
     },
     "shutter_a": {
       "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
-      "free": false,
+      "free": true,
       "free_increment": 1,
       // Separate, finer granularity used only while `set shutter a sync` is
       // on -- sync mode tracks exposure time continuously across fps
@@ -190,14 +207,44 @@
       // Startup values for the ClearHDR live knobs (0-4095 / 0-8 / 0-5).
       // Applied when a ClearHDR mode is selected; adjust live afterwards
       // with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain
-      // adder`, or a pot/quad-rotary channel. 16-bit linear, HG 1/2 + LG
-      // 1/2 blend, +6 dB gain adder (menu 1) -- a lower noise floor than
-      // the driver's +12 dB default.
-      "threshold_low": 0,
-      "threshold_high": 0,
-      "blend": 0,
-      "gain_adder": 1
+      // adder`, or a pot/quad-rotary channel. HG 1/16 + LG 15/16 blend
+      // (menu 5), +6 dB gain adder (menu 1) -- a lower noise floor than the
+      // driver's +12 dB default.
+      //
+      // null on the two thresholds means "leave the sensor driver's own
+      // pair alone" (EXP_TH_H 0x0FFF, EXP_TH_L 0x0000). Do not set both to
+      // the same value: equal thresholds select the AppNote's weighted-blend
+      // fallback, where the ClearHDR combiner output stays clamped near the
+      // black level and every HDR frame comes out flat. Set both, or
+      // neither.
+      "threshold_low": null,
+      "threshold_high": null,
+      "blend": 5,
+      "gain_adder": 1,
+      // Automatic recovery from the flat-pedestal ClearHDR startup defect
+      // (round 8, 2026-08-29): probe the live preview after every launch and,
+      // if it looks flat, try a brief shutter-angle kick and then a bounded
+      // mode bounce. Default false, deliberately.
+      //
+      // The root cause is still unknown, and every action this can take is
+      // unproven on hardware: the mode bounce and an earlier gain shock were
+      // both live-tested and failed, and the shutter kick's automated form has
+      // never run on the rig (only the manual shutter-to-1-degree version is
+      // operator-confirmed). The detector cannot tell the defect from a
+      // genuinely flat scene -- a lens cap or an unlit set shares the same
+      // low-unique-value signature -- so a false positive costs roughly two
+      // extra start_all() cycles (~6-10 s) at an arbitrary moment.
+      //
+      // Turn this on only to reproduce or study the defect. See
+      // development/mono-clearhdr-fixes/ROUND9-RESULTS.md.
+      "self_heal": false
     },
+    // Embedded DNG thumbnail written by cinepi-raw's DNG encoder: 0 off,
+    // 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour
+    // by default -- verified on hardware (G10/G11) and the standard
+    // playback path; raw decode is far more demanding on the Pi and is no
+    // longer the pane's fallback. New takes only.
+    "thumbnail": 2,
     "custom_modes": {}
   },
 
@@ -229,7 +276,7 @@
     },
     "preview": {
       "default_zoom": 1.0,
-      "zoom_steps": [1.0, 2.0],
+      "zoom_steps": [1.0, 1.5, 2.0],
       // Dual-sensor HDMI preview source at startup: both | cam0 | cam1 |
       // pip_cam0 | pip_cam1. Switch live with `set preview`. No effect with
       // a single sensor.
@@ -289,7 +336,7 @@
     // dt_pin/button_pin at startup. Set it true (and wire the pins) to use it.
     "rotary_encoders": [
       {
-        "enabled": false,
+        "enabled": true,
         "clk_pin": 9,
         "dt_pin": 11,
         "button_pin": 10,

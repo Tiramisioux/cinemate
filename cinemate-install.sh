@@ -101,10 +101,25 @@ LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
 # and 2.7K 16:9 (mode 2A) readout modes on top of the upstream 6.12.y base.
 IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx283-v4l2-driver.git}"
 IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-6.12.y}"
-# Tiramisioux fork of Will Whang's driver; 6.12.y branch mirrors the upstream
-# 6.12.y base (kept in sync as a self-hosted install source).
+# Tiramisioux fork of Will Whang's driver. cinemate-7modes (switched
+# 2026-09-03, replaces innomaker-v1.0 as the default) ships seven modes —
+# three SDR (1920x1080 12-bit binned, 3840x2160 12-bit all-pixel, and a
+# 3840x2160 10-bit RAW10 all-pixel mode up to 90 fps) and four ClearHDR
+# (1920x1080 12-bit binned ClearHDR+CCMP, 3840x2160 12-bit all-pixel
+# ClearHDR+CCMP, 1920x1100 16-bit binned ClearHDR linear, and 3840x2200
+# 16-bit all-pixel ClearHDR linear). The two binned-HDR modes are restored
+# from `6.12.y` (innomaker-v1.0 had dropped them) and are colour-sensor only
+# — mono returns pure BLC pedestal at binned resolutions and stays on the
+# 4K-only 16-bit HDR entry. Also makes 12-bit CCMP ClearHDR default-on for
+# colour (mono still needs the `ccmp` overlay flag below). Gates the invalid
+# binned-ClearHDR combo on mono, and pairs with the rp1-cfe Y16 patch
+# (scripts/patch-rp1-cfe.sh) for mono 16-bit.
+# Verified on hardware.
+# The old `6.12.y` branch (readout dims 3856x2180/1928x1090, no ccmp param)
+# and `innomaker-v1.0` (dropped the two binned-HDR modes and the RAW10 mode)
+# stay selectable via this env var but are no longer the supported default.
 IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx585-v4l2-driver.git}"
-IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
+IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-cinemate-7modes}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
 # Pi 5 kernel baseline. 6.12.93+rpt is the oldest baseline validated for
@@ -873,7 +888,9 @@ if [[ "\$cr_mem_mb" -gt 0 && "\$cr_mem_mb" -lt 3000 && "\$cr_swap_lines" -le 1 ]
     if [[ -n "\$CR_ZRAM_DEV" ]] && sudo mkswap "\$CR_ZRAM_DEV" >/dev/null 2>&1 && sudo swapon -p 100 "\$CR_ZRAM_DEV" 2>/dev/null; then
         printf '[compile-raw] Low-RAM board (%s MB): added 4 GB zram build swap on %s (removed on exit)\n' "\$cr_mem_mb" "\$CR_ZRAM_DEV"
     else
-        [[ -n "\$CR_ZRAM_DEV" ]] && sudo zramctl --reset "\$CR_ZRAM_DEV" 2>/dev/null || true
+        if [[ -n "\$CR_ZRAM_DEV" ]]; then
+            sudo zramctl --reset "\$CR_ZRAM_DEV" 2>/dev/null || true
+        fi
         CR_ZRAM_DEV=""
         printf '[compile-raw] WARNING: could not set up zram build swap; low-RAM build may OOM\n'
     fi
@@ -990,13 +1007,20 @@ resolve_sensor_overlay() {
             CAMERA_AUTO_DETECT=1
             DTO_OVERLAY="${SENSOR_MODEL},${cam_port}"
             ;;
-        imx283|imx585)
+        imx283)
             CAMERA_AUTO_DETECT=0
             DTO_OVERLAY="${SENSOR_MODEL},${cam_port}"
             ;;
+        imx585)
+            CAMERA_AUTO_DETECT=0
+            # ccmp enables 12-bit CCMP ClearHDR (gated off by default in the
+            # innomaker-v1.0 driver); the parameter only exists in that
+            # branch's overlay, so driver and overlay must move together.
+            DTO_OVERLAY="imx585,${cam_port},ccmp"
+            ;;
         imx585_mono)
             CAMERA_AUTO_DETECT=0
-            DTO_OVERLAY="imx585,${cam_port},mono"
+            DTO_OVERLAY="imx585,${cam_port},mono,ccmp"
             ;;
         *)
             die "Unsupported SENSOR_MODEL: $SENSOR_MODEL"
@@ -1323,6 +1347,41 @@ configure_hostname_and_i2c() {
     sudo usermod -aG i2c "$PI_USER"
     sudo modprobe i2c-dev || true
     ensure_line_in_root_file /etc/modules 'i2c-dev'
+    configure_etc_hosts
+    configure_mdns
+}
+
+# /etc/hosts is not rewritten from scratch -- only the 127.0.1.1 line (the
+# one hostnamectl doesn't touch) is fixed in place, or added if absent.
+# Idempotent: a re-run with the same TARGET_HOSTNAME leaves the file
+# byte-identical, so write_root_file's own no-op check skips the write.
+configure_etc_hosts() {
+    local hosts_file="/etc/hosts"
+    local desired_line="127.0.1.1	$TARGET_HOSTNAME"
+    local existing=""
+
+    log "Ensuring /etc/hosts has $desired_line"
+    if sudo test -f "$hosts_file"; then
+        existing="$(sudo cat "$hosts_file")"
+    fi
+
+    if printf '%s\n' "$existing" | grep -Eq '^127\.0\.1\.1[[:space:]]'; then
+        printf '%s\n' "$existing" \
+            | sed -E "s/^127\.0\.1\.1[[:space:]].*/$(printf '%s' "$desired_line" | sed 's/[&/\]/\\&/g')/" \
+            | write_root_file "$hosts_file" 644
+    else
+        { printf '%s\n' "$existing"; printf '%s\n' "$desired_line"; } | write_root_file "$hosts_file" 644
+    fi
+}
+
+# Nothing in this repo installed or enabled avahi so <hostname>.local only
+# ever resolved when the base image happened to ship it (F-289). Both
+# packages are idempotent to (re)install; systemctl enable --now is
+# idempotent too.
+configure_mdns() {
+    log "Installing avahi for $TARGET_HOSTNAME.local resolution"
+    sudo apt install -y avahi-daemon libnss-mdns
+    sudo systemctl enable --now avahi-daemon
 }
 
 configure_console_font() {
@@ -1412,6 +1471,19 @@ install_imx585_support() {
     if is_rpi2712_platform; then
         detail "Ensuring DKMS builds IMX585 for the pinned Pi 5 kernel baseline"
         sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"
+    fi
+
+    # Mono 16-bit (Y16) needs the rp1-cfe csi_dt patch: the kernel's Bayer
+    # 16-bit entries carry the "RP1 HW mismatch" workaround (csi_dt=0) but the
+    # Y16 entry was missed upstream, so unpatched mono 16-bit capture delivers
+    # COMP1-structured garbage. Warn-don't-die: every other mode works without
+    # it, and the script is rerunnable (docs/clear-hdr.md, mono section).
+    if [[ "$SENSOR_MODEL" == "imx585_mono" ]]; then
+        log "Applying the rp1-cfe Y16 csi_dt kernel patch (mono 16-bit capture)"
+        if ! "$CINEMATE_SOURCE_DIR/scripts/patch-rp1-cfe.sh"; then
+            warn "rp1-cfe patch failed -- 16-bit ClearHDR will record garbage on mono"
+            warn "until scripts/patch-rp1-cfe.sh succeeds. See docs/clear-hdr.md."
+        fi
     fi
 }
 
@@ -1544,6 +1616,43 @@ EOF
     detail "Added $PI_USER to audio group; re-login required for limits to take effect"
 }
 
+CONFIG_TXT_APPLY_HELPER="/usr/local/bin/cinemate-apply-config-txt"
+
+# The settings editor runs as $PI_USER, which cannot write into root-owned
+# /boot/firmware (F-288). This is the one narrow privileged step that lets
+# it anyway: it reads only a fixed, already-pi-written staging file and
+# copies it over config.txt, preserving that file's existing owner/mode
+# rather than assuming one. It takes no arguments -- the sudoers rule below
+# grants it with none, so a compromised or buggy caller cannot redirect it
+# at an arbitrary destination.
+configure_config_txt_apply_helper() {
+    log "Installing $CONFIG_TXT_APPLY_HELPER"
+    write_root_file "$CONFIG_TXT_APPLY_HELPER" 755 <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAGED="/home/pi/cinemate/.settings-editor-config-txt.staged"
+DEST="/boot/firmware/config.txt"
+
+if [[ ! -f "$STAGED" ]]; then
+    echo "cinemate-apply-config-txt: no staged file at $STAGED" >&2
+    exit 1
+fi
+
+OWNER="$(stat -c '%u:%g' "$DEST" 2>/dev/null || echo '0:0')"
+MODE="$(stat -c '%a' "$DEST" 2>/dev/null || echo '644')"
+
+TMP="$(mktemp "${DEST}.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
+cp "$STAGED" "$TMP"
+chown "$OWNER" "$TMP"
+chmod "$MODE" "$TMP"
+mv -f "$TMP" "$DEST"
+trap - EXIT
+rm -f "$STAGED"
+EOF
+}
+
 configure_sudoers() {
     log "Writing sudoers drop-ins"
     backup_file /etc/sudoers.d/pi_cinemate
@@ -1559,6 +1668,8 @@ $PI_USER ALL=(ALL) NOPASSWD: $PI_HOME/run_cinemate.sh
 $PI_USER ALL=(ALL) NOPASSWD: $CINEMATE_DIR/src/main.py
 $PI_USER ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 $PI_USER ALL=(ALL) NOPASSWD: /sbin/mount.ext4
+$PI_USER ALL=(ALL) NOPASSWD: /usr/bin/systemd-run --no-block --collect --unit=cinemate-restart-trigger -- systemctl restart cinemate-autostart
+$PI_USER ALL=(ALL) NOPASSWD: $CONFIG_TXT_APPLY_HELPER
 EOF
     sudo visudo -cf /etc/sudoers.d/pi_cinemate >/dev/null
     detail "sudoers validation passed"
@@ -1952,6 +2063,7 @@ main() {
     section "Preparing runtime wrappers and permissions"
     configure_media_permissions
     configure_run_wrapper
+    configure_config_txt_apply_helper
     configure_sudoers
     configure_audio_rtprio
     configure_logrotate

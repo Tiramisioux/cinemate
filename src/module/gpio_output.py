@@ -1,7 +1,7 @@
 import importlib
 import logging
-from pathlib import Path
 from module.rpi_gpio_wrapper import RPi
+from module.sensor_detect import is_pi5_family
 
 
 class _ToneOutput:
@@ -30,16 +30,7 @@ class _SoftwarePWMToneOutput(_ToneOutput):
 
 
 class _HardwarePWMToneOutput(_ToneOutput):
-    @staticmethod
-    def _is_raspberry_pi_5():
-        model_path = Path("/proc/device-tree/model")
-        try:
-            model = model_path.read_text(encoding="utf-8", errors="ignore").strip("\x00\n")
-        except Exception:
-            return False
-        return "Raspberry Pi 5" in model
-
-    def __init__(self, pin, frequency_hz, duty_cycle):
+    def __init__(self, pin, frequency_hz, duty_cycle, pi_model=None):
         self.pin = pin
         self.frequency_hz = frequency_hz
         self.duty_cycle = duty_cycle
@@ -48,7 +39,12 @@ class _HardwarePWMToneOutput(_ToneOutput):
         # rpi_hardware_pwm channel mapping differs on Raspberry Pi 5.
         # - Pi 5: GPIO18->channel 2, GPIO19->channel 3
         # - Older Pi models: GPIO18->channel 0, GPIO19->channel 1
-        is_pi5 = self._is_raspberry_pi_5()
+        # Prefer the family detected at startup and passed in; fall back to
+        # probing the device tree so a directly-constructed instance still maps
+        # the channel correctly. Both routes go through sensor_detect's markers,
+        # which recognise a CM5 -- the local check this replaced tested for the
+        # literal string "Raspberry Pi 5" and so put a CM5 on the Pi 4 channels.
+        is_pi5 = pi_model == "pi5" if pi_model else is_pi5_family()
         if is_pi5:
             channel = 2 if pin == 18 else 3
         else:

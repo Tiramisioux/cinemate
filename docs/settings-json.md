@@ -83,6 +83,22 @@ Wireless control API for microcontrollers (ESP32/Pico/M5Stack etc.) over the hot
 `max_sse_clients` – concurrent `/events` connections.<br>
 `broadcast` – the UDP status line: `enabled`, `port`, `hz` (rate), and `keys` (which Redis keys appear in the broadcast).
 
+### https
+
+Serves the web UI on port 5000 over TLS instead of plain HTTP. **Off by default, and not simply "more secure".**
+
+A camera is reached at `cinepi.local` or, on the hotspot, at `10.42.0.1`. No certificate authority will issue for an mDNS name or a private address, so this always means a **self-signed** certificate and a full-page browser warning on first visit — every visit in a private window, and repeatedly on iOS.
+
+Turn it on when you need a *secure browser context*. The RAW files pane's own **Download**/**Download selected** controls pick this up automatically: on a secure origin, in a browser that implements the File System Access API (Chromium-based desktops only — Safari and Firefox offer it on neither http nor https), they ask where to save instead of handing the file to the browser's own download manager. Anywhere else, the same buttons fall back to a normal download with no change in behaviour.
+
+One consequence is handled for you. cinepi-raw's MJPEG preview on port 8000 speaks only plain HTTP and cannot be upgraded, and a secure page is forbidden from loading an insecure subresource — so on HTTPS the live preview would go black. CineMate detects that the page was served over TLS and routes the preview through a same-origin proxy at `/preview/<cam>/stream` instead. A plain-HTTP camera is unaffected and keeps talking straight to port 8000, so it pays nothing for this.
+
+`enabled` – `false` by default. When `true` and no usable certificate exists, one is minted at startup.<br>
+`cert_file` / `key_file` – where the pair lives. Relative paths resolve against the repo root; both are git-ignored. The key is written `0600`.<br>
+`valid_days` – lifetime of a freshly minted certificate (default 3650). An expired one is re-issued automatically on the next start.
+
+If a certificate cannot be produced — `openssl` missing, or the path unwritable — CineMate logs the reason and serves plain HTTP anyway. A camera that answers insecurely is better than one that does not answer at all.
+
 ### storage
 
 `auto_preroll` – controls the short automatic warm-up recording that prepares mounted media before the first real take. Set it to `true` to run the warm-up on startup and when RAW storage mounts. Set it to `false` to skip only the automatic startup and mount-triggered pre-rolls. Manual `storage preroll` CLI runs remain available either way. See [Storage pre-roll](storage-preroll.md).
@@ -104,8 +120,8 @@ Per-sensor hardware. All per-port settings live inside a `cam0` or `cam1` block 
     "output": {
       "hdmi_port": 0
     },
-    "override_camera_name": false,
-    "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+    "override_camera_name": true,
+    "camera_name": "cinepi",
     "phase_lock": true,
     "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
     "log_encode": false
@@ -119,8 +135,8 @@ Per-sensor hardware. All per-port settings live inside a `cam0` or `cam1` block 
     "output": {
       "hdmi_port": 1
     },
-    "override_camera_name": false,
-    "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+    "override_camera_name": true,
+    "camera_name": "cinepi",
     "phase_lock": true,
     "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
     "log_encode": false
@@ -158,14 +174,14 @@ Maps the camera to an HDMI connector.
 ### camera name
 
 `override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default.<br>
-`camera_name` – the string to embed when `override_camera_name` is `true`.
+`camera_name` – the string to embed when `override_camera_name` is `true`. The stock file ships `true` with `"cinepi"` — the same tag `cinepi-raw` uses on its own — so changing the embedded name is a one-line edit.
 
 ??? note "Why Blackmagic Pocket Cinema Camera 4K"
     DaVinci Resolve uses the `UniqueCameraModel` DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.
 
     Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
 
-    **Caveat once [CineMate Log](cinemate-log.md) is in use:** the Blackmagic spoof layers BMD colour science and its own tone curve on top of data that CineMate Log has already linearised via the DNG `LinearizationTable`. Keep `override_camera_name` off (the default) on any camera recording log — spoofing and log-encoding the same clip confound each other in the grade. The spoof is still fine for a camera you are recording in plain linear DNGs.
+    **Caveat once [CineMate Log](cinemate-log.md) is in use:** the Blackmagic spoof layers BMD colour science and its own tone curve on top of data that CineMate Log has already linearised via the DNG `LinearizationTable`. Keep `camera_name` at `"cinepi"` (the stock value) on any camera recording log — spoofing and log-encoding the same clip confound each other in the grade. The spoof is still fine for a camera you are recording in plain linear DNGs.
 
 ### phase_lock
 
@@ -211,7 +227,10 @@ Frame-rate conform target, flicker-free input, and sync tolerances.
 }
 ```
 
-`conform_frame_rate` – frame rate intended for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.<br>
+`conform_frame_rate` – the frame rate the footage is intended to be conformed to in post. It has no effect on capture: the sensor always records at the camera's own `fps`. Two things on the camera use it:
+
+<br>*Timecode* – the frame base for the recording timecode tracker (`recording_tc_rec`, `recording_time_tod` in redis), whose frame field counts at the conform rate rather than the sensor's; `recording_time` is plain elapsed seconds and does not depend on it. Rounded to a whole frame base before use — 23.976 becomes a 24-frame base — so a fractional conform rate never appears in the displayed timecode. This is **not** the timecode written into the DNG files: CinePi RAW stamps those from the rate the take was actually captured at, so shooting 50 fps against a 25 fps conform gives two different bases, by design.
+<br>*Playback* – the rate the settings editor's Playback pane plays takes back at. A take shot above the conform rate plays as slow motion, at the speed it will run on the timeline; one shot below it plays fast. Turn *Use conform frame rate* off in that pane to watch a take at the rate it was shot instead.<br>
 `light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle steps (see [arrays](#arrays)) and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
 
 `sync_tolerances`:
@@ -306,6 +325,7 @@ Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycl
     "blend": 0,
     "gain_adder": 1
   },
+  "thumbnail": 2,
   "custom_modes": {}
 }
 ```
@@ -314,11 +334,12 @@ Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycl
 `bit_depths` – list of bit depths to expose. `16` covers the imx585 ClearHDR 16-bit modes (see [ClearHDR](clear-hdr.md)).<br>
 `hdr.sdr` / `hdr.imx585_clear_hdr` – whitelist of the ClearHDR flag. Both `true` (default) exposes the plain and the imx585 ClearHDR modes; set `imx585_clear_hdr` to `false` to hide the HDR modes, or `sdr` to `false` to show only them. Cinemate detects the HDR modes by probing `cinepi-raw --list-cameras --hdr sensor` alongside the plain list. imx585 has HDR modes at **both** 12-bit and 16-bit, and they are labelled `HDR` (simple GUI) / `:HDR` (web GUI). The legacy `[false, true]` list form still works.<br>
 `hdr.threshold_low` / `hdr.threshold_high` / `hdr.blend` / `hdr.gain_adder` – startup values for the four ClearHDR live knobs, seeded into Redis at launch. Adjust them afterwards without a restart via `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel. See [ClearHDR](clear-hdr.md#live-knobs) for what each one does.<br>
-`custom_modes` – optional extra modes per sensor if the driver advertises none.
+`thumbnail` – embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour. Written per frame by cinepi-raw's DNG encoder from the same lores plane the HDMI/MJPEG preview already uses, alongside (not instead of) the raw image. Seeded into Redis at launch; adjust it afterwards without a restart via `set thumbnail`. **Colour by default** — the standard playback path, verified on hardware. New takes only: a take recorded with this off, or before a rebuilt cinepi-raw shipped it, has no thumbnail and is not currently playable in the Playback pane (raw decode is far more demanding on the Pi and is no longer the pane's fallback).<br>
+`custom_modes` – per-camera-name list of mode overrides and additions, keyed by sensor name. `fps_max` (from `cinepi-raw --list-cameras`) is an electrical property of the sensor — it says nothing about what your storage and CPU can actually sustain at that mode, and only trial recording can find that ceiling. An entry whose `width`/`height`/`bit_depth`/`hdr` matches an already-detected mode **corrects that mode's `fps_max` in place**; a non-matching entry **adds** a brand-new mode instead. Settings editor → *Per-mode fps ceilings* lists every sensor-detected mode with the override pre-filled if one exists — leave a field blank (or equal to the detected value) to record no override, or lower it to whatever your storage profile actually sustains. Raising it above the detected value is allowed but logged as a warning. `choose_resolution()` needs no separate logic for this: it always selects on `fps_max`, which is now the effective (overridden or detected) value.
 
 !!! note "Design: full capability vs practical exposure"
 
-    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `image_capture` then exposes only the **practical** subset in the UI. Example: the IMX283 default `k_steps: [3, 4]` shows its ≥25 fps modes (2.7K and 4K) and hides the 5K modes (~18–21 fps); those 5K modes stay in `sensors.json` and reappear if you add `5.5`. `k_steps`/`bit_depths` are global across all sensors.
+    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `image_capture` then exposes only the **practical** subset in the UI. `k_steps`/`bit_depths` are global across all sensors — the stock `[1.5, 2, 3, 4]` covers every sensor's everyday modes. For the IMX283 that keeps the ≥25 fps 2.7K and 4K modes (the 3 and 4 steps) and hides the 5K modes (~18–21 fps); those stay in `sensors.json` and reappear if you add `5.5`.
 
 Cinemate also always runs **dynamic resolution**: if you select a mode and then raise FPS above what that mode's own sensor-reported maximum (the same number `cinepi-raw --list-cameras` reports) can sustain, Cinemate automatically switches to the highest-resolution mode that can. FPS returns to your selected mode once you dial back down. There is no setting for this — it always uses the sensor's own reported limits, never a separate measured table.
 
@@ -522,16 +543,17 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers), channel-fir
 
 ### quad_rotary_controller
 
-Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to an [array](#arrays) and defines the push button actions similar to `buttons`. The stock settings include this mapping with `enabled` set to `false`; set it to `true` only when the board is connected.
+Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to an [array](#arrays) and defines the push button actions similar to `buttons`. The stock settings ship it enabled — safe with no board attached, because the controller is hot-plugged and simply retries — set `enabled` to `false` to turn it off. The stock mapping:
 
 ```jsonc
 "quad_rotary_controller": {
   "enabled": true,
   "encoders": {
-    "0": {"setting_name": "iso", "button": {"press_action": {"method": "rec"}}},
-    "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_fps_double"}}},
-    "2": {
-      "setting_name": "fps",
+    "0": {"setting_name": "iso", "button": {"press_action": {"method": "set_zoom"}, "hold_action": {"method": "safe_shutdown"}}},
+    "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_shutter_a_sync_mode"}}},
+    "2": {"setting_name": "fps", "button": {"press_action": {"method": "set_fps_double"}}},
+    "3": {
+      "setting_name": "wb",
       "button": {
         "press_action": "None",
         "single_click_action": {"method": "set_resolution"},
@@ -539,8 +561,7 @@ Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry m
         "triple_click_action": {"method": "reboot"},
         "hold_action": {"method": "toggle_mount"}
       }
-    },
-    "3": {"setting_name": "wb", "button": {"press_action": {"method": "rec"}}}
+    }
   }
 }
 ```

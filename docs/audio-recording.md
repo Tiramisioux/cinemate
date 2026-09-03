@@ -1,6 +1,6 @@
 # Audio recording
 
-## Supported microhones
+## Supported microphones
 
 Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones.
 
@@ -12,10 +12,10 @@ Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 
 
 Timecode is readable by DaVinci Resolve, which treats the `.dng` sequence and `.wav` as one clip.
 
-## `settings.jsonc` audio section
+## `settings.jsonc` audio_capture section
 
 ```json
-"audio": {
+"audio_capture": {
   "24bit": {
     "capture_gain_db": 0.0,
     "timecode_offset_frames": 0
@@ -28,7 +28,7 @@ Timecode is readable by DaVinci Resolve, which treats the `.dng` sequence and `.
 ```
 
 - **`24bit`** — settings for the 24-bit USB dsnoop path (`mic_24bit` alias, e.g. RØDE VideoMic NTG).
-- **`16bit`** — settings for the 16-bit plain-`arecord` fallback path (generic USB PnP mics).
+- **`16bit`** — settings for 16-bit mono capture (`mic_16bit` alias, generic USB PnP mics). Both mic types go through the same capture helper; this block overrides the `24bit` values for 16-bit mics.
 
 `capture_gain_db` is applied after Cinemate probes which path is active and knows the bit depth. `0.0` = unity gain; positive values boost, negative attenuate. 
 

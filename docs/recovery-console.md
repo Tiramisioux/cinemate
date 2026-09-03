@@ -12,9 +12,9 @@ Connect a phone or laptop to the camera's hotspot (see [Configuring the Wi-Fi ho
 http://10.42.0.1:8080
 ```
 
-That is the fixed address of the hotspot interface itself and always works while connected to the hotspot. If your device is on the same network as the Pi some other way (Ethernet, or joined to the same Wi-Fi), `http://cinepi.local:8080` works too, via mDNS.
+That is the fixed address of the hotspot interface itself — it does not change, even when `settings.jsonc` is broken and the SSID has fallen back to a cached or default name — and it always works while connected to the hotspot. If your device reaches the Pi some other way (Ethernet, or joined to the same Wi-Fi), `http://cinepi.local:8080` works too, via mDNS.
 
-That is the fixed address of the hotspot interface — it does not change, even when `settings.jsonc` is broken and the SSID itself has fallen back to a cached or default name. The recovery console runs as its own root systemd service with no dependency on `cinemate-autostart.service`, so it stays reachable through a Cinemate crash, a broken virtualenv, or Redis being down.
+The recovery console runs as its own root systemd service with no dependency on `cinemate-autostart.service`, so it stays reachable through a Cinemate crash, a corrupted install, or Redis being down.
 
 ## What it can do
 
@@ -32,8 +32,8 @@ Only three services can be restarted or stopped from here: `cinemate-autostart`,
 
 When you save `settings.jsonc`, the console validates it before writing, using the best check available:
 
-1. If the Cinemate virtualenv is intact, it runs the *exact same* loader Cinemate itself uses — so a rejected save shows you the exact error, with line and column, that you would otherwise only see on the HDMI monitor.
-2. If the virtualenv is broken, it falls back to a plain JSON syntax check.
+1. If the system Python 3 interpreter and the Cinemate source tree are both present, it runs the *exact same* loader Cinemate itself uses — so a rejected save shows you the exact error, with line and column, that you would otherwise only see on the HDMI monitor.
+2. If the source tree is missing or corrupted, it falls back to a plain JSON syntax check.
 3. If neither is available, the file is written anyway and labelled **unvalidated** — refusing to save would leave you unable to fix a file that is already broken. A backup is taken first regardless, so nothing is lost either way.
 
 Every save keeps the previous version in `/var/lib/cinemate/backups/`, up to the last 10.

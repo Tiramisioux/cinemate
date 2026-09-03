@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging, threading, redis, psutil, time
 from enum import Enum
 import time, math
+from module.config_loader import DEFAULT_CONFORM_FRAME_RATE, as_bool
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
@@ -39,6 +40,8 @@ class ParameterKey(Enum):
     HDR_BLEND         = "hdr_blend"       # 0..8 — ClearHDR blending mode (driver menu index)
     HDR_GAIN_ADDER    = "hdr_gain_adder"  # 0..5 — ClearHDR gain adder (driver menu index, 2 = +12 dB)
     HEIGHT            = "height"
+    THUMBNAIL         = "thumbnail"       # 0 off / 1 mono / 2 colour — embedded DNG thumbnail (cinepi-raw CONTROL_KEY_THUMBNAIL)
+    THUMBNAIL_SIZE    = "thumbnail_size"  # right-shift downscale of the thumbnail plane, 0 = full lores size (cinepi-raw CONTROL_KEY_THUMBNAIL_SIZE; changing it restarts the camera). Not exposed via CLI/settings-editor here — seeded only, so a resident pre-Phase-0 value (PI-008) doesn't collapse the thumbnail (see cinepi-raw's sync() guard, C-2)
     IR_FILTER         = "ir_filter"
     IS_BUFFERING      = "is_buffering"
     IS_MOUNTED        = "is_mounted"
@@ -112,6 +115,35 @@ class ParameterKey(Enum):
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
     FRAMES_IN_SYNC      = "frames_in_sync"
+    USER_CHANGING_FPS   = "user_changing_fps"
+    FSCK_STATUS         = "FSCK_STATUS"  # ssd_monitor's own fsck result; cinepi-raw never reads this one
+
+
+_KNOWN_PARAMETER_VALUES = {member.value for member in ParameterKey}
+
+
+def smpte_frame_base(fps) -> int:
+    """The integer SMPTE frame base for a (possibly fractional) frame rate.
+
+    This is the single Python definition of "base = round(fps)". Use it
+    everywhere a frame rate has to become a frame count -- do not re-derive it
+    with the built-in round(), which is banker's rounding: round(24.5) == 24
+    while the C++ side (std::lround in cinepi_sound.cpp's
+    nominalTimecodeFramerate() and in dng_encoder.cpp) yields 25. At
+    half-integer frame rates that one-frame disagreement is visible to the
+    operator as Redis/GUI timecode diverging from the timecode embedded in the
+    DNG and WAV (F-253).
+
+    Rounds half away from zero and clamps to >= 1, mirroring
+    nominalTimecodeFramerate()'s std::max(1.0, std::round(framerate)).
+    """
+    try:
+        rate = float(fps)
+    except (TypeError, ValueError):
+        return 1
+    if not math.isfinite(rate) or rate <= 0.0:
+        return 1
+    return max(1, int(math.floor(rate + 0.5)))
 
 
 def encode_log_encode_request(value) -> int:
@@ -143,6 +175,20 @@ def decode_log_encode_request(raw):
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────
 class Event:
+    """Shared pub/sub helper (F-127). Used to be four independent copies --
+    redis_controller's own, plus ssd_monitor.mount_event, usb_monitor.usb_event
+    and cinepi_multi.message -- with divergent error handling; B3.1 fixed this
+    one, B9.6a fixed the other two in place, this collapses all three into it.
+    This is the only copy with unsubscribe, and the one PI-014 exercised on
+    hardware for the redis bus.
+
+    emit() takes *args, not a single data param: ssd_monitor's mount_event and
+    usb_monitor's usb_event were already emitting several positional args
+    (mount path/device/filesystem/profile; device/model/serial/card name), and
+    every existing single-arg caller (redis_parameter_changed.emit(data),
+    cinepi_multi's message.emit(line)) keeps working unchanged -- one
+    positional arg through *args reaches the subscriber exactly as before.
+    """
     def __init__(self):
         self._handlers = []
     def subscribe(self, fn):
@@ -152,31 +198,36 @@ class Event:
             self._handlers.remove(fn)
         except ValueError:
             pass
-    def emit(self, data=None):
-        # Every subscriber runs on the single _listen thread, synchronously. An
-        # unguarded raise here used to kill that thread outright, and because
-        # get_value() serves the cache rather than redis, every surface then went
-        # on rendering its last values with no error anywhere -- the operator sees
-        # plausible frozen numbers mid-take. One bad subscriber must not silence
-        # the others or the bus. Mirrors CinePiController._notify_resolution_change.
+    def emit(self, *args):
+        # Every subscriber runs synchronously on whatever thread calls emit()
+        # (redis_controller's single _listen thread for its own event; the
+        # log-relay/USB-monitor/mount threads for the others). An unguarded
+        # raise here used to kill that thread outright, and because
+        # get_value() serves the cache rather than redis, every surface then
+        # went on rendering its last values with no error anywhere -- the
+        # operator sees plausible frozen numbers mid-take. One bad subscriber
+        # must not silence the others or the bus. Mirrors
+        # CinePiController._notify_resolution_change.
         for fn in list(self._handlers):
             try:
-                fn(data)
+                fn(*args)
             except Exception:
                 logging.exception(
-                    "Redis subscriber %s failed; continuing with the rest",
+                    "Event subscriber %s failed; continuing with the rest",
                     getattr(fn, "__qualname__", fn),
                 )
 
 # ────────────────────────── main controller class ────────────────────
 class RedisController:
 
-    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls", conform_frame_rate: int = 24):
+    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls",
+                 conform_frame_rate: int = DEFAULT_CONFORM_FRAME_RATE):
         self.r      = redis.StrictRedis(host=host, port=port, db=db)
         self.ps     = self.r.pubsub(); self.ps.subscribe(channel)
         self.lock   = threading.Lock()
         self.cache  = {}
         self.local_updates: set[str] = set()
+        self._unknown_keys_warned: set[str] = set()
 
         self.redis_parameter_changed = Event()
 
@@ -246,27 +297,46 @@ class RedisController:
             return self.cache.get(key, default)
 
     def _storage_preroll_active(self) -> bool:
-        value = self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0")
-        text = str(value).strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0"))
 
         # ────────────────────────── public helpers ───────────────────────
-    def set_value(self, key, value):
-        """Write key, publish, update cache, emit consolidated log output."""
+    def set_value(self, key, value, *, force=False):
+        """Write key, publish, update cache, emit consolidated log output.
+
+        force=True publishes even when the value is unchanged. The same-value
+        early-out below is deliberate storm protection for per-frame keys
+        (framecount, fps_actual, the recording timers) -- but it also means a
+        re-issued command can never reach cinepi-raw while Redis already holds
+        that value. That is wrong in exactly one situation: the camera has
+        been reconfigured behind Redis's back (a sensor-mode switch resets
+        exposure to VMAX), so sensor state and Redis state disagree and the
+        publish itself is the payload. The mode-switch re-apply path
+        (CinePiController._reapply_camera_controls) passes force=True;
+        every other caller keeps the dedup.
+        """
         if value is None:
             logging.warning(f"Attempted to set Redis key '{key}' to None. Ignoring.")
             return
 
         key_name = key.value if isinstance(key, ParameterKey) else str(key)
 
+        # F-015: the enum was convention, not enforcement -- any string was
+        # accepted silently. This makes an un-enumerated key visible without
+        # blocking the write: rejecting outright here, with no Pi available
+        # to verify every call site this touches, risks silently breaking a
+        # working recording path over a naming gap. Warn once per key so a
+        # value written every frame (e.g. framecount) can't flood the log.
+        if key_name not in _KNOWN_PARAMETER_VALUES and key_name not in self._unknown_keys_warned:
+            self._unknown_keys_warned.add(key_name)
+            logging.warning(
+                "set_value('%s', ...): not a ParameterKey member -- writing anyway, "
+                "but this key has no enum entry to keep readers in sync with it.",
+                key_name,
+            )
+
         # ─── Redis write / publish / cache ───────────────────────────
         with self.lock:
-            if str(self.cache.get(key_name)) == str(value):
+            if not force and str(self.cache.get(key_name)) == str(value):
                 return                             # unchanged – nothing to do
             self.r.set(key_name, value)
             self.r.publish("cp_controls", key_name)
@@ -361,7 +431,7 @@ class RedisController:
         Return SMPTE time-code hh:mm:ss:ff for any positive offset in seconds.
         """
         rate = frame_rate if frame_rate is not None else self.conform_frame_rate
-        rate = int(round(rate))               # ensure integer fps
+        rate = smpte_frame_base(rate)         # ensure integer fps
 
         total_frames  = int(round(seconds_total * rate))
         frames        = total_frames % rate               # 0 … rate-1  (int)

@@ -95,16 +95,6 @@ class Framebuffer(object):
             self.stride = 0
             self.bits_per_pixel = 0
 
-    # def __init__(self, device_no: int):
-    #     self.path = f"/dev/fb{device_no}"
-    #     config_dir = f"/sys/class/graphics/fb{device_no}"
-    #     self.size = tuple(_read_and_convert_to_ints(
-    #         config_dir + "/virtual_size"))
-    #     self.stride = _read_and_convert_to_ints(config_dir + "/stride")[0]
-    #     self.bits_per_pixel = _read_and_convert_to_ints(
-    #         config_dir + "/bits_per_pixel")[0]
-    #     assert self.stride == self.bits_per_pixel // 8 * self.size[0]
-
     def __str__(self):
         args = (self.path, self.size, self.stride, self.bits_per_pixel)
         return "%s  size:%s  stride:%s  bits_per_pixel:%s" % args
@@ -169,26 +159,3 @@ def acquire_framebuffer(device_no: int):
         return None
 
     return fb
-
-# if __name__ == "__main__":
-#     import time
-#     from PIL import ImageDraw
-
-
-#     def TestFrameBuffer(i):
-#         fb = Framebuffer(i)
-#         print(fb)
-#         image = Image.new("RGBA", fb.size)
-#         draw = ImageDraw.Draw(image)
-#         draw.rectangle(((0, 0), fb.size), fill="green")
-#         draw.ellipse(((0, 0), fb.size), fill="blue", outline="red")
-#         draw.line(((0, 0), fb.size), fill="green", width=2)
-#         start = time.time()
-#         for i in range(5):
-#             fb.show(image)
-#         stop = time.time()
-#         print("fps: %.2f" % (10 / (stop - start)))
-
-
-#     for i in [0]:
-#         TestFrameBuffer(i)

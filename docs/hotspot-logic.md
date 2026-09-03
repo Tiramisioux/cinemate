@@ -5,7 +5,7 @@ The built-in hotspot lets you use any device (phone/tablet/computer) for preview
 There are three layers involved, each able to keep the hotspot up if the one above it is not running:
 
 - **NetworkManager itself:** the AP connection profile is persisted with `connection.autoconnect=yes`, so the hotspot comes up at boot before any Cinemate Python has run at all — even if both layers below are dead.
-- **As a background service:** `wifi-hotspot.service` reconciles the hotspot every 60 seconds. It runs as its own root systemd unit with no dependency on `cinemate-autostart.service`, so it keeps working through a Cinemate crash, a broken virtualenv, or a `settings.jsonc` that fails to parse.
+- **As a background service:** `wifi-hotspot.service` reconciles the hotspot every 60 seconds. It runs as its own root systemd unit with no dependency on `cinemate-autostart.service`, so it keeps working through a Cinemate crash, a corrupted install, or a `settings.jsonc` that fails to parse.
 - **At app startup:** when `system.wifi_hotspot.enabled` is `true`, Cinemate also creates the hotspot itself with `nmcli device wifi hotspot`. If `wifi-hotspot.service` is already active it stands down, so there is exactly one owner of the hotspot at any time.
 
 This is handy when shooting in the field. Connect your phone or laptop directly to the hotspot and browse to the GUI to control the camera. If the Pi was previously connected to another Wi-Fi network, that Wi-Fi connection is replaced by the hotspot.

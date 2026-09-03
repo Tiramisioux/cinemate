@@ -8,7 +8,8 @@ question that decides how far it can go — how fast the Pi decodes, and how fas
 card — has not been measured on hardware. The phases below are ordered so that measurement comes
 before any further build.
 
-!!! note "Status 2026-09-01 — the code is written, unlanded and now six days stale; the plan has been re-grounded against the repo"
+!!! note "Status 2026-09-01 — the code is written, unlanded and now five days stale; the plan
+has been re-grounded against the repo"
     A grounding pass read every checkable claim in this plan against `feature/dev-track`
     (`e759f2f`) and `origin/dev` (`c0eb9ff7`). Nine claims were wrong or overstated and are
     corrected in place below. The three that change what happens next:
@@ -16,14 +17,15 @@ before any further build.
     | | |
     |---|---|
     | Not done | The `docs/settings-json.md` correction this plan recorded as **done** exists only on the unpushed Mac branch. `b7e5eb43` is not an object in any pushed history and the stale sentence is still live on `dev` at `docs/settings-json.md:214`. It is **outstanding work that must travel with C9**, and it is currently the single most losable artifact of this step |
-    | Not established | Whether `dng_preview.py` applies the `LinearizationTable`. `docs/cinemate-log.md:63` names the failure it causes — a log clip renders **solid black** — and no gate as filed looks at a rendered pixel. G9 now does |
+    | Not established | Whether `dng_preview.py` applies the `LinearizationTable`. `docs/cinemate-log.md:66` names the failure it causes — a log clip renders **solid black** — and no gate as filed looks at a rendered pixel. G9 now does |
     | Refuted | "Reserving 2 of the Pi's 4 cores" is not a budget C9 can claim. The installer isolates core 3, `cinepi-raw` runs `chrt -f 70` + `taskset -c 1-3`, and audio capture holds SCHED_FIFO 80 on core 3. Nothing in C9 reserves anything, and no mechanism exists to. See "What the Pi actually offers" |
 
     Also: the branch's base is now **1381 commits** behind `dev`, through the files C9 edits
     (`settings_editor.html` alone moved 98 lines, including PR #160's doctype/viewport fix that
     this branch's copy predates). It must be rebased before "556 tests, checks green" means
     anything. Gates moved out to [`GATES.md`](GATES.md), where they carry predictions stated in
-    advance; G0 and G9 are new, G1–G8 keep the numbers they were filed under.
+    advance; G0 and G9 are new, G1–G8 keep the numbers they were filed under, and G10/G11 were added
+    the same day with the direction change.
 
 !!! note "Direction changed 2026-09-01 — thumbnail-first, with the raw decoder as the fallback"
     Operator steer: *"I am not expecting playback of raw files. I am thinking that the system can
@@ -58,7 +60,7 @@ imx585 mode-matrix samples, a real UHD imx585 still, and a genuine 50-frame imx4
 |---|---|
 | The IFD is at the **tail**, with its offset in the 8-byte header | A take's metadata costs ~2 kB to read on a linear take — ~9 kB where a `LinearizationTable` rides along — measured **0.03 ms**. Cheap enough that the clip list can show real frame rates and resolutions without touching pixel data. It is **not** the cost of indexing a card: see the enumeration caveat below |
 | One **uncompressed, row-addressable** strip (`StripOffsets == 8`, `RowsPerStrip ==` height) | A downscaled preview unpacks only the rows it needs. Corroborated in-repo, twice: `raw_files.py:165-171` ("`dng_encoder.cpp` hardcodes `COMPRESSION_NONE`") and `sensor_detect.py:40-44`, whose `DNG_COMPRESSION_RATIO = 1.0` names itself the seam to update if that ever changes. **If that constant moves off 1.0, row-addressable decode is dead** — treat it as C9's canary |
-| No embedded thumbnail or preview IFD (the writer logs "raw-only frames") | Every preview must demosaic **and apply the `LinearizationTable` where one is present**. There is no shortcut, which is why the decoder had to be proven before anything else — and why skipping the table is not a quality compromise but a black frame (`docs/cinemate-log.md:63`) |
+| No embedded thumbnail or preview IFD (the writer logs "raw-only frames") | Every preview must demosaic **and apply the `LinearizationTable` where one is present**. There is no shortcut, which is why the decoder had to be proven before anything else — and why skipping the table is not a quality compromise but a black frame (`docs/cinemate-log.md:66`) |
 
 And one that decides the architecture: numpy and Pillow both release the GIL, so a plain
 `ThreadPoolExecutor` scales nearly linearly (3.1× on 4 workers). No multiprocessing needed. This
@@ -86,9 +88,12 @@ Threaded, UHD at 1/4: 12.4 ms (1 worker) → 6.7 ms (2) → 3.9 ms (4).
 
 Three things this table does **not** say, all of which it was read as saying:
 
-- **Cost falls with output size but does not track it.** Two rows produce the same 964×545 output
-  and differ by 1.49× in decode and 1.97× in I/O. And at scale 1/2 the 12.6 MB read *is* the whole
-  frame (3856×2180×12/8 = 12,607,440 B), so nothing is saved on I/O at that scale at all.
+- **Cost falls with output size but does not track it.** *Three* rows produce the same 964×545
+  output. UHD 12-bit at 1/4 and 2K at 1/2 differ by 1.49× in decode and 1.97× in I/O; the UHD
+  16-bit ClearHDR row sits between them on decode (10.5 ms) while moving the most I/O of the three
+  (8.4 MB). And at scale 1/2 the 12.6 MB read *is* the whole
+  frame (3856×2180×12/8 = 12,609,120 B, or 5784 B/row × 2180 rows at cinepi-raw's packing —
+  `sensor_detect.py:32-33`), so nothing is saved on I/O at that scale at all.
 - **13.9 ms and 12.4 ms are the same work measured twice**, 11% apart, and were never reconciled.
   Every derived number depends on which is the baseline. The G1 harness must pick one and say so.
 - **The I/O column is bytes the decoder consumes, not bytes the drive moves.** Nothing in this
@@ -99,7 +104,7 @@ Three things this table does **not** say, all of which it was read as saying:
 
 **The headline claim to test, restated as a function of the timebase:** at 964×545 for UHD
 footage, against the 6.7 ms 2-worker figure, the Pi may be **6.22× slower per core at a 24 fps
-conform, 5.97× at 25, 4.97× at 30** and still hold the rate. The plan's original "~6×" is 5.97×,
+conform, 5.97× at 25, 4.98× at 30** and still hold the rate. The plan's original "~6×" is 5.97×,
 so a Pi exactly 6× slower *fails* its own gate. And the budget is whole-frame wall clock while
 6.7 ms is decode only — JPEG encode, Flask and the network are unbudgeted inside it.
 
@@ -109,8 +114,9 @@ raw MB/s: `storage_profiles.py:147-153` records that a shared xHCI controller co
 ALSA capture, which is why disk workers are capped on Pi 4 and not on Pi 5. A USB SATA SSD on a
 CM5 shares that bus with the USB mic exactly as a Pi 4 does; NVMe over PCIe does not. The dev Pi
 has **only** NVMe, so the USB-SATA and SD rows of that ordering are not testable on this rig at
-all. Delivery over the hotspot is *not* a constraint: a real-scene frame at 964×545 q80 is ~32 kB,
-i.e. 6.4 Mbit/s at 25 fps.
+all. Delivery over the hotspot is the smallest of the requirements *at 1/4* — a real-scene frame at
+964×545 q80 is ~32 kB, i.e. 6.4 Mbit/s at 25 fps — but it is not settled: the figure scales ~4× at
+1/2, and the Live tab's MJPEG stream shares the link (defect 5). G6 measures it.
 
 ## What the Pi actually offers
 
@@ -120,7 +126,7 @@ available changes G1's method rather than its verdict:
 | | |
 |---|---|
 | Core 3 | Removed from the schedulable set at boot on a 4-core board — `cinemate-install.sh:1200-1211` appends `isolcpus=managed_irq,domain,3`, `nohz_full=3`, `rcu_nocbs=3`, `irqaffinity=0-2` — and held by `cinepi-audio-capture` at SCHED_FIFO 80 **while recording**. `storage_profiles.py:41-49` states the invariant: no worker affinity may include it |
-| `cinepi-raw` | Launched `chrt -f 70` + `ionice -c2 -n0` + `taskset -c 1-3` (`cinepi_multi.py:243-249`). SCHED_FIFO 70 preempts the Flask process unconditionally |
+| `cinepi-raw` | Launched `chrt -f 70` + `ionice -c2 -n0` + `taskset -c 1-3` (`cinepi_multi.py:238-249` here; `:259-269` on `dev`). SCHED_FIFO 70 preempts the Flask process unconditionally |
 | The decode pool | SCHED_OTHER, unpinned, in the same process as the HDMI GUI's redraw loop and the Socket.IO push. Measured at rest: cinemate 6.3% CPU idle, **31.8→33.5% during a take** (PI-016) |
 
 So: while **not** recording, two cores are genuinely free and the headline claim stands. While
@@ -154,7 +160,9 @@ without a new signal on disk to justify it.
 **Mono is undetectable *from the file*.** Confirmed in source, and worse than the plan said: `mono_`
 exists **twice** — a file-scope global at `dng_encoder.cpp:129` (`bool mono_ = false;`, comment "add
 as a private member of DngEncoder") shadowing the real member at `dng_encoder.hpp:137` — and neither
-is ever assigned, while `mono_formats` at `:124` is deliberately empty. So `phot = mono_ ? PHOTOMETRIC_MINISBLACK : PHOTOMETRIC_CFA` (`:1024`) always takes the CFA branch and every frame carries a
+is ever assigned, while `mono_formats` at `:124` is deliberately empty. So `phot = mono_ ?
+PHOTOMETRIC_MINISBLACK : PHOTOMETRIC_CFA` (`:1024`) always takes the CFA branch and every frame
+carries a
 colour CFA even on the mono rig, so demosaicing mono footage through a Bayer pattern produces a
 convincing wrong image. It must stay an operator toggle. But the *running system* knows:
 `sensor_detect.py:251-256` appends `_mono` when `--list-cameras` reports it, `boot_config.py:35`
@@ -194,7 +202,8 @@ Three consequences worth not rediscovering:
 Caveat: `conform_frame_rate` is a known multi-source drift (F-251) — and there are **six** sites,
 not four: `settings.schema.json:200` and `config_loader.py:218` and `redis_controller.py:174` and
 `main.py:604` all say 24; `settings.jsonc:118` and `resources/settings/settings_default.jsonc:50`
-say 25; and the settings tab's `#f-conform` field shows the operator `data-original="25"` (`:1370` on `dev`). The pane reads
+say 25; and the settings tab's `#f-conform` field shows the operator `data-original="25"`
+(`:1370` on `dev`). The pane reads
 the live value and displays it; it must not restate a default. **Name the source:** the value in
 effect is `current_app.config['SETTINGS']['settings']['conform_frame_rate']` — the same dict
 `main.py:604` constructed `RedisController` from, i.e. the *running* value, which diverges from
@@ -230,10 +239,21 @@ with real-looking values (`thumbnail=3`, `thumbnail_size=50`), which is why F-02
 possibly "a feature someone wants and never finished". This is that feature.
 
 Give them meaning rather than inventing keys: `thumbnail` becomes the mode — **0 off, 1 mono,
-2 colour** — which is the toggle the operator asked for, and `thumbnail_size` stays the size knob,
-matching the right-shift `thumbnailFactor` already threaded through
-`RPiCamApp::ConfigureVideo(flags, thumbnailFactor)` (`rpicam_app.cpp:597,659-661`), which
-`cinepi_raw.cpp:71` passes as 0 today.
+2 colour** — which is the toggle the operator asked for, and `thumbnail_size` becomes a downscale of
+the Y plane applied **inside `dng_save()`**.
+
+Not, as this plan first said, by reusing `thumbnailFactor`. That knob is dead on CineMate's path
+and would not size a thumbnail if it were not: `rpicam_app.cpp:603` sets
+`alias_lores_to_video = have_raw_stream && have_lores_stream`, CineMate always passes
+`--lores-width`/`--lores-height` (`cinepi_multi.py:492-493`) and always records raw, so the
+`alias_lores_to_video` branch at `:647` always wins and the `thumbnailFactor` right-shift at
+`:659-661` is never reached. What it sizes there is `configuration_->at(0)` — the stream that feeds
+the HDMI preview and the MJPEG preview — so driving it from a playback setting would resize the
+operator's live preview as a side effect. Downscaling inside the encoder cannot touch either.
+
+One consequence to carry into the CLI verb's help text: the live `CONTROL_KEY_THUMBNAIL_SIZE`
+handler sets `cameraInit_ = true` (`cinepi_controller.cpp:580`), so changing the size restarts the
+camera. The mode key should behave the same way or deliberately not — decide it, do not inherit it.
 
 **One bug to fix on the way past.** `cinepi_controller.cpp:137` seeds `CONTROL_KEY_THUMBNAIL` with
 `thumbnail_size_` where it means `CONTROL_KEY_THUMBNAIL_SIZE`. That is why the Pi reads
@@ -320,13 +340,16 @@ None of these were visible in the harness. Each is one line to a few lines, and 
 of thing that reads as working:
 
 1. **`syncTopbarForPage` will offer Save / Revert / Upload / Download on the playback tab.**
-   `syncTopbarForPage()` reads `var noFilePage = activePage === 'live' || activePage === 'raw';` (`settings_editor.html:4574` on `dev` @ `c0eb9ff7` — grep the symbol, the line moves)
+      `syncTopbarForPage()` reads `var noFilePage = activePage === 'live' || activePage ===
+   'raw';` (`settings_editor.html:4574` on `dev` @ `c0eb9ff7` — grep the symbol, the line
+   moves)
    — a `playback` page falls through as a *file* page and claims to edit settings.jsonc.
 2. **`playback.py` must not re-scan directories.** `raw_files.py` already has `_media_roots()`,
    `_is_take_dir()`, `_take_info()`, `list_takes()` (mtime-sorted, `has_wav` per take) and a
    traversal-hardened `resolve_take()`. This repo has already shipped the failure of duplicating a
-   settings-editor catalogue — three copies that agree perfectly, including on the same wrong
-   entry (F-218/219/220). Extend the one enumerator; do not build a second.
+   settings-editor catalogue — three copies of it, of which the two hand-maintained ones agree
+   perfectly — including on the same wrong entry `set_log` (46 / 46 / 94; F-218/219/220,
+   `GUI-STATE-MODEL.md:166-169`). Extend the one enumerator; do not build a second.
 3. **Take mtime is not a sufficient cache key.** `storage-automount` promotes a standby with
    `mount --move`, so a take's path changes from `/media/RAW1/<take>` to `/media/RAW/<take>`
    without its mtime moving. Key on resolved path *and* mtime, and re-resolve per request.
@@ -335,7 +358,7 @@ of thing that reads as working:
    file and treat every hit as an offered controller action. A scale-option list written as
    `{"value": "quarter"}` fails CI twice, with a message pointing at the JS catalogue. Use `id`,
    `divisor` or `scale`, or keep option lists in `playback.py`.
-5. **The Live tab's MJPEG stream never stops.** the template embeds `<iframe id="liveEmbedFrame" … src="/">` (`:2226` on `dev`) and nothing
+5. **The Live tab's MJPEG stream never stops.** The template embeds `<iframe id="liveEmbedFrame" … src="/">` (`:2226` on `dev`) and nothing
    ever clears its `src` — `setActivePage` only hides it. Once the
    operator has visited Live view, playback competes with a live MJPEG stream on the same Wi-Fi
    link for the rest of the session, which is most of G6's margin. Clear the src on leave, restore
@@ -350,7 +373,7 @@ of thing that reads as working:
 ## Phase 2 — hardware gates (none run; `cinepi.local` was unreachable)
 
 **Full gate definitions, with predictions stated in advance: [`GATES.md`](GATES.md)** in this
-directory. Ten gates grouped into four sessions, because four of them cannot run against the dev
+directory. Twelve gates grouped into five sessions, because four of them cannot run against the dev
 Pi as last recorded without a hardware change first.
 
 | Gate | Tests | Session |
@@ -381,8 +404,15 @@ will fix it are, so the answers are read off the measurements rather than argued
 
 - **Default scale — fallback path only.** The thumbnail has one size, so this is now a question
   about older footage alone. Set it to the largest scale whose G1 decode time is ≤ `1000 /
-  conform_frame_rate` ms at 2 workers **and** whose G2 device-bytes figure is ≤ 70% of the
-  measured sequential ceiling. If no scale satisfies both for UHD, UHD defaults to scrub-only and
+    conform_frame_rate` ms at 2 workers **and** whose G2 device-bytes-per-frame figure
+  **multiplied by the conform
+  rate** is ≤ 70% of the measured sequential ceiling in MB/s. Both sides must be rates; comparing
+  MB/frame against MB/s is what the rule said before and it could not be evaluated. Note what the
+  rule then decides: against G2's own predicted 170–190 MB/s ceiling, 70% is 119–133 MB/s, and UHD
+  at 1/4 needs 157.5 MB/s even in the best case where G2(b) confirms the credited 6.3 MB/frame — so
+  **the rule pre-decides against the current 1/4 default for UHD**, leaving 1/8 (78.75 MB/s). That
+  is the honest reading of the numbers as they stand; if it is wrong it is the 70% that is wrong,
+  and G2 is what corrects it. If no scale satisfies both for UHD, UHD defaults to scrub-only and
   2K keeps a real-time default — the pane already shows the achieved rate and the skip count, so
   it degrades honestly either way.
 - **Decode-ahead** — a bounded prefetch ring, sized in **frames** with a comment naming the
@@ -420,7 +450,13 @@ will fix it are, so the answers are read off the measurements rather than argued
   block beside `conform_frame_rate`. A **new top-level block in `settings.jsonc` breaks three
   things at once** (verified by experiment): the schema test across three shipped config files
   (`additionalProperties: false` at the root), and the gated docs `settings` check, which demands a
-  matching `##` heading in `settings-json.md`.
+  matching `##` heading in `settings-json.md`. And a fourth thing nesting does **not** fix:
+  `put_settings()` schedules `restart_cinemate()` after every successful save
+  (`settings_editor.py:253-317`), and that is an `os.execl` of the whole process
+  (`cinepi_controller.py:2377-2381`) — it takes the HDMI GUI, the Socket.IO channel and the
+  `cinepi-raw` children with it. A full app restart is the wrong price for a preview-scale toggle.
+  Prefer `localStorage` in the pane, or a prefs file the settings editor does not own, and put in
+  `settings.jsonc` only what an operator would expect a restart for.
 
 ## Phase 4 — audio, and the path deliberately not taken
 
@@ -443,8 +479,11 @@ Four facts the decision has to survive, none of them in the original plan:
   (`usb_monitor.py:322-345`), and the packed-3-byte 24-bit case is the less universally supported
   in browsers. Read the format from the take's own header — the live mic probe describes the mic
   attached now, not the one that shot the take.
-- **A hard-aborted take leaves an unfinalised WAV** whose data-chunk size is still 0, so `<audio>`
-  reads duration 0 and refuses to play (`C1 RUNBOOK.md:305-322`). That is precisely the take an
+- **A hard-aborted take leaves an unfinalised WAV** whose data-chunk size is still 0, (`C1 RUNBOOK.md:305-322`), so its declared
+  duration is 0 and byte-derived recovery is needed to know the real one. What a browser `<audio>`
+  element does with that is **untested here** — it may report 0, stream to EOF, or refuse — so the
+    pane must detect the condition server-side rather than relying on the browser to. That is
+  precisely the take an
   operator most wants to review. Decide what the pane shows for it — silence, or an explicit
   "audio present, unfinalised" state. It is also an independent argument for open decision 2: an
   in-progress take's WAV is unfinalised by construction, so audio during recording is impossible
@@ -474,12 +513,12 @@ feature, not a way to review between setups.
 | # | Question | Current state | What settles it |
 |---|---|---|---|
 | 1 | ~~Tab or a section on the RAW page?~~ | **Settled 2026-08-27: a fifth tab, and built** | — |
-| 2 | Refuse or degrade while recording? | Refuses (409, stage greys out) | G4. Note the prior has weakened: the ALSA-contention root cause is recorded as *fixed*, and NVMe does not share the mic's bus. The stronger arguments for refusing are now that no core is free during a take, that every media profile sets the I/O scheduler to `none` (no kernel arbitration between the read and write streams), and that the WAV is unfinalised mid-take anyway |
+| 2 | Refuse or degrade while recording? | Refuses (409, stage greys out) | G4. Note the prior has weakened: the ALSA-contention root cause is recorded as *fixed*, and NVMe does not share the mic's bus. The stronger arguments for refusing are now that no core is free during a take, that every non-fallback media profile sets the I/O scheduler to `none` (`storage-automount.py:93,102,116,124`; the `other` fallback keeps `mq-deadline` at `:133`) (no kernel arbitration between the read and write streams), and that the WAV is unfinalised mid-take anyway |
 | 3 | Default preview scale, fallback path | 1/4, a guess | The G1/G2 rule in Phase 3. Applies only to takes with no thumbnail |
 | 4 | REVIEW button on the shooting screen? | Not built | Operator decision. Costs a `location.hash` reader and the first surface-2 → surface-3 link; costs no controller method |
 | 5 | Audio — play it at all, and how? | **Not played.** The WAV endpoint exists; nothing consumes it | Operator decision, informed by the four facts above. Free-running is cheap but must apply the 5-frame offset and be labelled as unlocked; sync needs Phase 4's proxy path |
 | 6 | Does the decoder apply the `LinearizationTable`? | **Not established** | G9. Until it reports, the *fallback* path's behaviour on every companded and log take is unknown, and the failure mode is a black frame. The thumbnail path is immune |
-| 7 | Thumbnail as IFD0 (raw to a SubIFD) or chained as IFD1? | **Open, and it decides Phase 0's shape** | What the operator's post software actually does with each. IFD0 is the standard DNG shape and what upstream does deliberately; IFD1 leaves every existing reader — including `dng_preview.py` — untouched. Test both against Resolve before choosing |
+| 7 | ~~Thumbnail as IFD0 (raw to a SubIFD) or chained as IFD1?~~ | **Settled 2026-09-01: chained as IFD1, IFD0 untouched** | The risk is asymmetric. The thumbnail's only consumer is our own pane; post software needs the raw, which is in IFD0 of every CineMate DNG written so far. Moving it to a SubIFD to satisfy the spec buys nothing we consume and risks the one thing that must not break, while a reader that ignores IFD1 is no worse off than today. It also keeps IFD0 byte-identical at every toggle setting, which strengthens G10's control. Kept as a one-line switch: G10 tests both, and may send it the other way |
 | 8 | Does the pane say which path a frame came from? | **Yes** — decided with the direction | Not a question, recorded so it is not dropped: a 720p mono proxy and a demosaiced quarter-res frame must never be indistinguishable in the HUD |
 
 ## Risks
@@ -499,9 +538,10 @@ feature, not a way to review between setups.
   HDMI GUI redraw already runs at ~7.5 Hz against a 12 fps target. A playback feature that drops
   the on-camera GUI to 3 Hz is a regression on the primary surface, and nothing today would catch
   it — hence G3's third observable.
-- **Storage contention is a known failure shape here**, not a hypothetical: long-take 24-bit drift
-  is the recorded historical root cause of ALSA capture xruns under storage contention
-  (`C1 RUNBOOK.md:136-143`) — never re-measured, and the specific ext4 disk-worker/audio-core
+- **Storage contention is a known failure shape here**, not a hypothetical: the recorded historical root cause of
+  long-take 24-bit audio drift on this stack is ALSA capture xruns under storage contention, not
+    clock drift — the RØDE 24-bit clock measured ~0 ppm (`C1 RUNBOOK.md:136-139`) — never
+  re-measured, and the specific ext4 disk-worker/audio-core
   collision behind it is recorded as *fixed*. G4 tests whether a read stream reintroduces it by
   another route. **It must not grep for "xrun":** a recovered xrun logs nothing at all, and the two
   lines containing the word both mean the opposite. The signal is
@@ -514,7 +554,8 @@ feature, not a way to review between setups.
   `start_recording()` — the real exposure is what the ring leaves behind for the *next* take.
 - **Colour is approximate — and permanently so in the mode C9 most wants to preview.**
   `AsShotNeutral` on the test frame is `[1, 1, 0.303]`, which looks like unset AWB defaults
-  because it is: `docs/clear-hdr.md:13,19` records that ISP statistics are invalid at 16-bit, so
+    because it is: `docs/clear-hdr.md:14,21` on `dev` records that ISP statistics are invalid
+  at 16-bit, so
   auto white balance *cannot run* in the ClearHDR modes. This is a review preview for framing,
   focus and motion; the UI must not imply it is a grading reference, and the docs page must say
   that magenta highlights near the HG→LG hand-off are the sensor, not the decoder — or the first
@@ -536,13 +577,14 @@ feature, not a way to review between setups.
 **not pushed** and 1381 commits behind `dev`), plus a cinepi-raw branch off its `dev` for Phase 0,
 still to be cut — C9 is a two-repo step as of 2026-09-01. The gates need it on the Pi, so it has to
 be pushed before Session A — which is also the only way the `conform_frame_rate` docs fix stops
-living in one place. Planning commits stay here on `feature/dev-track` as `c9:`; the hardware
+living in one place. Planning commits are on `feature/c9-clip-playback-plan` as `c9:` (PR #181, cut off `dev`
+2026-09-01 so it merges clean; the `feature/dev-track` copies are stale); the hardware
 session reports as `c9-pi:`.
 
 **Verification.** Desk — done at `714ef7b4`: 9 tests in `_test/test_dng_preview.py`, the real
 blueprint through `harness.py`, ruff and the drift checks; **stale**, and re-grounding found six
 defects and one unestablished behaviour (G9) that the harness could not see. Hardware — nothing.
-None of G0–G9 has run; `cinepi.local` was unreachable on the day.
+None of G0–G11 has run; `cinepi.local` was unreachable on the day.
 
 **Hardware needed:** the dev Pi for every gate, and for Phase 0 a **cinepi-raw build on it** —
 the first C9 step that is not a Python restart. An **imx585** for G1's UHD/ClearHDR figures and for

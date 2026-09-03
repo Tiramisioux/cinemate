@@ -5,7 +5,9 @@
       "display_name": "IMX477",
       "common_name": "Raspberry Pi HQ Camera",
       "packing": "U",
-      "packing_by_platform": { "pi4": "P" },
+      "packing_by_platform": {
+        "pi4": "P"
+      },
       "aliases": [],
       "modes": [
         {
@@ -32,14 +34,56 @@
           "bit_depth": 10,
           "max_fps": 120
         }
-      ]
+      ],
+      "link_frequency": {
+        "lanes": 2,
+        "selectable": true,
+        "menu_enabled": false,
+        "default_hz": 450000000,
+        "options": [
+          {
+            "hz": 450000000,
+            "mbps_per_lane": 900
+          },
+          {
+            "hz": 750000000,
+            "mbps_per_lane": 1500,
+            "pi5_spec_limit": true
+          },
+          {
+            "hz": 909000000,
+            "mbps_per_lane": 1818,
+            "experimental": true,
+            "over_rp1_spec": true
+          }
+        ],
+        "arbitrary": {
+          "step_hz": 3000000,
+          "min_kernel": "6.12.49"
+        },
+        "by_platform": {
+          "pi4": {
+            "max_hz": 500000000,
+            "confidence": "suggested"
+          },
+          "pi5": {
+            "max_hz": 909000000,
+            "confidence": "probable"
+          }
+        },
+        "notes": "menu_enabled is false until Gate 2 measures 750 MHz on this stack; enabling it is an operator decision. Since kernel 6.12.49 the driver computes PLL settings for any ~3 MHz multiple passed via the overlay parameter, so these are curated presets, not the driver's own list -- it vouches for no upper bound, which is why a menu rather than a free field. 750 MHz is the Pi 5 RP1 spec limit and officially sanctioned. RPi's own testing found ~909 MHz stable and white/corrupt frames from ~939 MHz in binned modes."
+      }
     },
     "imx296": {
       "display_name": "IMX296",
       "common_name": "Raspberry Pi Global Shutter Camera",
       "packing": "U",
-      "packing_by_platform": { "pi4": "P" },
-      "aliases": ["imx296_mono"],
+      "packing_by_platform": {
+        "pi4": "P"
+      },
+      "aliases": [
+        "imx296_mono"
+      ],
       "modes": [
         {
           "mode": 0,
@@ -49,18 +93,43 @@
           "bit_depth": 10,
           "max_fps": 60
         }
-      ]
+      ],
+      "link_frequency": {
+        "lanes": 1,
+        "selectable": false,
+        "default_hz": 594000000,
+        "options": [
+          {
+            "hz": 594000000,
+            "mbps_per_lane": 1188
+          }
+        ],
+        "notes": "Fixed. The sensor derives its own MIPI timing internally (the PLL lands between 1122 and 1198 Mbps) and there is no register knob or overlay parameter. The 60 fps cap is readout-limited, not link-limited, so a faster link would buy nothing."
+      }
     },
     "imx585": {
       "display_name": "IMX585",
       "common_name": "Starlight Eye",
       "packing": "U",
-      "aliases": ["imx585_mono"],
+      "aliases": [
+        "imx585_mono"
+      ],
       "log_encode": {
         "black_level_16bit": 3200,
         "targets": {
-          "16": { "valid": [10, 12], "default": 12 },
-          "12": { "valid": [10], "default": 10 }
+          "16": {
+            "valid": [
+              10,
+              12
+            ],
+            "default": 12
+          },
+          "12": {
+            "valid": [
+              10
+            ],
+            "default": 10
+          }
         }
       },
       "modes": [
@@ -80,7 +149,65 @@
           "bit_depth": 12,
           "max_fps": 40
         }
-      ]
+      ],
+      "link_frequency": {
+        "lanes": 4,
+        "selectable": true,
+        "default_hz": 720000000,
+        "options": [
+          {
+            "hz": 297000000,
+            "mbps_per_lane": 594,
+            "fps_4k12_4lane": 20.8
+          },
+          {
+            "hz": 360000000,
+            "mbps_per_lane": 720,
+            "fps_4k12_4lane": 25.0
+          },
+          {
+            "hz": 445500000,
+            "mbps_per_lane": 891,
+            "fps_4k12_4lane": 30.0
+          },
+          {
+            "hz": 594000000,
+            "mbps_per_lane": 1188,
+            "fps_4k12_4lane": 41.7
+          },
+          {
+            "hz": 720000000,
+            "mbps_per_lane": 1440,
+            "fps_4k12_4lane": 50.0
+          },
+          {
+            "hz": 891000000,
+            "mbps_per_lane": 1782,
+            "fps_4k12_4lane": 60.0,
+            "over_rp1_spec": true
+          },
+          {
+            "hz": 1039500000,
+            "mbps_per_lane": 2079,
+            "fps_4k12_4lane": 75.0,
+            "over_rp1_spec": true
+          }
+        ],
+        "excluded": [
+          {
+            "hz": 1188000000,
+            "mbps_per_lane": 2376,
+            "reason": "frame drops on Pi 5, unsupported on Pi 4"
+          }
+        ],
+        "by_platform": {
+          "pi4": {
+            "max_hz": 891000000,
+            "confidence": "probable"
+          }
+        },
+        "notes": "fps figures are from the will127534 driver README, 4K 12-bit 4-lane; advisory until measured on this stack (Gate 1). ClearHDR halves them; 2x2 binned doubles them. 891 and 1039.5 MHz exceed the RP1 1.5 Gbps/lane spec by 19% and 39% but are proven on Pi 5."
+      }
     },
     "imx283": {
       "display_name": "IMX283",
@@ -90,7 +217,12 @@
       "log_encode": {
         "black_level_16bit": 3200,
         "targets": {
-          "12": { "valid": [10], "default": 10 }
+          "12": {
+            "valid": [
+              10
+            ],
+            "default": 10
+          }
         }
       },
       "modes": [
@@ -142,14 +274,42 @@
           "bit_depth": 10,
           "max_fps": 44
         }
-      ]
+      ],
+      "link_frequency": {
+        "lanes": 4,
+        "selectable": true,
+        "default_hz": 720000000,
+        "options": [
+          {
+            "hz": 360000000,
+            "mbps_per_lane": 720
+          },
+          {
+            "hz": 720000000,
+            "mbps_per_lane": 1440
+          }
+        ],
+        "notes": "Sony ships exactly two register sequences (mipi_data_rate_1440Mbps / _720Mbps); no other value exists in the driver, which rejects anything else at probe. 720 MHz is both the default and the silicon ceiling, so the only selectable alternative is SLOWER. This closes the long-standing 'faster link for higher fps' TODO as infeasible: the 4K modes' 44/41 fps are the link ceiling at those bit depths, and more fps means lower bit depth, not a faster link. Selecting a non-default value needs the link-frequency overlay parameter, which exists only in Tiramisioux/imx283-v4l2-driver 6.12.y at 257c9cf or later -- an older overlay rejects the unknown parameter and the camera will not enumerate."
+      }
     },
     "imx519": {
       "display_name": "IMX519",
       "common_name": "IMX519",
       "packing": "P",
       "aliases": [],
-      "modes": []
+      "modes": [],
+      "link_frequency": {
+        "lanes": 2,
+        "selectable": false,
+        "default_hz": 408000000,
+        "options": [
+          {
+            "hz": 408000000,
+            "mbps_per_lane": 816
+          }
+        ],
+        "notes": "Fixed. The driver hard-rejects any other value at probe, and no community overclock precedent was found."
+      }
     }
   }
 }

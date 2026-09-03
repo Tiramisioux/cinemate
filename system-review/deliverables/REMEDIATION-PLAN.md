@@ -56,6 +56,9 @@ in parallel with each other; none can break a camera.
 | **B8** | Structural (deferred) | mixed | high | — | — |
 | **B9** | One fact, one home | B9.1/B9.4 | medium | 28 | 7 |
 | **B10** | Close the ledger | B10.2 only | low | 35 + all 201 dispositioned | 7 |
+| **B11** | Field-reported defects | B11.1/2/8 | mixed | 11 | 8 |
+| **B13** | Docs vs. the code that shipped | B13.1/2 verify | none | 8 | 7 |
+| **B14** | Format drive from the RAW pane (feature) | **yes** — destructive | medium | — (feature) | 3 |
 
 ---
 
@@ -332,6 +335,159 @@ the risk**, promote any that document a deletion's reasoning before removing it.
 removals — nine packages that nothing imports is a static claim, and PI-012 already showed
 once that an apt-installed dependency can be reached without a Python import. **Test the
 package removals on a clean install, not on a running camera.**
+
+---
+
+### B11 · Field-reported defects — the first batch that did not come from the audit
+
+**Every other batch in this plan came from reading. B11 came from using the camera.** Eleven
+findings (F-288..F-298) reported by the operator from a running system, investigated against
+`dev` at `13ab022`. That provenance matters: the audit read 20k lines of Python and never
+found F-288, because a permission error on a root-owned directory is invisible to static
+analysis — the same lesson `lessons/what-the-pi-taught-us.md` records for the Pi session.
+
+Two of these are broken-in-the-field, not cosmetic. Do those first.
+
+| commit | change | closes |
+|---|---|---|
+| B11.1 | **`config.txt` cannot be saved at all.** `mkstemp(dir="/boot/firmware")` as `User=pi` fails before writing a byte. Stage the temp file somewhere pi-writable and move it into place with a narrow privileged step — the installer's `configure_sudoers()` is the existing mechanism, and #138's `sudo -n` is the existing idiom. **Do not widen sudo to a general file write**; scope it to this one path | **F-288** |
+| B11.2 | **`cinepi.local` does not resolve.** Nothing in either repo installs or enables `avahi-daemon`; a repo-wide grep for `avahi`/`mdns`/`nss-mdns` returns zero. Install and enable it, and fix `/etc/hosts` alongside `hostnamectl`, which currently leaves the old `127.0.1.1` entry | F-289 **(reopened — see F-308; the hardening landed but did not reproduce the original mechanism)** |
+| B11.3 | **The preview reconnects too early after a resolution change.** Move the `reload_stream` emit off `_notify_resolution_change` (fired at initiation, `cinepi_controller.py:1749`) and onto the completion path — `_schedule_resolution_switch_complete` is the very next line. The client machinery at `template.html:914-925` is already correct and needs no change | **F-290** |
+| B11.4 | **"Restart Cinemate" does nothing.** Root-cause first, fix second — `journalctl -u cinemate-autostart -f` while pressing it. Candidates in the finding. If `os.execl` from a Timer thread is the cause, restarting via systemd rather than in-process is the more honest fix | F-291, **F-307** |
+| B11.5 | **The GPIO panes, rebuilt to the operator's column model.** Inputs: GPIO · action (**including `press`, currently missing from the dropdown**) · method, renamed to something a user recognises, with several actions per pin adding aligned method rows. Outputs: the same shape, section renamed **"GPIO out"**, which makes multiple tally pins expressible for the first time. This subsumes the 3-button/2-switch ceiling — rebuild the pane so the banner at `settings_editor.html:1730` can be deleted rather than reworded | **F-293**, **F-294**, F-292, **F-309**, **F-310**, **F-311**, **F-312** |
+| B11.6 | **Raw pane:** move "download selected" and "delete selected" below the list they act on | F-295 |
+| B11.7 | **The web GUIs scale rather than reflow.** The top row stays the top row; the left and right grey-box columns stay columns at any width. Characterise the phone hamburger failure before touching it — it is currently only "does not really work" | **F-297**, F-296, F-313 |
+| B11.8 | **Make the per-resolution fps ceiling correctable and editable, sensor value as default.** `image_capture.custom_modes` already carries `fps_max` per mode and is already read — it just `append`s instead of merging, so it can add a mode but never correct a detected one. Make a matching entry **override** that mode's `fps_max`, give the block a real schema, and **surface it in the settings editor** so the ceiling can be found by trial without editing code. Prefer sparse overrides with detected values shown as placeholders — materialising the whole table goes stale on every sensor swap, and this project swaps sensors. `choose_resolution()` needs no new logic: it keeps selecting on `fps_max`, now the effective value | **F-298** |
+
+**Why B11.8 is shaped this way, stated once so it is not re-litigated:** `fps_max` comes from
+`cinepi-raw --list-cameras`. It is an electrical property of the *sensor* and says nothing about
+what this storage and this CPU sustain — only trial can find that. But the fix is **not** a new
+global threshold: the switching mechanic is already right, it is simply reading a number nobody
+can correct. Per-resolution overrides with the sensor value as default keep the existing
+selection logic untouched, keep behaviour identical until someone overrides something, and let
+4K be tuned down without touching 2K. `custom_modes` already proves the shape.
+
+**Ordering:** B11.1 and B11.2 are broken-in-the-field — do them first and land them alone.
+B11.3 and B11.4 are small and independent. B11.5 and B11.7 are the real work and want a
+design pass before code. B11.8 should follow B9.5, which touches the same settings plumbing.
+
+**Verification:** B11.1 and B11.2 need a real install — **a clean one, not a running camera**,
+for the same reason B10.2 does. B11.3 needs a resolution change with the web GUI open. B11.5,
+B11.6 and B11.7 need a browser at several widths, and a phone for the hamburger. B11.8 needs a
+recording at either side of the threshold. Everything else is desk work.
+
+**Outcomes, and corrections found while implementing (F-307..F-313) — added after B11 landed.**
+Two of eight desk diagnoses did not survive contact with hardware:
+
+- **F-307** corrects B11.4: the restart bug was two compounding bugs, not one (the button never
+  called the backend, and the `os.execl()` re-exec it would have called was itself broken since
+  the listening socket survives `exec()`). Both fixed. A third, narrower, pre-existing systemd
+  race (`Conflicts=getty@tty1.service` vs the console-handoff script) was hit during verification
+  and is tracked as F-283's residual, not new scope here.
+- **F-308** corrects B11.2: on the real test device, avahi-daemon was already installed and
+  running before B11.2's install step ran. The hardening (explicit install + idempotent
+  `/etc/hosts` fix) still landed as a defensive measure, but it is **not a confirmed fix for the
+  original field report** — see F-289's "reopened" note in the B11.2 row above. Root-causing the
+  operator's original failure needs more information (which client OS/network/image originally
+  saw `cinepi.local` fail to resolve) than this ledger currently has.
+- **F-309, F-310, F-312** were found while rebuilding the GPIO panes for B11.5 (two silent-save
+  bugs in `hardware_controls`/`quad_rotary_controller`/`hardware_outputs`, and an uncaught
+  `TypeError` from dead mockup script left in `settings_editor.html`) and fixed in the same
+  commit.
+- **F-311** (`applyActionToSlot()` defaulting a `"None"`/absent gesture action to `method='rec'`)
+  was also fixed in B11.5 — verified directly against `dev`: `applyActionToSlot()` now defaults
+  `method` to `''` ("No action"), with a comment citing this exact defect.
+- **F-313** is a citation correction, not a code defect: B11.7's own brief cited "ADR-001's
+  constraint 2 and PI-009's result" for the web GUI's scale-vs-reflow question, and that citation
+  doesn't hold up (ADR-001 C2/PI-009 is about DRM plane composition on the Pi's local HDMI output,
+  unrelated to CSS layout strategy for a remote browser client). The real precedent —
+  `simple_gui.py`'s own `shrink_x`/`shrink_y` scaling — was used for the actual fix instead, so
+  nothing downstream repeats the bad citation. No further action.
+
+---
+
+### B13 · The documentation against the code that shipped
+
+*(B12 is deliberately unused — the operator numbered this batch B13.)*
+
+**B1 fixed the drift the checker could see. This batch fixes the drift it cannot.**
+`docs_drift_check.py` verifies links, citations, method names, redis keys and settings
+headings — all things with a machine-checkable counterpart. It has nothing to say about a
+paragraph that describes a virtualenv the installer stopped creating, and it reported clean
+on `13ab022` while every finding below was already true.
+
+Eight findings, F-299..F-306, from reading both doc sets against `dev` (`13ab022`) and
+cinepi-raw `dev` (`bc63598`) after eleven merged PRs.
+
+**The two that actively mislead come first.**
+
+| commit | change | closes |
+|---|---|---|
+| B13.1 | **Remove the virtualenv from the documentation.** `installation-steps.md:611-613,619-620,728` builds `~/.cinemate-env`, appends its activation to `.bashrc`, and writes the sudoers rule that #138's `configure_sudoers()` now **actively deletes**. Four more files reason about it: `:116,154` (meson picking the venv Python), `overclocking.md:116-119` (`deactivate` first), and the "broken virtualenv" failure mode in `recovery-console.md:35-36` and `hotspot-logic.md:8` | **F-299** |
+| B13.2 | **Reconcile the manual pip list with `requirements*.txt`.** The hand list at `installation-steps.md:640-646` omits **`pyserial`** (F-276's exact defect, fixed by #133) and **`lgpio`** (annotated "NOT optional" in `requirements-hardware.txt`), and installs nine packages nothing imports. Replace the list with `pip install -r requirements.txt -r requirements-hardware.txt` — one source, not two | **F-300** |
+| B13.3 | **Document the dependency layout.** `requirements.txt` / `-hardware` / `-dev`, `docs/requirements-docs.txt`, and the `versions.env` pairing manifest are live and unmentioned anywhere. Say what each is for and which the installer reads | **F-302** |
+| B13.4 | **Document the CI, in both repositories.** Five checks on every cinemate PR since #131, and cinepi-raw's first workflow from B10.6. What each protects, and that a ratchet is tightened when reality improves and never raised to make a job pass. Depends on B10.6 landing (#60) | **F-303** |
+| B13.5 | **cinepi-raw README: `python-pip` at `:17` cannot install** on any image this project targets — `:51` already gets it right with `python3-pip`. While there: add the test-suite and CI section B10.6 earns | **F-304** |
+| B13.6 | **Give the install document step-level correspondence.** `main()` runs **45 named steps**; the prose mirrors none of them and never mentions `align_pi5_kernel_baseline`, the two sensor-support steps, `configure_rp1_overclock`, `refresh_pi5_boot_handoff`, `configure_audio_rtprio` or `seed_redis_defaults` by name. Structure the document so each section names the installer function it corresponds to — that is what makes the two checkable against each other in future, and it closes F-266's missing recovery-console section at the same time | **F-301**, F-266 |
+| B13.7 | **Re-check the two claims that rest on retracted premises.** The recovery console's degradation ladder, described in terms of a virtualenv that no longer exists — **read `cinemate-recovery.py` before rewriting**, the mechanism probably survives even though the framing does not, and F-221 records this component as a strength to preserve. And `simple-gui.md:15`'s "2 GB boards" attribution, which PI-016 contradicted for the tested board | F-305, F-306 |
+
+**Why this batch exists at all, stated once:** the audit's own `docs_drift_check.py` passes
+clean on a tree where the installation guide builds an environment the installer deletes. A
+check that compares names cannot compare meaning. That is a limit of the tooling, not a
+failure of it — but it means prose against behaviour stays a **reading** task, and needs
+redoing whenever behaviour changes. #138 changed behaviour; this is the redo.
+
+**Ordering:** B13.1 and B13.2 first and together — they are the two that send a reader down a
+path that does not work. B13.5 is independent and one line plus a section. B13.6 is the real
+work and wants the installer open beside the document.
+
+**Verification:** `docs_drift_check.py` must stay clean and `mkdocs build --strict` must exit
+0 — necessary, not sufficient, since both already pass today. **The real verification for
+B13.1 and B13.2 is a clean install performed by following the document**, not the script.
+That is the only test that distinguishes a doc that is accurate from one that merely parses.
+
+---
+
+### B14 · Format drive from the settings editor's RAW pane
+
+*(The first batch that is a feature, not remediation — operator-requested 2026-08-25. It
+follows B11's precedent of tracking post-audit field work here so one ledger holds
+everything. Closes no findings.)*
+
+The RAW files pane browses, downloads and deletes takes but cannot prepare a drive — yet
+the format backend has existed all along: `SSDMonitor.format_drive()` (unmount escalation,
+repartition when the partition underfills the disk, `mkfs.{ext4,exfat,ntfs}` labelled
+`RAW`, remount), the CLI `format` command, and `_test/test_ssd_monitor_format.py`. B14 is
+the missing UI wiring only.
+
+**Full implementation spec: [`FORMAT-DRIVE-PLAN.md`](FORMAT-DRIVE-PLAN.md) in this
+directory** — a verbatim copy of the operator-side handoff plan, written against `dev`
+(`13ab022`). The operator-settled decisions, recorded once here:
+
+- Dispatch goes **through the command executor** (`handle_received_data("format <fs>")`
+  — the same serialised path CLI/serial/web-API share), accepting that the dispatch lock
+  reports `busy` to other commands for the format's duration. Formatting is exclusive by
+  nature.
+- The browser surface allows destructive operations **ungated**, exactly like the pane's
+  existing clip delete; the existing danger confirm modal is the are-you-sure step.
+  `api.py`'s `allow_destructive` gate keeps protecting headless IoT clients and is
+  untouched.
+- exFAT is the default selection; ext4 and NTFS equally selectable. Active drive only.
+  Refuse-while-recording (409) as a sequencing interlock, not a permissions gate.
+
+| commit | change | closes |
+|---|---|---|
+| B14.1 | `POST /settings-editor/api/raw/format` — validates the filesystem, refuses while recording, dispatches `format <fs>` via `COMMAND_EXECUTOR`, then verifies against the remounted filesystem (the dispatcher ignores handler return values, so the active mount is the only truthful status source; accept `ntfs`/`ntfs3`/`fuseblk` as NTFS) | — |
+| B14.2 | The control on the active storage card: exFAT-default select + `Format…` danger button + confirm modal naming device, size and filesystem; ES5 to match the template | — |
+| B14.3 | `_test/test_settings_editor_format.py` — blueprint tests off `test_web_api_blueprint.py`'s pattern (real `CommandExecutor`, mocked controller, patched `storage_summary`) | — |
+
+**Branch:** `feature/raw-pane-format-drive` off `dev`; merge only after hardware passes.
+
+**Verification:** desk — the full `_test/` suite green. Hardware — **destructive, needs a
+scratch drive**: all three filesystems format and remount with label `RAW` at full
+capacity; a format attempt during recording is refused; `busy` during an in-flight format
+recovers afterwards; no mount fight with `storage-automount.service` after the remount.
+The checklist with exact steps is in the plan file.
 
 ---
 

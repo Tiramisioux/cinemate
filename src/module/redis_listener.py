@@ -1,10 +1,10 @@
-import redis
 import logging
 import threading
 import datetime
 import json
 from collections import deque
 from module.redis_controller import ParameterKey
+from module.config_loader import as_bool
 
 import os
 import re
@@ -12,22 +12,28 @@ import time
 import math
 
 class RedisListener:
+    # Number of per-frame framerate samples averaged into fps_actual. At 24-60
+    # fps this is a 1-2 s window: long enough to settle the per-frame jitter,
+    # short enough that an fps change shows up in the key almost immediately.
+    FPS_ACTUAL_WINDOW = 100
+
     def __init__(
         self,
         redis_controller,
         ssd_monitor,
         framerate_callback=None,
-        host='localhost',
-        port=6379,
-        db=0,
         *,
         live_sync_warning_tolerance_frames: int | float = 5,
         live_sync_startup_guard_frames: int | float = 10,
         final_sync_analysis_tolerance_frames: int | float = 1,
         tc_drop_jitter_tolerance_frames: int | float = 1,
     ):
-        self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
-        
+        # Share redis_controller's client instead of opening a second
+        # connection to the same host/port/db (F-105) -- pubsub() still hands
+        # back a dedicated subscription per call, so cp_stats and cp_controls
+        # each get their own, same as before.
+        self.redis_client = redis_controller.r
+
         self.pubsub_stats = self.redis_client.pubsub()
         self.pubsub_controls = self.redis_client.pubsub()
         self.channel_name_stats = "cp_stats"
@@ -37,8 +43,11 @@ class RedisListener:
         self.lock = threading.Lock()
         self.is_recording = False
         self.framerate_values = []
-        self.sensor_timestamps = deque(maxlen=100)
-        
+        # Rolling window of the instantaneous framerates cinepi-raw publishes on
+        # cp_stats, keyed by cameraPort. This is what feeds fps_actual; see
+        # _publish_measured_framerate().
+        self.framerate_samples = {}
+
         self.recording_start_time = None
         self.recording_end_time = None
         
@@ -379,7 +388,7 @@ class RedisListener:
             logging.info("Recording resolution reconfigure started; suspending frame sync/drop warnings.")
         self.recording_reconfigure_pending = True
         self.recording_reconfigure_grace_until = now + datetime.timedelta(seconds=5)
-        self.sensor_timestamps.clear()
+        self.framerate_samples.clear()
         self.current_framerate = None
 
     def _finish_recording_reconfigure_split(self, raw_count: int, now: datetime.datetime) -> None:
@@ -403,7 +412,7 @@ class RedisListener:
         self.recording_reconfigure_pending = False
         self.recording_reconfigure_requested_at = None
         self.recording_reconfigure_grace_until = now + datetime.timedelta(seconds=1)
-        self.sensor_timestamps.clear()
+        self.framerate_samples.clear()
         self.current_framerate = None
         self.last_framecount = self.framecount_segment_base + raw_count
         logging.info(
@@ -561,17 +570,7 @@ class RedisListener:
         except Exception:
             return False
 
-        if value is None:
-            return False
-
-        text = str(value).strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(value)
 
     def _determine_expected_fps(self) -> float | None:
         if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:
@@ -882,7 +881,6 @@ class RedisListener:
                         if raw_write_failures is not None and not self.awaiting_fresh_framecount:
                             self.hw_write_failures = raw_write_failures
                         color_temp = stats_data.get('colorTemp', None)
-                        sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
                         # The cp_stats channel is shared by every cinepi-raw
                         # process (cam0 and cam1), and the payload's `timestamp`
@@ -893,6 +891,15 @@ class RedisListener:
                         # single-camera behaviour.
                         camera_port = stats_data.get('cameraPort', 'cam0')
                         self.current_framerate = self._coerce_float(stats_data.get('framerate', None))
+                        # cinepi-raw computes `framerate` as 1e9 / (this sensor
+                        # timestamp - the previous one) per completed request
+                        # (rpicam_app.cpp CompletedRequest handling), so it is a
+                        # genuine measurement, not the requested rate echoed back.
+                        # It publishes 0 for the first frame of a run and for a
+                        # repeated timestamp -- those are not rate measurements,
+                        # so they must not enter the mean.
+                        if self.current_framerate is not None and self.current_framerate > 0:
+                            self._record_framerate_sample(camera_port, self.current_framerate)
 
                         if color_temp:
                             self.colorTemp = color_temp
@@ -933,13 +940,7 @@ class RedisListener:
                                 self.redis_controller.set_value(ParameterKey.BUFFER.value, display_buffer)
                                 #logging.info(f"Buffer size changed to {display_buffer}")
 
-                        # Update sensor timestamps
-                        if sensor_timestamp is not None:
-                            self.sensor_timestamps.append(int(sensor_timestamp))
-                            self.calculate_average_framerate_last_100_frames()
-                        
-                        if len(self.sensor_timestamps) > 1:
-                            self.calculate_current_framerate()
+                        self._publish_measured_framerate()
 
                         # Update framecount in Redis (only if it has changed, and doesnt report a lower number than before, except 0
                         self._maybe_publish_framecount(self.frame_count)
@@ -1106,9 +1107,6 @@ class RedisListener:
                         self._update_live_frames_in_sync()
                         self.last_stats_message_time = now
                         
-                        # # Calculate average framerate of last 100 frames
-                        # avg_framerate = self.calculate_average_framerate_last_100_frames()
-
                         # # Adjust FPS if necessary
                         # current_time = datetime.datetime.now()
                         # if (current_time - self.last_fps_adjustment_time).total_seconds() >= self.fps_adjustment_interval:
@@ -1149,7 +1147,7 @@ class RedisListener:
         """Debounce-timer callback – clear the flag once the fps key
         has been stable for a while."""
         self.user_changing_fps = False
-        self.redis_controller.set_value("user_changing_fps", 0)
+        self.redis_controller.set_value(ParameterKey.USER_CHANGING_FPS.value, 0)
         logging.debug("user_changing_fps → 0 (fps stable)")
 
     def _note_fps_change(self, new_fps: float):
@@ -1159,7 +1157,7 @@ class RedisListener:
 
         self.last_fps_value = new_fps
         self.user_changing_fps = True
-        self.redis_controller.set_value("user_changing_fps", 1)
+        self.redis_controller.set_value(ParameterKey.USER_CHANGING_FPS.value, 1)
         logging.debug(f"fps changed to {new_fps} → user_changing_fps = 1")
 
         # leeway = max(0.5 s, two frame-intervals)
@@ -1483,25 +1481,55 @@ class RedisListener:
                 continue
 
 
-    def calculate_current_framerate(self):
-        if len(self.sensor_timestamps) > 1:
-            timestamps_in_seconds = [ts / 1_000_000 for ts in self.sensor_timestamps]
-            time_diffs = [t2 - t1 for t1, t2 in zip(timestamps_in_seconds, timestamps_in_seconds[1:])]
-            
-            if time_diffs:
-                average_time_diff = sum(time_diffs) / len(time_diffs)
-                logging.debug(f"Time differences between consecutive frames: {time_diffs}")
-                logging.debug(f"Average time difference: {average_time_diff}")
-                
-                self.current_framerate = ((1.0 / average_time_diff) * 1000) if average_time_diff != 0 else 0
-                logging.debug(f"Calculated current framerate: {self.current_framerate:.6f} FPS")
-            else:
-                logging.warning("Time differences calculation resulted in an empty list.")
-                self.current_framerate = None
-        else:
-            self.current_framerate = None
-        self.redis_controller.set_value('fps_actual', self.current_framerate)
-        
+    def _record_framerate_sample(self, camera_port: str, framerate: float) -> None:
+        samples = self.framerate_samples.get(camera_port)
+        if samples is None:
+            samples = deque(maxlen=self.FPS_ACTUAL_WINDOW)
+            self.framerate_samples[camera_port] = samples
+        samples.append(framerate)
+
+    def _publish_measured_framerate(self) -> None:
+        """Publish the measured sensor rate to fps_actual.
+
+        fps_actual used to be derived from a `sensorTimestamp` field in the
+        cp_stats payload, but cinepi-raw has never published that key (see
+        cinepi_controller.cpp, where the stats JSON is built), so the deque
+        feeding it stayed empty and the key kept whatever the installer seeded
+        -- a literal 24 -- for the life of the system. cinepi-raw does publish
+        a per-request `framerate`, which is the same 1/dt measurement the old
+        code was trying to reconstruct, so average that instead.
+
+        A window is averaged rather than published raw because each sample is
+        one inter-frame interval and jitters by whole fps at 24-60 fps; a
+        windowed mean is what "the fps actually is" means to a reader of this
+        key.
+
+        Deliberately does not touch self.current_framerate: the drop-detection
+        fallback tier compares that against the requested fps and needs the
+        instantaneous value to see a single stalled frame. Smoothing it there
+        would blunt drop detection.
+        """
+        # Dual-sensor runs share the cp_stats channel, so keep the ports apart
+        # and report the primary one -- averaging two sensors running at
+        # different rates would produce a number matching neither.
+        for port in ('cam0', 'cam1'):
+            samples = self.framerate_samples.get(port)
+            if not samples:
+                continue
+            # Average the frame *intervals*, then invert. Averaging the rates
+            # directly overestimates whenever the interval jitters (the mean of
+            # 1/dt exceeds 1/mean(dt)), which would report a camera locked to
+            # 40 fps as ~40.25.
+            mean_interval = sum(1.0 / f for f in samples) / len(samples)
+            if mean_interval <= 0:
+                continue
+            # Rounded so set_value's same-value dedup absorbs most of the
+            # per-frame churn instead of writing Redis at the frame rate.
+            self.redis_controller.set_value(
+                ParameterKey.FPS_ACTUAL.value, round(1.0 / mean_interval, 2)
+            )
+            return
+
     # ------------------------ DNG enumeration helpers ------------------------
     _DNG_SUFFIX = ('.dng', '.DNG')
     _IDX_RE = re.compile(r'_(\d+)\.dng$', re.IGNORECASE)
@@ -2027,23 +2055,6 @@ class RedisListener:
         self.fps_timeline = []
 
 
-    def calculate_average_framerate_last_100_frames(self):
-        if len(self.sensor_timestamps) > 1:
-            timestamps_in_seconds = [ts / 1_000_000 for ts in self.sensor_timestamps]
-            time_diffs = [t2 - t1 for t1, t2 in zip(timestamps_in_seconds, timestamps_in_seconds[1:])]
-            
-            if time_diffs:
-                average_time_diff = sum(time_diffs) / len(time_diffs)
-                average_fps = (1.0 / average_time_diff) * 1000 if average_time_diff != 0 else 0
-                #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS : fps: {self.redis_controller.get_value('fps')}")
-                
-                return average_fps
-            else:
-                logging.warning("Time differences calculation resulted in an empty list.")
-        else:
-            logging.warning("Not enough sensor timestamps to calculate average framerate.")
-        return None
-    
     def adjust_fps(self, avg_framerate):
         if avg_framerate is None:
             return

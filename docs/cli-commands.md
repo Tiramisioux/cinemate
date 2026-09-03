@@ -1,6 +1,6 @@
 # Commands reference
 
-By typing `cinemate`in the Raspberry Pi CLI we can start Cinemate manually. This will stop any autostarted instance of Cinemate, show the camera startup sequence and provide the Cinemate "pseudo CLI" where can type commands for changing the camera controls and also to start and stop recording.
+By typing `cinemate` in the Raspberry Pi CLI we can start Cinemate manually. This will stop any autostarted instance of Cinemate, show the camera startup sequence and provide the Cinemate "pseudo CLI" where can type commands for changing the camera controls and also to start and stop recording.
 
 These commands can also be sent to the Pi as serial via the Tx/Rx pins or via USB. This can be useful for creating external controllers.
 
@@ -35,6 +35,7 @@ The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see
 | `set hdr gain adder <n>`                   | int               | `set hdr gain adder 2`                  | ClearHDR low-gain gain adder 0–5 (2 = +12 dB), applied live |
 | `inc hdr gain adder` / `dec hdr gain adder`| -              |                                          | Step gain adder; `arrays.hdr_gain_adder.free_increment` in free stepping |
 | `set log [<10\|12\|off>]`                   | int, string or none | `set log` / `set log 10` / `set log off` | Toggle [CineMate Log](cinemate-log.md) on/off using the live mode's default target, or force `10`/`12` explicitly where the live mode supports it; restarts the camera when idle, deferred while recording |
+| `set thumbnail <n>`                        | int               | `set thumbnail 1`                       | Embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour, applied live (no camera restart), written per frame into new takes only. `thumbnail_size` (the plane's downscale) is not exposed here — its handler restarts the camera, unlike this one |
 | `set wb [<Kelvin>]`                        | int or none       | `set wb 5600`                           | Set white balance or cycle active WB steps      |
 | `inc wb` / `dec wb`                        | -              |                                 | Step white balance; `arrays.wb.free_increment` (100 K default) in free stepping |
 | `set resolution [<mode>]`                  | int or none       | `set resolution 2`                      | Apply or cycle sensor mode                      |
@@ -60,7 +61,7 @@ The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see
 | `set all lock [0/1]`                       | 0/1 or none       | `set all lock 0`                        | Toggle all exposure locks at once               |
 | `set fps double [0/1]`                     | 0/1 or none       |                         | Instant or toggled 2× FPS mode                  |
 | `reboot` / `shutdown`                      | -              |                                 | Safely reboot or halt the Pi                    |
-| `restart camera`                           | -              | `                        | Restart the libcamera pipeline                  |
+| `restart camera`                           | -              |                          | Restart the libcamera pipeline                  |
 | `restart cinemate`                         | -              |                       | Restart the Cinemate process                    |
 | `set iso free [0/1]`                       | 0/1 or none       | `set iso free 1`                        | Allow any ISO in 100-unit steps (100–3200), instead of presets |
 | `set shutter a free [0/1]`                 | 0/1 or none       | `set shutter a free 0`                  | Allow any shutter angle in 1° steps (1–360°)    |
@@ -94,6 +95,6 @@ On a dual-sensor rig you can prepend a camera token — `cam0`, `cam1`, or `both
 
 ## Storage pre-roll warm-up
 
-`storage preroll` triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `settings.auto_storage_preroll` is set to `false` in `settings.jsonc`.
+`storage preroll` triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `system.storage.auto_preroll` is set to `false` in `settings.jsonc`.
 
 See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.

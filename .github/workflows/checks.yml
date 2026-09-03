@@ -63,11 +63,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: shellcheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y shellcheck
           find . -name '*.sh' -not -path './.git/*' -print0 \
             | xargs -0 shellcheck -f gcc
+
+      # F-195: compile-raw.sh and run_cinemate.sh are heredoc bodies inside
+      # cinemate-install.sh, written to the Pi at install time -- the sweep
+      # above only finds committed *.sh files, so these two never got any
+      # lint coverage. They're the two scripts a user actually invokes.
+      - name: shellcheck the scripts the installer generates
+        run: python3 tools/check_generated_scripts.py
 
   drift:
     name: contract drift
@@ -86,6 +96,13 @@ jobs:
       - name: Docs match the code
         run: python3 tools/docs_drift_check.py --repo . --strict
 
+      # B10.1 gave every one of the 228 findings a disposition -- fixed /
+      # guarded / accepted / superseded / strength. This is what keeps that
+      # true: a new finding appended without one, or a typo'd value, fails
+      # here instead of silently reopening the gap B10.1 closed.
+      - name: Every finding has a disposition
+        run: python3 tools/findings_disposition_check.py --repo .
+
       - name: Design tokens match between the GUIs
         run: python3 tools/design_token_diff.py --repo . --strict
 
@@ -93,6 +110,9 @@ jobs:
       # is never the fix.
       - name: Every offered action resolves on the controller
         run: python3 tools/gui_field_extract.py --repo . --max-unresolved 0
+
+      - name: Link frequencies live only in the sensor database
+        run: python3 tools/link_frequency_drift_check.py --repo . --strict
 
       # Needs both repositories: the key contract spans them.
       - name: Check out cinepi-raw

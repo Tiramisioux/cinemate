@@ -7,6 +7,7 @@ The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on se
 - [**libcamera**](https://libcamera.org) – Ideas on board
 - [**cpp-mjpeg-streamer**](https://github.com/nadjieb/cpp-mjpeg-streamer) – Nadjieb Mohammadi
 - [**lgpio**](https://github.com/joan2937/lg) – Joan
+- [**PiShrink**](https://github.com/Drewsif/PiShrink) – Drew Bonasera
 
 Also thanks to Simon at [Altcinecam](https://altcinecam.com) for support and assistance!
 

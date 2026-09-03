@@ -1,6 +1,7 @@
 from flask_socketio import emit
 import threading
 from module.redis_controller import ParameterKey
+from module.config_loader import as_bool
 
 def register_events(socketio, redis_controller, cinepi_controller, simple_gui, sensor_detect):
     """Server → browser push only.
@@ -12,10 +13,9 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
     """
 
     def resolution_switching_active():
-        return str(
+        return as_bool(
             redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value, "0")
-            or "0"
-        ).strip().lower() in ("1", "true", "yes", "on")
+        )
 
     def selected_resolution_mode():
         target_mode = redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_MODE.value)

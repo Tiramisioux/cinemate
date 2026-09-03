@@ -1,4 +1,6 @@
-## Compatible sensors 
+# Camera sensors and frame rates
+
+## Compatible sensors
 
 Higher frame rates need fast storage. If you see a purple/magenta `DROP` indicator while recording, lower the FPS or switch to faster media.
 
@@ -64,7 +66,7 @@ Recording time assumes a 1 TB drive (1,000,000 MB decimal, matching Cinemate's o
 | IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | off | 16.81 | 40m |
 | IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | on, default (→12) | 12.61 | 53m |
 | IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | on, forced (→10) | 10.51 | 1h 03m |
-| IMX585 | 1, ClearHDR + 12-bit (CCMP12) | 3856 x 2180 | 12 | refused -- stays linear* | 12.61 | 53m |
+| IMX585 | 1, ClearHDR + 12-bit (CCMP12) | 3856 x 2180 | 12 | on (→10 only)* | 10.51 | 1h 03m |
 | IMX283 | 0 | 5568 x 3664 | 12 | off | 30.60 | 22m |
 | IMX283 | 0 | 5568 x 3664 | 12 | on (→10) | 25.50 | 26m |
 | IMX283 | 1 | 2784 x 1828 | 12 | off | 7.63 | 1h 27m |
@@ -75,9 +77,9 @@ Recording time assumes a 1 TB drive (1,000,000 MB decimal, matching Cinemate's o
 | IMX283 | 4 | 5568 x 3094 | 10 | not supported (10-bit mode) | 21.54 | 31m |
 | IMX283 | 5 | 3936 x 2176 | 10 | not supported (10-bit mode) | 10.71 | 1h 02m |
 
-*12-bit ClearHDR is CCMP-companded on-sensor; log-encoding it would compand twice, so `set log` has no effect there -- use 16-bit ClearHDR for log, or turn ClearHDR off. See [CineMate Log support](#cinemate-log-support) below.
+*12-bit ClearHDR is CCMP-companded on-sensor, so it cannot take a linear 12→10 curve. `set log` still works: cinepi-raw decompands to 16-bit linear first, then applies the 16→10 curve as one composed table. Only target 10 exists on this path — `set log 12` is refused. See [CineMate Log support](#cinemate-log-support) below.
 
-Resolutions above are the modes currently defined in `resources/sensors.json`; the IMX283 rows in the [Compatible sensors](#compatible-sensors) table above list an older/alternate mode set and haven't been reconciled with this one yet.
+The IMX283 rows here and in [Compatible sensors](#compatible-sensors) above quote the same modes at different sizes. This table and `resources/sensors.json` use the full readout including the optical-black margin (2784, 3936 and 5568 wide) — those are the sizes the system works from, so they are what the mode filter and the GUI show. The Compatible sensors table quotes the cropped image sizes (2736, 3840). The two have not been reconciled; doing so needs a `--list-cameras` capture from the Pi.
 
 ## CineMate Log support
 
@@ -92,6 +94,43 @@ Resolutions above are the modes currently defined in `resources/sensors.json`; t
 | IMX477, IMX296, all others | any | not supported | — black level doesn't match |
 
 IMX477 is not a hardware limitation — its 12-bit modes would work the same way — it needs sensor-aware spec selection on the `cinepi-raw` side that hasn't been built yet.
+
+## CSI-2 link frequency
+
+The link frequency sets how fast the sensor pushes pixels down the MIPI lanes,
+and so what frame rate a mode can reach. Where it is selectable, Cinemate
+offers it per port in the settings editor's Boot config pane — see
+[Overclocking the Pi](overclocking.md), because on a Pi 5 the receiver has to
+be overclocked before the higher rates buy anything.
+
+`resources/sensors.json` is the source of truth for the values below.
+
+| Sensor | Lanes | Default | Selectable | Values |
+|--------|-------|---------|------------|--------|
+| IMX585 | 4 | 720 MHz | **yes** | 297 / 360 / 445.5 / 594 / 720 / 891 / 1039.5 MHz |
+| IMX283 | 4 | 720 MHz | **yes** | 360 / 720 MHz — 720 is also the ceiling |
+| IMX477 | 2 | 450 MHz | not yet | driver computes any ~3 MHz multiple (kernel ≥ 6.12.49) |
+| IMX296 | 1 | 594 MHz | no | fixed |
+| IMX519 | 2 | 408 MHz | no | fixed |
+
+**IMX585** carries per-value frame rates in
+[Overclocking the Pi](overclocking.md#imx585). 1188 MHz exists in the driver
+and is deliberately not offered: frame drops on Pi 5, unsupported on Pi 4.
+
+**IMX283**'s two values are the only two Sony ships register sequences for.
+720 MHz is both the default and the silicon ceiling, so the only selectable
+alternative is slower. The 4K modes' 44/41 fps are the link ceiling at those
+bit depths — more frame rate means a lower bit depth, not a faster link.
+Selecting the non-default value needs the `link-frequency` overlay parameter
+added in `Tiramisioux/imx283-v4l2-driver` `6.12.y` at `257c9cf`.
+
+**IMX477** is not a hardware limitation. Its driver accepts any exact multiple
+of 3 MHz and RPi's own testing found ~909 MHz stable, but it vouches for no
+upper bound, so Cinemate keeps the menu hidden until the values are verified
+on this stack.
+
+**IMX296**'s 60 fps cap is readout-limited, not link-limited; a faster link
+would buy nothing.
 
 ## Sensor size, crop factor and film-format equivalents
 

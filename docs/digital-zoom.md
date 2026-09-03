@@ -17,7 +17,7 @@ You can also map these to a button or rotary encoder in `settings.jsonc`.
 
 ## Settings
 
-The zoom behaviour lives in the `preview` section of [`settings.jsonc`](settings-json.md):
+The zoom behaviour lives in the `hdmi_display.preview` section of [`settings.jsonc`](settings-json.md):
 
 - `default_zoom` – the zoom factor applied at startup (default `1.0`).
 - `zoom_steps` – the list of factors that `set zoom`, `inc zoom`, and `dec zoom` cycle through.

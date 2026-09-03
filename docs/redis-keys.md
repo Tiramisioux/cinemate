@@ -16,8 +16,9 @@ Each entry explains which component normally writes the key and whether it makes
 | exposure_time | Cinemate | Current exposure time in seconds | No |
 | fps | Cinemate -> CinePi-raw | Target frames per second | Yes |
 | fps_user | Cinemate | User-selected FPS value stored by the UI/controller | No |
-| fps_actual | CinePi-raw -> Cinemate | Measured FPS from the running pipeline | No |
-| fps_last | Cinemate | Previous stable FPS value from stats | No |
+| fps_actual | Cinemate (RedisListener) | Measured frame rate: the mean of the last 100 inter-frame intervals CinePi-raw reports on `cp_stats`. Reports cam0 on dual-sensor rigs | No |
+| user_changing_fps | Cinemate (RedisListener) | `1` while an fps change is debouncing; cleared once `fps` has been stable for a while | No |
+| fps_last | Cinemate | FPS at the previous shutdown, restored as the startup FPS | No |
 | fps_max | Cinemate startup | Maximum FPS supported by the current sensor mode | No |
 | fps_phase_lock | Cinemate startup | Runtime enable for CinePi-raw's closed-loop frame-rate phase lock, from `sensors.<cam>.phase_lock` in settings.jsonc (default on); read once at CinePi-raw startup, not live | No |
 | sensor_mode | Cinemate -> CinePi-raw startup | Active sensor resolution/mode index | Yes (causes pipeline restart) |
@@ -35,7 +36,7 @@ transition instead of a stale value.
 
 | Key | Written by | Description | Safe to change manually? |
 |-----|------------|-------------|--------------------------|
-| dynamic_resolution_enabled | Cinemate | Toggle for automatic FPS-driven resolution downgrade/upgrade (`set dynamic_resolution_enabled`); persisted and read back at startup, defaulting to on when unset | Yes |
+| dynamic_resolution_enabled | Cinemate | Toggle for automatic FPS-driven resolution downgrade/upgrade (`set dynamic resolution`); persisted and read back at startup, defaulting to on when unset | Yes |
 | dynamic_resolution_active | Cinemate | `1` while a lower resolution mode is currently substituted in to sustain the requested FPS | No |
 | dynamic_resolution_desired_mode | Cinemate | The sensor mode the user actually asked for; dynamic resolution switches away from and back to this mode as FPS allows | No |
 | resolution_switching | Cinemate | `1` while a resolution change (manual or dynamic) is in flight; cleared when CinePi-raw's raw-stream-ready log line reports the new stream at the target size, or after a 2.5 s hold timer | No |
@@ -53,6 +54,8 @@ transition instead of a stale value.
 | hdr_threshold_high | Cinemate -> CinePi-raw | ClearHDR data-selection threshold, high side (0–4095). Applied live to the sensor (as a pair with `hdr_threshold_low`), and re-applied at every CinePi-raw start | Yes (publish key to apply) |
 | hdr_blend | Cinemate -> CinePi-raw | ClearHDR HG/LG blending mode, driver menu 0–8 (0 = HG 1/2 + LG 1/2). Applied live | Yes (publish key to apply) |
 | hdr_gain_adder | Cinemate -> CinePi-raw | ClearHDR low-gain path gain adder, driver menu 0–5 (2 = +12 dB). Applied live | Yes (publish key to apply) |
+| thumbnail | Cinemate -> CinePi-raw | Embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour. Applied live (no camera restart), written per frame into new takes only | Yes (publish key to apply) |
+| thumbnail_size | Cinemate -> CinePi-raw | Right-shift downscale of the thumbnail plane; `0` is the full lores size. Changing it restarts the camera. Seeded at launch only — no CLI verb or settings-editor field yet | No (seeded to avoid a stale pre-Phase-0 resident value collapsing the thumbnail; change by hand only if you understand the restart) |
 | log_encode_request | Cinemate | [CineMate Log](cinemate-log.md) request, shared across every launched camera like `hdr`: `0` off, `1` on (use the live mode's default target), `10` / `12` force that target. Set by `set log`; each camera resolves it independently against its own sensor at the next restart | No (use `set log`) |
 | log_encode_cam0 / log_encode_cam1 | CinePi-raw (per camera) startup | The target that camera was actually **launched** with: `0` = off/not applied, else `10` or `12`. Drives the Simple GUI `LOG10`/`LOG12` badge — deliberately not the same as `log_encode_request`, so the badge never shows a target that isn't running yet | No |
 | is_recording | Cinemate -> CinePi-raw | Requested record state. Edge-triggered: `0 -> 1` starts, `1 -> 0` stops | Yes |
@@ -84,6 +87,7 @@ transition instead of a stale value.
 | storage_recorder_profile | Cinemate (SSD monitor) | Recorder worker profile selected from the current filesystem | No |
 | space_left | Cinemate (SSD monitor) | Remaining free space in GB | No |
 | write_speed_to_drive | Cinemate (SSD monitor) | Current write speed in MB/s | No |
+| FSCK_STATUS | Cinemate (SSD monitor) | Result of the periodic filesystem check run after mount, e.g. `OK ...` / `FAIL ...`; cinemate-internal, cinepi-raw never reads it | No |
 | file_size | Cinemate | Bytes per frame for the current mode | No |
 | memory_alert | Cinemate | RAM percentage at which the watchdog auto-stopped recording (integer, set at the 80 % trip point); `0` when clear | No |
 | cam_init | CinePi-raw | Internal startup flag | No |
@@ -91,5 +95,5 @@ transition instead of a stale value.
 | audio_capture_gain_db | Cinemate startup | Capture gain in dB applied to the active USB mic, from `audio_capture` in settings.jsonc (per-mic-type block, e.g. `16bit.capture_gain_db`); read back by the USB hotswap monitor on mic reconnect | No |
 | trigger_mode | -- | Defined in `ParameterKey` but not currently written or read anywhere in Cinemate or CinePi-raw | -- |
 | gui_layout | Cinemate | Path to the active GUI layout preset | No |
-| pi_model | Cinemate | Raspberry Pi model string | No |
+| pi_model | Cinemate startup | Platform family, not the full board name: `pi5` (Pi 5 / 500 / CM5), `pi4` (Pi 4 / 400 / CM4), `other`, or `unknown` | No |
 | sensor | Cinemate startup | Active camera model key | No |

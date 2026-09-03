@@ -1,0 +1,54 @@
+{
+ "mode3_fullres": {
+  "mode": 3,
+  "b": 1.0,
+  "domain": "KEEP_PEDESTAL",
+  "black": 200,
+  "white": 63265,
+  "white_exact": 63264.662325,
+  "T1": 500.3389,
+  "T2": 11500.0,
+  "s1": 0.015625,
+  "s2": 0.0625,
+  "P": 200.0,
+  "knee_codes": [
+   700.3389,
+   872.2086046875
+  ],
+  "knots_L": [
+   500.3389,
+   11500.0
+  ],
+  "entries": 4096,
+  "files": [
+   "ccmp_decode_mode3_fullres.bin",
+   "ccmp_decode_mode3_fullres.txt"
+  ]
+ },
+ "mode2_binned": {
+  "mode": 2,
+  "b": 4.0,
+  "domain": "KEEP_PEDESTAL",
+  "black": 200,
+  "white": 62704,
+  "white_exact": 62703.78654375,
+  "T1": 500.9431,
+  "T2": 11500.0,
+  "s1": 0.015625,
+  "s2": 0.0625,
+  "P": 200.0,
+  "knee_codes": [
+   325.235775,
+   368.200841015625
+  ],
+  "knots_L": [
+   125.235775,
+   2875.0
+  ],
+  "entries": 4096,
+  "files": [
+   "ccmp_decode_mode2_binned.bin",
+   "ccmp_decode_mode2_binned.txt"
+  ]
+ }
+}

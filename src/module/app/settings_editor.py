@@ -18,22 +18,30 @@ from pathlib import Path
 
 from flask import (
     Blueprint,
-    after_this_request,
+    Response,
     current_app,
     jsonify,
+    make_response,
     render_template,
     request,
     send_file,
+    send_from_directory,
+    stream_with_context,
 )
 
+from module.sensor_database import resolve_database_path
 from module.config_loader import (
+    DEFAULT_CONFORM_FRAME_RATE,
     SettingsLoadError,
     _apply_settings_defaults,
     load_settings,
     strip_jsonc,
+    DEFAULT_SETTINGS_PATH,
 )
-from module.app import boot_config, raw_files
+from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
+from module.redis_controller import ParameterKey, smpte_frame_base
+from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
 
@@ -44,10 +52,7 @@ settings_editor_bp = Blueprint(
     template_folder="templates",
 )
 
-# Every settings.jsonc caller in this codebase hardcodes this same absolute
-# path (src/main.py:51, cinepi_multi.py:27, cinepi_controller.py:27,
-# wifi_hotspot.py:37) -- it is a live-hardware constant, not configurable.
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 
 # Shipped template (resources/settings/settings_default.jsonc) -- used as
 # (a) the GET /api/settings fallback when the live file is missing, and
@@ -62,52 +67,88 @@ STOCK_SETTINGS_FILE = Path(__file__).resolve().parents[3] / "resources/settings/
 # 'storage_preroll' dropped (it's CLI/serial/web-API-only, bound to a
 # separate storage_preroll object, not a cinepi_controller method -- see
 # cli_commands.py's 'storage preroll' entry).
+# Every dispatcher (gpio_input.py, i2c/quad_rotary_controller.py,
+# cli_commands.py) resolves the method by getattr and calls
+# `method(*action.get("args", []))`. No argument is ever injected and arity is
+# never checked, so an action saved WITHOUT args calls the method with zero
+# arguments -- and the method's own signature is the only thing deciding what
+# happens. "no_arg" records that, per method, so the editor can say which it
+# is instead of labelling every blank the same way:
+#
+#   "cycle"    -- value=None and the body steps to the next entry in the list
+#   "toggle"   -- value=None and the body inverts the current flag
+#   "required" -- a bare positional (TypeError), or an optional parameter with
+#                 no None branch, so leaving it blank is never what you want
+#
+# The distinction is not cosmetic. Before it existed the arg control offered
+# one blank option reading "(none - toggle)" for all of them, which was untrue
+# for eleven methods -- including format_drive, where `filesystem or "exfat"`
+# means a blank argument silently formats the card.
 ACTION_METHODS = [
     {"group": "Record", "value": "rec", "label": "Start / stop recording"},
-    {"group": "ISO", "value": "set_iso", "label": "Set ISO",
+    {"group": "ISO", "value": "set_iso", "label": "Set ISO", "no_arg": "required",
      "arg": {"type": "select", "options": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200]}},
     {"group": "ISO", "value": "inc_iso", "label": "ISO up one stop"},
     {"group": "ISO", "value": "dec_iso", "label": "ISO down one stop"},
-    {"group": "ISO", "value": "set_iso_lock", "label": "Toggle ISO lock", "arg": {"type": "toggle01"}},
-    {"group": "ISO", "value": "set_iso_free", "label": "Toggle ISO free stepping", "arg": {"type": "toggle01"}},
-    {"group": "Shutter", "value": "set_shutter_a", "label": "Set shutter angle",
+    {"group": "ISO", "value": "set_iso_lock", "label": "Toggle ISO lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "ISO", "value": "set_iso_free", "label": "Toggle ISO free stepping", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Shutter", "value": "set_shutter_a", "label": "Set shutter angle", "no_arg": "required",
      "arg": {"type": "select", "options": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360], "suffix": "°"}},
     {"group": "Shutter", "value": "inc_shutter_a", "label": "Shutter angle up one stop"},
     {"group": "Shutter", "value": "dec_shutter_a", "label": "Shutter angle down one stop"},
-    {"group": "Shutter", "value": "set_shutter_a_nom", "label": "Set nominal shutter angle", "arg": {"type": "number", "step": 0.1}},
-    {"group": "Shutter", "value": "set_shutter_a_sync_mode", "label": "Set shutter-sync mode", "arg": {"type": "toggle01"}},
-    {"group": "Shutter", "value": "set_shutter_a_nom_lock", "label": "Toggle nominal-shutter lock", "arg": {"type": "toggle01"}},
-    {"group": "Shutter", "value": "set_shutter_a_free", "label": "Toggle shutter free stepping", "arg": {"type": "toggle01"}},
-    {"group": "Frame rate", "value": "set_fps", "label": "Set frame rate", "arg": {"type": "select", "options": [25, 33, 50]}},
+    {"group": "Shutter", "value": "set_shutter_a_nom", "label": "Set nominal shutter angle", "no_arg": "required",
+     "arg": {"type": "number", "step": 0.1, "placeholder": "angle"}},
+    {"group": "Shutter", "value": "set_shutter_a_sync_mode", "label": "Set shutter-sync mode", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Shutter", "value": "set_shutter_a_nom_lock", "label": "Toggle nominal-shutter lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Shutter", "value": "set_shutter_a_free", "label": "Toggle shutter free stepping", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Frame rate", "value": "set_fps", "label": "Set frame rate", "no_arg": "required",
+     "arg": {"type": "select", "options": [25, 33, 50]}},
     {"group": "Frame rate", "value": "inc_fps", "label": "Frame rate up one stop"},
     {"group": "Frame rate", "value": "dec_fps", "label": "Frame rate down one stop"},
-    {"group": "Frame rate", "value": "set_fps_lock", "label": "Toggle FPS lock", "arg": {"type": "toggle01"}},
-    {"group": "Frame rate", "value": "set_fps_free", "label": "Toggle FPS free stepping", "arg": {"type": "toggle01"}},
-    {"group": "Frame rate", "value": "set_fps_double", "label": "Toggle double-fps mode", "arg": {"type": "toggle01"}},
-    {"group": "Frame rate", "value": "set_shu_fps_lock", "label": "Toggle nominal shutter+fps lock", "arg": {"type": "toggle01"}},
-    {"group": "White balance", "value": "set_wb", "label": "Set white balance", "arg": {"type": "select", "options": [3200, 4400, 5600], "suffix": "K"}},
+    {"group": "Frame rate", "value": "set_fps_lock", "label": "Toggle FPS lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Frame rate", "value": "set_fps_free", "label": "Toggle FPS free stepping", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Frame rate", "value": "set_fps_double", "label": "Toggle double-fps mode", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Frame rate", "value": "set_shu_fps_lock", "label": "Toggle nominal shutter+fps lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "White balance", "value": "set_wb", "label": "Set white balance", "no_arg": "cycle",
+     "arg": {"type": "select", "options": [3200, 4400, 5600], "suffix": "K"}},
     {"group": "White balance", "value": "inc_wb", "label": "White balance up one stop"},
     {"group": "White balance", "value": "dec_wb", "label": "White balance down one stop"},
-    {"group": "White balance", "value": "set_wb_free", "label": "Toggle WB free stepping", "arg": {"type": "toggle01"}},
-    {"group": "ClearHDR", "value": "set_hdr_threshold_low", "label": "Set HDR threshold low", "arg": {"type": "number", "min": 0, "max": 4095}},
-    {"group": "ClearHDR", "value": "set_hdr_threshold_high", "label": "Set HDR threshold high", "arg": {"type": "number", "min": 0, "max": 4095}},
-    {"group": "ClearHDR", "value": "set_hdr_blend", "label": "Set HDR blend", "arg": {"type": "number", "min": 0, "max": 8}},
-    {"group": "ClearHDR", "value": "set_hdr_gain_adder", "label": "Set HDR gain adder", "arg": {"type": "number", "min": 0, "max": 5}},
-    {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "arg": {"type": "select", "options": ["off", "10", "12"]}},
-    {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
+    {"group": "White balance", "value": "set_wb_free", "label": "Toggle WB free stepping", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "ClearHDR", "value": "set_hdr_threshold_low", "label": "Set HDR threshold low", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 4095, "placeholder": "0-4095"}},
+    {"group": "ClearHDR", "value": "set_hdr_threshold_high", "label": "Set HDR threshold high", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 4095, "placeholder": "0-4095"}},
+    {"group": "ClearHDR", "value": "set_hdr_blend", "label": "Set HDR blend", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 8, "placeholder": "0-8"}},
+    {"group": "ClearHDR", "value": "set_hdr_gain_adder", "label": "Set HDR gain adder", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 5, "placeholder": "0-5"}},
+    {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "no_arg": "toggle",
+     "arg": {"type": "select", "options": ["off", "10", "12"]}},
+    {"group": "Thumbnail", "value": "set_thumbnail", "label": "Set DNG thumbnail mode", "no_arg": "required",
+     "arg": {"type": "select", "options": [0, 1, 2]}},
+    {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "no_arg": "cycle",
+     "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
     {"group": "Zoom / anamorphic", "value": "inc_zoom", "label": "Zoom in one stop"},
     {"group": "Zoom / anamorphic", "value": "dec_zoom", "label": "Zoom out one stop"},
-    {"group": "Zoom / anamorphic", "value": "set_anamorphic_factor", "label": "Set anamorphic desqueeze", "arg": {"type": "select", "options": [1, 1.33, 2], "suffix": "×"}},
-    {"group": "Resolution / preview", "value": "set_resolution", "label": "Change resolution", "arg": {"type": "number", "placeholder": "mode #, blank = cycle"}},
-    {"group": "Resolution / preview", "value": "set_dynamic_resolution_enabled", "label": "Toggle dynamic resolution", "arg": {"type": "toggle01"}},
-    {"group": "Resolution / preview", "value": "set_preview_source", "label": "Set HDMI preview source", "arg": {"type": "select", "options": ["cam0", "cam1", "cam0+cam1"]}},
+    {"group": "Zoom / anamorphic", "value": "set_anamorphic_factor", "label": "Set anamorphic desqueeze", "no_arg": "cycle",
+     "arg": {"type": "select", "options": [1, 1.33, 2], "suffix": "×"}},
+    {"group": "Resolution / preview", "value": "set_resolution", "label": "Change resolution", "no_arg": "cycle",
+     "arg": {"type": "number", "placeholder": "mode #"}},
+    {"group": "Resolution / preview", "value": "set_dynamic_resolution_enabled", "label": "Toggle dynamic resolution", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Resolution / preview", "value": "set_preview_source", "label": "Set HDMI preview source", "no_arg": "cycle",
+     "arg": {"type": "select", "options": ["cam0", "cam1", "cam0+cam1", "pip_cam0", "pip_cam1"]}},
     {"group": "Storage", "value": "mount", "label": "Mount storage"},
     {"group": "Storage", "value": "unmount", "label": "Unmount storage"},
     {"group": "Storage", "value": "toggle_mount", "label": "Toggle mount / unmount"},
     {"group": "Storage", "value": "erase_drive", "label": "Erase drive"},
-    {"group": "Storage", "value": "format_drive", "label": "Format drive", "arg": {"type": "select", "options": ["exfat", "ext4", "ntfs"]}},
-    {"group": "Sensor", "value": "set_filter", "label": "Toggle IR-cut filter", "arg": {"type": "toggle01"}},
-    {"group": "Locks", "value": "set_all_lock", "label": "Toggle all-parameter lock", "arg": {"type": "toggle01"}},
+    # required, not "defaults to exfat": format_drive() falls back to exfat on
+    # a blank argument, so an unset filesystem here would format the card.
+    {"group": "Storage", "value": "format_drive", "label": "Format drive", "no_arg": "required",
+     "arg": {"type": "select", "options": ["exfat", "ext4", "ntfs"]}},
+    # set_filter's else-branch returns "Invalid value provided." -- it acts on
+    # 0 or 1 only and has no toggle branch, whatever its old label implied.
+    {"group": "Sensor", "value": "set_filter", "label": "Set IR-cut filter", "no_arg": "required", "arg": {"type": "toggle01"}},
+    {"group": "Locks", "value": "set_all_lock", "label": "Toggle all-parameter lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
     {"group": "System", "value": "restart_cinemate", "label": "Restart Cinemate"},
     {"group": "System", "value": "restart_camera", "label": "Restart camera process"},
     {"group": "System", "value": "reboot", "label": "Reboot the Pi"},
@@ -122,9 +163,66 @@ def _public_method_names(obj) -> set[str]:
     }
 
 
+# Every state in which the card is being written at rate. is_recording alone
+# is not that set: the post-take buffer flush (is_writing_buf / is_buffering)
+# and storage pre-roll all move frames to disk, and pre-roll in particular
+# writes at full rate with is_recording still 0. These are exactly the
+# storage-contention windows the playback lockout exists for.
+_PLAYBACK_BLOCKING_KEYS = (
+    ParameterKey.IS_RECORDING,
+    ParameterKey.IS_WRITING_BUF,
+    ParameterKey.IS_BUFFERING,
+    ParameterKey.STORAGE_PREROLL_ACTIVE,
+)
+
+
+def _playback_blocked() -> tuple[bool, str]:
+    """Whether the card is too busy to serve playback, and why.
+
+    Fails CLOSED, unlike the read it replaced. RedisController.get_value()
+    returns a local cache kept fresh by one background listener thread; if
+    that thread has died every read keeps succeeding and every value is
+    frozen (the handbook's trap 1, hardware-confirmed as F-204). A frozen
+    "0" would let the pane start decoding in the middle of a take, which is
+    the one thing this gate exists to prevent -- so a dead listener, or an
+    unreadable bus, refuses rather than allows.
+    """
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is None:
+        return False, ""          # no bus wired at all: desk/test use
+    try:
+        if not redis_controller.listener_alive():
+            return True, "Camera status is stale — playback held"
+        for key in _PLAYBACK_BLOCKING_KEYS:
+            if str(redis_controller.get_value(key.value)).strip() == "1":
+                return True, f"Busy ({key.value}) — playback held"
+    except Exception:
+        logger.debug("playback: could not read the recording state", exc_info=True)
+        return True, "Camera status unavailable — playback held"
+    return False, ""
+
+
+def _is_recording() -> bool:
+    """Whether playback is currently refused. Reported in the clip index so the
+    pane can grey the stage out before it asks for a frame."""
+    return _playback_blocked()[0]
+
+
 @settings_editor_bp.route("/")
 def index():
-    return render_template("settings_editor.html")
+    settings = current_app.config["SETTINGS"]
+    # The resolved path, not the relative form settings.jsonc carries.
+    # sensors.database_file is operator-settable, and /home/pi/cinemate is a
+    # symlink on a source install (cinemate-install.sh), which Path.resolve()
+    # follows -- so the only truthful answer comes from the same helper the
+    # loader itself uses.
+    return render_template(
+        "settings_editor.html",
+        api_token=web_api_settings(settings).get("token") or "",
+        sensor_db_path=str(
+            resolve_database_path((settings.get("sensors") or {}).get("database_file"))
+        ),
+    )
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])
@@ -362,14 +460,7 @@ def put_config_txt():
         return jsonify({"ok": False, "message": str(exc)}), 400
 
     try:
-        fd, tmp_path = tempfile.mkstemp(dir=str(dest.parent), prefix=".settings-editor-", suffix=".config.txt.tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fp:
-                fp.write(new_text)
-            os.replace(tmp_path, dest)
-        except Exception:
-            os.unlink(tmp_path)
-            raise
+        boot_config.write_config_txt(new_text)
     except OSError as exc:
         logger.exception("Failed to write %s", dest)
         return jsonify({"ok": False, "message": f"Could not write {dest}: {exc}"}), 500
@@ -405,6 +496,124 @@ def get_actions():
     return jsonify({"ok": True, "actions": actions})
 
 
+@settings_editor_bp.route("/api/sensor-modes", methods=["GET"])
+def get_sensor_modes():
+    """Detected modes per camera model, for the fps-ceiling override pane
+    (F-298). sensor_detect.res_modes/sensor_resolutions already carry any
+    settings.jsonc custom_modes override merged in (that's the *effective*
+    fps_max cinepi-raw actually launches with); fps_max_detected is only
+    present on a mode _finalize_modes() overrode, and is what the sensor
+    itself reported before that override was applied -- see
+    sensor_detect.py's _finalize_modes(). Absent means "not overridden",
+    i.e. fps_max itself is the detected value.
+    """
+    sensor_detect = current_app.config.get("SENSOR_DETECT")
+    if sensor_detect is None:
+        return jsonify({"ok": True, "sensors": {}})
+
+    sensors = {}
+    for camera_name, modes in (sensor_detect.sensor_resolutions or {}).items():
+        entries = []
+        for mode in modes.values():
+            detected_fps = mode.get("fps_max_detected", mode.get("fps_max"))
+            entries.append({
+                "width": mode.get("width"),
+                "height": mode.get("height"),
+                "bit_depth": mode.get("bit_depth"),
+                "hdr": bool(mode.get("hdr", False)),
+                "fps_max_detected": detected_fps,
+                "fps_max_effective": mode.get("fps_max"),
+            })
+        entries.sort(key=lambda m: ((m["width"] or 0) * (m["height"] or 0), m["bit_depth"] or 0), reverse=True)
+        sensors[camera_name] = entries
+
+    return jsonify({"ok": True, "sensors": sensors})
+
+
+@settings_editor_bp.route("/api/playback/clips", methods=["GET"])
+def get_playback_clips():
+    conform = DEFAULT_CONFORM_FRAME_RATE
+    settings = current_app.config.get("SETTINGS") or {}
+    raw_conform = settings.get("settings", {}).get(
+        "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
+    try:
+        # smpte_frame_base(), not int(): the same "round to a whole frame
+        # base" rule redis_controller._format_timecode() applies to this
+        # exact setting (F-253 already records four sites with three
+        # different rounding rules -- a plain int() truncation here would
+        # have been a fifth, and 23.976 -> 23 both paced playback ~4% slow
+        # and disagreed with the redis/DNG frame base of 24). float() first
+        # so a genuinely unreadable value falls back to
+        # DEFAULT_CONFORM_FRAME_RATE below rather than smpte_frame_base()'s
+        # own internal fallback of 1 -- a 1 fps pane on a typo is a worse
+        # failure mode than the shipped default.
+        conform = smpte_frame_base(float(raw_conform))
+    except (TypeError, ValueError):
+        logger.debug("playback: unreadable conform_frame_rate, using %s", conform)
+    return jsonify({"ok": True, "clips": playback.list_clips(),
+                    "conform_frame_rate": conform,
+                    "render_token": playback.RENDER_TOKEN,
+                    "recording": _is_recording()})
+
+
+@settings_editor_bp.route("/api/playback/clips/<name>/frame/<int:index>", methods=["GET"])
+def get_playback_frame(name, index):
+    # Playback loses to recording, always. Reading a take off the card while
+    # another is being written to it is the shape of the storage contention that
+    # has cost audio sync before, so the pane is refused rather than throttled.
+    blocked, reason = _playback_blocked()
+    if blocked:
+        return jsonify({"ok": False, "message": reason}), 409
+
+    try:
+        scale = int(request.args.get("scale", 4))
+        quality = max(40, min(95, int(request.args.get("q", 80))))
+    except ValueError:
+        return jsonify({"ok": False, "message": "scale and q must be integers"}), 400
+    if scale not in (2, 4, 8, 16):
+        return jsonify({"ok": False, "message": "scale must be 2, 4, 8 or 16"}), 400
+    mono = request.args.get("mono") in ("1", "true", "yes")
+
+    try:
+        data, width, height, source = playback.frame_jpeg(
+            name, index, scale=scale, mono=mono, quality=quality)
+    except playback.Busy:
+        # Tell the client to drop this frame rather than wait for it; holding the
+        # clock is what keeps playback honest about its rate.
+        return jsonify({"ok": False, "message": "busy"}), 503
+    except playback.PlaybackError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 404
+
+    response = make_response(data)
+    response.headers["Content-Type"] = "image/jpeg"
+    response.headers["X-Frame-Size"] = f"{width}x{height}"
+    # Which path produced this frame (open decision 8). The HUD shows it, so a
+    # 720p proxy is never mistaken for a demosaiced frame or the other way.
+    response.headers["X-Frame-Source"] = source
+    # A decoded frame is a pure function of (take, index, scale, mono, q) and
+    # takes are immutable once written, so this is safe to cache hard.
+    response.headers["Cache-Control"] = "private, max-age=3600, immutable"
+    return response
+
+
+@settings_editor_bp.route("/api/playback/clips/<name>/audio", methods=["GET"])
+def get_playback_audio(name):
+    # Same lockout as get_playback_frame() -- this route had none, so a
+    # hotspot client could stream a take's WAV off the card mid-recording,
+    # exactly the storage contention the frame lockout exists to prevent.
+    # A WAV is also unfinalised mid-take by construction (its data-chunk
+    # size is only written on a clean stop), so serving it during a take
+    # was never just a performance question.
+    blocked, reason = _playback_blocked()
+    if blocked:
+        return jsonify({"ok": False, "message": reason}), 409
+
+    path = playback.wav_path(name)
+    if path is None:
+        return jsonify({"ok": False, "message": "no audio for this take"}), 404
+    return send_file(path, mimetype="audio/wav", conditional=True)
+
+
 @settings_editor_bp.route("/api/raw/storage", methods=["GET"])
 def get_raw_storage():
     return jsonify({"ok": True, "storage": raw_files.storage_summary()})
@@ -415,29 +624,98 @@ def get_raw_takes():
     return jsonify({"ok": True, "takes": raw_files.list_takes()})
 
 
+def _recording_take_names() -> set[str]:
+    """Names currently being written to -- empty unless a recording is
+    actually in progress, since last_dng_cam0/cam1 are only reset to "None"
+    on start_all/stop_all, not on record stop."""
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is None:
+        return set()
+    rec = str(redis_controller.get_value(ParameterKey.IS_RECORDING.value, "0") or "0").strip()
+    if rec != "1":
+        return set()
+    return raw_files.active_take_names(redis_controller)
+
+
 @settings_editor_bp.route("/api/raw/takes/<name>", methods=["DELETE"])
 def delete_raw_take(name):
-    ok, message = raw_files.delete_take(name)
+    storage = request.args.get("storage") or None
+    if name in _recording_take_names():
+        return jsonify({"ok": False, "message": "Refusing to delete while recording"}), 409
+    ok, message = raw_files.delete_take(name, storage=storage)
     return jsonify({"ok": ok, "message": message}), (200 if ok else 404)
 
 
 @settings_editor_bp.route("/api/raw/takes/<name>/download", methods=["GET"])
 def download_raw_take(name):
-    path = raw_files.resolve_take(name)
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
     if path is None:
         return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
 
-    zip_path = raw_files.build_take_zip(path)
+    if not raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False):
+        return jsonify({"ok": False, "message": "A download is already in progress"}), 429, {"Retry-After": "5"}
 
-    @after_this_request
-    def _cleanup(response):
+    # Two release paths for one acquire: guarded_stream()'s generator-finally
+    # covers a GET whose body is iterated (to completion, or aborted mid-
+    # stream); call_on_close covers a HEAD, whose body Werkzeug never
+    # iterates -- the generator's own code, including that finally, never
+    # runs, so the acquire above would otherwise leak on every HEAD. _Permit
+    # makes it safe for whichever of the two actually fires to be the one
+    # that releases.
+    permit = raw_files._Permit(raw_files.DOWNLOAD_SEMAPHORE)
+    response = Response(
+        stream_with_context(raw_files.guarded_stream(raw_files.stream_take_zip(path), sem=permit)),
+        mimetype="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}.zip"'},
+    )
+    response.call_on_close(permit.release)
+    return response
+
+
+@settings_editor_bp.route("/api/raw/takes/<name>/files", methods=["GET"])
+def raw_take_manifest(name):
+    """Feeds the folder-picker client path (W10): the file list and sizes
+    it needs before it can start writing into a chosen directory."""
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
+    if path is None:
+        return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
+
+    files = []
+    total_bytes = 0
+    for f in sorted(path.rglob("*")):
+        if not f.is_file():
+            continue
         try:
-            zip_path.unlink(missing_ok=True)
+            stat = f.stat()
         except OSError:
-            logger.warning("Could not remove temp zip %s", zip_path)
-        return response
+            continue
+        files.append({"name": str(f.relative_to(path)), "size_bytes": stat.st_size, "mtime": stat.st_mtime})
+        total_bytes += stat.st_size
 
-    return send_file(zip_path, as_attachment=True, download_name=f"{name}.zip")
+    return jsonify({
+        "ok": True,
+        "take": name,
+        "storage": path.parent.name,
+        "file_count": len(files),
+        "total_bytes": total_bytes,
+        "recording": name in _recording_take_names(),
+        "files": files,
+    })
+
+
+@settings_editor_bp.route("/api/raw/takes/<name>/files/<path:filename>", methods=["GET"])
+def raw_take_file(name, filename):
+    """Per-file fetch for the folder-picker path. werkzeug's safe_join
+    (inside send_from_directory) is the traversal guard here, not
+    raw_files.resolve_take -- but resolve_take still confines *name* to a
+    real take dir before *path* is ever handed to it."""
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
+    if path is None:
+        return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
+    return send_from_directory(path, filename, conditional=True, max_age=0)
 
 
 @settings_editor_bp.route("/api/raw/bulk", methods=["POST"])
@@ -448,9 +726,78 @@ def bulk_raw_action():
     if action != "delete" or not isinstance(names, list):
         return jsonify({"ok": False, "message": "Expected {action: 'delete', names: [...]}"}), 400
 
+    # Whole-request refusal, not a per-name skip: a partial delete that
+    # silently dropped the recording take would be worse than a refusal the
+    # operator can see. Duplicate-name ambiguity across /media/RAW and
+    # /media/RAW1 is a separate, still-open issue -- bulk stays name-only.
+    blocked = _recording_take_names() & set(names)
+    if blocked:
+        return jsonify({
+            "ok": False,
+            "message": "Refusing to delete while recording",
+            "recording": sorted(blocked),
+        }), 409
+
     results = {}
     for name in names:
         ok, message = raw_files.delete_take(name)
         results[name] = {"ok": ok, "message": message}
     all_ok = all(r["ok"] for r in results.values())
     return jsonify({"ok": all_ok, "results": results})
+
+
+# psutil reports the NTFS mount as ntfs, ntfs3 or fuseblk depending on which
+# driver took the volume; all three mean the mkfs.ntfs succeeded. ext4 and
+# exfat report literally.
+_FSTYPE_ALIASES = {
+    "ext4": ("ext4",),
+    "exfat": ("exfat",),
+    "ntfs": ("ntfs", "ntfs3", "fuseblk"),
+}
+
+
+@settings_editor_bp.route("/api/raw/format", methods=["POST"])
+def format_raw_drive():
+    body = request.get_json(silent=True) or {}
+    fs = str(body.get("filesystem") or "").strip().lower()
+    if fs not in _FSTYPE_ALIASES:
+        return jsonify({"ok": False, "message": "filesystem must be ext4, exfat or ntfs"}), 400
+
+    command_executor = current_app.config.get("COMMAND_EXECUTOR")
+    if command_executor is None:
+        return jsonify({"ok": False, "message": "Command dispatcher not available"}), 503
+
+    # Sequencing interlock, not a permissions gate: ssd_monitor's own guard
+    # only covers the buffer flush, and its unmount escalation runs
+    # `fuser -km` on the mount, which would kill a running writer mid-take.
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is not None:
+        rec = str(redis_controller.get_value(ParameterKey.IS_RECORDING.value, "0") or "0").strip()
+        if rec == "1":
+            return jsonify({"ok": False, "message": "Refusing to format while recording"}), 409
+
+    logger.info("Dispatching 'format %s' from the settings editor", fs)
+    ok, message = command_executor.handle_received_data(f"format {fs}")
+    if not ok:
+        return jsonify({"ok": False, "message": message or "dispatch failed"}), (
+            503 if message == "busy" else 500
+        )
+
+    # The dispatcher discards handler return values, so a (True, "") here says
+    # only that `format` was dispatched -- never that mkfs worked. Verify
+    # against reality instead: format_drive() remounts before it returns, so
+    # the active mount's filesystem is the authoritative answer.
+    active = next((s for s in raw_files.storage_summary() if s.get("active")), None)
+    fstype = ((active or {}).get("filesystem") or "").lower()
+    if active and fstype in _FSTYPE_ALIASES[fs]:
+        return jsonify({"ok": True, "message": f"Formatted as {fs} and remounted."})
+    if active:
+        return jsonify({
+            "ok": False,
+            "message": f"Format may have failed — drive is mounted as {fstype or 'unknown'}. "
+                       "Check the cinemate log.",
+        }), 500
+    return jsonify({
+        "ok": False,
+        "message": "Format failed — drive did not remount. Check the cinemate log.",
+    }), 500

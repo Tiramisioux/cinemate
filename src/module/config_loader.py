@@ -7,8 +7,28 @@ ANSI_RED = "\033[1;31m"
 ANSI_YELLOW = "\033[1;33m"
 ANSI_CYAN = "\033[1;36m"
 
-_TRUE_VALUES = {"1", "true", "yes", "on"}
-_FALSE_VALUES = {"0", "false", "no", "off"}
+# F-260: this absolute path used to be hardcoded independently in six files
+# (main.py, cinepi_multi.py, cinepi_controller.py, wifi_hotspot.py,
+# simple_gui.py, app/settings_editor.py); one had already drifted out of
+# sync with a comment that tried to enumerate the others by line number.
+# services/cinemate-recovery/cinemate-recovery.py keeps its own copy
+# deliberately -- that process must import nothing from module.* (F-221) so
+# it can still run when the rest of the stack cannot.
+DEFAULT_SETTINGS_PATH = "/home/pi/cinemate/settings.jsonc"
+
+# The conform frame rate used when settings.jsonc does not name one. Exported
+# because the same value was previously restated at four other call sites and
+# had already drifted from the shipped configs (F-251: schema and this loader
+# said 24, both shipped .jsonc files said 25, with no arbiter). Import it rather
+# than writing the number again; settings.schema.json carries a sixth copy that
+# cannot import, so _test/test_conform_frame_rate_default.py pins them together.
+DEFAULT_CONFORM_FRAME_RATE = 25
+
+# Public: a handful of call sites need the raw membership test (e.g. a CLI
+# parser that must reject an unrecognised value outright rather than fall
+# back to a default) instead of the as_bool() default-fallback shape below.
+TRUE_VALUES = {"1", "true", "yes", "on"}
+FALSE_VALUES = {"0", "false", "no", "off"}
 
 
 class SettingsLoadError(RuntimeError):
@@ -115,7 +135,75 @@ def _format_error_context(path: Path, line: int, column: int, radius: int = 1) -
     return "\n".join(snippet)
 
 
-def _coerce_bool_setting(value, default: bool) -> bool:
+def normalize_log_encode(value, default: bool = False):
+    """Decode a `log_encode` flag to its native type: bool, or an int target.
+
+    `log_encode` is the one settings key whose options are not all one type --
+    False | True | 10 | 12 -- so it cannot go through `as_bool`, and a plain
+    string passes through the launch path silently wrong rather than loudly:
+    `if log_requested:` in cinepi_multi makes the string "false" TRUTHY, so a
+    corrupted "false" reads as log-on, while "true" is passed on as an explicit
+    target, matches no valid bit depth, and records linear with only a warning.
+
+    The settings editor used to write exactly those strings (its log_encode
+    select was `data-type="string"`), so files already on cameras carry them.
+    Normalising on load means such a file heals itself on the next start
+    instead of needing a hand edit.
+
+    - bool and int pass through unchanged (an out-of-range int is left alone;
+      `SensorDetect.resolve_log_encode_target()` is what validates targets).
+    - A string matching TRUE_VALUES/FALSE_VALUES decodes via `as_bool`.
+    - Any other numeric string becomes that int, so "10"/"12" behave as 10/12.
+    - Anything unrecognised falls back to `default`, same as an absent key.
+    """
+    if isinstance(value, bool) or isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return default
+        if text.lower() in TRUE_VALUES or text.lower() in FALSE_VALUES:
+            return as_bool(text, default=default)
+        try:
+            return int(text)
+        except ValueError:
+            logging.debug(
+                "normalize_log_encode: unrecognised value %r, defaulting to %s",
+                value, default,
+            )
+            return default
+    return default
+
+
+def as_bool(value, default: bool = False) -> bool:
+    """Decode a settings.jsonc / Redis boolean the same way everywhere.
+
+    This used to be four independent copies (cinepi_controller, gpio_input,
+    dynamic_resolution, mediator) that quietly disagreed -- e.g. `_as_bool(2)`
+    was `True` in gpio_input and `False` in the other three (F-126) -- plus
+    the same `("1","true","yes","on")` truth-set re-typed standalone in half
+    a dozen more places. This is the one decoder; everything routes here now.
+
+    - bool passes through unchanged.
+    - None means "not set" and returns `default` silently -- that is the
+      normal, expected shape of an absent key.
+    - int/float use Python truthiness (`bool(value)`): 2 is True, matching
+      how a settings-file author reads a truthy value, and matching what
+      gpio_input already did. (Nothing in settings.jsonc currently sends a
+      non-0/1 number through here -- checked when this was unified -- so
+      this is a decision for future values, not an observed behaviour fix.)
+    - str is matched case-insensitively against `TRUE_VALUES`/`FALSE_VALUES`
+      first (Redis stores every value as text, so this is the common path),
+      then against a numeric fallback (`bool(int(text))`) so a stray "2"
+      decodes the same way the int 2 does instead of being "unrecognised" --
+      three call sites already relied on exactly this before the merge.
+    - Anything else -- an unrecognised string, or a non-str/bool/int/float/
+      None object -- is NOT the same as an explicit false. It falls back to
+      `default`, same as an absent value, but at `debug` level (not `warning`)
+      because this runs on the 12 fps GUI redraw path and a stuck bad value
+      must not flood the log every frame -- see "fail visible" vs. the
+      redraw-path logging rule, both in the project's own conventions.
+    """
     if isinstance(value, bool):
         return value
     if value is None:
@@ -124,10 +212,17 @@ def _coerce_bool_setting(value, default: bool) -> bool:
         return bool(value)
     if isinstance(value, str):
         normalized = value.strip().lower()
-        if normalized in _TRUE_VALUES:
+        if normalized in TRUE_VALUES:
             return True
-        if normalized in _FALSE_VALUES:
+        if normalized in FALSE_VALUES:
             return False
+        try:
+            return bool(int(normalized))
+        except ValueError:
+            pass
+    logging.debug(
+        "as_bool: unrecognised value %r, defaulting to %s", value, default
+    )
     return default
 
 
@@ -135,7 +230,7 @@ def auto_storage_preroll_enabled(settings: dict) -> bool:
     """Return whether automatic storage pre-roll should run."""
 
     storage_cfg = settings.get("system", {}).get("storage", {})
-    return _coerce_bool_setting(
+    return as_bool(
         storage_cfg.get("auto_preroll") if isinstance(storage_cfg, dict) else None, True
     )
 
@@ -144,6 +239,121 @@ def storage_preroll_enabled(settings: dict) -> bool:
     """Backward-compatible alias for automatic storage pre-roll."""
 
     return auto_storage_preroll_enabled(settings)
+
+
+def clearhdr_self_heal_enabled(settings: dict) -> bool:
+    """Return whether the ClearHDR flat-pedestal self-heal may run.
+
+    Defaults to False. The self-heal fires from ``CinePiManager.start_all()``,
+    which every cold start and every resolution switch funnels through, and
+    none of the recovery actions it can take has been shown to work on
+    hardware -- the mode bounce and an earlier analogue-gain shock were both
+    live-tested and failed. Its detector also has no way to distinguish the
+    defect from a legitimately flat or dark scene. Off unless asked for.
+    """
+
+    hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
+    return as_bool(
+        hdr_cfg.get("self_heal") if isinstance(hdr_cfg, dict) else None, False
+    )
+
+
+def clearhdr_startup_values(settings: dict) -> dict:
+    """Startup values for the ClearHDR live knobs, keyed by Redis key.
+
+    The two data-selection thresholds only come back as numbers when
+    ``image_capture.hdr`` actually configures them. Left unset they come back
+    as ``""``, which means "write nothing" rather than "write zero":
+    cinepi-raw skips the sensor write entirely while both are empty, so the
+    imx585 driver keeps the pair it boots with (EXP_TH_H 0x0FFF,
+    EXP_TH_L 0x0000).
+
+    That distinction is the point of this helper. EXP_TH_H == EXP_TH_L selects
+    the AppNote's weighted-blend fallback, which leaves the ClearHDR combiner
+    clamped near the black level on ordinary scenes; the driver carries a
+    comment saying exactly that, and defaults to the rule-based range instead.
+    Seeding 0/0 wrote that rejected configuration over the driver's own
+    default on every boot.
+
+    The empty string is written rather than skipped so a 0 persisted into
+    Redis by an earlier build is cleared on upgrade instead of surviving it.
+
+    ``blend`` and ``gain_adder`` keep their previous defaults: 0 is the
+    driver's own blend value, and 1 (+6 dB) is a deliberate choice over the
+    driver's +12 dB.
+    """
+
+    hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
+    if not isinstance(hdr_cfg, dict):
+        hdr_cfg = {}
+
+    def threshold(name):
+        value = hdr_cfg.get(name)
+        return "" if value is None else value
+
+    return {
+        "hdr_threshold_low": threshold("threshold_low"),
+        "hdr_threshold_high": threshold("threshold_high"),
+        "hdr_blend": hdr_cfg.get("blend", 0),
+        "hdr_gain_adder": hdr_cfg.get("gain_adder", 1),
+    }
+
+
+def thumbnail_startup_value(settings: dict) -> int:
+    """Validated startup value for image_capture.thumbnail, keyed by Redis key.
+
+    main.py used to pass settings.get("image_capture", {}).get("thumbnail", 0)
+    straight to redis_controller.set_value() with no validation -- unlike
+    set_thumbnail() (cinepi_controller.py), which clamps int(value) to 0..2.
+    A hand-edited settings.jsonc with "thumbnail": true crashed Cinemate at
+    startup (redis-py rejects a bool where set_thumbnail() would have
+    coerced it), a non-numeric string reached cinepi-raw's sync() and its
+    then-unguarded stoi(), and 3 passed through where the CLI path clamps
+    to 2 -- so the same raw value in the file meant "off" via one path and
+    "colour" via the other. This applies the exact same clamp as
+    set_thumbnail() so both paths agree, and so a malformed value degrades
+    to a safe default instead of reaching either process unvalidated.
+
+    Defaults to 2 (colour), not 0: the embedded thumbnail is now the
+    standard playback path, and playback.py's raw-decode fallback is
+    disabled (too demanding on the Pi, operator decision after G10/G11) --
+    so a take recorded with thumbnail=0, or a parse failure that used to
+    fall back to 0, would otherwise be unplayable in the pane.
+    """
+    raw = settings.get("image_capture", {}).get("thumbnail", 2)
+    try:
+        return max(0, min(2, int(raw)))
+    except (TypeError, ValueError):
+        return 2
+
+
+REC_TONE_DEFAULTS = {
+    "pin": [],
+    "frequency_hz": 1000,
+    "duty_cycle": 50,
+    "relay_drop_frames": False,
+}
+
+
+def rec_tone_config(gpio_cfg: dict) -> dict:
+    """Read hardware_outputs.rec_tone, tolerating the pre-c171975e flat keys.
+
+    c171975e regrouped `rec_tone_pin` / `rec_tone_frequency_hz` /
+    `rec_tone_duty_cycle` / `rec_tone_relay_drop_frames` under a nested
+    `rec_tone` object. main.py's section name was updated; its leaf reads were
+    not, so every one of them silently fell back to a hardcoded default -- the
+    configured tone pin was ignored in favour of pwm_pin, frequency and duty
+    cycle could not be changed at all, and relay_drop_frames could never be
+    true, which meant relay_drop_frame_on_rec_tone() returned at its guard on
+    every call. settings.schema.json declares rec_tone with
+    additionalProperties:false, so the flat keys cannot appear in a current
+    file; the fallback is only for a hand-written one predating the rename.
+    """
+    nested = gpio_cfg.get("rec_tone") or {}
+    return {
+        key: nested[key] if key in nested else gpio_cfg.get(f"rec_tone_{key}", default)
+        for key, default in REC_TONE_DEFAULTS.items()
+    }
 
 
 def _apply_settings_defaults(settings: dict) -> dict:
@@ -168,7 +378,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
 
     storage_cfg = system_cfg.setdefault("storage", {})
     storage_cfg.setdefault("auto_preroll", True)
-    storage_cfg["auto_preroll"] = _coerce_bool_setting(storage_cfg.get("auto_preroll"), True)
+    storage_cfg["auto_preroll"] = as_bool(storage_cfg.get("auto_preroll"), True)
     storage_cfg.setdefault("recognized_ssds", [])
     system_cfg["storage"] = storage_cfg
 
@@ -209,13 +419,13 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # 10 | 12 (on, forced target). Off by default -- log changes recorded
         # output. Resolved against the live sensor + bit depth at launch via
         # SensorDetect.resolve_log_encode_target(); never a raw flag value.
-        cam.setdefault("log_encode", False)
+        cam["log_encode"] = normalize_log_encode(cam.get("log_encode", False))
     sensors_cfg.setdefault("database_file", "resources/sensors.json")
     settings["sensors"] = sensors_cfg
 
     # ── settings: frame-rate conform + flicker-free input + sync tuning ────
     settings_cfg = settings.setdefault("settings", {})
-    settings_cfg.setdefault("conform_frame_rate", 24)
+    settings_cfg.setdefault("conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     settings_cfg.setdefault("light_hz", [50, 60])
 
     tol_cfg = settings_cfg.setdefault("sync_tolerances", {})
@@ -243,7 +453,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "free_increment": 100,
         },
         "shutter_a": {
-            "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 360],
+            "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
             "free": False,
             "free_increment": 1,
             # Own granularity used only while shutter-angle sync mode is on
@@ -300,6 +510,9 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
         # SensorDetect._hdr_whitelist.
         "hdr": {"sdr": True, "imx585_clear_hdr": True},
+        # 2 (colour): the embedded thumbnail is the standard playback path
+        # now, not an opt-in -- see thumbnail_startup_value()'s docstring.
+        "thumbnail": 2,
         "custom_modes": {},
     }
     for k, v in image_capture_defaults.items():
@@ -393,10 +606,8 @@ def _apply_settings_defaults(settings: dict) -> dict:
     outputs_cfg.setdefault("pwm_pin", 19)
     outputs_cfg.setdefault("rec_out_pin", [6, 21])
     rec_tone_cfg = outputs_cfg.setdefault("rec_tone", {})
-    rec_tone_cfg.setdefault("pin", [])
-    rec_tone_cfg.setdefault("frequency_hz", 1000)
-    rec_tone_cfg.setdefault("duty_cycle", 50)
-    rec_tone_cfg.setdefault("relay_drop_frames", False)
+    for _key, _default in REC_TONE_DEFAULTS.items():
+        rec_tone_cfg.setdefault(_key, _default)
     outputs_cfg["rec_tone"] = rec_tone_cfg
     settings["hardware_outputs"] = outputs_cfg
 

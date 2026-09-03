@@ -50,6 +50,17 @@
             }
           }
         },
+        "https": {
+          "description": "TLS for the web UI on port 5000. Off by default -- cinepi.local and the hotspot address can never hold a publicly-trusted certificate, so this always means a self-signed one and a browser interstitial. Needed for the RAW pane's folder download, which requires a secure browser context.",
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "cert_file": { "type": "string", "default": "resources/certs/cinemate.crt" },
+            "key_file": { "type": "string", "default": "resources/certs/cinemate.key" },
+            "valid_days": { "type": "integer", "minimum": 1, "default": 3650 }
+          },
+          "additionalProperties": false
+        },
         "web_api": {
           "type": "object",
           "description": "HTTP/UDP control API over the Wi-Fi hotspot (docs/web-api.md). A missing or partial block behaves as the defaults shown here.",
@@ -199,7 +210,7 @@
       "properties": {
         "conform_frame_rate": {
           "type": "number",
-          "default": 24
+          "default": 25
         },
         "light_hz": {
           "type": "array",
@@ -293,16 +304,16 @@
               "default": true
             },
             "threshold_low": {
-              "type": "integer",
+              "type": ["integer", "null"],
               "minimum": 0,
               "maximum": 4095,
-              "default": 0
+              "default": null
             },
             "threshold_high": {
-              "type": "integer",
+              "type": ["integer", "null"],
               "minimum": 0,
               "maximum": 4095,
-              "default": 0
+              "default": null
             },
             "blend": {
               "type": "integer",
@@ -315,11 +326,42 @@
               "minimum": 0,
               "maximum": 5,
               "default": 1
+            },
+            "self_heal": {
+              "type": "boolean",
+              "default": false,
+              "description": "Automatically probe the live preview after each launch and try to recover the flat-pedestal ClearHDR startup defect. Off by default: the root cause is unknown, every recovery action is unproven on hardware, and the detector cannot distinguish the defect from a genuinely flat or dark scene."
             }
           }
         },
+        "thumbnail": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 2,
+          "description": "Embedded DNG thumbnail mode written by cinepi-raw's DNG encoder: 0 off, 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour by default -- verified on hardware (G10/G11) and the standard playback path; raw decode is far more demanding on the Pi and is no longer the Playback pane's fallback. New takes only -- a take recorded with this off (or before a rebuilt cinepi-raw shipped it) has no thumbnail and is not currently playable in the pane."
+        },
         "custom_modes": {
-          "type": "object"
+          "type": "object",
+          "description": "Per-camera-name list of mode overrides/additions (F-298). An entry whose width/height/bit_depth/hdr matches an already-detected mode overrides that mode's fps_max in place; a non-matching entry adds a brand-new mode.",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "width": { "type": "integer", "minimum": 1 },
+                "height": { "type": "integer", "minimum": 1 },
+                "bit_depth": { "type": "integer", "minimum": 1 },
+                "fps_max": { "type": "number", "minimum": 0 },
+                "hdr": { "type": "boolean", "default": false },
+                "aspect": { "type": "number", "minimum": 0 },
+                "gui_layout": { "type": "integer" },
+                "packing": { "type": "string" }
+              },
+              "required": ["width", "height", "bit_depth"],
+              "additionalProperties": false
+            }
+          }
         }
       },
       "additionalProperties": false
@@ -474,7 +516,50 @@
           "type": "array"
         },
         "rotary_encoders": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "clk_pin": {
+                "type": "integer"
+              },
+              "dt_pin": {
+                "type": "integer"
+              },
+              "button_pin": {
+                "type": "integer"
+              },
+              "pull_up": {
+                "type": "boolean"
+              },
+              "debounce_time": {
+                "type": "number"
+              },
+              "button_actions": {
+                "type": "object",
+                "properties": {
+                  "press_action": { "$ref": "#/definitions/action" },
+                  "single_click_action": { "$ref": "#/definitions/action" },
+                  "double_click_action": { "$ref": "#/definitions/action" },
+                  "triple_click_action": { "$ref": "#/definitions/action" },
+                  "hold_action": { "$ref": "#/definitions/action" }
+                },
+                "additionalProperties": false
+              },
+              "encoder_actions": {
+                "type": "object",
+                "properties": {
+                  "rotate_clockwise": { "$ref": "#/definitions/action" },
+                  "rotate_counterclockwise": { "$ref": "#/definitions/action" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
         },
         "combined_actions": {
           "type": "array"
@@ -507,7 +592,28 @@
               "default": false
             },
             "encoders": {
-              "type": "object"
+              "type": "object",
+              "description": "Keyed by dial index (\"0\"..\"3\").",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "setting_name": {
+                    "type": "string"
+                  },
+                  "button": {
+                    "type": "object",
+                    "properties": {
+                      "press_action": { "$ref": "#/definitions/action" },
+                      "single_click_action": { "$ref": "#/definitions/action" },
+                      "double_click_action": { "$ref": "#/definitions/action" },
+                      "triple_click_action": { "$ref": "#/definitions/action" },
+                      "hold_action": { "$ref": "#/definitions/action" }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
             }
           },
           "additionalProperties": false
@@ -616,6 +722,27 @@
     }
   },
   "definitions": {
+    "action": {
+      "description": "A gesture action: the string \"None\"/\"none\" for no action, or a controller method call.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string"
+            },
+            "args": {
+              "type": "array"
+            }
+          },
+          "required": ["method"],
+          "additionalProperties": false
+        }
+      ]
+    },
     "cam_config": {
       "type": "object",
       "properties": {

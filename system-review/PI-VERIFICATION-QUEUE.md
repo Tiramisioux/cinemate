@@ -1309,3 +1309,36 @@ PI-016
     Worth its own finding if "highest resolution" and "highest bit depth" are expected to
     be jointly reachable through the normal command surface.
 ```
+
+## PI-017 — What actually caused the original `cinepi.local` field report (F-289)?
+
+**Belief (`unverified`, reopened by F-308):** F-289 assumed the operator's client couldn't
+resolve `cinepi.local` because neither repo installs `avahi-daemon`. B11.2 installed and
+enabled it defensively. But on the real test device (192.168.2.6, `pi-gen` stage2 Lite,
+2026-06-18), `avahi-daemon` was **already** installed and running before B11.2's step ran,
+and `cinepi.local` already resolved — so B11.2's fix cannot have been what originally failed
+for the operator. The mechanism F-289 named did not reproduce.
+
+**Why the Pi is needed:** this isn't a code question. The missing variable is what the
+*client* side looked like at the time of the original report — its OS, network, and mDNS
+resolver — none of which is recoverable from source or from re-testing the Pi alone.
+
+**Procedure:**
+1. Ask the operator: which machine/OS saw `cinepi.local` fail to resolve, on which network
+   (same L2 segment as the Pi? VPN? guest Wi-Fi that blocks mDNS multicast?), and roughly
+   when (which base image was on the SD card that day).
+2. If reproducible: from that same client, `ping cinepi.local` / `dns-sd -B _workstation._tcp`
+   (macOS) or `avahi-browse -a` (Linux) while confirming `systemctl status avahi-daemon` on
+   the Pi is active — isolate client-resolver vs. network-mDNS-blocking vs. Pi-side.
+3. If not reproducible on demand: leave `unverified` rather than closing it on B11.2's
+   hardening alone — the hardening is real and worth keeping, it just isn't a confirmed fix
+   for this specific report.
+
+**Settles:** whether F-289 needs a different fix (client-side documentation, a fallback IP
+in the docs, an `mdns-repeater` recommendation for segmented networks) or was already
+correct behavior misread as a bug (e.g., a client on a guest network that blocks multicast
+by design).
+
+**Expected effort:** needs operator input first; the on-Pi/on-client checks themselves are
+~15 minutes once the original conditions are known.
+

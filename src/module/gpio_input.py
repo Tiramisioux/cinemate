@@ -7,7 +7,9 @@ import shlex  # Add this import
 import warnings
 import logging
 import time
-    
+
+from module.config_loader import as_bool
+
 class ComponentInitializer:
     def __init__(self, cinepi_controller, settings, reserved_output_pins=None):
         self.cinepi_controller = cinepi_controller
@@ -16,11 +18,35 @@ class ComponentInitializer:
         self.reserved_output_pins = {
             int(pin) for pin in (reserved_output_pins or [])
         }
-        
+        # Every GPIO already claimed by an input, pin -> what claimed it.
+        # gpiozero raises GPIOPinInUse on a second claim, which used to abort
+        # startup with a message naming only the pin -- not the two settings
+        # entries that collided. _claim_pin() names both and skips instead.
+        self.claimed_input_pins = {}
+
         self.smart_buttons_list = []
-        
+
         self.initialize_components()
-        
+
+    def _claim_pin(self, pin, description):
+        """Reserve *pin* for *description*, or refuse it as a duplicate.
+
+        Returns True when the caller may build its gpiozero device. Returns
+        False when another input already holds the pin -- the caller should
+        skip that component, exactly as it does for a reserved output pin.
+        """
+        pin = int(pin)
+        holder = self.claimed_input_pins.get(pin)
+        if holder is not None:
+            self.logger.warning(
+                "Skipping %s: GPIO%s is already used by %s. Two settings.jsonc "
+                "entries claim the same pin -- change one of them.",
+                description, pin, holder,
+            )
+            return False
+        self.claimed_input_pins[pin] = description
+        return True
+
     def initialize_components(self):
         controls_cfg = self.settings.get('hardware_controls', {})
         combined_actions = controls_cfg.get('combined_actions', [])
@@ -33,6 +59,9 @@ class ComponentInitializer:
                     "Skipping button on pin %s because it is reserved for GPIO output",
                     pin,
                 )
+                continue
+
+            if not self._claim_pin(pin, f"button on pin {pin}"):
                 continue
 
             press_action_method = self.extract_action_method(button_config.get('press_action'))
@@ -52,7 +81,7 @@ class ComponentInitializer:
             smart_button = SmartButton(
                 cinepi_controller=self.cinepi_controller,
                 pin=pin,
-                pull_up=self._as_bool(button_config.get('pull_up'), default=True),
+                pull_up=as_bool(button_config.get('pull_up'), default=True),
                 debounce_time=float(button_config['debounce_time']),
                 actions=button_config,
                 identifier=str(pin),
@@ -71,6 +100,9 @@ class ComponentInitializer:
                 )
                 continue
 
+            if not self._claim_pin(pin, f"two-way switch on pin {pin}"):
+                continue
+
             state_on_action_method = self.extract_action_method(switch_config.get('state_on_action'))
             state_off_action_method = self.extract_action_method(switch_config.get('state_off_action'))
             
@@ -86,6 +118,28 @@ class ComponentInitializer:
         self.three_way_switches = []
         for switch_config in controls_cfg.get('three_way_switches', []):
             pins = switch_config['pins']
+            # All-or-nothing: a switch that got only some of its pins would
+            # read garbage states, so refuse the whole switch and leave the
+            # pins it would have taken free for their existing owners.
+            conflicts = [
+                (int(pin), self.claimed_input_pins[int(pin)])
+                for pin in pins
+                if int(pin) in self.claimed_input_pins
+            ]
+            if conflicts:
+                self.logger.warning(
+                    "Skipping three-way switch on pins %s: %s. Two "
+                    "settings.jsonc entries claim the same pin -- change one.",
+                    pins,
+                    ", ".join(
+                        f"GPIO{pin} is already used by {holder}"
+                        for pin, holder in conflicts
+                    ),
+                )
+                continue
+            for pin in pins:
+                self._claim_pin(pin, f"three-way switch on pins {pins}")
+
             self.logger.info(f"Three-way switch on pins {pins}:")
             for i in range(3):
                 action_method_name = switch_config.get(f"state_{i}_action")
@@ -99,7 +153,7 @@ class ComponentInitializer:
         
         # Initialize Rotary Encoders with Buttons
         for encoder_config in controls_cfg.get('rotary_encoders', []):
-            if not self._as_bool(encoder_config.get('enabled', True), default=True):
+            if not as_bool(encoder_config.get('enabled', True), default=True):
                 self.logger.info("Skipping disabled rotary encoder config: %s", encoder_config)
                 continue
 
@@ -107,6 +161,27 @@ class ComponentInitializer:
             rotate_cw_action_method = self.extract_action_method(encoder_actions.get('rotate_clockwise'))
             rotate_ccw_action_method = self.extract_action_method(encoder_actions.get('rotate_counterclockwise'))
             
+            clk_pin = int(encoder_config['clk_pin'])
+            dt_pin = int(encoder_config['dt_pin'])
+            rotation_conflicts = [
+                (pin, self.claimed_input_pins[pin])
+                for pin in (clk_pin, dt_pin)
+                if pin in self.claimed_input_pins
+            ]
+            if rotation_conflicts:
+                self.logger.warning(
+                    "Skipping rotary encoder on CLK %s / DT %s: %s. Two "
+                    "settings.jsonc entries claim the same pin -- change one.",
+                    clk_pin, dt_pin,
+                    ", ".join(
+                        f"GPIO{pin} is already used by {holder}"
+                        for pin, holder in rotation_conflicts
+                    ),
+                )
+                continue
+            for pin in (clk_pin, dt_pin):
+                self._claim_pin(pin, f"rotary encoder on CLK {clk_pin} / DT {dt_pin}")
+
             self.logger.info(f"Rotary Encoder with Button on CLK pin: {encoder_config['clk_pin']}, DT pin: {encoder_config['dt_pin']}")
             if not "None" in str(rotate_cw_action_method): self.logger.info(f"  Rotate Clockwise: {rotate_cw_action_method}")
             if not "None" in str(rotate_ccw_action_method): self.logger.info(f"  Rotate CounterClockwise: {rotate_ccw_action_method}")
@@ -129,12 +204,19 @@ class ComponentInitializer:
                 )
                 continue
 
+            # This is the claim that used to abort startup outright: the
+            # shipped settings.jsonc puts a button on GPIO10 *and* names
+            # GPIO10 as this encoder's button_pin, so enabling the encoder
+            # raised GPIOPinInUse before anything else could start.
+            if not self._claim_pin(button_pin, f"rotary encoder button on pin {button_pin}"):
+                continue
+
             button_actions = encoder_config.get('button_actions', {})
             self.logger.info(f"  Button pin: {button_pin}")
             smart_button = SmartButton(
                 cinepi_controller=self.cinepi_controller,
                 pin=button_pin,
-                pull_up=self._as_bool(encoder_config.get('pull_up'), default=True),
+                pull_up=as_bool(encoder_config.get('pull_up'), default=True),
                 debounce_time=float(encoder_config.get('debounce_time', 0.05)),
                 actions=button_actions,
                 identifier=str(button_pin),
@@ -158,18 +240,6 @@ class ComponentInitializer:
             return action_config.get('method')
         else:
             return None
-
-    @staticmethod
-    def _as_bool(value, default=False):
-        if isinstance(value, bool):
-            return value
-        if value is None:
-            return default
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            return value.strip().lower() in {"1", "true", "yes", "on"}
-        return bool(value)
 
     @staticmethod
     def _is_noop_action(action):

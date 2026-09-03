@@ -3,10 +3,12 @@ import signal
 import subprocess
 import re
 import logging
-import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List
+
+from module import rp1_regime
+from module.sensor_database import load_sensor_database
 
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
 FALLBACK_PACKING_INFO = {
@@ -26,6 +28,16 @@ PI4_MODEL_MARKERS = (
     "Raspberry Pi 4",
     "Raspberry Pi 400",
     "Compute Module 4",
+)
+
+# Raspberry Pi models that run the RP1 camera receiver. "Compute Module 5" is
+# the marker that matters in practice -- CineMate's own dev unit is a CM5, and
+# /proc/device-tree/model reports it as "Raspberry Pi Compute Module 5", which
+# does not contain the string "Raspberry Pi 5".
+PI5_MODEL_MARKERS = (
+    "Raspberry Pi 5",
+    "Raspberry Pi 500",
+    "Compute Module 5",
 )
 
 # DNG frame-size model, calibrated against real captures (imx585 3856x2180
@@ -67,6 +79,32 @@ def is_pi4_family() -> bool:
     return any(marker in model for marker in PI4_MODEL_MARKERS)
 
 
+def is_pi5_family() -> bool:
+    """True on any Raspberry Pi 5 / 500 / CM5 (RP1) platform."""
+    model = read_pi_model()
+    return any(marker in model for marker in PI5_MODEL_MARKERS)
+
+
+def pi_family() -> str:
+    """Coarse platform family: 'pi5', 'pi4', 'other', or 'unknown'.
+
+    Matching is by family marker, not by the exact board name, because the
+    boards CineMate actually ships on are Compute Modules: a CM5 reports
+    "Raspberry Pi Compute Module 5 Rev 1.0", which contains neither
+    "Raspberry Pi 5" nor "Raspberry Pi 4". Substring checks against the
+    consumer board names alone therefore classify every CM as 'other' and send
+    Pi-5-only code down the legacy path.
+    """
+    model = read_pi_model()
+    if not model:
+        return "unknown"
+    if any(marker in model for marker in PI5_MODEL_MARKERS):
+        return "pi5"
+    if any(marker in model for marker in PI4_MODEL_MARKERS):
+        return "pi4"
+    return "other"
+
+
 class SensorDetect:
     def __init__(self, settings=None):
         self.camera_model = None
@@ -103,20 +141,10 @@ class SensorDetect:
         return Path(__file__).resolve().parents[2] / path
 
     def _load_sensor_database(self) -> dict[str, Any]:
-        path = self._resolve_repo_path(self.sensor_database_file)
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except OSError as exc:
-            logging.warning("Sensor database unavailable (%s): %s", path, exc)
-            return {"schema_version": 1, "sensors": {}}
-        except json.JSONDecodeError as exc:
-            logging.warning("Sensor database is invalid JSON (%s): %s", path, exc)
-            return {"schema_version": 1, "sensors": {}}
-
-        if not isinstance(data.get("sensors"), dict):
-            logging.warning("Sensor database %s has no sensors object", path)
-            return {"schema_version": 1, "sensors": {}}
-        return data
+        # Delegates to module.sensor_database, which boot_config also uses --
+        # two loaders would mean two sets of fallback rules to keep in step,
+        # which is the drift this database exists to prevent.
+        return load_sensor_database(str(self._resolve_repo_path(self.sensor_database_file)))
 
     def _packing_info_from_database(self) -> dict[str, str]:
         packing = dict(FALLBACK_PACKING_INFO)
@@ -371,14 +399,66 @@ class SensorDetect:
         self,
         sensors: Dict[str, List[Dict]],
     ) -> Dict[str, Dict[int, Dict]]:
-        """Add custom modes, apply the settings.jsonc filters, order and index."""
-        # ── add any user-defined custom modes ──────────────────────
+        """Add custom modes, apply the settings.jsonc filters, order and index.
+
+        F-298: a custom_modes entry whose (width, height, bit_depth, hdr)
+        matches an already-detected mode overrides that mode's fps_max in
+        place -- the sensor's advertised ceiling is an electrical property
+        and says nothing about what this storage/CPU actually sustain, so
+        it needs to be correctable, not just addable-to. Only fps_max is
+        overridable this way; the rest of the detected mode (packing,
+        gui_layout, aspect) is left alone. A non-matching entry still
+        appends a brand-new mode exactly as before -- this only changes
+        what happens when the dimensions already exist.
+        """
+        # ── add or correct user-defined custom modes ─────────────────
         for cam, extras in self.custom_modes.items():
-            sensors.setdefault(cam, [])
+            # Only ever extend or correct a camera the probe actually found.
+            # This used to be sensors.setdefault(cam, []), which invented the
+            # camera when it wasn't detected -- so a settings.jsonc entry for
+            # a sensor that isn't plugged in produced a fabricated mode table
+            # for it. custom_modes exists to add modes to a real sensor and to
+            # correct a detected fps_max (F-298), never to declare a camera.
+            if cam not in sensors:
+                logging.warning(
+                    "custom_modes has an entry for %s, which was not detected "
+                    "-- ignoring it. custom_modes extends a camera that is "
+                    "present; it cannot declare one that isn't.", cam,
+                )
+                continue
             for extra in extras:
                 w, h = int(extra["width"]), int(extra["height"])
                 bd   = int(extra["bit_depth"])
                 fps  = extra.get("fps_max")
+                hdr_flag = bool(extra.get("hdr", False))
+                existing = next(
+                    (
+                        m for m in sensors[cam]
+                        if int(m.get("width") or 0) == w
+                        and int(m.get("height") or 0) == h
+                        and int(m.get("bit_depth") or 0) == bd
+                        and bool(m.get("hdr")) == hdr_flag
+                    ),
+                    None,
+                )
+                if existing is not None:
+                    if fps is not None:
+                        detected_fps = existing.get("fps_max")
+                        if detected_fps is not None and fps > detected_fps:
+                            logging.warning(
+                                "custom_modes override for %s %dx%d (%d-bit%s) raises "
+                                "fps_max from the detected %s to %s -- the sensor did "
+                                "not report this; if storage/CPU can't actually sustain "
+                                "it, lower the value instead of raising it.",
+                                cam, w, h, bd, " HDR" if hdr_flag else "",
+                                detected_fps, fps,
+                            )
+                        # Stash the sensor's own value before overwriting it --
+                        # the settings editor shows this as the "detected"
+                        # placeholder next to the editable effective value.
+                        existing.setdefault("fps_max_detected", detected_fps)
+                        existing["fps_max"] = fps
+                    continue
                 sensors[cam].append(
                     self._mode_from_metadata_or_detected(
                         camera_name=cam,
@@ -386,7 +466,7 @@ class SensorDetect:
                         height=h,
                         bit_depth=bd,
                         fps_max=fps,
-                        hdr=bool(extra.get("hdr", False)),
+                        hdr=hdr_flag,
                         extra=extra,
                     )
                 )
@@ -470,7 +550,14 @@ class SensorDetect:
         Returns stdout, or "" when the run fails. The HDR run is best-effort:
         a cinepi-raw build without ClearHDR support just yields no extra modes.
         """
-        cmd = "cinepi-raw --list-cameras" + (" --hdr sensor" if hdr else "")
+        # Probe under the same pixel-rate ceiling the real launch will use, so
+        # the mode table cannot advertise a frame rate the configured RP1
+        # regime could never sustain. Harmless if libcamera turns out to apply
+        # the bound only at configure time rather than during enumeration --
+        # that is what hardware gate G2 settles.
+        max_pixel_rate = rp1_regime.pixel_rate()
+        rate_arg = f" --max-pixel-rate {max_pixel_rate}" if max_pixel_rate is not None else ""
+        cmd = "cinepi-raw --list-cameras" + rate_arg + (" --hdr sensor" if hdr else "")
         try:
             proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         except Exception as exc:  # pragma: no cover - defensive
@@ -530,6 +617,24 @@ class SensorDetect:
                         "likely because something already held the sensor "
                         "subdev when Cinemate started."
                     )
+
+            # No camera header line parsed. This is NOT the same test as the
+            # `not out.strip()` one above: cinepi-raw prints "No cameras
+            # available!" to stdout, so the output is non-empty and that
+            # guard never fires. Stop here rather than in _finalize_modes(),
+            # because the custom_modes loop there would otherwise manufacture
+            # a camera out of a settings key -- leaving res_modes non-empty
+            # and camera_model set on a boot with no sensor attached, which
+            # bypasses every `if not res_modes` degraded-boot guard in
+            # cinepi_controller.py and storage_preroll.py.
+            if not merged:
+                logging.warning(
+                    "No camera parsed from the cinepi-raw listing -- treating "
+                    "this as no camera attached."
+                )
+                self.camera_model = None
+                self.res_modes = {}
+                return
 
             # full assembly → {model → {mode_idx → mode_dict}}
             sensors = self._finalize_modes(merged)

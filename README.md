@@ -9,7 +9,7 @@ It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https
 - 10/12-bit CinemaDNG recording, plus 16-bit [ClearHDR](https://tiramisioux.github.io/cinemate/clear-hdr/) on the IMX585
 - [CineMate Log](https://tiramisioux.github.io/cinemate/cinemate-log/) — log-companded DNGs on the IMX585 and IMX283, 17–37 % smaller, decoded back to linear automatically by any DNG-aware app
 - [Dual sensors](https://tiramisioux.github.io/cinemate/dual-sensors/) — two libcamera-synchronised sensors, side-by-side / picture-in-picture HDMI preview, per-sensor recording
-- [Web GUI](https://tiramisioux.github.io/cinemate/web-gui/) on the Pi's own hotspot, plus a browser settings editor for `settings.jsonc`, `config.txt` and the RAW drive
+- [Web GUI](https://tiramisioux.github.io/cinemate/web-gui/) on the Pi's own hotspot, plus a browser [settings editor](https://tiramisioux.github.io/cinemate/settings-editor/) for `settings.jsonc`, `config.txt` and the RAW drive
 - [Web API](https://tiramisioux.github.io/cinemate/web-api/) — build wireless controllers and tally lights from an ESP32, Pico W or M5Stack ([Building control units](https://tiramisioux.github.io/cinemate/building-control-units/))
 - GPIO buttons, switches, rotary encoders, pots and an OLED, mapped in one settings file ([Additional hardware](https://tiramisioux.github.io/cinemate/hardware-controls/))
 - Multi-drive RAW hot-swap with a standby drive; SSD, NVMe or CFE Hat storage

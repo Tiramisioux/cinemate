@@ -7,11 +7,37 @@ ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-ga
 | Piece | Needed | Why |
 |-------|--------|-----|
 | Kernel | ≥ 6.12.93+rpt (the Cinemate baseline) | older `rp1-cfe` corrupts 16-bit CSI-2 capture; 10/12-bit is unaffected |
-| Sensor driver | Tiramisioux `imx585-v4l2-driver`, branch `innomaker-v1.0` | exposes `wide_dynamic_range`, the 3840×2200 16-bit mode, and the `ccmp` overlay parameter; gates the invalid binned-ClearHDR combo |
+| Sensor driver | Tiramisioux `imx585-v4l2-driver`, branch `cinemate-7modes` | exposes `wide_dynamic_range`, the 3840×2200 16-bit mode, and the `ccmp` overlay parameter; gates the invalid binned-ClearHDR combo |
 | Overlay | `dtoverlay=imx585,...,ccmp` in config.txt | without `ccmp` the 12-bit CCMP ClearHDR mode does not exist on this driver (the installer writes it) |
 | libcamera | Tiramisioux `libcamera`, branch `cinemate` | 16-bit endian swap handling |
 | Kernel patch (mono only) | `scripts/patch-rp1-cfe.sh` | the stock kernel's Y16 format entry misses the 16-bit workaround — see [Mono sensor](#mono-sensor-imx585_mono) |
 | Exposure | manual | ISP statistics are invalid at 16-bit, so auto exposure and auto white balance cannot run |
+
+## New: launch refusal if the sensor doesn't confirm HDR
+
+cinepi-raw now hard-fails at launch instead of silently continuing when the
+sensor doesn't confirm the ClearHDR write. If you hit this, you'll see:
+
+> `imx585/imx708 ClearHDR: sensor did not accept wide_dynamic_range=1 after retrying -- refusing to launch with --hdr sensor while the sensor's combiner is still off (this is the invalid-combo BLC-fill defect, not a software problem; retry the launch)`
+
+(`sensor` in the message is whichever `--hdr` value you launched with — `sensor`
+or `auto`.)
+
+**What it means:** at startup cinepi-raw writes `wide_dynamic_range=1` to the
+sensor subdevice, then reads it back to confirm the sensor actually applied
+it. This message means that readback never came back true — not on the first
+write, and not after 4 retries 50 ms apart.
+
+**What changed:** previously, a failed readback was not checked at all —
+cinepi-raw would launch anyway with the HDR write requested but not actually
+applied, and the sensor's WDR combiner still off. In that state a ClearHDR
+mode records a flat BLC pedestal fill instead of real image data, with every
+ClearHDR knob (thresholds, blend, gain adder) inert against it — silently.
+cinepi-raw now refuses to launch in that case instead. This is a fail-fast
+change, not a new defect: if you see this error, it means the same
+invalid-combo condition that used to record garbage now stops you before it
+does. Retry the launch — the confirmation usually succeeds on a subsequent
+attempt.
 
 ## What changes when ClearHDR is on
 
@@ -31,7 +57,7 @@ without it. No separate toggle is needed.
 
 The imx585 exposes ClearHDR at **both** 12-bit and 16-bit, so the table is
 ordered plain modes first, then 12-bit HDR, then 16-bit HDR. On the
-`innomaker-v1.0` driver (active-area dims) the mono table is:
+`cinemate-7modes` driver (active-area dims) the mono table is:
 
 | Mode | Resolution | Bit depth | HDR |
 |------|-----------|-----------|-----|
@@ -188,7 +214,7 @@ variant. Three mono-specific facts:
 |------|--------|
 | Kernel patch required for 16-bit | The stock rpi-6.12.y kernel gives every Bayer 16-bit format the "RP1 HW mismatch" workaround (`csi_dt = 0`) but missed the mono `Y16` entry. Unpatched, mono 16-bit records PiSP-COMP1-structured garbage (stripes on flat scenes, noise on detailed ones). The installer applies `scripts/patch-rp1-cfe.sh` automatically for `SENSOR_MODEL=imx585_mono`; rerun it after any kernel package upgrade (the upgrade silently restores the stock module). |
 | 16-bit frames are 3840×2200 | The sensor prepends ~20 optical-black rows to its RAW16 output; the top rows of every 16-bit DNG sit at the 3200 pedestal. Expected geometry, not a defect. |
-| No binned ClearHDR | Binned (2K) ClearHDR is an invalid sensor configuration on mono — the sensor emits pure black-level regardless of exposure (AppNote §2 p.6). The `innomaker-v1.0` driver removes the combination from the mode table; only full-res 12-bit CCMP and 16-bit ClearHDR are offered. |
+| No binned ClearHDR | Binned (2K) ClearHDR is an invalid sensor configuration on mono — the sensor emits pure black-level regardless of exposure (AppNote §2 p.6). The `cinemate-7modes` driver removes the combination from the mode table; only full-res 12-bit CCMP and 16-bit ClearHDR are offered. |
 
 Mono launches also drop `--awb`/`--awbgains` (no CFA to balance) and use the
 `imx585_mono.json` tuning automatically.

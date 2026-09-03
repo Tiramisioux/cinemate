@@ -14,6 +14,12 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 
 - **Default branch moves to `cinemate-7modes`**, replacing `innomaker-v1.0`. Seven modes total — three SDR (1920×1080 12-bit binned, 3840×2160 12-bit all-pixel, and a 3840×2160 10-bit RAW10 all-pixel mode, up to 90 fps) and four ClearHDR (1920×1080 12-bit binned ClearHDR+CCMP, 3840×2160 12-bit all-pixel ClearHDR+CCMP, 1920×1100 16-bit binned ClearHDR linear, and 3840×2200 16-bit all-pixel ClearHDR linear) — restoring the two binned-HDR modes `6.12.y` had and `innomaker-v1.0` dropped (both colour-sensor only), on top of `innomaker-v1.0`'s RAW10 mode and its dedicated 16-bit entry. Also makes 12-bit CCMP ClearHDR default-on for colour sensors. Verified on hardware. The old `6.12.y` and `innomaker-v1.0` branches stay selectable via `IMX585_DRIVER_REPO_REF` but are no longer the supported default.
 
+### libcamera
+
+- **PiSP pixel-rate bound taken as an explicit input, derived from the RP1 clock** — previously a compile-time constant baked at the overclocked value. Cinemate now computes the ceiling from the RP1 overclock toggle's actual state and passes it to cinepi-raw as `--max-pixel-rate`. See [Overclocking the Pi](overclocking.md).
+- **Fixed 16-bit ClearHDR corruption on compressed (COMP1) capture** — the 16-bit endian swap was keyed only on sensor bus bit depth, so a 16-bit ClearHDR mode with COMP1-compressed CFE output got byte-swapped too. The swap assumes 2 bytes/pixel and scrambled the 8-byte compression blocks, corrupting both the raw stream and the back-end input. The swap is now gated off compressed formats — consumers decode COMP1 directly.
+- **RP1 overclock tuning** — `minPixelProcessingTime` adjusted so the overclock toggle actually raises the achievable frame rate.
+
 ### ClearHDR (imx585)
 
 - **16-bit ClearHDR recording** — the imx585's on-sensor single-frame HDR is now a first-class mode: Cinemate probes the sensor with and without `--hdr sensor` and lists the plain and ClearHDR modes (12-bit and 16-bit) in one mode table. Selecting an HDR mode relaunches cinepi-raw with the flag; `HDR` labels mark the modes in both GUIs. See [ClearHDR](clear-hdr.md).

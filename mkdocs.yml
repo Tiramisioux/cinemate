@@ -28,6 +28,7 @@ nav:
       - Storage pre-roll warm-up: storage-preroll.md
   - Configuring:
       - Settings file: settings-json.md
+      - Settings editor: settings-editor.md
       - Camera sensors and frame rates: sensors.md
       - ClearHDR (imx585): clear-hdr.md
       - CineMate Log (imx585 / imx283): cinemate-log.md

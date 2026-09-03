@@ -394,7 +394,7 @@ cd
 ```
 
 ```shell
-git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git --branch innomaker-v1.0
+git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git --branch cinemate-7modes
 cd imx585-v4l2-driver/
 ./setup.sh
 sudo dkms autoinstall -k "$(uname -r)"
@@ -402,7 +402,7 @@ cd
 ```
 
 !!! note ""
-    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work and installed from Tiramisioux forks (`6.12.y` branch of each). The [IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) adds UHD 4K (3840×2160, 10-bit) and 2.7K 16:9 (2736×1538, 12-bit) readout modes on top of the upstream `6.12.y` base; the [IMX585 fork](https://github.com/Tiramisioux/imx585-v4l2-driver) installs its `innomaker-v1.0` branch — upstream `main`, byte-identical to the INNO-MAKER v1.0 vendor driver: active-area modes (1920×1080 / 3840×2160 / 3840×2200 16-bit ClearHDR), the `ccmp` overlay parameter, and the invalid binned-ClearHDR combination gated out. For a mono imx585 the installer additionally applies the `scripts/patch-rp1-cfe.sh` kernel patch — without it, mono 16-bit capture records garbage (see [ClearHDR](clear-hdr.md#mono-sensor-imx585_mono)). For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
+    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work and installed from Tiramisioux forks (`6.12.y` branch for IMX283). The [IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) adds UHD 4K (3840×2160, 10-bit) and 2.7K 16:9 (2736×1538, 12-bit) readout modes on top of the upstream `6.12.y` base; the [IMX585 fork](https://github.com/Tiramisioux/imx585-v4l2-driver) installs its `cinemate-7modes` branch — built on `innomaker-v1.0` (upstream `main`, byte-identical to the INNO-MAKER v1.0 vendor driver) — with seven active-area modes: three SDR (1920×1080 12-bit 2x2 binned, 3840×2160 12-bit all-pixel, and a 3840×2160 10-bit RAW10 all-pixel mode up to 90 fps) and four ClearHDR (1920×1080 12-bit binned ClearHDR+CCMP, 3840×2160 12-bit all-pixel ClearHDR+CCMP, 1920×1100 16-bit binned ClearHDR linear, and 3840×2200 16-bit all-pixel ClearHDR linear). The two binned ClearHDR modes are restored from `6.12.y` (`innomaker-v1.0` had dropped them) on top of `innomaker-v1.0`'s RAW10 mode and its dedicated 16-bit entry, and are colour-sensor only — mono returns pure black level at binned ClearHDR, so mono stays on the existing 4K-only entries. The branch also carries the `ccmp` overlay parameter (default-on for the colour sensor's 12-bit CCMP ClearHDR on this branch; mono still needs the overlay flag) and gates the invalid binned-ClearHDR combination out of mono's mode table. This driver pin is verified on Cinemate hardware. For a mono imx585 the installer additionally applies the `scripts/patch-rp1-cfe.sh` kernel patch — without it, mono 16-bit capture records garbage (see [ClearHDR](clear-hdr.md#mono-sensor-imx585_mono)). For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
 
 #### Cinemate IMX283 and IMX585 tuning overrides
 
@@ -636,7 +636,7 @@ For more details on running CinePi-raw from the command line, see [this section]
 ```shell
 sudo apt update
 sudo apt install -y \
-    git build-essential python3-dev python3-pip python3-venv \
+    git build-essential python3-dev python3-pip \
     i2c-tools python3-smbus python3-pyudev \
     libgpiod-dev libgpiod2 python3-libgpiod gpiod \
     portaudio19-dev python3-systemd \
@@ -1031,6 +1031,8 @@ sudo make enable
     ```
 
     Cinemate checks this for you at startup and logs a warning naming this exact command if any installed copy is out of date with the repo. Re-running the full installer does the same thing, since it calls `sudo make install` itself.
+
+For routine updates, run `cinemate-update.sh` from the repo root (`/home/pi/cinemate/cinemate-update.sh`) instead of a bare `git pull`. It fetches and fast-forwards both `cinepi-raw` and `cinemate`, then rebuilds/reinstalls whichever repo actually changed — including the `make install` step above — so the installed copies stay current automatically. If `versions.env` has a `CINEMATE_REPO_REF` and/or `CINEPI_RAW_REPO_REF` recorded (see [Dependency files](#dependency-files) above), it checks out and follows that pinned ref for the corresponding repo instead of whatever branch happens to be checked out; left empty (the default), it behaves exactly as before.
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!
 

@@ -1,6 +1,22 @@
 # C7 · ClearHDR: INNO-MAKER defaults, HCG toggle, and the remaining driver controls
 
-!!! note "Status 2026-08-26 — implemented on branches at filing time, no Pi time yet"
+!!! success "Status 2026-09-03 — ClearHDR works on hardware"
+    The operator confirms ClearHDR is functioning on the rig, so the feature half of this
+    step is closed. Recorded as a working-system confirmation, **not** a gate sweep: G0–G3
+    below were never run under those labels and no per-knob A/B was reported, so each gate's
+    specific claim stays unverified rather than passed. In particular G1 — what the threshold
+    pair's ordering does to the hand-off — remains an open question about the sensor, not a
+    task blocking this step.
+
+    **What is still open is where the code lives, not whether it works.** The cinemate half
+    (`8dfcd165`: the INNO defaults, the `hcg` key, the consistency test) is on **no pushed
+    branch in this repo** and is absent from both `dev` and `main` — it exists only on the
+    operator's own checkout, so nothing here is recoverable from GitHub if that machine is
+    lost. The cinepi-raw half is pushed but unmerged, one commit ahead of `dev` on
+    `feature/clearhdr-controls`. A fresh install therefore does not get this feature.
+    Pushing the cinemate half, then merging both, is the whole of the remaining work.
+
+!!! note "Status 2026-08-26 — implemented on branches at filing time, no Pi time yet (historical)"
     Like C5, the code shipped the same day this was filed: cinemate
     `feature/clearhdr-controls` @ `8dfcd165`, cinepi-raw `feature/clearhdr-controls`
     @ `399692f`, driver fork `imx585-v4l2-driver` `6.12.y` @ `cb7c7a6`. All four
@@ -44,7 +60,13 @@ contract) — all pass. The cinepi-raw side compiles only on the Pi; not yet bui
 | INNO-only direct VMAX/HMAX/SHR (CID +7/+8/+9) | skip | Redundant — VBLANK/HBLANK/EXPOSURE reach the same registers and libcamera owns frame timing. Adopting means a driver swap to the unproven 3840×2200 INNO lineage. |
 | Sync mode (`sony,sync-mode`, overlay param exists) | future C-step candidate | Boot-config dropdown exactly like the link-frequency one; enables dual-cam genlock (XVS/XHS wiring, own hardware session). |
 
-## Verification gates (all unrun — need the Pi)
+## Verification gates (never run as specified — superseded by the working confirmation)
+
+ClearHDR is confirmed working on hardware (see the status note above), so these gates no
+longer block the step. None of them was executed under its own label, so nothing below
+should be read as passed — the open questions each gate was written to settle, especially
+G1's threshold-pair ordering, are still unanswered. Kept as written for whoever revisits
+the knobs.
 
 Pre-checks first, per the hardware-session method: `free -g` (which CM5), `uname -r`
 ≥ 6.12.93, both repos on `feature/clearhdr-controls`, rebuild cinepi-raw, DKMS-rebuild the

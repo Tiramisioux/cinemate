@@ -21,13 +21,13 @@ nav:
       - Web GUI: web-gui.md
       - Playback: playback.md
       - Web API: web-api.md
-      - Lenses and image circles: image-circle.md
+      # - Lenses and image circles: image-circle.md   # unverified - hidden from the menu, page still builds
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Storage pre-roll warm-up: storage-preroll.md
   - Configuring:
-      - Settings file: settings-json.md
+      - settings.jsonc: settings-json.md
       - Settings editor: settings-editor.md
       - Camera sensors and frame rates: sensors.md
       - ClearHDR (imx585): clear-hdr.md
@@ -48,7 +48,7 @@ nav:
       - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
       - Manual installation: installation-steps.md
       - Compiling cinepi-raw: compiling-cinepi-raw.md
-      - Overclocking the Pi: overclocking.md
+      # - Overclocking the Pi: overclocking.md   # shipped on by the installer; pending fact-check - hidden from the menu, page still builds
   - Reference:
       - Cinemate terminal commands: cli-commands.md
       - CinePi RAW terminal commands: cli-user-guide.md

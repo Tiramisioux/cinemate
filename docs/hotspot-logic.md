@@ -2,11 +2,13 @@
 
 The built-in hotspot lets you use any device (phone/tablet/computer) for preview/controlling the camera.
 
+Once joined, the camera is at `cinepi.local` or, equivalently, `10.42.0.1`. That number is NetworkManager's shared-mode gateway address and it never changes, which is why microcontroller firmware hard-codes it instead of resolving a name — see [Building control units](building-control-units.md).
+
 There are three layers involved, each able to keep the hotspot up if the one above it is not running:
 
-- **NetworkManager itself:** the AP connection profile is persisted with `connection.autoconnect=yes`, so the hotspot comes up at boot before any Cinemate Python has run at all — even if both layers below are dead.
-- **As a background service:** `wifi-hotspot.service` reconciles the hotspot every 60 seconds. It runs as its own root systemd unit with no dependency on `cinemate-autostart.service`, so it keeps working through a Cinemate crash, a corrupted install, or a `settings.jsonc` that fails to parse.
-- **At app startup:** when `system.wifi_hotspot.enabled` is `true`, Cinemate also creates the hotspot itself with `nmcli device wifi hotspot`. If `wifi-hotspot.service` is already active it stands down, so there is exactly one owner of the hotspot at any time.
+- **NetworkManager itself:** the AP connection profile is persisted with `connection.autoconnect=yes`, so the hotspot comes up at boot before any CineMate Python has run at all — even if both layers below are dead.
+- **As a background service:** `wifi-hotspot.service` reconciles the hotspot every 60 seconds. It runs as its own root systemd unit with no dependency on `cinemate-autostart.service`, so it keeps working through a CineMate crash, a corrupted install, or a `settings.jsonc` that fails to parse.
+- **At app startup:** when `system.wifi_hotspot.enabled` is `true`, CineMate also creates the hotspot itself with `nmcli device wifi hotspot`. If `wifi-hotspot.service` is already active it stands down, so there is exactly one owner of the hotspot at any time.
 
 This is handy when shooting in the field. Connect your phone or laptop directly to the hotspot and browse to the GUI to control the camera. If the Pi was previously connected to another Wi-Fi network, that Wi-Fi connection is replaced by the hotspot.
 
@@ -29,4 +31,4 @@ During development you may want the Pi to join your normal Wi-Fi so it has inter
 If you plug an Ethernet cable into the Pi, you can keep the hotspot running while also having a wired connection for internet and local networking.
 
 !!! note ""
-    The web GUI only starts when `wlan0` or `eth0` already has an IP address. When networking is up, the UI is served at `<ip-address>:5000` and the clean preview stream is at `<ip-address>:8000/stream`. If the interface comes up only after Cinemate has already started, restart Cinemate to start the web server.
+    The web GUI only starts when `wlan0` or `eth0` already has an IP address. When networking is up, the UI is served at `<ip-address>:5000` and the clean preview stream is at `<ip-address>:8000/stream`. If the interface comes up only after CineMate has already started, restart CineMate to start the web server.

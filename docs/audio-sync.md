@@ -2,7 +2,7 @@
 
 ## Fine timecode offset
 
-A USB mic can sit a fixed couple of frames early or late relative to video (constant analog/buffering latency). Correct that offset per toolchain in `settings.jsonc`:
+A USB mic can sit a fixed couple of frames early or late relative to video (constant analog/buffering latency). This can be correct by adding an offset `settings.jsonc`:
 
 ```json
 "audio_capture": {
@@ -11,9 +11,6 @@ A USB mic can sit a fixed couple of frames early or late relative to video (cons
 }
 ```
 
-| Symptom | Value |
-|---------|-------|
-| Sound arrives **early** (before the visual) | positive — e.g. `1` |
-| Sound arrives **late** (after the visual) | negative — e.g. `-1` |
+If sound arrives **early** (before the visual), try adding a *positive* value to nudge the timecode. If sound arrives **late** (after the visual), try adding a *negative* value.
 
-This shifts only the embedded BWF/iXML timecode metadata; the PCM samples are never moved.
+Note that this shifts only the embedded BWF/iXML timecode metadata; PCM samples are not moved.

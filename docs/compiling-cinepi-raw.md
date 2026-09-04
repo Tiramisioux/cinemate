@@ -1,6 +1,6 @@
 # Recompiling cinepi-raw
 
-For easy rebuilding and installation of `cinepi-raw` the Cinemate image contains `compile-raw.sh`. 
+For easy rebuilding and installation of `cinepi-raw` the CineMate image contains `compile-raw.sh`. 
 
 Run it by typing:
 

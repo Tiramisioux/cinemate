@@ -46,7 +46,7 @@ These methods adjust ISO, shutter angle and frame rate. Increment/decrement help
 - `ssd_monitor.space_left()` – Report remaining disk space (used by the `space` CLI command).
 - `reboot()` – Safely reboot the Pi.
 - `safe_shutdown()` – Shut the Pi down cleanly.
-- `restart_cinemate()` – Restart the Cinemate Python process without rebooting.
+- `restart_cinemate()` – Restart the CineMate Python process without rebooting.
 
 ## Locks and sync modes
 

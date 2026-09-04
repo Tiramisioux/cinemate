@@ -1,6 +1,6 @@
 # Acknowledgements
 
-The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on several open-source projects. Special thanks to all authors!
+The [**CineMate**](https://github.com/Tiramisioux/cinemate) stack is built on several open-source projects. Special thanks to all authors!
 
 - [**CinePi-raw**](https://github.com/cinepi/cinepi-raw) – Csaba Nagy
 - [**IMX585 and IMX283 drivers**](https://github.com/will127534) – Will Whang
@@ -17,7 +17,7 @@ Get your sensors and CFE Hats here: [https://www.tindie.com/stores/will123321/](
 
 <script src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
 <script>
-kofiwidget2.init('Support Cinemate on Ko-fi', '#72a4f2', 'G2G21IM9RO');
+kofiwidget2.init('Support CineMate on Ko-fi', '#72a4f2', 'G2G21IM9RO');
 kofiwidget2.draw();
 </script>
 <noscript>

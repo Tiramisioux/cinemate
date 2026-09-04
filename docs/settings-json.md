@@ -1,632 +1,524 @@
-# Settings.jsonc file
+# settings.jsonc
 
-This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/settings.jsonc`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
+Open the settings editor from a phone or laptop on the same network as the camera:
+
+```
+http://cinepi.local:5000/settings-editor/
+```
+
+On the camera's own hotspot, use `http://10.42.0.1:5000/settings-editor/` instead.
+
+Nothing is written until you press **Save changes**, which saves the file and restarts CineMate,
+stopping any recording. Every field is one key in `settings.jsonc`, which you can also
+[edit by hand](#editing-the-file-directly). For the page's own mechanics (tabs, top bar, backups) see
+[Settings editor](settings-editor.md).
+
+## Welcome screen
+
+![Welcome screen section of the CineMate settings editor](images/gui-welcome.png)
+
+Greeting drawn on HDMI at startup, before the live view. Changes show at the next start, which saving
+triggers. With Plymouth running, CineMate waits for the spinner to hand off.
+
+| Control | What it does |
+| --- | --- |
+| Show welcome message | Full-screen greeting, held at least three seconds. Default on. |
+| Message text | Free text, default `THIS IS A COOL MACHINE`. One centred white-on-black line, no wrapping, so keep it short. |
+| Welcome image | PNG instead of the text, stretched to fill the output, so match your monitor's aspect ratio. **Upload PNG** picks it, the bin icon clears it. PNG only. Default none. |
+
+!!! warning "Picking a PNG only records its path"
+    It sets `system.welcome.image` to `resources/welcome/<filename>`, relative to CineMate's working
+    directory: `/home/pi/cinemate/resources/welcome/<filename>` on the camera. Create that folder and
+    copy the PNG there over SSH; the page does not, and CineMate falls back to the text. By hand, any
+    absolute path and any format Pillow opens works.
+
+These map to `system.welcome`.
+
+## Wi-Fi hotspot
+
+![Wi-Fi hotspot section of the CineMate settings editor](images/gui-wifi.png)
+
+The camera broadcasts its own Wi‑Fi network, so you reach this page with no router. The toggle stops
+only that broadcast; the Pi still joins your own network through `raspi-config` or the desktop tools.
+
+| Control | What it does |
+| --- | --- |
+| Broadcast hotspot | Default on. Off applies **from the next boot**, so you can't strand yourself mid-session. Once down, only a wired link or a `wlan0`/`eth0` that already had an IP at CineMate start reaches this page. |
+| Network name | SSID shown to phones and laptops. Ships `CinePi`. Rename it when running more than one unit. |
+| Password | Ships `11111111`. 8-character minimum, unenforced here, so a shorter one saves silently. The eye button reveals it. Anyone with it can open this page. |
+
+!!! warning "A password under 8 characters is thrown away"
+    The field and `settings.jsonc` keep what you typed, but the service enforces NetworkManager's
+    8‑character minimum and comes up on the shipped `11111111` instead. The only trace is a line in
+    the service log. That shipped password is published here, so change it before treating the
+    hotspot as private.
+
+`wifi-hotspot.service` re-reads name and password on a 60-second reconcile pass: live within a
+minute, no reboot or restart. The access-point restart drops every hotspot client, including the
+device you are editing from. Full behaviour: [Wi-Fi hotspot](hotspot-logic.md).
+
+These map to `system.wifi_hotspot`.
+
+## Cameras
+
+<a id="sensors"></a>
+
+![Cameras section of the CineMate settings editor](images/gui-cam0.png)
+
+Per-sensor orientation, HDMI port, reported name and log. **Camera 0** and **Camera 1** are separate
+sections with independent values. Camera 1 drops the flip and name fields and adds the rig-wide
+record policy.
+
+| Control | What it does |
+| --- | --- |
+| Rotate 180° | Preview and recorded frames upside-down, for an inverted mount. Default off. |
+| Flip horizontal | Mirrors left–right, for periscope rigs. Default off. Camera 0 only. |
+| Flip vertical | Mirrors top–bottom. Default off. Camera 0 only. |
+| HDMI output | `Port 0` = `HDMI-A-1`, `Port 1` = `HDMI-A-2`. Camera 0 defaults to Port 0, Camera 1 to Port 1. |
+| Phase lock | Locks recorded cadence to the Pi's clock instead of sensor free-run, stopping audio/video drift over long takes. Default on. Leave it on, genlocked rigs included. |
+| Report a different USB name | Writes your own name into every DNG's `UniqueCameraModel` tag instead of the one `cinepi-raw` picks. Default on. Camera 0 only. |
+| Reported name | Used when the toggle above is on. Ships `cinepi`. Camera 0 only. |
+| Custom tuning file | Forces a colour tuning file instead of the auto-detected one. Default off; the picker lists `resources/tuning_files/` (stock `imx477.json`). Ignored on a Pi 4, which gets none. |
+| Upload .json | Points the setting at `resources/tuning_files/<your file>` and selects it. Put the file on the Pi over SSH first; the page does not copy it. Non-`.json` refused. |
+| CineMate Log | Log instead of linear: smaller files, same grade. Default `Off`; `On (mode default)` uses the sensor mode's target, `Force 10-bit` / `Force 12-bit` pin it. imx585 and imx283 only. A target the live mode cannot reach records plain linear DNGs. Seeds at launch; a later `set log` wins. |
+| Dual-sensor record policy | **Camera 1 only, rig-wide.** `Follow preview` (default): full-screen or pip-main records one sensor, side-by-side both. `Always both` records both every time. No effect with one sensor; `rec cam0` / `rec cam1` / `rec both` overrides one take. |
+
+!!! note "Reported name and Blackmagic"
+    Resolve picks its decode pipeline from this name. `Blackmagic Pocket Cinema Camera 4K` unlocks
+    the full Camera RAW tab, ISO slider and colour science included. Never combine it with CineMate
+    Log; that colour science stacks on already-linearised data. Keep `cinepi` on any log camera.
+
+!!! note "HDMI port on a headless install"
+    This sets only the connector CineMate uses once running. The boot screen needs its own matching
+    `video=HDMI-A-1:1920x1080M@60D` (or `HDMI-A-2`) in `/boot/firmware/cmdline.txt`.
+
+!!! danger "A save from this page resets Camera 1's flip and name keys"
+    `sensors.cam1` also holds `horizontal_flip`, `vertical_flip`, `override_camera_name` and
+    `camera_name`, exposed here for Camera 0 only. The form never sends them, so a save rewrites them
+    to `false`, `false`, `false`, `""` and values set over SSH are silently lost. Avoid saving here on
+    a rig that depends on them.
+
+These map to `sensors.cam0`, `sensors.cam1` and `sensors.record_policy`.
+
+## Timing & sync
+
+![Timing & sync section of the CineMate settings editor](images/gui-sync.png)
+
+Frame-timing tolerances, the conform frame rate, and storage warm-up.
+
+| Control | What it does |
+| --- | --- |
+| Auto storage pre-roll | Records and discards a short test clip at startup and on each storage mount, priming the card. Never becomes the "latest recording". Default on. Off skips only the automatic runs; CLI `storage preroll` still works ([Storage pre-roll](storage-preroll.md)). |
+| Local mains frequency | Frequencies used for flicker-free shutter angles. Ships 50 and 60. Enter adds a chip, × removes one, drag to reorder. |
+| Conform frame rate | What everything is timecode-conformed to. 24, 25 or 30; default 25. |
+| Live sync warning tolerance | Frames the recorded count may fall behind elapsed take time before the SYNC warning latches. Shortfall only; running ahead never latches. Default 5 frames. |
+| Startup guard | Frames that must elapse after record starts before the live warning can latch, covering recorder startup latency. Default 10 frames, 400 ms at 25 fps. |
+| Final sync tolerance | How far end-of-take analysis lets frames on disk differ from expected, either direction, before flagging the clip out of sync. Default 1 frame, stricter than the live warning. |
+| Timecode jitter tolerance | Late-but-present frames within this many frames are ignored, not logged as a drop. Default 1 frame. |
+
+!!! note "Conform frame rate does not change what you shoot"
+    The sensor records at the camera's own FPS. Conform sets only the timecode counter's frame base
+    and the Playback pane's speed, so a take shot above it plays slow motion unless **Use conform
+    frame rate** is off there. DNG timecode uses the actual capture rate.
+
+These map to `system.storage.auto_preroll`, `settings.conform_frame_rate`, `settings.light_hz` and
+`settings.sync_tolerances`.
+
+## Value steps
+
+<a id="arrays"></a>
+
+![Value steps section of the CineMate settings editor](images/gui-steps.png)
+
+The click-stops each control cycles through. Enter adds a chip, × removes one, drag reorders, except
+shutter angle, always re-sorted low to high. ISO, shutter angle and frame rate stop at the list ends;
+white balance and anamorphic wrap.
+
+| Control | What it does |
+|---|---|
+| ISO stops | Default 100, 200, 400, 640, 800, 1200, 1600, 2500, 3200. |
+| Free stepping (ISO stops) | Sweeps continuously, ignoring the list. Default off. |
+| Increment (ISO stops) | Free-step size. Default 100. |
+| Shutter angle stops | Degrees. Default 1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360. |
+| Free stepping (Shutter angle stops) | Sweeps continuously. Default on. |
+| Increment (Shutter angle stops) | Free-step size. Default 1°. |
+| Frame-rate stops | Default 25, 33, 50. |
+| Free stepping (Frame-rate stops) | Sweeps continuously. Default off. |
+| Increment (Frame-rate stops) | Free-step size. Default 1 fps. |
+| White balance stops | Kelvin. Default 3200, 4400, 5600. |
+| Free stepping (White balance stops) | Sweeps continuously. Default on. |
+| Increment (White balance stops) | Free-step size. Default 100 K. |
+| Anamorphic desqueeze stops | Preview desqueeze factors; above 1 widens the preview, recording untouched. Step-only, no pot or free stepping. Default 1, 1.33, 2. |
+
+Free stepping drives pots, the quad encoders, the CLI `inc`/`dec` commands and the web GUI. Assign a
+pot in **Pots & free stepping**.
+
+The swept range is fixed per parameter, not your chips, whatever the card text says. Only the
+increment is yours.
+
+| Control | Free range |
+|---|---|
+| ISO | 100–3200 |
+| Shutter angle | 1–360° |
+| Frame rate | 1 fps to `fps_max` (sensor max for the mode, truncated: 49.97 gives 49) |
+| White balance | 2800–6500 K |
+
+!!! note "Two lists get edited behind your back"
+    Flicker-free angles for `light_hz` (**Local mains frequency**, Timing & sync) are added to the
+    shutter angle stops on every fps change and the list re-sorted, so angles you never typed appear.
+    Frame-rate stops above the sensor mode's ceiling are dropped and the sensor maximum offered
+    instead, so the stock 50 fps stop is not reachable in every mode.
+
+These map to `arrays.iso`, `arrays.shutter_a`, `arrays.fps`, `arrays.wb` and
+`hdmi_display.preview.anamorphic.steps`.
+
+## Pots & free stepping
+
+![Pots & free stepping section of the CineMate settings editor](images/gui-pots.png)
+
+Assign a Grove Base HAT ADC channel to each parameter you want on a dial. ISO, shutter angle, frame
+rate and white balance set their free stepping in **Value steps**. Only assign channels with a pot
+wired: noise on an empty connector drifts the parameter on its own.
+
+| Control | What it does |
+| --- | --- |
+| ISO | Grove Base HAT channel: `None`, or `Channel 0`–`Channel 7`. Opens on `Channel 0`, ships `None`. |
+| Shutter angle | Same; opens on `Channel 2`, ships `None`. |
+| Frame rate | Same; opens on `Channel 4`, ships `None`. |
+| White balance | Same; opens on `Channel 6`, ships `None`. |
+| ClearHDR threshold low | Channel; range 0–4095. Ships `None`. |
+| — Free stepping | On: whole 0–4095 range by the increment. Off (default): the stops in `arrays.hdr_threshold_low.steps`. |
+| — Increment | Shows `64`; ships `16`. |
+| ClearHDR threshold high | Channel; range 0–4095. Ships `None`. |
+| — Free stepping | Same, 0–4095. Default off. |
+| — Increment | Shows `64`; ships `16`. |
+| ClearHDR blend | Channel; range 0–8. Ships `None`. |
+| — Free stepping | Same, 0–8. Default off. |
+| — Increment | Shows `1`, which also ships. |
+| ClearHDR gain adder | Channel; range 0–5. Ships `None`. |
+| — Free stepping | Same, 0–5. Default off. |
+| — Increment | Shows `1`, which also ships. |
+
+!!! warning "Set the channels by hand"
+
+    The dropdowns are display-only: they ignore `settings.jsonc`, hence the `Channel 0/2/4/6`
+    openers, and saving replaces `input_peripherals.pots` with an empty list. Edit that list over
+    SSH, and re-check it after every save here.
+
+!!! warning "ClearHDR free stepping does not take effect either"
+
+    The toggles and increments save to `image_capture.hdr.threshold_low_free`, `…_free_increment`,
+    `blend_free`, `gain_adder_free`, keys CineMate never reads. It reads
+    `arrays.hdr_threshold_low.free` / `free_increment` and the three matching blocks, which have no
+    control here, so the toggles show off and the increments `64`/`64`/`1`/`1` whatever your file
+    holds. Set them in `arrays` over SSH.
+
+These map to `input_peripherals.pots` and (nominally) `image_capture.hdr`; the free-stepping values
+CineMate reads live in [`arrays`](settings-json.md#arrays).
+
+## Resolution & sensor
+
+<a id="image_capture"></a>
+
+![Resolution & sensor section of the CineMate settings editor](images/gui-resolution.png)
+
+Filters which sensor modes reach the camera's resolution control, and sets the startup values for
+imx585 ClearHDR.
+
+| Control | What it does |
+| --- | --- |
+| Crop factors offered | Which crops appear, as "K" categories. Modes group to the nearest half-K by width, so 1332×990 is 1.5 K. Default chips `1.5`, `2`, `3`, `4`; `+K` adds one, `×` removes one. |
+| Bit depths offered | Which raw depths appear. Default chips `10`, `12`, `16`; `+bit` adds one. `16` covers the imx585 16-bit ClearHDR modes. |
+| Expose plain (SDR) modes | Shows the sensor's non-HDR modes alongside ClearHDR. Default on; off leaves only ClearHDR. |
+| Expose imx585 ClearHDR modes | Shows them, at 12-bit and 16-bit. Default on; off keeps the sensor SDR-only. |
+| ClearHDR startup knobs | The four fields below, applied whenever a ClearHDR mode is selected. |
+| Threshold low | Raw level below which the sensor reads pure high-gain. Range 0–4095. Blank by default (field reads `driver`), keeping the driver's 0. |
+| Threshold high | Raw level above which it reads pure low-gain. Range 0–4095. Blank by default (field reads `driver`), keeping the driver's 4095. |
+| Blend | High-gain / low-gain mix in the transition zone, as a driver menu number. Range 0–8, default `5` (HG 1/16 + LG 15/16). HG-heavier is cleaner in the transition tones; LG-heavier holds highlights longer, with more grain. |
+| Gain adder | Digital gain on the merge's low-gain path. Range 0–5, default `1` (+6 dB, quieter than the driver's +12 dB). Higher brightens highlights and adds grain; lower leaves them darker, to lift in the grade. |
+| Sensor database | Read-only path of the file describing every sensor's modes, `resources/sensors.json` by default, shown in full for this Pi. Only relevant when adding hardware support. |
+
+!!! warning "Set both thresholds, or neither"
+
+    Both blank keeps the driver's own pair. Setting the two to the same value clamps every HDR frame
+    near black. Never set just one of the pair.
+
+!!! note "These are filters, not the mode list"
+
+    Crop factors and bit depths only decide which database modes get shown, and both lists are
+    global: every sensor, not per camera. Hidden modes come back the moment you add the step again,
+    so `5.5` brings the IMX283 5K modes back.
+
+    An empty list is not a ban. Clear every chip, or turn both mode toggles off, and that filter
+    stops applying, so every mode is offered. If a combination leaves a camera with nothing, CineMate
+    logs a warning and keeps that camera's full mode list.
+
+The four ClearHDR values are seeded at launch. For a running camera use `set hdr threshold low/high`,
+`set hdr blend`, `set hdr gain adder`, or a pot / quad-rotary channel, with no restart. Nothing here
+is range-checked: an out-of-range value is written as typed.
+
+The embedded DNG thumbnail has no card here. `image_capture.thumbnail` is `0` off, `1` mono, `2`
+colour, colour by default, the standard Playback pane path. Change it with `set thumbnail`; it
+applies live, to new takes only.
+
+These map to `image_capture.k_steps`, `image_capture.bit_depths`, `image_capture.hdr` and
+`sensors.database_file`.
+
+## Per-mode fps ceilings
+
+<a id="custom_modes"></a>
+
+![Per-mode fps ceilings section of the CineMate settings editor](images/gui-fpsceilings.png)
+
+Caps the frame rate offered for one sensor mode, for when a trial recording shows that mode dropping
+frames.
+
+| Control | What it does |
+| --- | --- |
+| Mode row label, e.g. *imx585 3856×2180 · 12-bit* | One row per mode detected at last start: sensor, resolution, bit depth, `HDR` on ClearHDR. Modes the *Resolution & sensor* whitelists exclude get none. Its "Sensor reports N fps." is the pre-override ceiling `--list-cameras` found on this board. |
+| fps field | Overrides that ceiling. Blank, cleared, or the detected number means no override; the greyed value is that detected figure. Min 0, no max, decimals accepted, and the working ceiling rounds down to whole frames. |
+
+**Save changes** restarts CineMate, which applies the ceiling; Boot config then shows
+`N (capped from M)`.
+
+!!! note "Entries for absent cameras survive"
+
+    A `custom_modes` entry with no row here (a camera that isn't attached) is left untouched.
+
+!!! warning "Lower, not higher"
+
+    A ceiling above the reported figure saves but logs a warning; the sensor never claimed that rate.
+
+!!! note "The detected figure is not fixed"
+
+    `--list-cameras` reports it per board, clamped by the RP1 pixel rate. The overclock raises it
+    (imx585 4K 12-bit: 43 stock, 50 overclocked), and it rounds down, so 43 can mean 43.98. It says
+    nothing about what storage and CPU sustain; only a trial recording finds that.
+
+No rows means no sensor modes detected. Reconnect the camera and check `cinepi-raw --list-cameras`.
+
+These map to `image_capture.custom_modes`, listed under
+[`image_capture`](settings-json.md#image_capture).
+
+## Audio
+
+<a id="audio_capture"></a>
+
+![Audio section of the CineMate settings editor](images/gui-audio.png)
+
+Mic input level and WAV timecode alignment. CineMate probes the USB mic: `24bit` values for 24-bit
+stereo capture, `16bit` for 16-bit mono. Read at startup, so a change needs a save & restart.
+
+| Control | What it does |
+| --- | --- |
+| 24-bit capture gain | In dB. `0` unity, positive boosts, negative cuts. Default `6`, step 0.5, no min/max enforced. |
+| 24-bit timecode offset | Shifts the timecode in the WAV, in whole frames. Positive later, negative earlier. Default `2`. |
+| 16-bit capture gain | Same, 16-bit path. Default `6`, step 0.5. |
+| 16-bit timecode offset | Same, 16-bit takes. Default `2`. |
 
 !!! note ""
-    The prebuilt image works out of the box. You do **not** need to edit `settings.jsonc` to start shooting. This page is a reference for when you want to customise hardware controls and behaviour.
+    Gain goes over ALSA with `amixer` at mic detection. Mics with fixed hardware gain expose no
+    writable capture control, so it never lands, only a log warning. The 16-bit value also goes to
+    Redis: `cinepi-raw` re-encodes the finished WAV with it after any non-zero 16-bit take, so a
+    16-bit mic that *does* take the ALSA gain is boosted twice.
 
-The image ships with a stock `settings.jsonc` that already holds working defaults for every section below — button and switch mappings, preview, and audio (for example, a 2-frame audio timecode offset on both microphone paths). Edit it only to change a mapping or tune behaviour.
+!!! note ""
+    An offset moves only the timecode metadata, written when the WAV is finalised; samples are never
+    shifted. Use it for a fixed bias, not drift over a long take, see
+    [Audio sync & drift](audio-sync.md).
+
+These map to `audio_capture`.
+
+## HDMI & preview
+
+<a id="hdmi_display"></a>
+
+![HDMI & preview section of the CineMate settings editor](images/gui-hdmi.png)
+
+Overlays on the HDMI monitor, and how the feed is framed at boot.
+
+| Control | What it does |
+|---|---|
+| **Show audio VU meter** | Mislabelled: toggles the RAM **buffer** bar, lower left. Green under 70% full, yellow under 90%, red above. Default on. The right-edge audio VU meters are separate and appear with any supported USB mic. |
+| **VU meter clip hatching** | Hatch lines across the buffer bar's filled part. Default on. Only visible while that bar is shown. |
+| **Monitor resolution** | GUI canvas size; match your monitor for a pixel-accurate overlay. Default `1920` × `1080`. A smaller framebuffer wins: CineMate uses it instead of clipping the layout. |
+| **Mirror to both HDMI ports** | One preview, GUI included, on both connectors. Default off. Single-sensor only; with two sensors the compositor owns both feeds. |
+| **Monitor shows** | Boot feed: Camera 0, Camera 1, or Both, side by side. Default **Both, side by side**. Needs two sensors. |
+| **Default zoom** | Boot magnification, 1.0× or 2.0×; 2.0× punches into frame centre for focus. Default **1.0×**. Preview only, never the recording. |
+| **Picture-in-picture** | Corner for the inset when one camera is full-screen: Upper left, Upper right, Lower left, Lower right. Default **Lower right**. Needs two sensors. |
+
+!!! note "The dropdown doesn't offer picture-in-picture"
+
+    Enter pip on the running camera with `set preview pip_cam0` / `pip_cam1`; the corner above is
+    where the inset lands. `hdmi_display.preview.default_hdmi_source` takes those as boot values too.
+    See [Dual sensors](dual-sensors.md#picture-in-picture).
+
+These map to `hdmi_display`.
+
+## GPIO in
+
+<a id="hardware_controls"></a>
+<a id="quad_rotary_controller"></a>
+<a id="combined_actions"></a>
+<a id="input_peripherals"></a>
+
+![GPIO in section of the CineMate settings editor](images/gui-gpio-in.png)
+
+Every physical control wired to the Pi's GPIO header, plus the Adafruit quad rotary i²c board. One
+row per control: its pin, then one or more gesture → command lines. A button can carry a press,
+single, double and triple click, and a hold, each running a different command.
+
+The stock image ships six controls (two record buttons, a multi-gesture button, two switches and a
+rotary encoder) and the four dials of the quad rotary board. Creating a control, choosing its command
+and argument, moving it to another pin, and the wiring for each device are covered in
+[Additional hardware](hardware-controls.md).
+
+These map to `hardware_controls` and `input_peripherals`.
+
+## GPIO out
+
+<a id="hardware_outputs"></a>
+
+![GPIO out section of the CineMate settings editor](images/gui-gpio-out.png)
+
+Pins driven while recording: tally lamp, relay, or a sync tone for the scratch track. One row per
+pin; the trigger is always **While rec**.
+
+| Control | What it does |
+| --- | --- |
+| + Add pin | New row: REC tally, no pin. |
+| Output | The row's pin, or **None** (dropped on save). Pins in use read "GPIO n — in use (…)" and are unselectable; a move asks to confirm. Ships GPIO 21 tally, GPIO 18 tone. |
+| Command | **REC tally** pulls the pin high for an LED or relay; **REC tone** puts a PWM sync beep on it for a recorder input. |
+| at … Hz | Tone pitch on REC tone rows; mirrors Slate tone frequency. |
+| Remove | Deletes the row after a confirmation; gone from the file on save. |
+| Slate tone frequency | Hertz. 1–20000, default 1000. All REC tone pins share it. |
+| Slate tone duty cycle | Pulse width in percent. 1–99, default 50. |
+| Mute the tone on a dropped frame | Mutes the tone for about a frame on a drop. Default off; the gap makes drops findable by ear. |
 
 !!! tip ""
-    For easy editing of settings on the preinstalled image file, type `editsettings` anywhere in Raspberry Pi terminal.
-
-The configuration is JSON with `//` and `/* */` comments and trailing commas allowed (JSONC) — the shipped file uses both to annotate the trickier keys in place. Each top‑level key describes a feature area of the system:
-
-| Key | Covers |
-|---|---|
-| [`system`](#system) | Splash screen, Wi‑Fi hotspot, web API, storage behaviour |
-| [`sensors`](#sensors) | Per-sensor hardware: geometry, HDMI output, name spoofing, phase lock, CineMate Log, sensor database |
-| [`settings`](#settings) | Frame-rate conform target, flicker-free input, sync tolerances |
-| [`arrays`](#arrays) | One block per cycle-able camera parameter: ISO, shutter angle, FPS, white balance |
-| [`image_capture`](#image_capture) | Resolution / bit-depth / HDR filters |
-| [`audio_capture`](#audio_capture) | Capture gain and timecode offset, per microphone path |
-| [`hdmi_display`](#hdmi_display) | Everything the operator sees: HDMI canvas, GUI overlays, preview zoom/source/pip/anamorphic |
-| [`hardware_controls`](#hardware_controls) | Direct-GPIO physical inputs, channel-first: buttons, switches, rotary encoders, combined actions |
-| [`input_peripherals`](#input_peripherals) | Grove Base HAT analog pots + the Adafruit quad I2C rotary encoder board |
-| [`hardware_outputs`](#hardware_outputs) | Direct-GPIO outputs Cinemate drives: REC tally/relay pins, REC sync tone |
-| [`output_peripherals`](#output_peripherals) | The optional I2C OLED status screen |
-
-## system
-
-Splash screen, network, and storage behaviour.
-
-```jsonc
-"system": {
-  "welcome": {
-    "show": true,
-    "message": "THIS IS A COOL MACHINE",
-    "image": null
-  },
-  "wifi_hotspot": {
-    "name": "CinePi",
-    "password": "11111111",
-    "enabled": true
-  },
-  "web_api": {
-    "enabled": true,
-    "token": "",
-    "allow_destructive": false,
-    "max_commands_per_sec": 20,
-    "max_sse_clients": 4,
-    "broadcast": { "enabled": true, "port": 8888, "hz": 5, "keys": ["is_recording", "iso"] }
-  },
-  "storage": {
-    "auto_preroll": true
-  }
-}
-```
-
-### welcome
-
-Text or image displayed briefly when Cinemate starts.
-
-`show` – `true` to display the configured startup splash for at least 3 seconds, `false` to skip it entirely. If Plymouth is active during boot, Cinemate waits until the spinner hands off before it shows the welcome message so the screen transition stays clean.<br>
-`message` – the splash text.<br>
-`image` – path to a bitmap file to show a logo instead of text, e.g. `/home/pi/welcome_image.bmp`. Overrides `message` when set.
-
-### wifi_hotspot
-
-`name` – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.<br>
-`password` – password for joining the hotspot.<br>
-`enabled` – set to `true` to start the hotspot automatically on boot. If set to `false`, Cinemate can still serve its web UI on whatever network the Pi is connected to, as long as `wlan0` or `eth0` already has an IP address when Cinemate starts.
-
-Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.
-
-### web_api
-
-Wireless control API for microcontrollers (ESP32/Pico/M5Stack etc.) over the hotspot — same commands as the Cinemate CLI, over HTTP, plus a UDP status broadcast for tally lights and displays. See [Web API](web-api.md) and [Building control units](building-control-units.md).
-
-`enabled` – turns the API off entirely when `false`.<br>
-`token` – when set, requests must carry it in `X-Cinemate-Token`. Leave `""` only on a trusted/isolated hotspot.<br>
-`allow_destructive` – when `false` (default), blocks `reboot`/`shutdown`/`erase`/`format` over the API. The hotspot password ships as `11111111`, so this defaults closed.<br>
-`max_commands_per_sec` – per-client rate limit.<br>
-`max_sse_clients` – concurrent `/events` connections.<br>
-`broadcast` – the UDP status line: `enabled`, `port`, `hz` (rate), and `keys` (which Redis keys appear in the broadcast).
-
-### https
-
-Serves the web UI on port 5000 over TLS instead of plain HTTP. **Off by default, and not simply "more secure".**
-
-A camera is reached at `cinepi.local` or, on the hotspot, at `10.42.0.1`. No certificate authority will issue for an mDNS name or a private address, so this always means a **self-signed** certificate and a full-page browser warning on first visit — every visit in a private window, and repeatedly on iOS.
-
-Turn it on when you need a *secure browser context*. The RAW files pane's own **Download**/**Download selected** controls pick this up automatically: on a secure origin, in a browser that implements the File System Access API (Chromium-based desktops only — Safari and Firefox offer it on neither http nor https), they ask where to save instead of handing the file to the browser's own download manager. Anywhere else, the same buttons fall back to a normal download with no change in behaviour.
-
-One consequence is handled for you. cinepi-raw's MJPEG preview on port 8000 speaks only plain HTTP and cannot be upgraded, and a secure page is forbidden from loading an insecure subresource — so on HTTPS the live preview would go black. CineMate detects that the page was served over TLS and routes the preview through a same-origin proxy at `/preview/<cam>/stream` instead. A plain-HTTP camera is unaffected and keeps talking straight to port 8000, so it pays nothing for this.
-
-`enabled` – `false` by default. When `true` and no usable certificate exists, one is minted at startup.<br>
-`cert_file` / `key_file` – where the pair lives. Relative paths resolve against the repo root; both are git-ignored. The key is written `0600`.<br>
-`valid_days` – lifetime of a freshly minted certificate (default 3650). An expired one is re-issued automatically on the next start.
-
-If a certificate cannot be produced — `openssl` missing, or the path unwritable — CineMate logs the reason and serves plain HTTP anyway. A camera that answers insecurely is better than one that does not answer at all.
-
-### storage
-
-`auto_preroll` – controls the short automatic warm-up recording that prepares mounted media before the first real take. Set it to `true` to run the warm-up on startup and when RAW storage mounts. Set it to `false` to skip only the automatic startup and mount-triggered pre-rolls. Manual `storage preroll` CLI runs remain available either way. See [Storage pre-roll](storage-preroll.md).
-
-## sensors
-
-Per-sensor hardware. All per-port settings live inside a `cam0` or `cam1` block so every option for a given camera port is visible in one place. `raw_buffer_count`, `record_policy`, and `database_file` are the global keys.
-
-```jsonc
-"sensors": {
-  "raw_buffer_count": 0,
-  "record_policy": "follow_preview",
-  "cam0": {
-    "geometry": {
-      "rotate_180": false,
-      "horizontal_flip": false,
-      "vertical_flip": false
-    },
-    "output": {
-      "hdmi_port": 0
-    },
-    "override_camera_name": true,
-    "camera_name": "cinepi",
-    "phase_lock": true,
-    "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
-    "log_encode": false
-  },
-  "cam1": {
-    "geometry": {
-      "rotate_180": false,
-      "horizontal_flip": false,
-      "vertical_flip": false
-    },
-    "output": {
-      "hdmi_port": 1
-    },
-    "override_camera_name": true,
-    "camera_name": "cinepi",
-    "phase_lock": true,
-    "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
-    "log_encode": false
-  },
-  "database_file": "resources/sensors.json"
-}
-```
-
-`raw_buffer_count` – how many frames `cinepi-raw` keeps in RAM as a write-burst absorber. Leave it at `0` (default); the active storage profile picks the right depth automatically.
-
-??? note "raw_buffer_count / CMA buffer tuning"
-    The sensor produces frames at a fixed rate but storage write speed is uneven — exFAT can stall during cluster allocation or directory updates. Frames that land during a stall are held in the RAM ring until the disk catches up; no frames are dropped as long as the stall is shorter than the buffer depth. More buffers = more RAM used, but more tolerance for storage hiccups. `0` (default) lets the active storage profile pick the right depth for your sensor, filesystem, and storage type — this is almost always correct. Raise it only if you see single-frame TC holes (`DROP` flashing) and `grep Cma /proc/meminfo` confirms spare CMA headroom (~25 MB per extra buffer at 4K).
-
-### record_policy
-
-Dual-sensor record policy. `"follow_preview"` (default) makes recording follow the HDMI preview: a full-screen or pip-main sensor records alone, side-by-side records both. `"always_both"` forces both sensors to record every take regardless of the preview. A camera token on `rec` (`rec cam0` / `rec cam1` / `rec both`) overrides either policy for one take. No effect with a single sensor. See [Dual sensors › Recording](dual-sensors.md#recording).
-
-### geometry
-
-Controls image orientation for the camera mounted on this port. These settings let you mount cameras in any orientation and still get an upright preview and recording.
-
-`rotate_180` – flip the image upside-down.<br>
-`horizontal_flip` – mirror the image left/right.<br>
-`vertical_flip` – mirror the image top/bottom.
-
-### output
-
-Maps the camera to an HDMI connector.
-
-`hdmi_port` – `0` for `HDMI-A-1`, `1` for `HDMI-A-2`.
+    GPIO 18 and 19 have hardware PWM and a steadier pitch; other pins fall back to software. GPIO 18
+    is reserved for the slate tone, so the row shipped on it keeps it and nothing else may move
+    there. Use GPIO 19 for a second tone pin.
 
 !!! note ""
-    This setting chooses which connector `cinepi-raw` uses at runtime. On Raspberry Pi Bookworm with KMS, the boot framebuffer mode still comes from `/boot/firmware/cmdline.txt`, so headless installs should also set a `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D` override there.
+    Slate tone settings appear only with a REC tone pin. The tone follows the record command: on at
+    the request, before any frame is written, off at stop, muted during storage pre-roll. Tally pins
+    wait for frames on the card instead. Rows regroup on each page load, tally before tone.
 
-### camera name
+These map to `hardware_outputs.rec_out_pin` and `hardware_outputs.rec_tone` (`pin`, `frequency_hz`,
+`duty_cycle`, `relay_drop_frames`).
 
-`override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default.<br>
-`camera_name` – the string to embed when `override_camera_name` is `true`. The stock file ships `true` with `"cinepi"` — the same tag `cinepi-raw` uses on its own — so changing the embedded name is a one-line edit.
+## OLED status display
 
-??? note "Why Blackmagic Pocket Cinema Camera 4K"
-    DaVinci Resolve uses the `UniqueCameraModel` DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.
+<a id="output_peripherals"></a>
 
-    Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
+![OLED status display section of the CineMate settings editor](images/gui-oled.png)
 
-    **Caveat once [CineMate Log](cinemate-log.md) is in use:** the Blackmagic spoof layers BMD colour science and its own tone curve on top of data that CineMate Log has already linearised via the DNG `LinearizationTable`. Keep `camera_name` at `"cinepi"` (the stock value) on any camera recording log — spoofing and log-encoding the same clip confound each other in the grade. The spoof is still fine for a camera you are recording in plain linear DNGs.
+Drives the optional 128×64 i²c OLED panel.
 
-### phase_lock
+| Control | What it does |
+| --- | --- |
+| Enabled | Default off. The help line always reads "No OLED detected on this build": fixed text, not a live i²c probe. |
+| Rows shown | Live values printed top to bottom, as chips. Type a field name in `+field` and Enter to add, `×` to remove, drag to reorder. Default `iso`, `tc_cam0`, `RECORDING_TC`. |
+| Font size | Pixels. Default `20`, no range enforced; larger reads further away but fits fewer rows on 128×64. |
 
-`phase_lock` – `true` (default) keeps audio and video aligned over long takes by locking the recorded frame cadence to the Pi clock. Leave it on.
+!!! note ""
+    Row fields are Redis keys plus a few pseudo-keys. Formatted ones: `shutter_a`→`SHUTTER °`,
+    `wb_user`→`WB K`, `space_left`→`SPACE` GB, `resolution`→`1920x1080@12Bit`, `is_recording`→`●`
+    while recording, `cpu_load`→`CPU`, `cpu_temp`→`TEMP`, `memory_usage`→`RAM`; `tc_cam0` and
+    `RECORDING_TC` print the value only. Any other key (`iso`, `fps`, `write_speed_to_drive`) prints
+    its name in capitals plus the raw value, so a typo shows as `TYPO: N/A`. `is_recording` and
+    `resolution` always hoist onto the top line together, whatever the chip order.
 
-!!! note "phase_lock internals and multi-camera genlock"
+!!! note ""
+    `width` and `height` have no control here and survive no save: hand-set values are rewritten to
+    128 and 64 on the next **Save changes**.
 
-    The phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (against the Pi wall clock — `FrameWallClock`, the same clock the audio is captured against) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock, so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
+Saving restarts CineMate; the OLED is set up at startup, so changes come up on the next run.
 
-    Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and holds the recorded cadence on the nominal FPS directly, so no per-sensor FPS-correction table is needed.
+These map to `output_peripherals.oled`, listed under
+[`output_peripherals`](settings-json.md#output_peripherals).
 
-    **Multi-camera genlock.** `phase_lock` can stay `true` on a multi-camera `--sync` (beam-splitter / genlock) rig. `cinepi-raw` infers its role from `--sync`: the master (`--sync server`) runs the phase lock and disciplines the pair to the Pi clock, while the `--sync client` automatically suppresses its own phase lock and lets libcamera's `rpi.sync` hold the relative camera-to-camera (A→B) alignment. One setting works for single and dual — no per-camera differentiation. See [Dual sensors](dual-sensors.md).
+## Restart & raw file
 
-### tuning_file_override
+![Restart & raw file section of the CineMate settings editor](images/gui-system.png)
 
-`enabled` – use `path` instead of the libcamera tuning file Cinemate would otherwise pick for the detected sensor.<br>
-`path` – tuning file to use when `enabled` is `true`.
+Applies changes you already saved, and reaches the raw file.
 
-### log_encode
+| Control | What it does |
+| --- | --- |
+| Cinemate is running — READY | Fixed coloured-dot label, not a live health check: always READY, except "Restarting Cinemate — please wait" during the animation. |
+| Restart Cinemate | Real restart. Sends `restart cinemate` to the page API, the same dispatcher entry as the CLI and the default GPIO 13 double-click. systemd restarts `cinemate-autostart`, ~10 s per the page. Recording stops, page unresponsive until the service returns. On failure: "Restart failed" toast, nothing restarted. |
+| Restart console | Opens under the button while restarting. Fixed stylised animation, same lines every time, not a live log. |
+| Reboot Pi | Does not reboot. Clicks through to the **Save & reboot Pi** card on Boot config, which only plays the same animation (no `config.txt` write, no reboot) and does not switch pages, so you see only a "Pi is back up" toast. Real reboot: Save changes on Boot config, `reboot` over SSH, or GPIO 13 triple-click. |
+| config.txt (link) | Inline link in the Reboot Pi text; switches to Boot config. |
 
-`log_encode` – this camera's [CineMate Log](cinemate-log.md) setting: `false` (default, off), `true` (on, using the live sensor mode's default target), or `10` / `12` to force that target explicitly when the live mode supports it. Only imx585 and imx283 support it; the setting is ignored on every other sensor. See [CineMate Log](cinemate-log.md) for the full picture, including the `set log` CLI command and the per-camera `LOG10`/`LOG12` badge on the Simple GUI.
+!!! note "config.txt reboots itself"
+    Saving on **Boot config** (sensors, buses, RP1 overclock) reboots the Pi by itself, no Reboot Pi
+    button needed.
 
-### database_file
+Raw-file controls sit in the top bar, on this page and Boot config only.
 
-Points Cinemate at the sensor metadata database. It lists the **full** set of modes each sensor supports — every mode stays available to the system — alongside known packing modes and documentation metadata. The [image_capture](#image_capture) filter selects which of those modes appear in the UI.
+| Control | What it does |
+| --- | --- |
+| settings.jsonc | Drawer on the raw file, with a Copy button. Label follows the page (`config.txt` on Boot config), but the drawer always has both tabs. The view is the form state as plain JSON: what Save would write, minus the comments. |
+| Revert | Loads the stock shipped defaults (stock `config.txt` defaults on Boot config). Nothing is written until Save changes. |
+| Download | Saves the form state to your computer: `settings.jsonc`, or `config.txt` on Boot config. Same comment-free JSON as the drawer. |
+| Upload | Loads a `.json`, `.jsonc` or `.txt` file into the form; parsed on the Pi, rejected if it does not parse. Nothing is written until Save changes. |
 
-`database_file` – JSON file containing compatible sensor metadata. The default file is `resources/sensors.json`.
+!!! warning "The drawer shows unsaved edits too"
+    Drawer and Download reflect the form as it stands, unsaved edits included. The unsaved counter
+    counts fields differing from what was loaded off the Pi; after a Revert or Upload it reads 1, and
+    it is hidden on Boot config, where Save changes enables on any edit.
 
-## settings
+This section writes no keys of its own. It applies what the rest of the page saved into
+`settings.jsonc`.
 
-Frame-rate conform target, flicker-free input, and sync tolerances.
+## Settings with no field on this page
 
-```jsonc
-"settings": {
-  "conform_frame_rate": 25,
-  "light_hz": [50, 60],
-  "sync_tolerances": {
-    "live_sync_warning_frames": 5,
-    "live_sync_startup_guard_frames": 10,
-    "final_sync_analysis_frames": 1,
-    "tc_drop_jitter_frames": 1
-  }
-}
+<a id="https"></a>
+
+Edit these by hand, or leave them at the defaults.
+
+| Key | What it does |
+|---|---|
+| `system.web_api.*` | Wireless control API: on/off, token, rate limits, UDP status broadcast. [Web API](web-api.md#settings). |
+| `system.recovery.*` | Recovery console on port 8080; whether it may edit `config.txt`. [Recovery console](recovery-console.md). |
+| `system.https.enabled` | Web UI over TLS. Off by default. Self-signed cert, so a browser warning; needed for a secure context, which the RAW pane's folder download requires. |
+| `system.https.cert_file` / `key_file` | Certificate pair path. Relative paths resolve from the repo root; both git-ignored, key `0600`. |
+| `system.https.valid_days` | Certificate lifetime, default `3650`. Expired ones are re-issued at next start. |
+| `system.storage.recognized_ssds` | Recognised SSD identifiers. Empty by default. |
+| `sensors.raw_buffer_count` | Frames `cinepi-raw` buffers in RAM against write bursts. Leave at `0`; the active storage profile sets the depth. |
+| `sensors.cam1.camera_name` · `override_camera_name` · `geometry.horizontal_flip` · `geometry.vertical_flip` | Camera 1 has fewer page fields than Camera 0; set these by hand for a second sensor. |
+| `arrays.hdr_threshold_low` · `hdr_threshold_high` · `hdr_blend` · `hdr_gain_adder` | Click-stop tables (`steps`, `free`, `free_increment`) a pot or encoder steps through. Startup values: [Resolution & sensor](#resolution-sensor). |
+| `arrays.shutter_a.sync_increment` | Granularity in shutter-angle sync mode only. Default `0.1`°, independent of the shutter angle's own free increment. |
+| `image_capture.hdr.self_heal` | Auto-recovery for the flat-pedestal ClearHDR startup defect. Off by default, [details](clear-hdr.md#flat-black-pedestal-frames). |
+| `hdmi_display.preview.zoom_steps` | Zoom factors `set zoom` cycles through. Default `1.0, 1.5, 2.0`; **Default zoom** offers only `1.0` and `2.0`. |
+| `hdmi_display.preview.pip.scale` / `pip.margin` | PiP inset size and edge gap, as fractions of the pane. Defaults `0.28` and `0.03`. |
+| `hdmi_display.preview.anamorphic.default_factor` | Desqueeze factor at startup, default `1.0`; the factor list is on the page, under **Value steps**. |
+| `output_peripherals.oled.width` / `height` | OLED panel pixels. Defaults `128` × `64`. |
+
+## Editing the file directly
+
+On the camera:
+
+```bash
+editsettings
 ```
 
-`conform_frame_rate` – the frame rate the footage is intended to be conformed to in post. It has no effect on capture: the sensor always records at the camera's own `fps`. Two things on the camera use it:
+That opens `/home/pi/cinemate/settings.jsonc` in nano with syntax colouring. Without the alias:
 
-<br>*Timecode* – the frame base for the recording timecode tracker (`recording_tc_rec`, `recording_time_tod` in redis), whose frame field counts at the conform rate rather than the sensor's; `recording_time` is plain elapsed seconds and does not depend on it. Rounded to a whole frame base before use — 23.976 becomes a 24-frame base — so a fractional conform rate never appears in the displayed timecode. This is **not** the timecode written into the DNG files: CinePi RAW stamps those from the rate the take was actually captured at, so shooting 50 fps against a 25 fps conform gives two different bases, by design.
-<br>*Playback* – the rate the settings editor's Playback pane plays takes back at. A take shot above the conform rate plays as slow motion, at the speed it will run on the timeline; one shot below it plays fast. Turn *Use conform frame rate* off in that pane to watch a take at the rate it was shot instead.<br>
-`light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle steps (see [arrays](#arrays)) and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
-
-`sync_tolerances`:
-
-<br>`live_sync_warning_frames` – frame-slot tolerance for the live magenta `SYNC` warning during a take.
-<br>`live_sync_startup_guard_frames` – grace period, in frames, right after recording starts before the live warning can latch.
-<br>`final_sync_analysis_frames` – frame tolerance for the end-of-take DNG count analysis after buffered frames have flushed. Kept stricter than the live warning by default.
-<br>`tc_drop_jitter_frames` – tolerance for late-but-present frames (TC holes) before they count as a sync concern.
-
-## arrays
-
-One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white balance, and the four ClearHDR live knobs. `steps` is the preset table Cinemate steps through; `free` switches to a continuous runtime range instead — for potentiometers, rotary encoders, CLI inc/dec commands, and the web GUI. `free_increment` sets the step size free stepping counts in (bounds are fixed per parameter; only the increment is configurable).
-
-| parameter | free range | `free_increment` default |
-|---|---|---|
-| `iso` | 100–3200 | 100 |
-| `shutter_a` | 1–360° | 1° |
-| `fps` | 1–`fps_max` | 1 |
-| `wb` | 2800–6500 K | 100 K |
-| `hdr_threshold_low` / `hdr_threshold_high` | 0–4095 | 16 |
-| `hdr_blend` | 0–8 | 1 |
-| `hdr_gain_adder` | 0–5 | 1 |
-
-`shutter_a` has one more field, `sync_increment` (default 0.1°): the granularity used only while [shutter-angle sync mode](cli-commands.md) (`set shutter a sync`) is on, tracking exposure time continuously across fps changes. It's independent of `free_increment` — the two used to share a single hardcoded 0.1° value, so toggling sync mode and toggling free stepping looked identical; they're now separate knobs for two different jobs (sync mode's continuous exposure tracking vs. free stepping's manual pot/encoder control).
-
-```jsonc
-"arrays": {
-  "iso": {
-    "steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
-    "free": false,
-    "free_increment": 100
-  },
-  "shutter_a": {
-    "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
-    "free": false,
-    "free_increment": 1,
-    "sync_increment": 0.1
-  },
-  "fps": {
-    "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],
-    "free": true,
-    "free_increment": 1
-  },
-  "wb": {
-    "steps": [3200, 4400, 5600],
-    "free": false,
-    "free_increment": 100
-  },
-  "hdr_threshold_low": {
-    "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
-    "free": false,
-    "free_increment": 16
-  },
-  "hdr_threshold_high": {
-    "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
-    "free": false,
-    "free_increment": 16
-  },
-  "hdr_blend": {
-    "steps": [0, 1, 2, 3, 4, 5, 6, 7, 8],
-    "free": false,
-    "free_increment": 1
-  },
-  "hdr_gain_adder": {
-    "steps": [0, 1, 2, 3, 4, 5],
-    "free": false,
-    "free_increment": 1
-  }
-}
+```bash
+sudo nano /home/pi/cinemate/settings.jsonc
 ```
 
-??? note "How to think about ISO"
-    At capture, ISO is real analog gain on the sensor — it changes the raw pixel values written to disk. Setting it too high introduces noise that is baked in and cannot be removed later.
-
-    Once your DNGs are in Resolve's Camera RAW tab, the pixel values are fixed. ISO there is a decode-time parameter: in Gen 4 color science it selects a different log curve that shifts contrast as well as brightness; in Gen 5 it acts as a linear gain equivalent to the Exposure slider. Either way, correcting a wrong ISO in Resolve costs no additional quality — provided the sensor data was not catastrophically over- or underexposed at capture.
-
-    References: [BRAW decode](https://blackmagiccameraapk.pro/blackmagic-raw-explained/) · [Gen 4 vs Gen 5](https://forum.blackmagicdesign.com/viewtopic.php?f=2&t=130645&start=50) · [ISO vs Exposure](https://forum.blackmagicdesign.com/viewtopic.php?f=2&t=123096) · [Resolve Camera RAW manual](https://www.steakunderwater.com/VFXPedia/__man/Resolve18-6/DaVinciResolve18_Manual_files/part202.htm)
-
-## image_capture
-
-Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycling resolutions. This is a filter, not the mode list itself: every mode a sensor supports lives in the sensor database (`resources/sensors.json`, see [sensors.database_file](#database_file) above), and `image_capture` selects the useful subset to show. Hidden modes stay technically available to the system.
-
-```jsonc
-"image_capture": {
-  "k_steps": [1.5, 2, 3, 4],
-  "bit_depths": [10, 12, 16],
-  "hdr": {
-    "sdr": true,
-    "imx585_clear_hdr": true,
-    "threshold_low": 0,
-    "threshold_high": 0,
-    "blend": 0,
-    "gain_adder": 1
-  },
-  "thumbnail": 2,
-  "custom_modes": {}
-}
-```
-
-`k_steps` – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.<br>
-`bit_depths` – list of bit depths to expose. `16` covers the imx585 ClearHDR 16-bit modes (see [ClearHDR](clear-hdr.md)).<br>
-`hdr.sdr` / `hdr.imx585_clear_hdr` – whitelist of the ClearHDR flag. Both `true` (default) exposes the plain and the imx585 ClearHDR modes; set `imx585_clear_hdr` to `false` to hide the HDR modes, or `sdr` to `false` to show only them. Cinemate detects the HDR modes by probing `cinepi-raw --list-cameras --hdr sensor` alongside the plain list. imx585 has HDR modes at **both** 12-bit and 16-bit, and they are labelled `HDR` (simple GUI) / `:HDR` (web GUI). The legacy `[false, true]` list form still works.<br>
-`hdr.threshold_low` / `hdr.threshold_high` / `hdr.blend` / `hdr.gain_adder` – startup values for the four ClearHDR live knobs, seeded into Redis at launch. Adjust them afterwards without a restart via `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel. See [ClearHDR](clear-hdr.md#live-knobs) for what each one does.<br>
-`thumbnail` – embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour. Written per frame by cinepi-raw's DNG encoder from the same lores plane the HDMI/MJPEG preview already uses, alongside (not instead of) the raw image. Seeded into Redis at launch; adjust it afterwards without a restart via `set thumbnail`. **Colour by default** — the standard playback path, verified on hardware. New takes only: a take recorded with this off, or before a rebuilt cinepi-raw shipped it, has no thumbnail and is not currently playable in the Playback pane (raw decode is far more demanding on the Pi and is no longer the pane's fallback).<br>
-`custom_modes` – per-camera-name list of mode overrides and additions, keyed by sensor name. `fps_max` (from `cinepi-raw --list-cameras`) is an electrical property of the sensor — it says nothing about what your storage and CPU can actually sustain at that mode, and only trial recording can find that ceiling. An entry whose `width`/`height`/`bit_depth`/`hdr` matches an already-detected mode **corrects that mode's `fps_max` in place**; a non-matching entry **adds** a brand-new mode instead. Settings editor → *Per-mode fps ceilings* lists every sensor-detected mode with the override pre-filled if one exists — leave a field blank (or equal to the detected value) to record no override, or lower it to whatever your storage profile actually sustains. Raising it above the detected value is allowed but logged as a warning. `choose_resolution()` needs no separate logic for this: it always selects on `fps_max`, which is now the effective (overridden or detected) value.
-
-!!! note "Design: full capability vs practical exposure"
-
-    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `image_capture` then exposes only the **practical** subset in the UI. `k_steps`/`bit_depths` are global across all sensors — the stock `[1.5, 2, 3, 4]` covers every sensor's everyday modes. For the IMX283 that keeps the ≥25 fps 2.7K and 4K modes (the 3 and 4 steps) and hides the 5K modes (~18–21 fps); those stay in `sensors.json` and reappear if you add `5.5`.
-
-Cinemate also always runs **dynamic resolution**: if you select a mode and then raise FPS above what that mode's own sensor-reported maximum (the same number `cinepi-raw --list-cameras` reports) can sustain, Cinemate automatically switches to the highest-resolution mode that can. FPS returns to your selected mode once you dial back down. There is no setting for this — it always uses the sensor's own reported limits, never a separate measured table.
-
-## audio_capture
-
-Audio capture options shared by idle monitoring and recorded WAV input level. The stock file applies a 2-frame timecode offset on both paths.
-
-```jsonc
-"audio_capture": {
-  "24bit": {
-    "capture_gain_db": 6.0,
-    "timecode_offset_frames": 2
-  },
-  "16bit": {
-    "capture_gain_db": 6.0,
-    "timecode_offset_frames": 2
-  }
-}
-```
-
-Settings are split by the bit depth negotiated with the connected microphone. `24bit` applies when the mic supports 24-bit stereo capture (`mic_24bit` ALSA alias); `16bit` applies when only 16-bit mono is available (`mic_16bit` alias).
-
-`capture_gain_db` – target ALSA capture gain in decibels applied when the microphone is detected. `0.0` means unity gain. Positive values boost the capture level, negative values attenuate it. For 16-bit mics this value is also passed into `cinepi-raw` via Redis so that a post-take software gain can be applied to the WAV if the hardware exposes no writable ALSA control.
-
-`timecode_offset_frames` – frame offset applied to the WAV timecode metadata after each take. A **positive** value moves the WAV timecode later (use when audio arrives *early* relative to video); a negative value moves it earlier. Only the embedded timecode is shifted — the PCM is never moved. `24bit.timecode_offset_frames` is used whenever the capture helper is active (both 24-bit and 16-bit mics going through the helper). `16bit.timecode_offset_frames` applies to 16-bit mics specifically, overriding the 24-bit value for that path.
-
-Some USB microphones expose a writable ALSA capture control and some do not. When the mic supports it, Cinemate applies `capture_gain_db` via `amixer` when the microphone is detected. If the device exposes no compatible control, the setting is silently skipped and the log will note that the mic likely has fixed hardware gain.
-
-## hdmi_display
-
-Everything the operator sees: the HDMI canvas, GUI overlays, and preview zoom/source/pip/anamorphic.
-
-```jsonc
-"hdmi_display": {
-  "width": 1920,
-  "height": 1080,
-  "mirror_to_both_ports": false,
-  "overlays": {
-    "buffer_vu_meter": false,
-    "vu_meter_hatch_lines": true
-  },
-  "preview": {
-    "default_zoom": 1.0,
-    "zoom_steps": [1.0, 1.5, 2.0],
-    "default_hdmi_source": "both",
-    "pip": {
-      "scale": 0.28,
-      "corner": "lower_right",
-      "margin": 0.03
-    },
-    "anamorphic": {
-      "default_factor": 1,
-      "steps": [1, 1.33, 2.0]
-    }
-  }
-}
-```
-
-`width` / `height` – the GUI canvas size Cinemate targets. If the active framebuffer is smaller, Cinemate falls back to the active framebuffer size instead of drawing a clipped layout into a smaller mode.<br>
-`mirror_to_both_ports` – single-sensor only: mirror the one sensor's preview (with GUI) onto both HDMI connectors via cinepi-raw's `--same-hdmi`. The dual-sensor compositor already owns both-feed layouts, so this has no effect with two sensors attached.
-
-### overlays
-
-`buffer_vu_meter` – show or hide the vertical RAM-buffer meter on the HDMI GUI.<br>
-`vu_meter_hatch_lines` – draw hatch lines inside the buffer meter fill.
-
-### preview
-
-`default_zoom` – magnification factor used at startup.<br>
-`zoom_steps` – list of zoom factors you can cycle through with `set zoom`.<br>
-`default_hdmi_source` – dual-sensor HDMI preview source at startup: `both`, `cam0`, `cam1`, `pip_cam0`, or `pip_cam1`. Switch it live with [`set preview`](cli-commands.md). No effect with a single sensor.<br>
-`pip` – picture-in-picture inset geometry for the `pip_cam0` / `pip_cam1` preview modes. `scale` – inset size as a fraction of the main pane (default `0.28`). `corner` – `lower_right`, `lower_left`, `upper_right`, or `upper_left` (default `lower_right`). `margin` – gap from the edge as a fraction of the pane (default `0.03`). See [Dual sensors](dual-sensors.md#picture-in-picture).<br>
-`anamorphic` – stretching the preview for anamorphic lenses. `default_factor` – factor loaded when Cinemate starts. `steps` – selectable squeeze factors; values above `1.0` widen the image.
-
-## hardware_controls
-
-Direct-GPIO physical inputs, channel-first: which pin it's on, then what it does.
-
-### buttons
-
-Defines GPIO push buttons. Each entry describes one button and the actions it triggers.
-
-```jsonc
-{
-  "pin": 5,
-  "pull_up": true,
-  "debounce_time": 0.1,
-  "press_action": {"method": "rec"}
-}
-```
-
-`pin` – BCM pin number the button is connected to.<br>`pull_up` – set `true` if the pin idles high (internal pull‑up). Use `false` for pull‑down wiring.<br>`debounce_time` – ignore additional presses within this time window (seconds).<br>`press_action`, `single_click_action`, `double_click_action`, `triple_click_action`, `hold_action` – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional `args`.
-
-!!! info ""
-
-    Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state `true` and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.
-
-### two_way_switches
-
-Latching on/off switches. Cinemate triggers an action whenever the state changes.
-
-```jsonc
-{
-  "pin": 27,
-  "state_on_action":  {"method": "set_all_lock", "args": [1]},
-  "state_off_action": {"method": "set_all_lock", "args": [0]}
-}
-```
-
-### three_way_switches
-
-Three-position switches made from three GPIO inputs. Cinemate checks which pin is active and then runs the matching action.
-
-```jsonc
-{
-  "pins": [5, 6, 13],
-  "state_0_action": {"method": "set_fps", "args": [24]},
-  "state_1_action": {"method": "set_fps", "args": [25]},
-  "state_2_action": {"method": "set_fps", "args": [50]}
-}
-```
-
-`pins` – the three GPIO inputs that represent the switch positions.
-<br>`state_0_action`, `state_1_action`, `state_2_action` – commands to run for each detected position.
-
-If none of the three inputs is active, the switch is treated as being in an undefined position and no action is run.
-
-### rotary_encoders
-
-Rotary encoders used for fine adjustment of settings. These can be wired straight to the GPIO pins of the Pi. The optional `button_pin` uses the same action grammar as `buttons`.
-
-```jsonc
-{
-  "enabled": true,
-  "clk_pin": 9,
-  "dt_pin": 11,
-  "button_pin": 10,
-  "pull_up": true,
-  "debounce_time": 0.05,
-  "button_actions": {
-    "press_action": {"method": "set_iso_lock"},
-    "hold_action": "None"
-  },
-  "encoder_actions": {
-    "rotate_clockwise":        {"method": "inc_iso"},
-    "rotate_counterclockwise": {"method": "dec_iso"}
-  }
-}
-```
-
-<br>`enabled` – optional per-encoder switch; set `false` to keep an example in the file without claiming pins at startup. The stock file ships one disabled example.
-<br>`clk_pin` and `dt_pin` – the two pins of the encoder.
-<br>`button_pin` – optional BCM pin for the encoder push button.
-<br>`button_actions` – optional press/click/hold actions for the encoder push button.
-<br>`encoder_actions` – commands to run when turning the dial.
-
-### combined_actions
-
-Combined actions let one button act as a modifier for another button.
-
-```jsonc
-"combined_actions": [
-  {
-    "hold_button_pin": 10,
-    "action_button_pin": 26,
-    "action_type": "press",
-    "action": {"method": "set_pwm_mode"}
-  }
-]
-```
-
-`hold_button_pin` – button that must already be held.
-<br>`action_button_pin` – second button that triggers the combined action.
-<br>`action_type` – either `press` or `release`.
-<br>`action` – Cinemate command to run when the hold/action combination matches.
-
-Combined actions only fire while the hold button is still held down. If the modifier button is not active, the normal per-button actions continue to run.
-
-## input_peripherals
-
-Grove Base HAT analog pots and the Adafruit quad I2C rotary encoder board — separate from [hardware_controls](#hardware_controls) because these are their own peripheral boards, not pins wired straight to the Pi's GPIO header.
-
-### pots
-
-Maps Grove Base HAT ADC channels to analogue dials (potentiometers), channel-first: which channel, then which [array](#arrays) it drives.
-
-```jsonc
-"pots": [
-  { "channel": 0, "setting": "iso" },
-  { "channel": 2, "setting": "shutter_a" },
-  { "channel": 4, "setting": "fps" }
-]
-```
-
-`channel` – the Grove Base HAT ADC channel the pot is wired to.<br>
-`setting` – which entry in [`arrays`](#arrays) the pot drives (`iso`, `shutter_a`, `fps`, `wb`, or an HDR knob name like `hdr_threshold_low`).
-
-!!! info ""
-
-    Only list channels actually connected to potentiometers — noise from unused connectors might trigger false readings.
-
-### quad_rotary_controller
-
-Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to an [array](#arrays) and defines the push button actions similar to `buttons`. The stock settings ship it enabled — safe with no board attached, because the controller is hot-plugged and simply retries — set `enabled` to `false` to turn it off. The stock mapping:
-
-```jsonc
-"quad_rotary_controller": {
-  "enabled": true,
-  "encoders": {
-    "0": {"setting_name": "iso", "button": {"press_action": {"method": "set_zoom"}, "hold_action": {"method": "safe_shutdown"}}},
-    "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_shutter_a_sync_mode"}}},
-    "2": {"setting_name": "fps", "button": {"press_action": {"method": "set_fps_double"}}},
-    "3": {
-      "setting_name": "wb",
-      "button": {
-        "press_action": "None",
-        "single_click_action": {"method": "set_resolution"},
-        "double_click_action": {"method": "restart_cinemate"},
-        "triple_click_action": {"method": "reboot"},
-        "hold_action": {"method": "toggle_mount"}
-      }
-    }
-  }
-}
-```
-
-`enabled` – turn the quad rotary controller on or off.<br>`encoders` – mapping of each dial (channel `"0"`–`"3"`) to a `setting_name` from [`arrays`](#arrays) and button actions. An encoder with no `setting_name` is valid too — its button can still drive its own actions without cycling a parameter.
-
-## hardware_outputs
-
-Direct-GPIO outputs Cinemate drives: the REC tally/relay pin(s) and the REC sync tone.
-
-```jsonc
-"hardware_outputs": {
-  "pwm_pin": 19,
-  "rec_out_pin": [6, 21],
-  "rec_tone": {
-    "pin": [18],
-    "frequency_hz": 1000,
-    "duty_cycle": 50,
-    "relay_drop_frames": false
-  }
-}
-```
-
-`pwm_pin` – outputs a strobe for shutter sync or external devices.<br>
-`rec_out_pin` – list of pins pulled high while recording (useful for tally LEDs).
-
-`rec_tone`:
-
-<br>`pin` – optional tone output pin(s) used as recording sync tone. You can pass a single pin or a list of pins. GPIO `18` and `19` use **hardware PWM** (preferred for stable tone generation). Any other pin uses **software PWM** fallback. The tone starts as soon as recording is requested (`is_recording = 1`), even before REC-light write confirmation, stops once writing stops (`is_writing = 0`), and is muted during storage pre-roll. If `pin` is unset or an empty list, Cinemate falls back to `pwm_pin` for backward compatibility.
-<br>`frequency_hz` – tone frequency in hertz.
-<br>`duty_cycle` – PWM duty cycle percentage (`0–100`).
-<br>`relay_drop_frames` – when `true`, each live drop-frame pulse (`drop_frame_relay = 1`) briefly mutes REC tone output for about one frame, then resumes automatically.
-
-## output_peripherals
-
-The optional I2C OLED status screen — separate from [hardware_outputs](#hardware_outputs) because it's its own I2C peripheral board, not a pin wired straight to the Pi's GPIO header. This can be useful for presenting extra information apart from the HDMI/web display.
-
-```jsonc
-"output_peripherals": {
-  "oled": {
-    "enabled": true,
-    "width": 128,
-    "height": 64,
-    "font_size": 30,
-    "values": ["write_speed_to_drive"]
-  }
-}
-```
-
-`enabled` – turn the OLED display on or off.<br>
-`width` / `height` – pixel dimensions of your screen.<br>
-`font_size` – size of the displayed text.<br>
-`values` – list of Redis keys or pseudo‑keys to show (for example `cpu_temp`).
-
-Available keys come from `src/module/i2c/i2c_oled.py`. Here are some examples:
-
-`iso`, `fps` – basic camera settings.<br>
-`shutter_a` – shown as `SHUTTER` with a `°` suffix.<br>
-`wb_user` – shown as `WB` with a trailing `K`.<br>
-`space_left` – displayed as `SPACE` in gigabytes.<br>
-`write_speed_to_drive` – write speed in MB/s.<br>
-`resolution` – prints `width×height@bit_depth` on the first line.<br>
-`is_recording` – draws a bullet `●` when recording.<br>
-`cpu_load`, `cpu_temp`, `memory_usage` – Pi system statistics.
-
-Other keys will display their name in uppercase and the raw value from Redis.
-
----
+The format is JSONC: JSON with `//` and `/* */` comments and trailing commas allowed. The shipped
+file annotates the trickier keys in place.
+
+Restart CineMate to apply a hand edit: type `cinemate` in an SSH session, or use **Restart CineMate**
+on the page. A reboot is only for [`config.txt`](config-txt.md).
+
+!!! note ""
+    Saving from the settings editor keeps a timestamped copy of the previous file in
+    `.settings-backups/` next to `settings.jsonc` (last 10). A hand edit does not, so make your own
+    copy first.

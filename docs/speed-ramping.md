@@ -2,15 +2,15 @@
 
 Speed ramping is the process of changing the camera's frame rate during a shot so that playback speed varies once the footage is conformed to a constant frame rate in post production. Ramping up the frame rate produces slow motion while ramping down speeds up the action.
 
-## Speed ramping in Cinemate
+## Speed ramping in CineMate
 
-Cinemate exposes frame rate control through the `CinePiController` class. The simplest way to change speed on the fly is the CLI command:
+CineMate exposes frame rate control through the `CinePiController` class. The simplest way to change speed on the fly is the CLI command:
 
 ```bash
 set fps <value>
 ```
 
-For quick 2× changes Cinemate also implements `set_fps_double` which toggles between the current FPS and twice that value. This can be used for designing a slow-motion button. Here is how you would do it in the settings file, button section:
+For quick 2× changes CineMate also implements `set_fps_double` which toggles between the current FPS and twice that value. This can be used for designing a slow-motion button. Here is how you would do it in the settings file, button section:
 
 ```json
 {
@@ -32,4 +32,4 @@ Mode `0` keeps the **motion blur consistent** because the physical shutter angle
 
 Mode `1` stores the current exposure time and recalculates the shutter angle whenever the FPS is adjusted so that **exposure time** stays the same.
 
-Cinemate stores the nominal exposure time whenever the user sets a new angle; on every FPS change it recalculates the shutter angle from that stored exposure time (angle = 360° × exposure time × fps, clamped to 1–360°), so the image brightness stays constant through the ramp.
+CineMate stores the nominal exposure time whenever the user sets a new angle; on every FPS change it recalculates the shutter angle from that stored exposure time (angle = 360° × exposure time × fps, clamped to 1–360°), so the image brightness stays constant through the ramp.

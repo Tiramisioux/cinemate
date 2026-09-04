@@ -15,7 +15,7 @@ It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https
 - Multi-drive RAW hot-swap with a standby drive; SSD, NVMe or CFE Hat storage
 - [Recovery console](https://tiramisioux.github.io/cinemate/recovery-console/) on `:8080` that stays reachable when Cinemate itself won't start
 
-See the [changelog](https://tiramisioux.github.io/cinemate/changelog/) for what's new in version 3.3.2.
+See the [changelog](https://tiramisioux.github.io/cinemate/changelog/) for what's new in version 3.4.0.
 
 ## Compatible sensors
 
@@ -73,7 +73,9 @@ chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono. To install directly for another sensor, pass `SENSOR_MODEL` and `CAM_PORT` inline:
+The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono. The IMX283 and IMX585 drivers are installed either way, so you can install with the defaults and then pick your sensor in the browser, on the settings editor's config.txt tab.
+
+To install directly for another sensor — which also writes the matching overlay — pass `SENSOR_MODEL` and `CAM_PORT` inline:
 
 ```bash
 SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
@@ -81,6 +83,8 @@ SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 ```
+
+Naming the sensor up front still matters in two cases: `imx585_mono` also applies the `rp1-cfe` kernel patch that mono 16-bit ClearHDR needs, and `imx585` also installs the IR filter helper. Neither happens when you switch sensor in the browser later.
 
 After installing, reboot the system and Cinemate should start automatically.
 

@@ -1,6 +1,6 @@
 # Commands reference
 
-By typing `cinemate` in the Raspberry Pi CLI we can start Cinemate manually. This will stop any autostarted instance of Cinemate, show the camera startup sequence and provide the Cinemate "pseudo CLI" where can type commands for changing the camera controls and also to start and stop recording.
+By typing `cinemate` in the Raspberry Pi CLI we can start CineMate manually. This will stop any autostarted instance of CineMate, show the camera startup sequence and provide the CineMate "pseudo CLI" where can type commands for changing the camera controls and also to start and stop recording.
 
 These commands can also be sent to the Pi as serial via the Tx/Rx pins or via USB. This can be useful for creating external controllers.
 
@@ -62,7 +62,7 @@ The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see
 | `set fps double [0/1]`                     | 0/1 or none       |                         | Instant or toggled 2× FPS mode                  |
 | `reboot` / `shutdown`                      | -              |                                 | Safely reboot or halt the Pi                    |
 | `restart camera`                           | -              |                          | Restart the libcamera pipeline                  |
-| `restart cinemate`                         | -              |                       | Restart the Cinemate process                    |
+| `restart cinemate`                         | -              |                       | Restart the CineMate process                    |
 | `set iso free [0/1]`                       | 0/1 or none       | `set iso free 1`                        | Allow any ISO in 100-unit steps (100–3200), instead of presets |
 | `set shutter a free [0/1]`                 | 0/1 or none       | `set shutter a free 0`                  | Allow any shutter angle in 1° steps (1–360°)    |
 | `set fps free [0/1]`                       | 0/1 or none       | `set fps free 1`                        | Allow any FPS in 1 fps steps (1–`fps_max`)      |
@@ -95,6 +95,6 @@ On a dual-sensor rig you can prepend a camera token — `cam0`, `cam1`, or `both
 
 ## Storage pre-roll warm-up
 
-`storage preroll` triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `system.storage.auto_preroll` is set to `false` in `settings.jsonc`.
+`storage preroll` triggers the same warm-up clip that CineMate runs automatically on startup or when you mount new storage. During the pre-roll, CineMate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `system.storage.auto_preroll` is set to `false` in `settings.jsonc`.
 
 See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.

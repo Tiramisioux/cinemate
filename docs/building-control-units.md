@@ -1,39 +1,34 @@
-# Building control units
+# Building CineMate microcontroller control units
 
-Build a wireless camera controller — a record button, a tally light, an ISO knob, a full remote — out of an ESP32, an M5Stack, a Raspberry Pi Pico W, or another Pi. The device joins the camera's Wi-Fi hotspot and sends the same commands you would type into the Cinemate CLI.
+You can use ESP32, an M5Stack, a Raspberry Pi Pico W or other type of microcontroller to build wireless camera controllers — a record button, a tally light, an ISO knob or a full. The device joins the camera's Wi-Fi hotspot and sends the same commands you would type into the [CineMate CLI](cli-commands.md):
 
-You need three things on the device, and nothing else:
+Port `5000` for commands, `8888/udp` for status.
 
-1. Join the hotspot
-2. `POST` a command string
-3. Listen for the UDP status line
+On the camera's own hotspot the address is always `10.42.0.1`. The firmware examples below use that number rather than `cinepi.local`: it never changes, and resolving a `.local` name needs an mDNS resolver the device may not have. The `curl` checks in the next section are run from a laptop, so they use `cinepi.local`.
 
-## What you need
+The transport is the [Web API](web-api.md). Read that page first. It covers sending a command, reading a value, and the three ways to get live updates. This page is the hardware side.
 
-| | |
-|---|---|
-| Camera | Cinemate with `system.wifi_hotspot.enabled` set to `true` |
-| Controller | Any Wi-Fi microcontroller — ESP32, ESP8266, M5Stack, Pico W, or a Pi |
-| Network | The camera's own hotspot. No router, no internet. |
-| Camera address | `10.42.0.1`, port `5000` for commands, `8888/udp` for status |
+## Trying out the connection to the Pi
 
-No library is required beyond the board's own Wi-Fi and HTTP support. There is no SDK to install and no JSON parser to link.
-
-## Before you write firmware
-
-Prove the camera answers, from a laptop joined to the `CinePi` hotspot:
+From a computer joined to the `CinePi` hotspot, or connected to the Pi via ethernet.
 
 ```bash
-curl http://10.42.0.1:5000/api/v1/hello
-curl -d "rec" http://10.42.0.1:5000/api/v1/cmd
+curl http://cinepi.local:5000/api/v1/hello
+curl -d "rec" http://cinepi.local:5000/api/v1/cmd
 nc -ul 8888
+```
+
+This should start recording, and report back that the camera is recording. To stop recording:
+
+```bash
+curl -d "rec" http://cinepi.local:5000/api/v1/cmd
 ```
 
 If those three work, every example below will work. If they do not, fix that first — see [Troubleshooting](#troubleshooting).
 
-## ESP32 — record button and tally light
+## Example projects
 
-The complete controller. One momentary button to GND, one LED.
+### ESP32 — record button and tally light
 
 ```cpp
 #include <WiFi.h>
@@ -93,13 +88,12 @@ void loop() {
 }
 ```
 
-That is the whole thing. `sendCmd` accepts any [Cinemate command](cli-commands.md): `"set iso 800"`, `"inc fps"`, `"set wb 5600"`, `"rec f 48"`.
+`sendCmd` accepts any [CineMate command](cli-commands.md): `"set iso 800"`, `"inc fps"`, `"set wb 5600"`, `"rec f 48"`.
 
-The tally reads the broadcast rather than polling. It costs the camera nothing extra whether you build one tally light or ten.
+The tally reads the broadcast rather than polling.
+### M5StickC — button, display, tally
 
-## M5StickC — button, display, tally
-
-The M5StickC has a button, a screen and an LED already, so it makes a good handheld remote with no wiring at all.
+The M5StickC has a button, a screen and an LED already, so it makes a good handheld remote.
 
 ```cpp
 #include <M5StickCPlus.h>
@@ -170,9 +164,7 @@ void loop() {
 }
 ```
 
-## Raspberry Pi Pico W — MicroPython
-
-No external libraries. Raw sockets only, so it works on any build.
+### Raspberry Pi Pico W — MicroPython
 
 ```python
 import network, socket, time
@@ -231,12 +223,12 @@ import requests
 requests.post("http://10.42.0.1:5000/api/v1/cmd", data="rec").close()
 ```
 
-## Another Raspberry Pi, or any computer
+### Another Raspberry Pi, or any computer
 
 ```python
 import requests, socket
 
-CAM = "http://10.42.0.1:5000/api/v1"
+CAM = "http://cinepi.local:5000/api/v1"
 
 def cmd(line):
     return requests.post(f"{CAM}/cmd", data=line, timeout=2).text
@@ -253,54 +245,9 @@ while True:
     print(dict(kv.split("=", 1) for kv in line.split()))
 ```
 
-## Control patterns
-
-| Control | Send | Note |
-|---|---|---|
-| Momentary REC button | `rec` | Toggles. Debounce 50 ms on the device. |
-| Timed take button | `rec f 48` | Records exactly 48 frame slots, then stops itself |
-| Rotary encoder | `inc iso` / `dec iso` | **Rate-limit on the device.** See below. |
-| Latching switch | `set fps lock 1` / `set fps lock 0` | Send the explicit `0`/`1`, not the bare toggle, so switch and camera cannot drift apart |
-| Preset button | `set iso 800`, then `set fps 24`, then `set shutter a 180` | Three requests. Leave ~20 ms between them. |
-| Menu on a display | `GET /api/v1/commands` | Build the menu from the camera's live command list instead of hardcoding it |
-| Tally light | UDP `rec=` | Use the broadcast, not polling |
-| Storage warning | UDP `space=` | Megabytes remaining |
-| Dropped-frame alarm | UDP `drops=` | Non-zero means the last take dropped frames |
-
-### Rate-limit encoders on the device
-
-A rotary encoder can emit fifty steps per second. The camera rejects anything over `max_commands_per_sec` (default 20) with `429`, and you lose steps.
-
-Accumulate on the device and send at most one command every 50 ms:
-
-```cpp
-// in the encoder ISR: detents += direction;
-static uint32_t lastSend = 0;
-if (detents != 0 && millis() - lastSend > 50) {
-  sendCmd(detents > 0 ? "inc iso" : "dec iso");
-  detents += (detents > 0) ? -1 : 1;
-  lastSend = millis();
-}
-```
-
-### Handle a camera that is not there yet
-
-The camera may reboot, or be switched on after the controller. Never block forever on a request.
-
-- Set an HTTP timeout of 1–2 seconds. Do not use the default.
-- Treat any failure as "camera absent" and show it — a dim tally, a dash on the display.
-- Re-check with `GET /api/v1/hello` every few seconds until it answers.
-- The UDP broadcast needs no reconnect. Packets simply resume.
-
-### Confirm state after a restart command
-
-`set resolution` and `set log` restart the camera. The `200 ok` arrives before the restart finishes. Do not assume the value took. Read it back:
-
-```
-GET /api/v1/get/sensor_mode
-```
-
 ## Design rules
+
+See [CineMate commands](cli-commands.md) for complete list of available commands. We are using the same syntax for the CineMate CLI
 
 - **Send the command string, not a parameter.** `POST "set iso 800"` — there is no `/iso` endpoint, by design. The command vocabulary is the API, so your firmware keeps working as commands are added.
 - **Prefer the UDP broadcast over polling.** One packet feeds every device. Polling multiplies load by the number of controllers.
@@ -312,7 +259,7 @@ GET /api/v1/get/sensor_mode
 
 | Symptom | Likely cause | Check |
 |---|---|---|
-| Device joins Wi-Fi, all requests time out | Web server never started — it only starts if the interface had an IP when Cinemate booted | Restart Cinemate after the hotspot is up. See [Wi-Fi hotspot](hotspot-logic.md). |
+| Device joins Wi-Fi, all requests time out | Web server never started — it only starts if the interface had an IP when CineMate booted | Restart CineMate after the hotspot is up. See [Wi-Fi hotspot](hotspot-logic.md). |
 | `curl` works from a laptop, fails from the ESP32 | URL encoding | Use `POST` with a plain body, not `GET` with spaces in the query |
 | `400 err unknown command` | Typo, or a command that does not exist in this version | `GET /api/v1/commands` lists exactly what this camera accepts |
 | `403 err blocked` | `format`, `erase`, `reboot` or `shutdown` with `allow_destructive` false | Intentional. See the [Web API](web-api.md) settings table. |
@@ -325,7 +272,7 @@ GET /api/v1/get/sensor_mode
 ## See also
 
 - [Web API](web-api.md) — the full endpoint reference
-- [Cinemate terminal commands](cli-commands.md) — every command you can send
+- [CineMate terminal commands](cli-commands.md) — every command you can send
 - [Redis Key reference](redis-keys.md) — every key you can read
 - [Configuring the Wi-Fi hotspot](hotspot-logic.md)
 - [Additional hardware](hardware-controls.md) — for wired buttons and encoders on the Pi's own GPIO

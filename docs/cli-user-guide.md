@@ -1,5 +1,15 @@
 # Using CinePi-RAW from the terminal
 
+You can run `cinepi-raw` directly — launching the binary yourself from a terminal with your own flags, instead of letting CineMate's process manager (`cinepi_multi.py`) build the command line and manage the camera lifecycle for you. See [How CineMate launches CinePi-raw](cinepi-multi.md) for more information about how CineMate works.
+
+Running it manually is useful for isolating a problem to `cinepi-raw` itself (rather than to CineMate's layer on top of it), or for trying a flag combination before wiring it into `settings.jsonc`. Since `cinemate-autostart.service` normally holds the camera with its own `cinepi-raw` child process, stop it first so the two don't fight over the sensor:
+
+```bash
+sudo systemctl stop cinemate-autostart
+```
+
+Restart it when you're done (`sudo systemctl start cinemate-autostart`), or reboot.
+
 ## Checking available options
 
 Before running the program you can view all command‑line flags with:
@@ -8,7 +18,7 @@ Before running the program you can view all command‑line flags with:
 cinepi-raw -h
 ```
 
-This prints a long list of options supported by the application. It includes the standard parameters from `rpicam-apps` (such as resolution and exposure settings) plus additional flags specific to the Cinemate.
+This prints a long list of options supported by the application. It includes the standard parameters from `rpicam-apps` (such as resolution and exposure settings) plus additional flags specific to the CineMate.
 
 ## Camera modes
 
@@ -67,9 +77,9 @@ For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default c
 
     If you have more than one camera connected to the Pi, and activated in `/boot/firmware/config.txt`, the camera connected to physical cam0 will use `/home/pi/post-processing0.json` and the camera connected to cam1 will use `/home/pi/post-processing1.json`.
 
-## Cinemate‑specific flags
+## CineMate‑specific flags
 
-The Cinemate fork introduces extra options beyond stock `rpicam-apps`: camera-port and HDMI selection (`--cam-port`, `--hdmi-port`, `--same-hdmi`), on-sensor HDR (`--hdr`), CineMate Log (`--log-encode`), encode/disk worker count, affinity and priority tuning, WAV timecode offsets, a DNG camera-model override (`--unique-camera-model`), and a pixel-rate ceiling (`--max-pixel-rate`).
+The CineMate fork introduces extra options beyond stock `rpicam-apps`: camera-port and HDMI selection (`--cam-port`, `--hdmi-port`, `--same-hdmi`), on-sensor HDR (`--hdr`), CineMate Log (`--log-encode`), encode/disk worker count, affinity and priority tuning, WAV timecode offsets, a DNG camera-model override (`--unique-camera-model`), and a pixel-rate ceiling (`--max-pixel-rate`).
 
 The full flag table with defaults is the [cinepi-raw README's "Additional flags" section](https://github.com/Tiramisioux/cinepi-raw#additional-flags) — that table is the canonical copy, so it is not duplicated here. `cinepi-raw -h` prints the same options from the binary.
 

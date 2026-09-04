@@ -51,4 +51,4 @@ scp pi@cinepi.local:/media/RAW/cinemate_2025-07-29_13-37-37.img.xz ~/Downloads/
 
 !!! note ""
 
-    When unpacking the image, it will inflate to the smallest possible size, even if it was made from a larger SD card. So an Cinemate image created from a 64 GB SD card will inflate to only about 6 GB, allowing for flashing it to SD cards down to 8 GB.
+    When unpacking the image, it will inflate to the smallest possible size, even if it was made from a larger SD card. So an CineMate image created from a 64 GB SD card will inflate to only about 6 GB, allowing for flashing it to SD cards down to 8 GB.

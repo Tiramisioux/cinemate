@@ -1,89 +1,81 @@
 # Web API
 
-The web API exposes **the same commands as the [Cinemate terminal commands](cli-commands.md)** over the Wi-Fi hotspot. Anything you can type into the Cinemate CLI, or send over serial, you can send over HTTP.
+The camera answers HTTP on port `5000`. Any [CineMate CLI](cli-commands.md) command line can be sent over HTTP instead. Replies are plain text, so a microcontroller needs no JSON parser.
 
-It is designed so a microcontroller needs as little code as possible. Responses are plain text by default — no JSON parser required for the common path.
-
-For a step-by-step guide to building a physical controller, see [Building control units](building-control-units.md).
+```bash
+curl -d "rec" http://cinepi.local:5000/api/v1/cmd
+```
 
 ## Address
 
 | | |
 |---|---|
 | Hotspot SSID / password | `CinePi` / `11111111` (set in [`settings.jsonc`](settings-json.md) under `system.wifi_hotspot`) |
-| Camera address on the hotspot | `10.42.0.1` (NetworkManager shared-mode default) |
+| Camera address | `cinepi.local`, or `10.42.0.1` on the camera's own hotspot |
 | API port | `5000` |
 | Status broadcast port | `8888/udp` |
-| Base URL | `http://10.42.0.1:5000/api/v1/` |
+| Base URL | `http://cinepi.local:5000/api/v1/` |
 
-!!! note ""
+!!! note "Which address to use"
 
-    On a wired or joined network the camera is also reachable as `cinepi.local:5000`.
-    Use the numeric hotspot address on microcontrollers — mDNS resolution is an extra
-    dependency and is not reliable on every ESP32 build.
+    Use `cinepi.local` from a laptop or phone. The installer enables `avahi-daemon`, so it
+    resolves on a joined network and on the hotspot, and it keeps working when the camera's
+    IP changes.
 
-## Sending commands
+    Hard-code `10.42.0.1` in microcontroller firmware. On the camera's own hotspot that
+    address never changes, so a name lookup buys nothing, and resolving a `.local` name needs
+    an mDNS resolver an ESP32 or Pico W build may not have. See
+    [Building control units](building-control-units.md).
 
-### POST — the path for devices
+    `system.https.enabled` moves the whole web server, API included, to `https://` on the
+    same port `5000` with a self-signed certificate. Leave it off for microcontroller clients.
 
-Send the command line verbatim as the request body. No URL encoding.
+## Send a command
 
-```
-POST /api/v1/cmd
-Content-Type: text/plain
-
-set iso 800
-```
-
-### GET — the path for browsers and curl
-
-```
-GET /api/v1/cmd?c=set+iso+800
-```
-
-Spaces may be `+` or `%20`.
+One endpoint: `/api/v1/cmd`. Send the command line exactly as you would type it in the CLI.
 
 ```bash
-curl -d "rec" http://10.42.0.1:5000/api/v1/cmd
-curl -d "set fps 48" http://10.42.0.1:5000/api/v1/cmd
-curl "http://10.42.0.1:5000/api/v1/cmd?c=inc+iso"
+curl -d "set iso 800" http://cinepi.local:5000/api/v1/cmd
+curl -d "set fps 48" http://cinepi.local:5000/api/v1/cmd
 ```
 
-### Responses
+| Method | Use it from | Shape |
+|---|---|---|
+| POST | Microcontrollers, scripts | Body is the command line verbatim, no URL encoding and no JSON. `Content-Type` is not checked (the `curl -d` lines above send `application/x-www-form-urlencoded` and work); send `text/plain` when you can |
+| GET | Browsers, quick tests | `/api/v1/cmd?c=inc+iso` — spaces may be `+` or `%20` |
+
+### Replies
 
 | HTTP | Body | Meaning |
 |---|---|---|
 | 200 | `ok` | Command matched and was dispatched |
-| 200 | `ok <message>` | Dispatched, with a message from the handler |
-| 400 | `err unknown command` | No command matched |
+| 200 | `ok requested <x>, live value is <y>` | Dispatched, but the value read back had not stuck. Usually a pot or a lock writing the same parameter |
+| 400 | `err unknown command` | No command matched (an empty body counts as this) |
 | 400 | `err bad argument` | Matched, but the argument was the wrong type |
 | 400 | `err missing argument` | Command requires an argument |
 | 401 | `err unauthorized` | A token is configured and yours was wrong or absent |
 | 403 | `err blocked` | Destructive command, blocked by settings |
 | 429 | `err rate limited` | Too many commands per second |
-| 503 | `err busy` | Another command was still running |
+| 503 | `err busy` | Another command still held the dispatcher after 2 seconds |
 
-Add `?json=1` to get `{"ok":true,"cmd":"set iso 800","message":""}` instead.
+Add `?json=1` for `{"ok":true,"cmd":"set iso 800","message":""}` instead.
 
 !!! warning "200 means dispatched, not applied"
 
-    `set resolution` and `set log` restart the camera. The response
-    returns before the restart finishes. Confirm the new state by reading it back with
-    `/api/v1/get/<key>` or by watching the status broadcast.
+    `set log` restarts the camera when idle, and defers to the end of the take while
+    recording. `set resolution` restarts it only when the new mode changes the aspect ratio;
+    a same-aspect change is seamless. The reply arrives before any restart finishes. Read the
+    new state back with `/api/v1/get/<key>`.
 
-## Reading status
-
-### Single value — no parser needed
+## Read a value
 
 ```
 GET /api/v1/get/is_recording   →   1
 ```
 
-Returns the raw value as text. This is the endpoint to use for a tally light. Returns `404` and `err unknown key` for an unknown key.
+Returns the raw value as text. This is the endpoint for a tally light. Unknown keys return `404` and `err unknown key`. Key names are the [Redis keys](redis-keys.md).
 
-Key names are the [Redis keys](redis-keys.md).
-
-### Snapshot
+### Many values at once
 
 | Request | Result |
 |---|---|
@@ -91,63 +83,56 @@ Key names are the [Redis keys](redis-keys.md).
 | `GET /api/v1/status?keys=is_recording,iso,fps` | JSON object of only those keys |
 | `GET /api/v1/status?keys=iso,fps&fmt=text` | `key=value` lines instead of JSON |
 
-Use `?keys=` on memory-constrained devices. A full snapshot is several kilobytes.
+Use `?keys=` on memory-constrained devices; a full snapshot is all 88 keys, a couple of kilobytes of JSON. Unknown keys in `?keys=` are skipped silently rather than erroring, so one firmware build works across CineMate versions.
 
-Unknown keys in `?keys=` are skipped silently rather than erroring, so one firmware build can talk to several Cinemate versions.
+### `/commands` and `/hello`
 
-### Command list
+`GET /api/v1/commands` returns every command the camera accepts, as JSON `[{"name":"set iso","arg":"int"}, ...]`, or one name per line with `?fmt=text`. It is built live from the running command table.
 
-```
-GET /api/v1/commands
-```
+`GET /api/v1/hello` returns `cinemate 3.4.0 api=1 sensor=imx585 cams=1 rec=0`. A configured `token` guards it, like every other `/api/v1/` route.
 
-Returns every command the camera accepts, as JSON `[{"name":"set iso","arg":"int"}, ...]`, or one name per line with `?fmt=text`. Built live from the running command table — a controller can generate its own menu instead of hardcoding one.
-
-### Identity
-
-```
-GET /api/v1/hello   →   cinemate 3.3.2 api=1 sensor=imx585 cams=1 rec=0
-```
-
-Cheap check that you are talking to a Cinemate camera, and that it has finished starting.
-
-## Live updates
-
-Three ways to keep a device in sync. Pick by device class.
+## Keep a device in sync
 
 | Method | Best for | Cost on the device | Cost on the camera |
 |---|---|---|---|
-| **UDP broadcast** | Tally lights, displays, many devices | ~10 lines, no connection state | One packet serves every device |
+| **UDP broadcast** | Tally lights, displays, many devices | ~10 lines, no connection state | One send serves every device |
 | **SSE** | One to four devices needing every change | Open socket, read lines | One server thread per client |
 | **Polling `/get/<key>`** | Anything; always works | Trivial | One short request per poll |
 
-### UDP broadcast — recommended default
-
-The camera broadcasts a single plain-text line to port `8888` on the hotspot subnet, at 5 Hz plus immediately on change.
+**Use the UDP broadcast unless you have a reason not to.** One plain-text line goes to port `8888`, at both the `wlan0` subnet broadcast address and `255.255.255.255`, at 5 Hz plus immediately on change (coalesced to at most 10 Hz):
 
 ```
-rec=1 iso=800 fps=24.0 shutter=180.0 tc=01:02:03:04 space=412 drops=0 mounted=1
+is_recording=1 iso=800 fps=24.0 shutter_angle_actual=180.0 recording_time_tod=01:02:03:04 space_left=412 drop_frame_count=0 is_mounted=1
 ```
 
-One packet, under 500 bytes, no parser, no connection to maintain, and it scales to as many devices as you like. Configure which keys are included in [`settings.jsonc`](settings-json.md).
+The keys are the [Redis keys](redis-keys.md), unabbreviated, truncated at 500 bytes. Choose them in [`settings.jsonc`](settings-json.md).
+
+!!! warning "Two of the shipped default keys are misspelled"
+
+    The `broadcast.keys` default in `settings.jsonc` contains `shutter_a_actual` and
+    `recording_tc_tod`. Neither is a real Redis key, so both broadcast as empty values.
+    Replace them with `shutter_angle_actual` and `recording_time_tod`, as in the settings
+    block below, until the default is fixed.
 
 ### Server-sent events
 
-```
-GET /api/v1/events
-```
-
-`text/event-stream`. One `data: key=value` per changed key, with a `: ping` heartbeat every 15 seconds so devices can detect a dead link.
-
-!!! warning "Limited number of clients"
-
-    Cinemate's web server holds one thread per open connection, so SSE is capped
-    (`max_sse_clients`, default 4). Beyond the cap the server returns `503`. For more than
-    a handful of devices, use the UDP broadcast.
+`GET /api/v1/events` returns `text/event-stream`: one `data: key=value` per changed key, with a `: ping` heartbeat every 15 seconds. One thread is held per open connection, so SSE is capped (`max_sse_clients`, default 4). Beyond the cap the server returns `503` and `err too many clients`.
 
 ## Settings
 
-Add to [`settings.jsonc`](settings-json.md) under `system`. Every field is optional — the defaults below apply when the block is absent.
+Add to [`settings.jsonc`](settings-json.md) under `system`. Every field is optional; the defaults below apply when the block is absent or only partly filled in.
+
+| Field | Default | Effect |
+|---|---|---|
+| `enabled` | `true` | `false` unregisters `/api/v1` entirely, which also breaks the [Web GUI](web-gui.md)'s controls, since they post to it. The UDP broadcast has its own switch |
+| `token` | `""` | When set, every `/api/v1/` request must carry `X-Cinemate-Token` |
+| `allow_destructive` | `false` | When false, blocks `reboot`, `shutdown`, `erase`, `format`, matched on the first word of the command line |
+| `max_commands_per_sec` | `20` | Per-client (per source IP) limit on `/api/v1/cmd`, over a sliding one-second window |
+| `max_sse_clients` | `4` | Concurrent `/events` connections |
+| `broadcast.enabled` | `true` | The UDP status broadcast, switched independently of `enabled` |
+| `broadcast.port` | `8888` | UDP destination port |
+| `broadcast.hz` | `5` | Heartbeat rate when nothing is changing |
+| `broadcast.keys` | see below | Which keys appear in the UDP line |
 
 ```json
 "system": {
@@ -161,41 +146,31 @@ Add to [`settings.jsonc`](settings-json.md) under `system`. Every field is optio
       "enabled": true,
       "port": 8888,
       "hz": 5,
-      "keys": ["is_recording", "iso", "fps", "shutter_a_actual",
-               "recording_tc_tod", "space_left", "drop_frame_count", "is_mounted"]
+      "keys": ["is_recording", "iso", "fps", "shutter_angle_actual",
+               "recording_time_tod", "space_left", "drop_frame_count", "is_mounted"]
     }
   }
 }
 ```
 
-| Field | Default | Effect |
-|---|---|---|
-| `enabled` | `true` | Turns the API off entirely |
-| `token` | `""` | When set, requests must carry `X-Cinemate-Token` |
-| `allow_destructive` | `false` | When false, blocks `reboot`, `shutdown`, `erase`, `format` |
-| `max_commands_per_sec` | `20` | Per-client rate limit |
-| `max_sse_clients` | `4` | Concurrent `/events` connections |
-| `broadcast.keys` | see above | Which keys appear in the UDP line |
-
 !!! danger "The hotspot password is public knowledge"
 
-    Cinemate ships with the hotspot password `11111111`. Anyone within Wi-Fi range can
-    reach the API. `allow_destructive` therefore defaults to **false**, so `format` and
-    `erase` cannot be triggered remotely on a stock unit. Change the hotspot password in
+    CineMate ships with the hotspot password `11111111`, so anyone within Wi-Fi range can
+    reach the API. `allow_destructive` therefore defaults to **false**: `format` and `erase`
+    cannot be triggered remotely on a stock unit. Change the hotspot password in
     `system.wifi_hotspot` before enabling destructive commands, and set a `token` if the
     camera will be used somewhere crowded.
 
-## Relationship to the other control paths
+## Other control paths
 
-| Path | Transport | Same commands? |
+| Path | Transport | Same command lines? |
 |---|---|---|
-| Cinemate CLI | `cinemate` in a terminal | — |
+| CineMate CLI | `cinemate` in a terminal | Yes |
 | Serial | Tx/Rx pins or USB, 9600 baud | Yes |
 | **Web API** | HTTP on port 5000 | **Yes** |
 | Web GUI | Browser on port 5000, posts to `/api/v1/cmd` | Yes |
-| GPIO / rotary / I²C | [`settings.jsonc`](settings-json.md) mappings | Yes |
+| GPIO / rotary / I²C | [`settings.jsonc`](settings-json.md) mappings | No — see below |
 
-All command-based paths go through one dispatcher, so behaviour cannot drift between them. The
-browser control page (`docs/web-gui.md`) is itself a `/api/v1/cmd` client — its ISO/shutter/FPS/WB/
-resolution selectors, REC tap, LOG toggle and Unmount button all post CLI command lines. Socket.IO
-carries only the push side: the live preview data feeding the on-screen readout.
+The CLI, serial, the Web API and the [Web GUI](web-gui.md) funnel into one dispatcher. GPIO buttons, rotary encoders and the I²C quad encoder are wired up differently: `settings.jsonc` names a controller method (`{"method": "set_zoom"}`), called directly rather than as a command line, so a command name is not a valid value there.
+
+**Next step:** [Building control units](building-control-units.md) — wiring and firmware for a physical controller.

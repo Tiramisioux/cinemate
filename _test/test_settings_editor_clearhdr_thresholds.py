@@ -5,9 +5,10 @@ settings editor could put it straight back.
 
 applyControlValue() returns early on `undefined`, so when
 image_capture.hdr.threshold_low/high are ABSENT the input's static markup value
-survives hydration. Both inputs shipped `value="0"`, and absent is exactly the
-stock-defaults case: resources/settings/settings_default.jsonc's hdr block is
-just {sdr, imx585_clear_hdr}, and that file is served both when
+survives hydration. Both inputs shipped `value="0"`. Both shipped .jsonc files
+now carry the pair explicitly as null, which hydrates blank exactly as absent
+did, but a hand-written or older settings file can still omit them, and
+resources/settings/settings_default.jsonc is served both when
 /home/pi/cinemate/settings.jsonc is missing and for "Revert to defaults".
 buildState() then read parseFloat("0") for both and Save wrote 0/0.
 

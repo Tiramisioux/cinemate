@@ -110,8 +110,8 @@
                     "is_recording",
                     "iso",
                     "fps",
-                    "shutter_a_actual",
-                    "recording_tc_tod",
+                    "shutter_angle_actual",
+                    "recording_time_tod",
                     "space_left",
                     "drop_frame_count",
                     "is_mounted"
@@ -319,7 +319,7 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 8,
-              "default": 0
+              "default": 5
             },
             "gain_adder": {
               "type": "integer",

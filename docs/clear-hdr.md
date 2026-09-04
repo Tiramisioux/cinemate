@@ -17,18 +17,25 @@ CineMate image and install script ships with the following stack:
 
 ## ClearHDR features
 
-- Frame rates halve versus the plain modes (≈ 33 fps at 4K, ≈ 37 fps at 2K on an overclocked RP1).
+- Frame rates are lower than the plain modes. Per-mode figures are on the [sensors page](sensors.md#imx585-starlight-eye), measured at 1039.5 MHz with the stock and overclocked pixel-rate ceilings side by side; the [changelog](changelog.md#imx585-driver) is where those measurements were first recorded.
 - Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).
 - Each 3840×2200 16-bit DNG is ≈ 16.9 MB.
 - Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.
 - Highlights near the HG→LG hand-off can render magenta in flat greys. This is sensor-side merge behaviour, not a capture defect.
-- Occasionally a launch can record a flat black-level pedestal instead of real image data, on any ClearHDR mode — CineMate's shipped `blend` default avoids the sensor condition that causes it. See [Flat black-pedestal frames](#flat-black-pedestal-frames) if you still hit it.
+- A launch can record a flat black-level pedestal instead of real image data, on any ClearHDR mode. CineMate's shipped `blend` default of 5 avoids the sensor condition that causes it, so a stock camera does not hit this. See [Flat black-pedestal frames](#flat-black-pedestal-frames) if you have overridden `blend`.
 
-## Flat black-pedestal frames
+## Live knobs
 
-Occasionally a ClearHDR launch produces a black image. This seems to be a driver-side merge condition and underexposing the sensor briefly seems to "kick" it back into operation, either by covering the sensor with the lens cap or by briefly setting shutter angle to 1°.
+The merge behaviour is tunable while streaming. Each command writes a Redis key that cinepi-raw applies to the sensor as a V4L2 control.
 
-## Default knob values
+| CLI command                   | Redis key            | Range  | What it does                                                                                                                           | Visual impact                                                                                                                        |
+| ----------------------------- | -------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `set hdr threshold low 500`   | `hdr_threshold_low`  | 0–4095 | raw level below which the sensor reads pure HG                                                                                         | lower = earlier hand-off, more highlight headroom, noisier mids; higher = more range stays clean HG                                  |
+| `set hdr threshold high 3000` | `hdr_threshold_high` | 0–4095 | raw level above which the sensor reads pure LG                                                                                         | lower = highlight detail kicks in sooner; higher = highlights closer to the plateau before LG takes over                             |
+| `set hdr blend 2`             | `hdr_blend`          | 0–8    | HG:LG mix inside the transition zone (0 = HG 1/2 + LG 1/2, per the driver menu)                                                        | HG-heavy = cleaner transition tones; LG-heavy = highlight detail holds longer through the zone, more grain there                     |
+| `set hdr gain adder 2`        | `hdr_gain_adder`     | 0–5    | digital gain on the low-gain path in the merge (2 = +12 dB, the driver default); shifts where the blend knee lands in the output range | lower = highlights darker, flatter, cleaner — lift in the grade; higher = brighter highlight rendering, more grain in the highlights |
+
+### Default knob values
 
 `image_capture.hdr` also carries the startup values for the four live knobs below — CineMate seeds them into Redis at launch, and cinepi-raw applies them whenever a ClearHDR mode is selected:
 
@@ -44,27 +51,28 @@ Occasionally a ClearHDR launch produces a black image. This seems to be a driver
 }
 ```
 
-## Live knobs
+## Known issues
 
-The merge behaviour is tunable while streaming. Each command writes a Redis key that cinepi-raw applies to the sensor as a V4L2 control.
+### Flat black-pedestal frames
 
-| CLI command                   | Redis key            | Range  | What it does                                                                                                                           | Visual impact                                                                                                                        |
-| ----------------------------- | -------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `set hdr threshold low 500`   | `hdr_threshold_low`  | 0–4095 | raw level below which the sensor reads pure HG                                                                                         | lower = earlier hand-off, more highlight headroom, noisier mids; higher = more range stays clean HG                                  |
-| `set hdr threshold high 3000` | `hdr_threshold_high` | 0–4095 | raw level above which the sensor reads pure LG                                                                                         | lower = highlight detail kicks in sooner; higher = highlights closer to the plateau before LG takes over                             |
-| `set hdr blend 2`             | `hdr_blend`          | 0–8    | HG:LG mix inside the transition zone (0 = HG 1/2 + LG 1/2, per the driver menu)                                                        | HG-heavy = cleaner transition tones; LG-heavy = highlight detail holds longer through the zone, more grain there                     |
-| `set hdr gain adder 2`        | `hdr_gain_adder`     | 0–5    | digital gain on the low-gain path in the merge (2 = +12 dB, the driver default); shifts where the blend knee lands in the output range | lower = highlights darker, flatter, cleaner — lift in the grade; higher = brighter highlight rendering, more grain in the highlights |
+A ClearHDR launch can come up recording a flat black-level pedestal instead of image data. The cause is known: the sensor's own `blend` default is 0, and that merge setting is broken. CineMate seeds `blend` 5 (HG 1/16) into Redis at launch instead, so a stock settings file never starts in that state.
+
+The manual shutter kick is only a fallback — for a settings file that overrides `blend`, or an older one written before 5 became the default. Underexpose briefly to kick the merge back into operation: cover the lens, or `set shutter a 1` and then back.
+
+`image_capture.hdr.self_heal` automates that kick. It is off by default, because a stock `blend` of 5
+means there is nothing to heal; turn it on only if you are running an overridden `blend` and would
+rather the camera recover on its own.
 
 ### Symptom → knob
 
-| You see                                     | Try                                                                                                                                                       |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Magenta in bright flat areas                | try `set hdr threshold low 500`, `set hdr threshold high 3000`, `set hdr blend 2`, `set hdr gain adder 2` |
-| Grainy mids or faces                        | higher thresholds, HG-heavier blend (3, 4), or a lower gain adder                                                                                         |
-| A band or step where tones change character | widen the gap between the two threshold values                                                                                                            |
-| Highlights too dark and flat out of camera  | higher gain adder — costs highlight grain                                                                                                                 |
-| Grainy highlights                           | lower gain adder; lift in the grade instead                                                                                                               |
-| Flat black-level pedestal, no image data    | manual shutter kick — `set shutter a 1` then back — see [Flat black-pedestal frames](#flat-black-pedestal-frames)                                         |
+| You see                                     | Try                                                                                                               |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Magenta in bright flat areas                | try `set hdr threshold low 500`, `set hdr threshold high 3000`, `set hdr blend 2`, `set hdr gain adder 2`         |
+| Grainy mids or faces                        | higher thresholds, HG-heavier blend (3, 4), or a lower gain adder                                                 |
+| A band or step where tones change character | widen the gap between the two threshold values                                                                    |
+| Highlights too dark and flat out of camera  | higher gain adder — costs highlight grain                                                                         |
+| Grainy highlights                           | lower gain adder; lift in the grade instead                                                                       |
+| Flat black-level pedestal, no image data    | check `blend` is 5; if you have overridden it, kick with `set shutter a 1` then back — see [Flat black-pedestal frames](#flat-black-pedestal-frames) |
 
 ## Mono sensor (imx585_mono)
 

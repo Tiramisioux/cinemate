@@ -278,9 +278,12 @@ def clearhdr_startup_values(settings: dict) -> dict:
     The empty string is written rather than skipped so a 0 persisted into
     Redis by an earlier build is cleared on upgrade instead of surviving it.
 
-    ``blend`` and ``gain_adder`` keep their previous defaults: 0 is the
-    driver's own blend value, and 1 (+6 dB) is a deliberate choice over the
-    driver's +12 dB.
+    ``blend`` is seeded at 5 (HG 1/16) rather than the driver's own 0. Seeding 0
+    is what produces the flat black-level pedestal launches described in
+    docs/clear-hdr.md; 5 is the value that was measured to avoid them. The
+    mechanism is separate from the threshold pair above, which fails a different
+    way. ``gain_adder`` keeps its previous default: 1 (+6 dB) is a deliberate
+    choice over the driver's +12 dB.
     """
 
     hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
@@ -294,7 +297,7 @@ def clearhdr_startup_values(settings: dict) -> dict:
     return {
         "hdr_threshold_low": threshold("threshold_low"),
         "hdr_threshold_high": threshold("threshold_high"),
-        "hdr_blend": hdr_cfg.get("blend", 0),
+        "hdr_blend": hdr_cfg.get("blend", 5),
         "hdr_gain_adder": hdr_cfg.get("gain_adder", 1),
     }
 
@@ -454,7 +457,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
         },
         "shutter_a": {
             "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
-            "free": False,
+            "free": True,
             "free_increment": 1,
             # Own granularity used only while shutter-angle sync mode is on
             # (`set shutter a sync`) -- independent of free_increment, which
@@ -462,13 +465,13 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "sync_increment": 0.1,
         },
         "fps": {
-            "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 30],
+            "steps": [25, 33, 50],
             "free": False,
             "free_increment": 1,
         },
         "wb": {
             "steps": [3200, 4400, 5600],
-            "free": False,
+            "free": True,
             "free_increment": 100,
         },
         # ClearHDR live knobs -- ranges per the imx585 driver: thresholds
@@ -504,8 +507,8 @@ def _apply_settings_defaults(settings: dict) -> dict:
     # ── image_capture: resolution / bit-depth / HDR filters ────────────────
     image_capture_cfg = settings.setdefault("image_capture", {})
     image_capture_defaults = {
-        "k_steps": [1.5, 2.0, 4.0],
-        "bit_depths": [10, 12],
+        "k_steps": [1.5, 2.0, 3.0, 4.0],
+        "bit_depths": [10, 12, 16],
         # ClearHDR (imx585) whitelist. Both true exposes the plain and the HDR
         # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
         # SensorDetect._hdr_whitelist.

@@ -20,26 +20,37 @@ Higher frame rates need fast storage. If you see a purple/magenta `DROP` indicat
 
 ### IMX585 (Starlight Eye)
 
-| Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | DNG Frame File Size (MB) |
-|------|------------------|--------------|-----------|---------|--------------------------|
-| 0    | 1928 x 1090      | 1.77         | 12        | 87      | 3.15                     |
-| 1    | 3856 x 2180      | 1.77         | 12        | 40      | 12.61                    |
+The `cinemate-7modes` driver the installer ships exposes seven modes: three SDR and four ClearHDR,
+at 10-, 12- and 16-bit.
 
-On the `cinemate-7modes` driver the sensor also exposes ClearHDR, at both 12-bit (CCMP) and 16-bit,
-and a 10-bit RAW10 mode. Frame rates halve versus the plain modes:
+| Mode | Type | Resolution | Bit Depth | Readout | Max FPS | Max FPS overclocked | DNG Frame File Size (MB) |
+|---|---|---|---|---|---|---|---|
+| 0 | SDR | 3840 x 2160 | 10 | all-pixel | 44.98 | 68.66 | 10.4 |
+| 1 | SDR | 1920 x 1080 | 12 | binned | 69.92 | 69.92 | 3.15 |
+| 2 | SDR | 3840 x 2160 | 12 | all-pixel | 43.98 | 67.13 | 12.61 |
+| 3 | ClearHDR | 1920 x 1080 | 12 | binned | 30.00 | 30.00 | 3.15 |
+| 4 | ClearHDR | 3840 x 2160 | 12 | all-pixel | 21.99 | 30.00 | 12.61 |
+| 5 | ClearHDR | 1920 x 1100 | 16 | binned | 30.00 | 30.00 | 4.2 |
+| 6 | ClearHDR | 3840 x 2200 | 16 | all-pixel | 21.99 | 30.00 | 16.9 |
 
-| Type     | Resolution  | Bit Depth | Readout   | Max FPS | DNG Frame File Size (MB) |
-|----------|-------------|-----------|-----------|---------|--------------------------|
-| SDR      | 3840 x 2160 | 10        | all-pixel | 60      | 10.4                     |
-| ClearHDR | 1920 x 1080 | 12        | binned    | 25      | 3.15                     |
-| ClearHDR | 3840 x 2160 | 12        | all-pixel | 25      | 12.61                    |
-| ClearHDR | 1920 x 1100 | 16        | binned    | 25      | 4.2                      |
-| ClearHDR | 3840 x 2200 | 16        | all-pixel | 25      | 16.9                     |
+Both fps columns are the [changelog](changelog.md#imx585-driver)'s measured figures for 3.4.0, taken
+at the sensor's highest link frequency, 1039.5 MHz. "Max FPS" is the stock RP1 pixel-rate ceiling
+(`--max-pixel-rate 380`); "overclocked" is the same mode with the `rp1-overclock` overlay's 580. Both
+move with the link frequency, which is set per port on the [config.txt tab](config-txt.md). See
+[Overclocking the Pi](overclocking.md) for the overlay, and [ClearHDR](clear-hdr.md) for what the HDR
+modes do and how to tune the merge.
 
-Max FPS here is measured at the installer's default link frequency (720 MHz) with the RP1
-overclock on. Both numbers move with the link frequency and the overclock — the full measured
-matrix is in the [changelog](changelog.md#imx585-driver). See [ClearHDR](clear-hdr.md) for what
-the modes do and how to tune the merge.
+!!! note "Mode numbers are not fixed sensor properties"
+
+    CineMate filters the sensor's modes by the crop-factor, bit-depth and ClearHDR whitelists in
+    [`settings.jsonc`](settings-json.md#image_capture), then numbers whatever survives. The table
+    above is the stock whitelist. Narrow any of those lists and the modes renumber, so `set
+    resolution 3` will not mean the same thing on a camera with a different `bit_depths` or
+    `k_steps`. The same applies to every mode table on this page.
+
+Resolutions here are the active area. `resources/sensors.json` and the GUI quote the readout size for
+the 12-bit modes, which is slightly larger — 1928 x 1090 and 3856 x 2180 — because it includes the
+optical-black rows.
 
 ### IMX283 (OneInchEye)
 
@@ -80,8 +91,9 @@ Where it is selectable, CineMate offers it per port on the settings editor's
 | IMX296 | 1 | 594 MHz | no |
 | IMX519 | 2 | 408 MHz | no |
 
-Raising it only pays off on a Pi 5 with the RP1 receiver overclocked — see
-[Overclocking the Pi](overclocking.md), which carries the per-value frame rates.
+How far a raise pays off depends on the mode: the wide all-pixel modes hit the RP1's pixel-rate
+bound before the link bound, so on a Pi 5 they also need the receiver overclocked — see
+[Overclocking the Pi](overclocking.md).
 
 ??? note "Why the other sensors are fixed"
     **IMX283** — Sony ships register sequences for only these two values, and 720 MHz is both the
@@ -115,6 +127,7 @@ Each mode reads out a physical area of the sensor. Binned modes keep the full fi
 | IMX477 | 2028 x 1520 (binned) | 6.29 x 4.71 | 7.9 | 5.5 | Super 8, slightly larger (4:3) |
 | IMX477 | 1332 x 990 (crop) | 4.13 x 3.07 | 5.1 | 8.4 | Standard 8mm, slightly smaller |
 | IMX296 | 1456 x 1088 | 5.02 x 3.75 | 6.3 | 6.9 | Standard 8mm, slightly larger |
+
 *Crop factor = 43.3 mm / mode diagonal, relative to 35 mm full-frame stills. Multiply the lens focal length by it for the full-frame-equivalent focal length. For depth-of-field equivalence, multiply the f-stop by the same factor.
 
 ### Focal-length examples:

@@ -105,14 +105,7 @@ Use `?keys=` on memory-constrained devices; a full snapshot is all 88 keys, a co
 is_recording=1 iso=800 fps=24.0 shutter_angle_actual=180.0 recording_time_tod=01:02:03:04 space_left=412 drop_frame_count=0 is_mounted=1
 ```
 
-The keys are the [Redis keys](redis-keys.md), unabbreviated, truncated at 500 bytes. Choose them in [`settings.jsonc`](settings-json.md).
-
-!!! warning "Two of the shipped default keys are misspelled"
-
-    The `broadcast.keys` default in `settings.jsonc` contains `shutter_a_actual` and
-    `recording_tc_tod`. Neither is a real Redis key, so both broadcast as empty values.
-    Replace them with `shutter_angle_actual` and `recording_time_tod`, as in the settings
-    block below, until the default is fixed.
+The keys are the [Redis keys](redis-keys.md), unabbreviated, truncated at 500 bytes. That line is the default set; pick your own in [`settings.jsonc`](settings-json.md).
 
 ### Server-sent events
 
@@ -120,7 +113,7 @@ The keys are the [Redis keys](redis-keys.md), unabbreviated, truncated at 500 by
 
 ## Settings
 
-Add to [`settings.jsonc`](settings-json.md) under `system`. Every field is optional; the defaults below apply when the block is absent or only partly filled in.
+The stock [`settings.jsonc`](settings-json.md) already carries a full `system.web_api` block under `system`, with exactly the values below — edit it there. The same values are also hard-coded in `src/module/web_api_settings.py`, and they apply if you delete the block or fill it in only partly, so every field is optional.
 
 | Field | Default | Effect |
 |---|---|---|

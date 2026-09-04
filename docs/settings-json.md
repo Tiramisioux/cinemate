@@ -71,7 +71,7 @@ record policy.
 
 | Control | What it does |
 | --- | --- |
-| Rotate 180° | Preview and recorded frames upside-down, for an inverted mount. Default off. |
+| Rotate 180° | Preview and recorded frames upside-down, for an inverted mount. Default off. `sensors.cam0.geometry.rotate_180` and the matching `cam1` key. |
 | Flip horizontal | Mirrors left–right, for periscope rigs. Default off. Camera 0 only. |
 | Flip vertical | Mirrors top–bottom. Default off. Camera 0 only. |
 | HDMI output | `Port 0` = `HDMI-A-1`, `Port 1` = `HDMI-A-2`. Camera 0 defaults to Port 0, Camera 1 to Port 1. |
@@ -111,10 +111,10 @@ Frame-timing tolerances, the conform frame rate, and storage warm-up.
 | Auto storage pre-roll | Records and discards a short test clip at startup and on each storage mount, priming the card. Never becomes the "latest recording". Default on. Off skips only the automatic runs; CLI `storage preroll` still works ([Storage pre-roll](storage-preroll.md)). |
 | Local mains frequency | Frequencies used for flicker-free shutter angles. Ships 50 and 60. Enter adds a chip, × removes one, drag to reorder. |
 | Conform frame rate | What everything is timecode-conformed to. 24, 25 or 30; default 25. |
-| Live sync warning tolerance | Frames the recorded count may fall behind elapsed take time before the SYNC warning latches. Shortfall only; running ahead never latches. Default 5 frames. |
-| Startup guard | Frames that must elapse after record starts before the live warning can latch, covering recorder startup latency. Default 10 frames, 400 ms at 25 fps. |
-| Final sync tolerance | How far end-of-take analysis lets frames on disk differ from expected, either direction, before flagging the clip out of sync. Default 1 frame, stricter than the live warning. |
-| Timecode jitter tolerance | Late-but-present frames within this many frames are ignored, not logged as a drop. Default 1 frame. |
+| Live sync warning tolerance | Frames the recorded count may fall behind elapsed take time before the SYNC warning latches. Shortfall only; running ahead never latches. Default 5 frames. `settings.sync_tolerances.live_sync_warning_frames`. |
+| Startup guard | Frames that must elapse after record starts before the live warning can latch, covering recorder startup latency. Default 10 frames, 400 ms at 25 fps. `settings.sync_tolerances.live_sync_startup_guard_frames`. |
+| Final sync tolerance | How far end-of-take analysis lets frames on disk differ from expected, either direction, before flagging the clip out of sync. Default 1 frame, stricter than the live warning. `settings.sync_tolerances.final_sync_analysis_frames`. |
+| Timecode jitter tolerance | Late-but-present frames within this many frames are ignored, not logged as a drop. Default 1 frame. `settings.sync_tolerances.tc_drop_jitter_frames`. |
 
 !!! note "Conform frame rate does not change what you shoot"
     The sensor records at the camera's own FPS. Conform sets only the timecode counter's frame base
@@ -218,8 +218,6 @@ CineMate reads live in [`arrays`](settings-json.md#arrays).
 
 ## Resolution & sensor
 
-<a id="image_capture"></a>
-
 ![Resolution & sensor section of the CineMate settings editor](images/gui-resolution.png)
 
 Filters which sensor modes reach the camera's resolution control, and sets the startup values for
@@ -240,18 +238,13 @@ imx585 ClearHDR.
 
 !!! warning "Set both thresholds, or neither"
 
-    Both blank keeps the driver's own pair. Setting the two to the same value clamps every HDR frame
-    near black. Never set just one of the pair.
+    Both blank keeps the driver's own pair. Setting the two to the same value clamps every HDR frame near black. Never set just one of the pair.
 
 !!! note "These are filters, not the mode list"
 
-    Crop factors and bit depths only decide which database modes get shown, and both lists are
-    global: every sensor, not per camera. Hidden modes come back the moment you add the step again,
-    so `5.5` brings the IMX283 5K modes back.
+    Crop factors and bit depths only decide which database modes get shown, and both lists are global: every sensor, not per camera. Hidden modes come back the moment you add the step again, so `5.5` brings the IMX283 5K modes back.
 
-    An empty list is not a ban. Clear every chip, or turn both mode toggles off, and that filter
-    stops applying, so every mode is offered. If a combination leaves a camera with nothing, CineMate
-    logs a warning and keeps that camera's full mode list.
+    An empty list is not a ban. Clear every chip, or turn both mode toggles off, and that filter stops applying, so every mode is offered. If a combination leaves a camera with nothing, CineMate logs a warning and keeps that camera's full mode list.
 
 The four ClearHDR values are seeded at launch. For a running camera use `set hdr threshold low/high`,
 `set hdr blend`, `set hdr gain adder`, or a pot / quad-rotary channel, with no restart. Nothing here
@@ -325,7 +318,7 @@ stereo capture, `16bit` for 16-bit mono. Read at startup, so a change needs a sa
 !!! note ""
     An offset moves only the timecode metadata, written when the WAV is finalised; samples are never
     shifted. Use it for a fixed bias, not drift over a long take, see
-    [Audio sync & drift](audio-sync.md).
+    [Audio recording](audio-recording.md#timecode-offset).
 
 These map to `audio_capture`.
 
@@ -339,13 +332,13 @@ Overlays on the HDMI monitor, and how the feed is framed at boot.
 
 | Control | What it does |
 |---|---|
-| **Show audio VU meter** | Mislabelled: toggles the RAM **buffer** bar, lower left. Green under 70% full, yellow under 90%, red above. Default on. The right-edge audio VU meters are separate and appear with any supported USB mic. |
-| **VU meter clip hatching** | Hatch lines across the buffer bar's filled part. Default on. Only visible while that bar is shown. |
+| **Show audio VU meter** | Mislabelled: toggles the RAM **buffer** bar, lower left. Green under 70% full, yellow under 90%, red above. Default on. The right-edge audio VU meters are separate and appear with any supported USB mic. `hdmi_display.overlays.buffer_vu_meter`. |
+| **VU meter clip hatching** | Hatch lines across the buffer bar's filled part. Default on. Only visible while that bar is shown. `hdmi_display.overlays.vu_meter_hatch_lines`. |
 | **Monitor resolution** | GUI canvas size; match your monitor for a pixel-accurate overlay. Default `1920` × `1080`. A smaller framebuffer wins: CineMate uses it instead of clipping the layout. |
-| **Mirror to both HDMI ports** | One preview, GUI included, on both connectors. Default off. Single-sensor only; with two sensors the compositor owns both feeds. |
+| **Mirror to both HDMI ports** | One preview, GUI included, on both connectors. Default off. Single-sensor only; with two sensors the compositor owns both feeds. `hdmi_display.mirror_to_both_ports`. |
 | **Monitor shows** | Boot feed: Camera 0, Camera 1, or Both, side by side. Default **Both, side by side**. Needs two sensors. |
 | **Default zoom** | Boot magnification, 1.0× or 2.0×; 2.0× punches into frame centre for focus. Default **1.0×**. Preview only, never the recording. |
-| **Picture-in-picture** | Corner for the inset when one camera is full-screen: Upper left, Upper right, Lower left, Lower right. Default **Lower right**. Needs two sensors. |
+| **Picture-in-picture** | Corner for the inset when one camera is full-screen: Upper left, Upper right, Lower left, Lower right. Default **Lower right**. Needs two sensors. `hdmi_display.preview.pip.corner`, written as `upper_left`, `upper_right`, `lower_left` or `lower_right`. |
 
 !!! note "The dropdown doesn't offer picture-in-picture"
 
@@ -369,9 +362,10 @@ row per control: its pin, then one or more gesture → command lines. A button c
 single, double and triple click, and a hold, each running a different command.
 
 The stock image ships six controls (two record buttons, a multi-gesture button, two switches and a
-rotary encoder) and the four dials of the quad rotary board. Creating a control, choosing its command
-and argument, moving it to another pin, and the wiring for each device are covered in
-[Additional hardware](hardware-controls.md).
+rotary encoder) and the four dials of the quad rotary board. The GPIO encoder and the quad board each
+carry an `enabled` flag, both `true` as shipped; set either to `false` to keep the mapping on file
+while switching the device off. Creating a control, choosing its command and argument, and moving it
+to another pin are covered in [Additional hardware](hardware-controls.md).
 
 These map to `hardware_controls` and `input_peripherals`.
 

@@ -1,6 +1,8 @@
 # System services
 
-CineMate uses four long-running services and one maintenance timer for its operation.
+CineMate owns four long-running services and one maintenance timer. It also depends on a fifth unit
+it does not own, `redis-server`, which the installer enables — six systemd units in all. See [The
+CineMate stack explained](cinemate-stack.md#what-runs-as-what) for the whole list in one table.
 
 ## cinemate-autostart.service
 
@@ -19,6 +21,7 @@ Watches for removable drives and mounts them automatically. The accompanying Pyt
 It understands `ext4`, `ntfs` and `exfat` filesystems. Partitions labelled `RAW` are mounted at `/media/RAW`; any other label is mounted under `/media/<LABEL>` after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.
 
 ## wifi-hotspot.service
+
 Keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from `/home/pi/cinemate/settings.jsonc` under `system.wifi_hotspot`. Runs entirely independently of `cinemate-autostart.service` — it survives a CineMate crash — and applies a credential fallback ladder if `settings.jsonc` is broken. See [Configuring the Wi-Fi hotspot](hotspot-logic.md).
 
 ## cinemate-recovery.service

@@ -88,6 +88,8 @@ Everything here needs a full reboot to take effect — restarting CineMate alone
 
 ## RAW files tab
 
+![The RAW files tab](images/gui-raw-files.png)
+
 **Storage** shows a card per mounted drive: label, device and filesystem, free/total space, take count, and — for the active drive only — a **Format…** control. Formatting asks for confirmation, is refused while a recording is in progress, and is verified against the drive's actual filesystem after the dispatch completes rather than trusting the command succeeded.
 
 **Takes** lists every take across all mounted storage, newest first by default (also sortable by oldest or largest), each with a thumbnail you can scrub for a quick frame check. Per take:
@@ -98,6 +100,8 @@ Everything here needs a full reboot to take effect — restarting CineMate alone
 Checking takes and using **Download selected** / **Delete selected** applies the same actions to the whole selection. Bulk delete refuses the entire request (not a partial delete) if any selected take is currently recording. Downloading more than one take at once needs the folder-picker path above.
 
 ## Playback tab
+
+![The Playback tab](images/gui-playback.png)
 
 Reviews a take's frames, decoded live from the CinemaDNG files, at the settings' conform frame rate. Fully covered in [Playback](playback.md) — including the storage-contention lockout that holds playback while a take is recording or its buffer is still flushing.
 

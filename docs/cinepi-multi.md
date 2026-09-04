@@ -4,17 +4,7 @@
 
 ## Building the `cinepi-raw` command
 
-For each detected camera, the manager creates a `CinePiProcess`. `_build_args()` assembles flags for:
-
-- the selected sensor mode, width, height, and bit depth
-- the raw packing suffix for the selected Pi generation
-- per-camera geometry from `geometry.cam0`, `geometry.cam1`, and so on
-- per-camera HDMI output mapping from the `output` section
-- the low-resolution preview size used by CinePi-raw
-
-The preview size is based on `hdmi_display.width` and `hdmi_display.height`, but if a framebuffer is already active, CineMate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped `1920x1080` preview into a smaller active mode.
-
-Here is a simplified example of the resulting command:
+Here is an  example of the command CineMate uses to launch cinepi-raw:
 
 ```bash
 cinepi-raw --mode 2028:1080:12:U \
@@ -24,6 +14,16 @@ cinepi-raw --mode 2028:1080:12:U \
            --post-process-file /home/pi/post-processing0.json \
            --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
 ```
+
+For each detected camera, the manager creates a `CinePiProcess`. `_build_args()` assembles flags for:
+
+- the selected sensor mode, width, height, and bit depth
+- the raw packing suffix for the selected Pi generation
+- per-camera geometry from `geometry.cam0`, `geometry.cam1`, and so on
+- per-camera HDMI output mapping from the `output` section
+- the low-resolution preview size used by CinePi-raw
+
+The preview size is based on `hdmi_display.width` and `hdmi_display.height`, but if a framebuffer is already active, CineMate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped `1920x1080` preview into a smaller active mode.
 
 On Raspberry Pi 4 / Pi 400 / CM4, CineMate switches IMX296 and IMX477 launches to packed raw mode (`P`), for example `1456:1088:10:P` for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (`U`). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.
 

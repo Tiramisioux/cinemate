@@ -104,4 +104,4 @@ Max fps figures are measured at the sensor's highest supported link frequency, *
 - Dynamic resolution switching to match the observed sustainable frame rate for the attached sensor and storage media — for example, IMX585 automatically switches to HD above 25 fps when an SSD is used.
 - Hot-swapping between 16-bit and 24-bit USB microphones.
 - 4K-class recording modes are visible by default.
-- Automatic storage pre-roll can be disabled in `settings.json`.
+- Automatic storage pre-roll can be disabled in `settings.jsonc`.

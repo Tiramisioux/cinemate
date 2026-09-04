@@ -27,6 +27,7 @@ nav:
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Storage pre-roll warm-up: storage-preroll.md
   - Configuring:
+      - The CineMate stack explained: cinemate-stack.md
       - settings.jsonc: settings-json.md
       - Settings editor: settings-editor.md
       - Camera sensors and frame rates: sensors.md
@@ -44,7 +45,6 @@ nav:
       - Backing up the SD card: backing-up-sd-card.md
   - Troubleshooting: troubleshooting.md
   - Advanced:
-      - Audio sync & drift: audio-sync.md
       - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
       - Manual installation: installation-steps.md
       - Compiling cinepi-raw: compiling-cinepi-raw.md
@@ -52,10 +52,9 @@ nav:
   - Reference:
       - Cinemate terminal commands: cli-commands.md
       - CinePi RAW terminal commands: cli-user-guide.md
-      - Controller methods: controller-methods.md
-      - Redis API: redis-guide.md
-      - Redis Key reference: redis-keys.md
-      - How Cinemate launches CinePi-raw: cinepi-multi.md
+      # - Redis API: redis-guide.md   # hidden from the menu, page still builds
+      # - Redis Key reference: redis-keys.md   # hidden from the menu, page still builds
+      # - How Cinemate launches CinePi-raw: cinepi-multi.md   # hidden from the menu, page still builds
       - Changelog: changelog.md
   # - Cinemate builds:
   #     - Box build: brick.md

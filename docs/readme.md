@@ -5,7 +5,7 @@
 It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw), built on the [CinePi-RAW recorder by Csaba Nagy](https://github.com/cinepi).
 
 <div style="text-align: center;">
-  <img src="/cinemate/images/camera-stack3.png" alt="Camera stack exploded" width="60%" />
+  <img src="../images/camera-stack3.png" alt="Camera stack exploded" width="60%" />
   <p><em>Figure 1: The CineMate camera stack — CineMate (the user interface) running on top of CinePi-RAW (the recorder).</em></p>
 </div>
 

@@ -71,10 +71,13 @@ def test_configured_thresholds_are_passed_through():
     assert values["hdr_threshold_high"] == 4095
 
 
-def test_blend_and_gain_adder_keep_their_defaults():
+def test_blend_and_gain_adder_defaults():
     values = clearhdr_startup_values({})
 
-    assert values["hdr_blend"] == 0
+    # 5 (HG 1/16), not the driver's own 0: 0 is the blend setting that records a
+    # flat black-level pedestal. Kept in step with settings.schema.json's default
+    # and both shipped .jsonc files -- see docs/clear-hdr.md.
+    assert values["hdr_blend"] == 5
     assert values["hdr_gain_adder"] == 1
 
 

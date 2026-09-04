@@ -179,3 +179,21 @@ border-radius: 0;
 .admonition > .admonition-title {
   font-weight: 600;
 }
+
+/* The readthedocs theme caps the content column at 800px. These docs are full
+   of wide reference tables -- the commands reference, the settings sections,
+   the hardware table with its thumbnails -- and at 800px their right-hand
+   columns were silently clipped off the page rather than wrapping or
+   scrolling. Widen the column, and let anything still too wide scroll. */
+.wy-nav-content {
+  max-width: 1100px;
+}
+
+/* Thumbnails in the hardware table. The column has no header text, so it gets
+   no intrinsic width, and the theme's img{max-width:100%} then resolves to
+   zero -- the images load but render 0x0. Give them a fixed width instead. */
+div[role="main"] table img[src*="images/hardware/"] {
+  width: 92px;
+  max-width: none;
+  height: auto;
+}

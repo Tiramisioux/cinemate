@@ -1,6 +1,6 @@
 # Dual sensors
 
-CineMate automatically detects each camera connected to the Raspberry Pi and spawns a separate `cinepi-raw` process per sensor. Cameras are synchronized with cam0 being the server and cam1 being the client.
+CineMate automatically detects each camera connected to the Raspberry Pi (and defined in config.txt) and spawns a separate `cinepi-raw` process per sensor. Cameras are synchronized with cam0 being the server and cam1 being the client.
 
 ## HDMI preview
 

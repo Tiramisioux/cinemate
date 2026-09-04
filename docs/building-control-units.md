@@ -1,30 +1,52 @@
 # Building CineMate microcontroller control units
 
-You can use ESP32, an M5Stack, a Raspberry Pi Pico W or other type of microcontroller to build wireless camera controllers — a record button, a tally light, an ISO knob or a full. The device joins the camera's Wi-Fi hotspot and sends the same commands you would type into the [CineMate CLI](cli-commands.md):
+You can use ESP32, an M5Stack, a Raspberry Pi Pico W or other type of microcontroller to build wireless camera controllers — a record button, a tally light, an ISO knob or a full handheld remote with a display. The device joins the camera's Wi-Fi hotspot and sends the same commands you would type into the [CineMate CLI](cli-commands.md).
 
-Port `5000` for commands, `8888/udp` for status.
+| Wi-Fi network (SSID)     | `CinePi`                        |
+| ------------------------ | ------------------------------- |
+| Password                 | `11111111`                      |
+| Camera IP on the hotspot | `10.42.0.1`                     |
+| Commands                 | port `5000`, `POST /api/v1/cmd` |
+| Status broadcast         | port `8888/udp`                 |
 
-On the camera's own hotspot the address is always `10.42.0.1`. The firmware examples below use that number rather than `cinepi.local`: it never changes, and resolving a `.local` name needs an mDNS resolver the device may not have. The `curl` checks in the next section are run from a laptop, so they use `cinepi.local`.
+Change the SSID and password on the settings editor's [Wi-Fi hotspot](settings-json.md#wi-fi-hotspot) section. The IP does not change: `10.42.0.1` is NetworkManager's shared-mode gateway address, which is why the firmware examples below hard-code it rather than resolving `cinepi.local`. Resolving a `.local` name needs an mDNS resolver the device may not have. The `curl` checks in the next section run from a laptop, so those use `cinepi.local`.
 
 The transport is the [Web API](web-api.md). Read that page first. It covers sending a command, reading a value, and the three ways to get live updates. This page is the hardware side.
 
 ## Trying out the connection to the Pi
 
-From a computer joined to the `CinePi` hotspot, or connected to the Pi via ethernet.
+Prove the camera answers from your laptop before you write any firmware. Pick the section that
+matches how you are connected.
+
+### Over the Wi-Fi hotspot
+
+Join the `CinePi` network first. Use the numeric address, the same one your firmware will use.
+
+```bash
+curl http://10.42.0.1:5000/api/v1/hello
+curl -d "rec" http://10.42.0.1:5000/api/v1/cmd
+nc -ul 8888
+```
+
+### Over Ethernet or your own Wi-Fi
+
+With the camera on the same network as your computer, reach it by name.
 
 ```bash
 curl http://cinepi.local:5000/api/v1/hello
 curl -d "rec" http://cinepi.local:5000/api/v1/cmd
-nc -ul 8888
 ```
 
-This should start recording, and report back that the camera is recording. To stop recording:
+The status broadcast is less dependable here. It goes to `255.255.255.255` and to `wlan0`'s own
+subnet broadcast address, always `wlan0`'s whatever you are connected over, and no router forwards
+either across a subnet. On the same network segment as the camera you will usually still see it;
+from anywhere else, check it from the hotspot or poll `GET /api/v1/status` instead.
 
-```bash
-curl -d "rec" http://cinepi.local:5000/api/v1/cmd
-```
+Either way: `hello` identifies the camera and `rec` starts a recording. Send `rec` again to stop.
+On the hotspot, `nc -ul 8888` also prints the status broadcast.
 
-If those three work, every example below will work. If they do not, fix that first — see [Troubleshooting](#troubleshooting).
+If those work, every example below will work. If they do not, fix that first — see
+[Troubleshooting](#troubleshooting).
 
 ## Example projects
 
@@ -39,8 +61,8 @@ const char* SSID = "CinePi";
 const char* PASS = "11111111";
 const char* CAM  = "http://10.42.0.1:5000";
 
-const int PIN_BUTTON = 0;    // momentary to GND
-const int PIN_TALLY  = 2;    // LED to GND through a resistor
+const int PIN_BUTTON = 32;   // momentary to GND — not a strapping pin
+const int PIN_TALLY  = 33;   // LED to GND through a resistor
 
 WiFiUDP udp;
 
@@ -82,8 +104,9 @@ void loop() {
     char buf[512];
     int len = udp.read(buf, sizeof(buf) - 1);
     buf[len] = 0;
-    char* p = strstr(buf, "rec=");
-    if (p) digitalWrite(PIN_TALLY, p[4] == '1' ? HIGH : LOW);
+    const char* KEY = "is_recording=";
+    char* p = strstr(buf, KEY);
+    if (p) digitalWrite(PIN_TALLY, p[strlen(KEY)] == '1' ? HIGH : LOW);
   }
 }
 ```
@@ -91,6 +114,7 @@ void loop() {
 `sendCmd` accepts any [CineMate command](cli-commands.md): `"set iso 800"`, `"inc fps"`, `"set wb 5600"`, `"rec f 48"`.
 
 The tally reads the broadcast rather than polling.
+
 ### M5StickC — button, display, tally
 
 The M5StickC has a button, a screen and an LED already, so it makes a good handheld remote.
@@ -155,10 +179,10 @@ void loop() {
     char buf[512];
     int len = udp.read(buf, sizeof(buf) - 1);
     buf[len] = 0;
-    recording = field(buf, "rec=") == "1";
+    recording = field(buf, "is_recording=") == "1";
     iso = field(buf, "iso=");
     fps = field(buf, "fps=");
-    tc  = field(buf, "tc=");
+    tc  = field(buf, "recording_time_tod=");
     draw();
   }
 }
@@ -209,7 +233,7 @@ while True:
 
     try:
         data, _ = udp.recvfrom(512)
-        tally.value(1 if b"rec=1" in data else 0)
+        tally.value(1 if b"is_recording=1" in data else 0)
     except OSError:
         pass
 
@@ -247,13 +271,20 @@ while True:
 
 ## Design rules
 
-See [CineMate commands](cli-commands.md) for complete list of available commands. We are using the same syntax for the CineMate CLI
+See [CineMate commands](cli-commands.md) for complete list of available commands. We are using the same syntax as for the CineMate CLI
 
-- **Send the command string, not a parameter.** `POST "set iso 800"` — there is no `/iso` endpoint, by design. The command vocabulary is the API, so your firmware keeps working as commands are added.
-- **Prefer the UDP broadcast over polling.** One packet feeds every device. Polling multiplies load by the number of controllers.
-- **Use `/api/v1/get/<key>` when you need one value on demand.** It returns bare text, so no JSON parser and no heap allocation.
-- **Use `?keys=` on `/status`.** A full snapshot is several kilobytes and will strain a Pico.
-- **Do not hold an SSE connection unless you need every change.** Each one occupies a thread on the camera, and there are only four.
+- **Send the command as plain text.** `POST "set iso 800"`, exactly what you would type. There is
+  no `/iso` endpoint and there never will be. Because the commands themselves are the API, firmware
+  you write today still works when new commands are added.
+- **Listen to the status broadcast instead of asking over and over.** The camera sends one packet
+  to everyone five times a second, so ten controllers cost it the same as one. Asking in a loop
+  costs it once per device.
+- **To read one value, use `/api/v1/get/<key>`.** It replies with just the value as text, so there
+  is nothing to parse and nothing to allocate.
+- **To read several, add `?keys=` to `/status`.** Without it you get every value, a few kilobytes,
+  which is a lot to hand a Pico.
+- **Only open an SSE stream if you need every change the instant it happens.** The camera holds
+  four at most, and each one occupies a connection for as long as it is open.
 
 ## Troubleshooting
 
@@ -262,6 +293,7 @@ See [CineMate commands](cli-commands.md) for complete list of available commands
 | Device joins Wi-Fi, all requests time out | Web server never started — it only starts if the interface had an IP when CineMate booted | Restart CineMate after the hotspot is up. See [Wi-Fi hotspot](hotspot-logic.md). |
 | `curl` works from a laptop, fails from the ESP32 | URL encoding | Use `POST` with a plain body, not `GET` with spaces in the query |
 | `400 err unknown command` | Typo, or a command that does not exist in this version | `GET /api/v1/commands` lists exactly what this camera accepts |
+| `401 err unauthorized` | A token is set in `system.web_api.token` | Send it in the `X-Cinemate-Token` header |
 | `403 err blocked` | `format`, `erase`, `reboot` or `shutdown` with `allow_destructive` false | Intentional. See the [Web API](web-api.md) settings table. |
 | `429 err rate limited` | Encoder flooding | Rate-limit on the device |
 | `503 err too many clients` | More than four SSE connections | Switch those devices to the UDP broadcast |

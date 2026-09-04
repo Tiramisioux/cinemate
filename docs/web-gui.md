@@ -21,8 +21,7 @@ and the serial port use. Socket.IO only pushes live values back; it carries no c
   8000 directly.
 - The clean preview stream lives on port `8000` (`http://cinepi.local:8000/stream`), and on `8001`
   for a second sensor. `/stream` returns 404 until the first frame is published. A bare
-  `http://cinepi.local:8000/` serves the same stream once cinepi-raw is rebuilt from
-  `fix/mjpeg-clean-preview`; before that, 404.
+  `http://cinepi.local:8000/` serves the same stream.
 
 ## Top row
 

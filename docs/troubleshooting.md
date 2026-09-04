@@ -11,7 +11,7 @@ Common issues during a first build.
 | **Recording won't start / no storage** | Drive not labelled or formatted as expected | The drive must be formatted **exFAT, ext4 or NTFS** and labelled **RAW**, and mounted. See [Quick start](getting-started.md). |
 | **Purple/magenta screen, frequent DROP** | Storage too slow for the current frame rate | Lower the FPS or use faster media (SSD, NVMe, or CFE Hat). See [Camera sensors and frame rates](sensors.md). |
 | **Blue screen at startup or on inserting a drive** | Normal storage pre-roll (warm-up) | This is expected, not an error. To disable it, set `system.storage.auto_preroll` to `false`. See [Storage pre-roll warm-up](storage-preroll.md). |
-| **Audio drifts out of sync on long takes** | Microphone clock drift | See [Audio sync & drift](audio-sync.md) for correction. |
+| **Audio drifts out of sync on long takes** | Microphone clock drift | See [Audio recording](audio-recording.md#timecode-offset). |
 | **Can't reach the Pi over SSH** | Hostname or network | Connect to `cinepi.local`. See [Connecting via SSH](ssh.md). |
 
 !!! tip "Power down before changing hardware"

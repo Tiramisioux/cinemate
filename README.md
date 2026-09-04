@@ -34,9 +34,23 @@ Drivers and mappings for these come preinstalled:
 
 ## Camera stack
 <img src="docs/images/camera-stack3.png" alt="Camera stack exploded" width="250"><br>
-Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.
+
+| Layer | Responsibility |
+|---|---|
+| Camera sensor | Captures the image. One module on the Pi's CSI port, or two on a board with two ports. |
+| Raspberry Pi SoC | Receives the CSI-2 stream and lands the raw frames in memory. |
+| libcamera | Patched fork ([`Tiramisioux/libcamera`](https://github.com/Tiramisioux/libcamera), branch `cinemate`), built by the installer. Configures the sensor mode and delivers raw frames to the recorder. |
+| CinePi-RAW (C++) | One process per detected camera. Writes CinemaDNG frames to the RAW drive (`/media/RAW`), composites the HDMI preview, serves the MJPEG preview stream on port `8000` (`8001` for a second sensor), and supervises the separate `cinepi-audio-capture` helper that records the WAV sidecar. |
+| Cinemate (Python) | The user interface: the on-camera HDMI GUI, the [web GUI](https://tiramisioux.github.io/cinemate/web-gui/) and [settings editor](https://tiramisioux.github.io/cinemate/settings-editor/) on port `5000`, the [terminal commands](https://tiramisioux.github.io/cinemate/cli-commands/), the [Web API](https://tiramisioux.github.io/cinemate/web-api/) and the GPIO controls. Launches and supervises the CinePi-RAW processes. |
+
+Cinemate and CinePi-RAW are separate programs, and Redis is the whole interface between them. Each side writes a key and then publishes the key name on the `cp_controls` channel. Cinemate writes the setting you asked for; CinePi-RAW applies it and writes back the value it actually used, plus per-frame statistics on the `cp_stats` channel that Cinemate turns into the live readouts.
+
+The web GUI and the Web API post a CLI command line to `/api/v1/cmd` — the same dispatcher the terminal and the serial port use. GPIO buttons, pots and rotary encoders call the controller directly instead.
+
+More: [Redis API quick start](https://tiramisioux.github.io/cinemate/redis-guide/), [Redis key reference](https://tiramisioux.github.io/cinemate/redis-keys/) and [How Cinemate launches CinePi-raw](https://tiramisioux.github.io/cinemate/cinepi-multi/).
 
 ## Hardware
+
 For a basic Cinemate setup you need:
 - Raspberry Pi 4 or 5 / CM5 with **4 GB RAM or more**. 2 GB boards run the prebuilt image, but are not recommended for UHD/4K: raw frames are buffered in RAM and a watchdog auto-stops recording once total RAM use hits 80 %. 4 GB is also recommended for compiling `cinepi-raw` on the Pi.
 - Official HQ or GS camera module
@@ -44,8 +58,8 @@ For a basic Cinemate setup you need:
 - HDMI monitor or a phone/tablet connected to the Pi hotspot for preview
 
 ## Installation
-There are three options for installing Cinemate:
 
+There are three options for installing Cinemate:
 ### 1. Use the prebuilt image file
 
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for the preinstalled image and Quick Start Guide.
@@ -73,18 +87,9 @@ chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono. The IMX283 and IMX585 drivers are installed either way, so you can install with the defaults and then pick your sensor in the browser, on the settings editor's config.txt tab.
+The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono ([sensors and frame rates](https://tiramisioux.github.io/cinemate/sensors/)). The IMX283 and IMX585 drivers are installed either way, so you can install with the defaults and then pick your sensor in the browser, on the settings editor's [config.txt tab](https://tiramisioux.github.io/cinemate/config-txt/).
 
-To install directly for another sensor — which also writes the matching overlay — pass `SENSOR_MODEL` and `CAM_PORT` inline:
-
-```bash
-SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
-SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
-SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
-SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
-```
-
-Naming the sensor up front still matters in two cases: `imx585_mono` also applies the `rp1-cfe` kernel patch that mono 16-bit ClearHDR needs, and `imx585` also installs the IR filter helper. Neither happens when you switch sensor in the browser later.
+Naming the sensor up front still matters in two cases: `imx585_mono` also applies the `rp1-cfe` kernel patch that mono 16-bit [ClearHDR](https://tiramisioux.github.io/cinemate/clear-hdr/) needs, and `imx585` also installs the IR filter helper. Neither happens when you switch sensor in the browser later.
 
 After installing, reboot the system and Cinemate should start automatically.
 

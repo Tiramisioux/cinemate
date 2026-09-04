@@ -1,6 +1,6 @@
 # Backing up the SD card
 
-## Create a compressed image using PiShrink
+The installer and CineMate image file comes with PiShrink preinstalled. This can be used for making compressed image file to backup your system.
 
 ```shell hl_lines="2 3"
 sudo bash -Eeuo pipefail -c '

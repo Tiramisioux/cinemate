@@ -217,10 +217,10 @@
                fallback (below) shows. Operator ruling: rails stay left and
                right at every viewport and shrink, never restack -- this is
                the shrink. */
-            --gap:         max(6px,  calc(var(--gap-base)        * var(--fit, 1)));
-            --label-size:  max(11px, calc(var(--label-size-base) * var(--fit, 1)));
-            --box-size:    max(31px, calc(var(--box-size-base)   * var(--fit, 1)));
-            --box-height:  max(23px, calc(var(--box-height-base) * var(--fit, 1)));
+            --gap:         max(var(--floor-gap,   6px),  calc(var(--gap-base)        * var(--fit, 1)));
+            --label-size:  max(var(--floor-label, 11px), calc(var(--label-size-base) * var(--fit, 1)));
+            --box-size:    max(var(--floor-box,   31px), calc(var(--box-size-base)   * var(--fit, 1)));
+            --box-height:  max(var(--floor-height,23px), calc(var(--box-height-base) * var(--fit, 1)));
             /* draw_left_sections() starts its CAM column at y=97 on the
                1080p canvas — roughly a box-height of air below the top row.
                Reproduce that offset so the rails sit like the HDMI GUI's
@@ -535,6 +535,32 @@
 
            #stage keeps a floor for the same reason -- whatever else happens,
            the picture does not disappear. */
+        /* The rails carry legibility floors -- max(31px, ...) and friends --
+           so fitRails() cannot always shrink them into the height it has. On
+           the shooting screen that is the right trade: the operator ruling is
+           that the rails stay readable and the layout never restacks. In this
+           pane, with the drawer taking a share of a browser window that may
+           be short, those floors stop the shrink early and the bottom of the
+           left rail is simply cut off -- the operator loses the SYS section
+           rather than reading it smaller.
+           Measured on the camera at 1800x700, drawer open: as shipped the
+           left rail needed 343px in a 240px column; at these floors it needs
+           240 and fits. Lower floors than this gain nothing -- the shrink is
+           no longer what limits it. */
+        /* Lower floors where the alternative is losing content rather than
+           reading it smaller. Applied by height, not by which page this is:
+           the same squeeze happens on a phone, in a short browser window, and
+           in the settings editor's Live view pane, and the operator asked for
+           all three to work.
+           A media query rather than reacting to fitRails' .clipped flag,
+           which would oscillate: lowering the floor un-clips the rail, which
+           would restore the floor, which clips it again. */
+        @media (max-height: 820px) {
+            .rail { --floor-gap: 2px; --floor-label: 8px; --floor-box: 18px; --floor-height: 13px; }
+        }
+        /* The embedded pane is short whatever the window does -- the drawer
+           always takes a share -- so it takes the lower floors outright. */
+        #app.xp-fill .rail { --floor-gap: 2px; --floor-label: 8px; --floor-box: 18px; --floor-height: 13px; }
         #app.xp-fill { grid-template-rows: auto minmax(240px, 1fr) auto auto; }
         #app.xp-fill #experiment {
             /* The picture comes first. An earlier cap let the drawer take
@@ -2009,7 +2035,37 @@
             // identical URL -- which is the reason the cache-buster was there.
             img.removeAttribute('src');
             img.src = img.dataset.streamBase;
+            armStreamWatchdog(img);
         }, delay);
+    }
+
+    // A connection that is accepted and then silent produces no error event,
+    // so the error handler below never runs and nothing retries.
+    //
+    // cinepi-raw registers /stream before the first frame exists, deliberately
+    // (mjpegPreviewStage: "a client that connects early is accepted and simply
+    // waits for the first real frame") so that a plain browser navigation
+    // during boot does not land on a 404. That is right for a person typing
+    // the address, and a trap for this <img>: it used to get the 404, fire
+    // error, and recover through the retry above. Now it gets headers and
+    // nothing, and stays blank until something else calls reloadStreams() --
+    // which is why the preview came up black and only appeared once the
+    // operator changed resolution.
+    //
+    // Armed whenever a src is set, and disarmed for good by the first frame.
+    // Not re-armed on every load: whether a browser fires load per part of a
+    // multipart/x-mixed-replace response is not something to bet a reconnect
+    // loop on.
+    const STREAM_FIRST_FRAME_MS = 4000;
+    function armStreamWatchdog(img) {
+        clearTimeout(img._watchTimer);
+        if (img._gotFrame) { return; }
+        img._watchTimer = setTimeout(() => {
+            img._watchTimer = null;
+            if (img._gotFrame || img.classList.contains('hidden')) { return; }
+            if (!img.dataset.streamBase) { return; }
+            scheduleStreamReload(img, 0);
+        }, STREAM_FIRST_FRAME_MS);
     }
     function reloadStreams() {
         [$('stream'), $('stream-cam1')].forEach((img) => {
@@ -2019,12 +2075,17 @@
     }
     $('stream').dataset.streamBase = ($('stream').getAttribute('src') || '').split('?')[0];
     $('stream-cam1').dataset.streamBase = CAM1_STREAM;
+    // The markup's own src is a connection nothing armed a watchdog for.
+    armStreamWatchdog($('stream'));
     [$('stream'), $('stream-cam1')].forEach((img) => {
         img.addEventListener('error', () => {
             if (!img.dataset.streamBase || img.classList.contains('hidden')) { return; }
             scheduleStreamReload(img, 1000);
         });
         img.addEventListener('load', () => {
+            img._gotFrame = true;
+            clearTimeout(img._watchTimer);
+            img._watchTimer = null;
             clearTimeout(img._reloadTimer);
             img._reloadTimer = null;
         });

@@ -70,5 +70,44 @@ class StreamReloadTests(unittest.TestCase):
             self.fail(f"stream URL is being concatenated at offset {m.start()}")
 
 
+class FirstFrameWatchdogTests(unittest.TestCase):
+    """A connection that is accepted and then silent must still recover.
+
+    cinepi-raw registers /stream before the first frame exists, on purpose, so
+    that a browser navigating to the clean preview during boot does not land on
+    a 404. That is right for a person typing the address and a trap for the
+    GUI's <img>: it used to get the 404, fire error, and recover through the
+    retry below. Accepted-and-silent fires no error at all, so nothing retried
+    and the preview stayed black until something else called reloadStreams() --
+    which a resolution change does, and which is exactly how it was reported.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = TEMPLATE.read_text(encoding="utf-8")
+
+    def test_a_watchdog_is_armed_when_a_src_is_set(self):
+        self.assertIn("function armStreamWatchdog(img)", self.html)
+        # both the markup's own src and every reconnect
+        self.assertIn("armStreamWatchdog($('stream'));", self.html)
+        reload_fn = self.html[self.html.index("function scheduleStreamReload("):]
+        reload_fn = reload_fn[:reload_fn.index("\n    }")]
+        self.assertIn("armStreamWatchdog(img)", reload_fn)
+
+    def test_the_first_frame_disarms_it_for_good(self):
+        # not re-armed per load: whether a browser fires load per part of a
+        # multipart/x-mixed-replace response is not worth betting a reconnect
+        # loop on
+        self.assertIn("img._gotFrame = true;", self.html)
+        watchdog = self.html[self.html.index("function armStreamWatchdog(img)"):]
+        watchdog = watchdog[:watchdog.index("\n    }")]
+        self.assertIn("if (img._gotFrame) { return; }", watchdog)
+
+    def test_the_watchdog_reconnects_rather_than_giving_up(self):
+        watchdog = self.html[self.html.index("function armStreamWatchdog(img)"):]
+        watchdog = watchdog[:watchdog.index("\n    }")]
+        self.assertIn("scheduleStreamReload(img, 0)", watchdog)
+
+
 if __name__ == "__main__":
     unittest.main()

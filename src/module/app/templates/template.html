@@ -2057,14 +2057,27 @@
     // Built on first open rather than at load: a camera that never opens the
     // drawer pays nothing for it, and renderExperiment() no-ops while it is
     // closed instead of touching ~30 widgets on every state push.
-    $('btn-experiment').addEventListener('click', () => {
+    function setExperimentOpen(open) {
         const panel = $('experiment');
-        if (!xpBuilt) { buildExperiment(); }
-        const open = panel.classList.toggle('hidden');
-        $('btn-experiment').classList.toggle('on', !open);
+        if (open && !xpBuilt) { buildExperiment(); }
+        panel.classList.toggle('hidden', !open);
+        $('btn-experiment').classList.toggle('on', open);
         render();
         noteExperimentOverflow();
+    }
+
+    $('btn-experiment').addEventListener('click', () => {
+        setExperimentOpen($('experiment').classList.contains('hidden'));
     });
+
+    // The settings editor embeds this page in its Live view pane with ?xp=1,
+    // where having every remaining control to hand is the point of the pane.
+    // The bare page on :5000 is the shooting screen and stays closed -- the
+    // drawer is ~30 widgets touched on every state push, which is exactly what
+    // the build-on-first-open above exists to avoid paying for.
+    if (new URLSearchParams(window.location.search).get('xp') === '1') {
+        setExperimentOpen(true);
+    }
 
     // The drawer changes the preview's available box without a window
     // resize, and so does an orientation change or a phone's URL bar

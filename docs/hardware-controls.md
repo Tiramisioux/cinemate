@@ -15,6 +15,7 @@
 | LEDs                                                                              | a GPIO out pin + GND, via a resistor | rec tally lamp                                  | ![5mm LED](images/hardware/led.jpg)                             |
 | Resistor                                                                          | in series with an LED                | limits the LED's current; 220 Ω is a good value | ![220 Ω resistor](images/hardware/resistor.jpg)         |
 | I²C OLED display                                                                  | I²C (SDA/SCL pins)                   | status screen: ISO, timecode, space left        | ![SSD1306 OLED display](images/hardware/oled.jpg)               |
+| Real-time clock                                                                   | I²C (SDA/SCL pins)                   | keeps the clock across a power cycle, Pi 4 only | ![DS3231 real-time clock module](images/hardware/rtc.jpg)       |
 
 Physical controls are mapped in [the settings file](settings-json.md). Type `editsettings` on the Pi to open it or use the Web UI. Changes apply at the next CineMate start. Controls call the same commands as the CLI and web GUI, listed under [commands reference](cli-commands.md).
 
@@ -167,6 +168,31 @@ One frequency serves every tone pin: the in‑row field and the card edit the sa
 The [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang adds a CFexpress Type B card slot to the Raspberry Pi 5 over PCIe.
 
 No configuration needed. CineMate detects the hat at startup and shows **CFE** as the media type. Format the card `exFAT` and label it `RAW`, like any recording drive: the RAW files pane has a format button, `format exfat` does the same in the CLI.
+
+## Real-time clock
+
+Only needed on a **Raspberry Pi 4**. The Pi 5 has an RTC on board; fit its battery and it keeps time
+on its own.
+
+A Pi 4 has no clock that survives a power cycle. Left alone it boots believing it is whenever it last
+shut down, and every take is stamped with that wrong date. A DS3231 module on the I²C pins fixes it.
+
+The system clock corrects itself whenever the Pi can reach the internet — over Ethernet, or over
+Wi-Fi while joined to a network rather than serving its own hotspot. Plugging into a computer that is
+online is enough. That sets the *system* clock only. The module keeps whatever it was last given
+until you copy the corrected time across:
+
+```text
+set rtc time
+```
+
+`time` prints both clocks, so you can check they agree before going out to shoot.
+
+!!! note "The overlay is not managed for you"
+    CineMate owns its own fenced block in `config.txt` and does not put an RTC overlay in it. Add the
+    standard `dtoverlay=i2c-rtc,ds3231` line yourself on the [config.txt tab](config-txt.md), outside
+    the managed block, where it survives updates. Without it there is no `/dev/rtc` for `hwclock` to
+    talk to and both commands above will report that they cannot reach the clock.
 
 ## Outputs and displays
 

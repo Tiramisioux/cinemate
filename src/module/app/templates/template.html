@@ -241,6 +241,21 @@
             overscroll-behavior: contain;   /* matches #experiment; the rails were missed */
         }
         .rail.fitted { --rail-pad: 0.4; }   /* reclaim the dead band once we are shrinking */
+        /* Landscape on a phone: the top row and the button row each stay on
+           one line. Wrapping spends a second row of height in the orientation
+           that has the least of it, and every one of those rows comes off the
+           picture -- #stage is the only 1fr track. They shrink instead, which
+           is the same trade the rails already make. */
+        @media (orientation: landscape) and (max-width: 950px) {
+            #top-row, #button-row { flex-wrap: nowrap; }
+            /* Let the groups give ground rather than overflow the row. */
+            #top-row { gap: calc(var(--gap) * 0.5); }
+            #top-row .group { min-width: 0; flex: 0 1 auto; }
+            #top-row .value { font-size: calc(var(--value-size) * 0.82); }
+            #top-row .label { font-size: calc(var(--label-size) * 0.9); }
+            #button-row { gap: calc(var(--gap) * 0.35); }
+            #button-row button, #button-row .btn-link { padding-inline: 0.55em; }
+        }
 
         /* Upright on a phone the rails are as tall as the picture and sit
            beside it, the proportion simple_gui draws on the HDMI overlay --

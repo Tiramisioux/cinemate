@@ -266,6 +266,55 @@ while True:
     print(dict(kv.split("=", 1) for kv in line.split()))
 ```
 
+## Serial, without Wi-Fi
+
+Everything above goes over the hotspot. A controller can also talk to the camera down a wire, which
+needs no network at all — useful when the hotspot is off, when the rig has to survive a crowded
+2.4 GHz location, or when the controller has no Wi-Fi.
+
+CineMate opens the first of these that answers:
+
+| Port | What it is |
+| --- | --- |
+| `/dev/ttyACM0` | A USB serial device — an Arduino, a Pico, an ESP32 with USB CDC, plugged into the Pi |
+| `/dev/serial0` | The GPIO header's UART — Tx on GPIO 14, Rx on GPIO 15 |
+| `/dev/ttyS0` | The same UART under its other name |
+
+**9600 baud, 8N1, one command per line.** The line is handed to the same dispatcher the CLI and the
+Web API use, so anything in the [commands reference](cli-commands.md) works unchanged:
+
+```text
+rec
+set iso 800
+set shutter a 172.8
+```
+
+No JSON, no framing, no handshake — write the text and a newline.
+
+### What the camera sends back
+
+One thing, unprompted: `rec` when a recording starts and `stop` when it ends. That is a tally for a
+lamp or a display on the other end of the wire, and it is driven by the camera's own recording state
+rather than by whatever asked for the recording — so it fires whether the take was started from the
+controller, a GPIO button, the web GUI or the CLI.
+
+Nothing else is echoed. A command's reply is not sent back over serial: if a controller needs to read
+a value, the [Web API](web-api.md)'s `/get/<key>` is the way, and that needs the network.
+
+!!! note "The SER badge means USB, specifically"
+    The `SER` badge in the GUI and on the HDMI overlay tracks `/dev/ttyACM0` alone. A controller on
+    the GPIO UART works exactly the same way but does not light it — there is nothing to detect on
+    those pins the way a USB device announces itself.
+
+!!! warning "The UART is not free on a stock Pi"
+    `/dev/serial0` is the Linux console by default. Free it in `raspi-config` (Interface Options →
+    Serial Port: login shell **no**, hardware serial **yes**) or the port is already taken and
+    CineMate falls through to trying the next one.
+
+Wiring for the GPIO UART is three connections: the controller's Tx to the Pi's Rx (GPIO 15), the
+controller's Rx to the Pi's Tx (GPIO 14), and a common ground. The Pi's UART is **3.3 V** — a 5 V
+controller needs a level shifter on the line into GPIO 15, or it will damage the pin.
+
 ## Design rules
 
 See [CineMate commands](cli-commands.md) for a complete list of available commands. We are using the same syntax as for the CineMate CLI.

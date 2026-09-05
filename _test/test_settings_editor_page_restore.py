@@ -40,7 +40,11 @@ class PageRestoreTests(unittest.TestCase):
         self.assertIsNotNone(m, "PAGE_LANDING table missing")
         landings = dict(re.findall(r"(\w+):\s*'([^']+)'", m.group(1)))
 
-        pages = set(re.findall(r'data-page-tab="([a-z]+)"', self.html))
+        # [a-z0-9_-]+, matching test_page_tabs_have_their_markup's own tab
+        # regex. The narrower [a-z]+ silently dropped any page whose name
+        # carries a digit -- 'i2c' -- and then failed as a set mismatch
+        # blaming a missing landing section.
+        pages = set(re.findall(r'data-page-tab="([a-z0-9_-]+)"', self.html))
         self.assertTrue(pages, "no page tabs found")
         self.assertEqual(set(landings) , pages, "a page has no landing section")
 

@@ -29,6 +29,7 @@ from flask import (
     stream_with_context,
 )
 
+from module.app import hardware_probe
 from module.sensor_database import resolve_database_path
 from module.config_loader import (
     DEFAULT_CONFORM_FRAME_RATE,
@@ -801,3 +802,43 @@ def format_raw_drive():
         "ok": False,
         "message": "Format failed — drive did not remount. Check the cinemate log.",
     }), 500
+
+
+# ── i2c pane ─────────────────────────────────────────────────────────────
+@settings_editor_bp.route("/api/hardware", methods=["GET"])
+def get_hardware():
+    """What is on the bus right now, plus both clocks.
+
+    Probed per request rather than read from the drivers' cached flags:
+    AnalogControls and SsdMonitor decide once at startup and never look again,
+    and none of those objects is reachable from a request anyway -- they are
+    locals in main(). See hardware_probe for why the drivers themselves are
+    not used to answer this.
+    """
+    settings = current_app.config.get("SETTINGS") or {}
+    oled_settings = (settings.get("output_peripherals") or {}).get("oled") or {}
+    return jsonify({
+        "ok": True,
+        "bus": f"i2c-{hardware_probe.I2C_BUS}",
+        "devices": hardware_probe.detect_devices(oled_settings),
+        "clocks": {
+            "system": hardware_probe.system_time(),
+            "rtc": hardware_probe.read_rtc_time(),
+        },
+    })
+
+
+@settings_editor_bp.route("/api/hardware/rtc/sync", methods=["POST"])
+def sync_rtc():
+    """Copy the system clock onto the RTC.
+
+    Deliberately not routed through the `set rtc time` CLI command. That runs
+    `sudo hwclock --systohc` under os.system inside the dispatcher's lock, with
+    no -n, no timeout and no exit-status check, so on a machine whose sudoers
+    lacks a NOPASSWD rule it blocks on a console password prompt and starves
+    every other CLI, serial and HTTP command -- and it reports success either
+    way. This runs it with -n, checks the status, and reads the clock back.
+    """
+    result = hardware_probe.sync_rtc_to_system()
+    status = 200 if result["ok"] else 500
+    return jsonify(result), status

@@ -1373,7 +1373,10 @@
         { label: 'MOUNT',        cmd: 'mount' },
         { label: 'TOGGLE MOUNT', cmd: 'toggle mount' },
         { label: 'PREROLL',      cmd: 'storage preroll' },
-        { label: 'SET RTC',      cmd: 'set rtc time' },
+        // SET RTC lived here as a fire-and-forget POST that could only ever
+        // report "dispatched" -- `set rtc time` discards hwclock's exit status,
+        // so it said success with no RTC attached. The i2c pane in the settings
+        // editor shows both clocks and verifies the write, so this is gone.
     ];
 
     // set_preview_source()'s cycle order. Only visible with two sensors.

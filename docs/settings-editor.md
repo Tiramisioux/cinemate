@@ -40,6 +40,7 @@ Five tabs run across the top of the page:
 | Tab | Edits |
 |---|---|
 | **config.txt** | The managed block CineMate owns inside `/boot/firmware/config.txt` — sensor overlays, hardware buses, RP1 overclock |
+| **i2c** | What is attached to the camera's I²C bus, and the two clocks |
 | **settings.jsonc** | Everything in `settings.jsonc`, grouped into sections (below) |
 | **Live view** | The main Web GUI, embedded |
 | **Playback** | Reviews a recorded take frame-by-frame off the card |
@@ -85,6 +86,50 @@ You can also apply a save-in-place, or just restart with nothing pending, from *
     Double-check the change before saving, especially sensor overlay and link-frequency picks. Consider making config.txt edits through the recovery console instead when you want the safety net.
 
 Everything here needs a full reboot to take effect — restarting CineMate alone never picks up a `config.txt` change. The page shows the detected sensor modes for whatever is actually attached right now, separately from the overlay picks above them (those apply only after the reboot). CineMate only manages its own fenced block; anything you add to the file outside it survives updates and is untouched by this page.
+
+## i2c tab
+
+Shows which optional hardware is answering on the camera's I²C bus right now. Everything listed is
+optional — the camera records without any of it.
+
+The bus is probed each time you open the tab, one byte read per address. Nothing here writes to the
+bus, so opening this tab cannot disturb an encoder someone is turning or blank a display mid-take.
+
+| Device | Address | Notes |
+|---|---|---|
+| Grove Base HAT | `0x08` | Analog inputs for potentiometers |
+| Adafruit quad rotary encoder | `0x49` | Four dials and push buttons on one board |
+| I²C OLED display | `0x3c` or `0x3d` | SSD1306 or SSD1309 — the two share a command set and an address, and neither has an ID register, so the pane names both rather than guessing. Shows the configured pixel size |
+| Real-time clock | `0x68` | Pi 4 only — see [Additional hardware](hardware-controls.md#real-time-clock) |
+| CFE Hat | `0x34` | Not really an I²C device: the card is PCIe and `0x34` is the hat's latch controller. If it does not answer there, the PCIe bridge node is checked instead, and the pane says which answered |
+
+Each row shows the address that answered. A device that is not found says which address was tried,
+so a board strapped to a different address is obvious rather than just missing.
+
+!!! note "The display's size is configured, not detected"
+    An SSD1306 has no size register — nothing on the bus can be asked how many pixels it has. The
+    dimensions shown come from `output_peripherals.oled` in [settings.jsonc](settings-json.md), which
+    is where CineMate reads them before telling the driver. Change them there, not here.
+
+### The clocks
+
+The camera's system clock sets itself whenever it can reach the internet, over Ethernet or joined
+Wi-Fi. The RTC keeps whatever it was last given, so the two only agree after you copy one across.
+
+**Sync RTC** runs `hwclock --systohc` and then reads the clock back to check it took. That readback
+matters: the CLI's `set rtc time` discards `hwclock`'s exit status, so it reports success even with
+no clock attached. This reports what actually happened, including the case where the write needs a
+sudo rule the image does not have.
+
+## Missing hardware on the settings tab
+
+Sections for a board that is not answering are dimmed on the **settings.jsonc** tab, with a line
+saying so — the pot channels when there is no Grove HAT, the encoder rows when there is no quad
+rotary board, the OLED section when no display answers.
+
+Dimmed does not mean disabled. The fields stay editable and their values stay in the file, so a rig
+can be configured before the hardware arrives, and unplugging a board never quietly rewrites the
+settings that describe it.
 
 ## RAW files tab
 

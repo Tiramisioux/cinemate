@@ -311,6 +311,12 @@
   /* Present but not pickable — the link-frequency cards while the RP1
      overclock is off. The select's own [disabled] handles the control. */
   .card.is-disabled .card-main{ opacity:.45; }
+  /* A peripheral that is not answering on the bus right now. Its settings
+     still load, still save and still apply the moment the board is plugged
+     back in -- this only says the hardware is not there to obey them, so the
+     fields stay editable rather than being disabled. */
+  .hw-absent{ opacity:.45; }
+  .hw-note{ font-size:12px; color: var(--muted); margin:6px 0 0; }
   .card-main{ min-width: 0; }
   .card-label{
     display:block; font-weight: 600; font-size: 14px; margin-bottom: 2px;
@@ -335,6 +341,9 @@
     border: 1px solid var(--line); color: var(--muted);
   }
   .chip-live{ color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+  /* An i2c address is a token, not a label: the chip's uppercase turns 0x49
+     into 0X49. */
+  .chip-addr{ text-transform:none; letter-spacing:0; font-family: ui-monospace, monospace; }
   .chip-restart{ color: var(--restart); border-color: var(--restart); background: var(--restart-soft); }
 
   mark{ background: var(--accent-soft); color: var(--ink); border-radius: 2px; }
@@ -1117,6 +1126,10 @@
       <div class="rail-title eyebrow">System</div>
       <a href="#system" data-nav>Restart Cinemate</a>
     </div>
+    <div class="rail-group" data-page="i2c">
+      <div class="rail-title eyebrow">i2c hardware</div>
+      <p class="rail-blurb">What is attached to the camera's I²C bus, probed each time you open this tab. Everything here is optional — the camera shoots without any of it.</p>
+    </div>
     <div class="rail-group" data-page="raw">
       <div class="rail-title eyebrow">RAW files</div>
       <p class="rail-blurb">Everything on the active storage device — browse, sort and pull takes off over Wi‑Fi. Nothing here needs Cinemate to restart.</p>
@@ -1134,6 +1147,7 @@
   <main class="main" id="main">
     <div class="page-tabs" role="tablist" aria-label="Cinemate app pages">
       <button type="button" data-page-tab="config" role="tab">config.txt<span class="tab-hint">boot &amp; sensors</span></button>
+      <button type="button" data-page-tab="i2c" role="tab">i2c<span class="tab-hint">i2c hardware</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">settings.jsonc<span class="tab-hint">cameras, audio, controls</span></button>
       <button type="button" data-page-tab="live" role="tab">Live view<span class="tab-hint">shoot now</span></button>
       <button type="button" data-page-tab="playback" role="tab">Playback<span class="tab-hint">review takes</span></button>
@@ -1141,6 +1155,7 @@
     </div>
     <p class="lede" data-page-lede="config" hidden></p>
     <p class="lede" data-page-lede="settings"><strong>This edits <code class="mono">/home/pi/cinemate/settings.jsonc</code> on the camera</strong> — every field below is one line in that file. Change something, the file preview updates live, and nothing touches the SD card until you save. Restarting Cinemate applies it.</p>
+    <p class="lede" data-page-lede="i2c" hidden></p>
     <p class="lede" data-page-lede="live" hidden></p>
     <p class="lede" data-page-lede="playback" hidden></p>
     <p class="lede" data-page-lede="raw" hidden></p>
@@ -1622,8 +1637,9 @@
       <header class="group-head">
         <h2>Pots &amp; free stepping</h2>
         <p class="group-sub">Which Grove Base HAT channel drives each parameter. ISO/shutter/FPS/WB's free‑mode range and increment live with their step list in Value steps above; ClearHDR's stay here since those knobs aren't array settings.</p>
+        <p class="hw-note" id="potsHwNote" hidden></p>
       </header>
-      <div class="cards">
+      <div class="cards" id="potsCards">
         <div class="card" data-search="iso pot analog channel">
           <div class="card-main">
             <label class="card-label" for="f-isopot">ISO</label>
@@ -1991,9 +2007,10 @@
         <button class="btn btn-ghost" type="button" id="addSwitch3Btn">+ Add 3‑way switch</button>
         <button class="btn btn-ghost" type="button" id="addRotaryBtn">+ Add rotary encoder</button>
       </div>
-      <p class="cards-subtitle">Quad rotary — the 4‑encoder i²c board</p>
+      <p class="cards-subtitle" id="quadSubtitle">Quad rotary — the 4‑encoder i²c board</p>
+      <p class="hw-note" id="quadHwNote" hidden></p>
       <div class="cards" id="encodersList"></div>
-      <div class="add-control-row">
+      <div class="add-control-row" id="quadAddRow">
         <button class="btn btn-ghost" type="button" id="addEncoderBtn">+ Add encoder</button>
       </div>
       <div class="note">
@@ -2046,8 +2063,9 @@
       <header class="group-head">
         <h2>OLED status display</h2>
         <p class="group-sub">The small i²c screen some rigs mount near the handle.</p>
+        <p class="hw-note" id="oledHwNote" hidden></p>
       </header>
-      <div class="cards">
+      <div class="cards" id="oledCards">
         <div class="card" data-search="oled enabled i2c display screen">
           <div class="card-main">
             <label class="card-label" for="f-oled">Enabled</label>
@@ -2408,6 +2426,42 @@
     <!-- SYSTEM -->
 
     <!-- LIVE VIEW -->
+    <section class="group" id="i2cbus" data-page="i2c">
+      <header class="group-head">
+        <h2>i2c hardware</h2>
+        <p class="group-sub">Optional peripherals on the camera's I²C bus, probed when this tab opens. A one-byte read per address — nothing here writes to the bus or disturbs a device that is in use.</p>
+      </header>
+      <div class="cards" id="i2cDeviceList"></div>
+
+      <header class="group-head" style="margin-top:26px">
+        <h2>Real-time clock</h2>
+        <p class="group-sub">The system clock sets itself whenever the camera can reach the internet. The RTC keeps whatever it was last given, so it only matches after you copy the time across.</p>
+      </header>
+      <div class="cards" id="i2cClockCards">
+        <div class="card" data-search="system time clock now">
+          <div class="card-main">
+            <div class="card-label">System time</div>
+            <p class="card-help">What the Pi believes the time is.</p>
+          </div>
+          <div class="card-control"><span class="mono" id="i2cSystemTime">—</span></div>
+        </div>
+        <div class="card" data-search="rtc time clock hwclock battery">
+          <div class="card-main">
+            <div class="card-label">RTC time</div>
+            <p class="card-help" id="i2cRtcHelp">What the attached clock chip believes the time is.</p>
+          </div>
+          <div class="card-control"><span class="mono" id="i2cRtcTime">—</span></div>
+        </div>
+        <div class="card" data-search="sync rtc set clock systohc">
+          <div class="card-main">
+            <div class="card-label">Copy system time to the RTC</div>
+            <p class="card-help">Runs <span class="mono">hwclock --systohc</span> and reads the clock back to check it took.</p>
+          </div>
+          <div class="card-control"><button class="btn btn-primary" id="i2cSyncRtcBtn" type="button">Sync RTC</button></div>
+        </div>
+      </div>
+    </section>
+
     <section class="group" id="live" data-page="live">
       <header class="group-head">
         <h2>Live view</h2>
@@ -5682,7 +5736,7 @@
     var saveBtn = document.getElementById('saveBtn');
     var openJsonBtn = document.getElementById('openJson');
     var openJsonLabel = document.getElementById('openJsonLabel');
-    var noFilePage = activePage === 'live' || activePage === 'raw' || activePage === 'playback';
+    var noFilePage = activePage === 'live' || activePage === 'raw' || activePage === 'playback' || activePage === 'i2c';
     saveBtn.hidden = noFilePage;
     openJsonBtn.hidden = noFilePage;
     document.getElementById('revertBtn').hidden = noFilePage;
@@ -5711,6 +5765,156 @@
     }
   }
 
+  /* ---------- i2c pane ---------- */
+  /* Probed per request rather than cached: AnalogControls and SsdMonitor each
+     decide once at startup and never look again, so a device plugged in later
+     never shows up in their flags -- and none of those objects is reachable
+     from a request anyway. */
+  function i2cHex(value){
+    if (value === null || value === undefined) return null;
+    return '0x' + Number(value).toString(16).padStart(2, '0');
+  }
+
+  function i2cDeviceDetail(d){
+    var where = d.address !== null && d.address !== undefined
+      ? i2cHex(d.address) + ' on ' + d.bus
+      : null;
+    if (!d.present){
+      return 'Not found. Looked for ' + (d.expected || []).join(' or ') + ' on ' + d.bus + '.';
+    }
+    if (d.key === 'cfe_hat' && d.via === 'pcie-node'){
+      return 'Found via the PCIe bridge node — the hat did not answer on i2c, so this is the bridge '
+           + 'being present rather than the hat itself.';
+    }
+    var detail = 'Found at ' + where + '.';
+    if (d.key === 'oled'){
+      detail += ' ' + (d.controller || 'Display') + ', ' + d.width + ' × ' + d.height + ' px'
+              + ' (from settings — a display cannot be asked its own size).';
+      if (!d.enabled) detail += ' Switched off in settings, so CineMate is not driving it.';
+    }
+    if (d.key === 'rtc' && d.kernel_device === false){
+      detail += ' The chip answers, but there is no /dev/rtc — add the overlay to config.txt or'
+              + ' hwclock cannot reach it.';
+    }
+    return detail;
+  }
+
+  function i2cRenderDevices(devices){
+    var host = document.getElementById('i2cDeviceList');
+    if (!host) return;
+    host.textContent = '';
+    (devices || []).forEach(function(d){
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.setAttribute('data-search',
+        (d.name + ' ' + (d.hint || '') + ' i2c address ' + (d.expected || []).join(' ')).toLowerCase());
+
+      var main = document.createElement('div');
+      main.className = 'card-main';
+      var label = document.createElement('div');
+      label.className = 'card-label';
+      label.textContent = d.name;
+      var help = document.createElement('p');
+      help.className = 'card-help';
+      help.textContent = i2cDeviceDetail(d);
+      main.appendChild(label);
+      main.appendChild(help);
+
+      var control = document.createElement('div');
+      control.className = 'card-control';
+      var chip = document.createElement('span');
+      var address = d.present ? i2cHex(d.address) : null;
+      chip.className = 'chip' + (d.present ? ' chip-live' : '') + (address ? ' chip-addr' : '');
+      chip.textContent = address || (d.present ? 'attached' : 'not found');
+      control.appendChild(chip);
+
+      card.appendChild(main);
+      card.appendChild(control);
+      host.appendChild(card);
+    });
+  }
+
+  function i2cRenderClocks(clocks){
+    var sys = document.getElementById('i2cSystemTime');
+    var rtc = document.getElementById('i2cRtcTime');
+    var help = document.getElementById('i2cRtcHelp');
+    if (sys) sys.textContent = (clocks && clocks.system) || '—';
+    if (!rtc) return;
+    var reading = clocks && clocks.rtc;
+    if (reading && reading.ok){
+      rtc.textContent = reading.time;
+      if (help) help.textContent = 'What the attached clock chip believes the time is.';
+    } else {
+      rtc.textContent = '—';
+      if (help) help.textContent = (reading && reading.error) || 'No clock could be read.';
+    }
+  }
+
+  /* The settings pane greys the two boards that are not on the bus. The
+     fields keep their values, keep saving and keep applying -- a rig can be
+     configured before the hardware arrives, and unplugging a board must not
+     quietly rewrite a file that describes it. */
+  var HW_PRESENCE_TARGETS = {
+    grove: { note: 'potsHwNote', dim: ['potsCards'],
+             label: 'No Grove Base HAT on the bus. These channel assignments are kept and will apply when one is attached.' },
+    quad_rotary: { note: 'quadHwNote', dim: ['quadSubtitle', 'encodersList', 'quadAddRow'],
+             label: 'No quad rotary board on the bus. These encoder assignments are kept and will apply when one is attached.' },
+    oled: { note: 'oledHwNote', dim: ['oledCards'],
+             label: 'No display answering on the bus. These settings are kept and will apply when one is attached.' }
+  };
+
+  function i2cApplyPresence(devices){
+    var byKey = {};
+    (devices || []).forEach(function(d){ byKey[d.key] = d; });
+    Object.keys(HW_PRESENCE_TARGETS).forEach(function(key){
+      var target = HW_PRESENCE_TARGETS[key];
+      var device = byKey[key];
+      if (!device) return;
+      var absent = !device.present;
+      target.dim.forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.classList.toggle('hw-absent', absent);
+      });
+      var note = document.getElementById(target.note);
+      if (note){
+        note.textContent = absent ? target.label : '';
+        note.hidden = !absent;
+      }
+    });
+  }
+
+  var i2cLoading = false;
+  function i2cRefresh(){
+    if (i2cLoading) return;
+    i2cLoading = true;
+    fetch('/settings-editor/api/hardware')
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res.ok) { showToast('Could not read the i2c bus: ' + (res.message || '')); return; }
+        i2cRenderDevices(res.devices);
+        i2cRenderClocks(res.clocks);
+        i2cApplyPresence(res.devices);
+      })
+      .catch(function(err){ showToast('Could not reach the server: ' + err); })
+      .finally(function(){ i2cLoading = false; });
+  }
+
+  var i2cSyncBtn = document.getElementById('i2cSyncRtcBtn');
+  if (i2cSyncBtn){
+    i2cSyncBtn.addEventListener('click', function(){
+      i2cSyncBtn.disabled = true;
+      fetch('/settings-editor/api/hardware/rtc/sync', { method: 'POST' })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          showToast(res.message || (res.ok ? 'RTC set from system time' : 'Could not set the RTC'));
+          if (res.rtc) i2cRenderClocks({ system: null, rtc: res.rtc });
+          i2cRefresh();
+        })
+        .catch(function(err){ showToast('Could not reach the server: ' + err); })
+        .finally(function(){ i2cSyncBtn.disabled = false; });
+    });
+  }
+
   /* Which page a reload lands on. The rail's links already put a section id
      in the hash (#cam0, #steps, ...) and every section declares its page via
      data-page, so a URL that carries a hash answers this on its own. The hash
@@ -5722,7 +5926,7 @@
      never contradict a hash -- it is consulted when there is nothing else to
      go on. Storage can throw outright (Safari private mode, site data blocked),
      so every access is guarded and simply falls back to the default. */
-  var PAGE_LANDING = { config: 'bootconfig', settings: 'welcome', raw: 'clips', live: 'live', playback: 'playback' };
+  var PAGE_LANDING = { config: 'bootconfig', i2c: 'i2cbus', settings: 'welcome', raw: 'clips', live: 'live', playback: 'playback' };
   var DEFAULT_PAGE = 'settings';
   var LAST_PAGE_KEY = 'cinemate.settingsEditor.lastPage';
   function rememberPage(page){
@@ -5755,6 +5959,10 @@
        are unsaved edits already in progress (configDirty) so this can't
        silently discard those. */
     if (page === 'config' && activePage !== 'config' && !configDirty && !opts.skipConfigLoad) loadConfigTxt();
+    /* Same reasoning as the config refetch above: what is plugged in can change
+       while this page sits open, so the bus is re-probed on every arrival
+       rather than once at load. */
+    if (page === 'i2c') i2cRefresh();
     /* The Live tab embeds the shooting screen in an iframe, and hiding an
        iframe does not stop it: its MJPEG stream and its Socket.IO connection
        stay live behind every other tab for the rest of the session. That is
@@ -5913,6 +6121,9 @@
      rewrite the URL it just read; keepScroll so it does not fight either of
      those; skipConfigLoad because config.txt is fetched unconditionally above. */
   setActivePage(pageFromHash(), { keepHash: true, keepScroll: true, skipConfigLoad: true });
+  /* Probe once at load, so the settings pane already shows which boards are
+     missing before the i2c tab has ever been opened. */
+  i2cRefresh();
   /* Back/forward across panes. The browser's fragment scroll fires BEFORE
      hashchange, so at that moment the target section is still display:none and
      the scroll is a no-op on a box-less element; scroll again once the page

@@ -198,6 +198,6 @@ set rtc time
 
 - **Rec light (tally LED)** – `hardware_outputs.rec_out_pin` (GPIO 21 stock) goes high while recording.
 - **Rec sync tone** – `hardware_outputs.rec_tone.pin` (GPIO 18 stock) outputs a 1 kHz tone while recording.
-- **I²C OLED display** – an SSD1306-style status screen showing values you choose (ISO, timecode, write speed, disk space…). Enable it in `output_peripherals.oled`.
+- **I²C OLED display** – an SSD1306 or SSD1309 status screen showing values you choose (ISO, timecode, write speed, disk space…). The SSD1309 takes the same commands and the same addresses as the SSD1306, so it needs no separate setting — it just works. Enable it in `output_peripherals.oled`.
 
 Reference: [hardware_outputs](settings-json.md#hardware_outputs), [output_peripherals](settings-json.md#output_peripherals), [settings.jsonc](settings-json.md), [CineMate terminal commands](cli-commands.md).

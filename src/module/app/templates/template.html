@@ -248,7 +248,13 @@
                way it would be on a desk. */
             #top-row { font-size: 1.15em; row-gap: 0.9em; }
             #top-row .group select { min-height: 40px; }
-            #button-row button { min-height: 42px; padding-inline: 1.1em; }
+            /* The cog is an <a>; give it the row's button shape so it does not
+           read as a stray link among buttons. */
+        #button-row .btn-link {
+            display: inline-flex; align-items: center; justify-content: center;
+            text-decoration: none;
+        }
+        #button-row button, #button-row .btn-link { min-height: 42px; padding-inline: 1.1em; }
 
             /* One control per row in the drawer: four columns on a phone put
                a slider in about 80px, which is not something a thumb can
@@ -511,7 +517,7 @@
             border-top: 1px dashed var(--label);
         }
 
-        button {
+        button, #button-row .btn-link {
             font-family: inherit;
             font-weight: 700;
             font-size: calc(var(--value-size) * 0.62);
@@ -523,7 +529,7 @@
             cursor: pointer;
             white-space: nowrap;
         }
-        button:active { background: var(--label); color: #000; }
+        button:active, #button-row .btn-link:active { background: var(--label); color: #000; }
         button.on { background: var(--log-badge); border-color: var(--log-badge); color: #000; }
         button[disabled] { opacity: 0.45; cursor: default; }
 
@@ -893,6 +899,13 @@
             <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
             <button id="btn-unmount" title="unmount">UNMOUNT</button>
             <button id="btn-fullscreen">FULLSCREEN</button>
+            <!-- The way back to the full UI. An <a>, not a button with a JS
+                 navigation: it should behave like a link (middle-click, long
+                 press, open in a new tab) because on a phone that is often
+                 exactly what an operator wants. -->
+            <a id="btn-settings" class="btn-link" href="/settings-editor/" title="Settings, storage and playback" aria-label="Open the settings editor">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.13.35.4.63.74.79H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </a>
         </div>
 
         <!-- Built from the spec tables in the script below, not written out

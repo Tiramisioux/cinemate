@@ -100,6 +100,8 @@ Everything here needs a full reboot to take effect — restarting CineMate alone
 
 ## i2c tab
 
+![The i2c tab](images/gui-i2c.png)
+
 Shows which optional hardware is answering on the camera's I²C bus right now. Everything listed is
 optional — the camera records without any of it.
 

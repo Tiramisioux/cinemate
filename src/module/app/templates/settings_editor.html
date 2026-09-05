@@ -1117,7 +1117,6 @@
     <div class="rail-group" data-page="settings">
       <div class="rail-title eyebrow">Exposure &amp; steps</div>
       <a href="#steps" data-nav>Value steps</a>
-      <a href="#pots" data-nav>Potentiometers</a>
       <a href="#resolution" data-nav>Resolution &amp; sensor</a>
       <a href="#fpsceilings" data-nav>Per-mode fps ceilings</a>
     </div>
@@ -1129,6 +1128,8 @@
     <div class="rail-group" data-page="settings">
       <div class="rail-title eyebrow">Physical controls</div>
       <a href="#controls" data-nav>Buttons &amp; switches</a>
+      <a href="#pots" data-nav>Grove HAT potentiometers</a>
+      <a href="#quadrotary" data-nav>Quad rotary encoder</a>
       <a href="#gpio" data-nav>Rec tally &amp; GPIO out</a>
       <a href="#oled" data-nav>OLED status display</a>
     </div>
@@ -1643,127 +1644,6 @@
         </div>
       </div>
     </section>
-    <section class="group" id="pots" data-page="settings">
-      <header class="group-head">
-        <h2>Potentiometers</h2>
-        <p class="group-sub">Which Grove Base HAT channel drives each parameter. ISO/shutter/FPS/WB's free‑mode range and increment live with their step list in Value steps above; ClearHDR's stay here since those knobs aren't array settings.</p>
-        <p class="hw-note" id="potsHwNote" hidden></p>
-      </header>
-      <div class="cards" id="potsCards">
-        <div class="card" data-search="iso pot analog channel">
-          <div class="card-main">
-            <label class="card-label" for="f-isopot">ISO</label>
-            <p class="card-help">No effect until a channel is picked — free stepping and increment are set in Value steps above.</p>
-          </div>
-          <div class="card-control">
-            <select class="field-input" id="f-isopot" style="min-width:112px"><option>None</option><option selected>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
-          </div>
-        </div>
-        <div class="card" data-search="shutter pot analog channel">
-          <div class="card-main">
-            <label class="card-label" for="f-shutpot">Shutter angle</label>
-            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
-          </div>
-          <div class="card-control">
-            <select class="field-input" id="f-shutpot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option selected>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
-          </div>
-        </div>
-        <div class="card" data-search="fps pot analog channel">
-          <div class="card-main">
-            <label class="card-label" for="f-fpspot">Frame rate</label>
-            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
-          </div>
-          <div class="card-control">
-            <select class="field-input" id="f-fpspot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option selected>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
-          </div>
-        </div>
-        <div class="card" data-search="wb pot analog channel white balance">
-          <div class="card-main">
-            <label class="card-label" for="f-wbpot">White balance</label>
-            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
-          </div>
-          <div class="card-control">
-            <select class="field-input" id="f-wbpot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option selected>Channel 6</option><option>Channel 7</option></select>
-          </div>
-        </div>
-        <div class="card" data-search="hdr threshold low pot analog channel clearhdr free stepping increment continuous">
-          <div class="card-main">
-            <label class="card-label" for="f-hdrpot-thlow">ClearHDR threshold low</label>
-            <p class="card-help">Grove Base HAT channel for a physical knob on this value (range 0–4095). Free stepping sweeps continuously across that range instead of jumping by the increment below.</p>
-          </div>
-          <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
-            <select class="field-input" id="f-hdrpot-thlow" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
-            <div style="display:flex; gap:14px; align-items:flex-end">
-              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
-                <button class="toggle" id="f-hdrpot-thlow-free" data-path="image_capture.hdr.threshold_low_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
-              </label>
-              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
-                <input class="field-input num-input" type="number" id="f-hdrpot-thlow-inc" data-path="image_capture.hdr.threshold_low_free_increment" data-type="number" data-original="64" value="64" style="width:70px">
-              </label>
-            </div>
-          </div>
-        </div>
-        <div class="card" data-search="hdr threshold high pot analog channel clearhdr free stepping increment continuous">
-          <div class="card-main">
-            <label class="card-label" for="f-hdrpot-thhigh">ClearHDR threshold high</label>
-            <p class="card-help">Same idea (range 0–4095).</p>
-          </div>
-          <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
-            <select class="field-input" id="f-hdrpot-thhigh" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
-            <div style="display:flex; gap:14px; align-items:flex-end">
-              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
-                <button class="toggle" id="f-hdrpot-thhigh-free" data-path="image_capture.hdr.threshold_high_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
-              </label>
-              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
-                <input class="field-input num-input" type="number" id="f-hdrpot-thhigh-inc" data-path="image_capture.hdr.threshold_high_free_increment" data-type="number" data-original="64" value="64" style="width:70px">
-              </label>
-            </div>
-          </div>
-        </div>
-        <div class="card" data-search="hdr blend pot analog channel clearhdr free stepping increment continuous">
-          <div class="card-main">
-            <label class="card-label" for="f-hdrpot-blend">ClearHDR blend</label>
-            <p class="card-help">Same idea (range 0–8).</p>
-          </div>
-          <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
-            <select class="field-input" id="f-hdrpot-blend" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
-            <div style="display:flex; gap:14px; align-items:flex-end">
-              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
-                <button class="toggle" id="f-hdrpot-blend-free" data-path="image_capture.hdr.blend_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
-              </label>
-              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
-                <input class="field-input num-input" type="number" id="f-hdrpot-blend-inc" data-path="image_capture.hdr.blend_free_increment" data-type="number" data-original="1" value="1" style="width:70px">
-              </label>
-            </div>
-          </div>
-        </div>
-        <div class="card" data-search="hdr gain adder pot analog channel clearhdr free stepping increment continuous">
-          <div class="card-main">
-            <label class="card-label" for="f-hdrpot-gainadder">ClearHDR gain adder</label>
-            <p class="card-help">Same idea (range 0–5).</p>
-          </div>
-          <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
-            <select class="field-input" id="f-hdrpot-gainadder" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
-            <div style="display:flex; gap:14px; align-items:flex-end">
-              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
-                <button class="toggle" id="f-hdrpot-gainadder-free" data-path="image_capture.hdr.gain_adder_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
-              </label>
-              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
-                <input class="field-input num-input" type="number" id="f-hdrpot-gainadder-inc" data-path="image_capture.hdr.gain_adder_free_increment" data-type="number" data-original="1" value="1" style="width:70px">
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
     <section class="group" id="resolution" data-page="settings">
       <header class="group-head">
         <h2>Resolution &amp; sensor</h2>
@@ -2017,15 +1897,141 @@
         <button class="btn btn-ghost" type="button" id="addSwitch3Btn">+ Add 3‑way switch</button>
         <button class="btn btn-ghost" type="button" id="addRotaryBtn">+ Add rotary encoder</button>
       </div>
-      <p class="cards-subtitle" id="quadSubtitle">Quad rotary — the 4‑encoder i²c board</p>
-      <p class="hw-note" id="quadHwNote" hidden></p>
-      <div class="cards" id="encodersList"></div>
-      <div class="add-control-row" id="quadAddRow">
-        <button class="btn btn-ghost" type="button" id="addEncoderBtn">+ Add encoder</button>
-      </div>
       <div class="note">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
         <span>Move a control to a different pin or encoder from the dropdown — occupied ones are greyed out and it asks before remapping. Pick the command from the list (grouped like <span class="mono">cli_commands.py</span>, legal arguments only) or hit the pencil to type it by hand. The box after the command is its argument: leave it on <strong>Cycle through the list</strong> and the control steps through the values in <a href="#steps" data-nav>Value steps</a>, or pick one value to jump straight to it. Commands marked <strong>Needs a value</strong> do nothing useful until you choose one.</span>
+      </div>
+    </section>
+    <section class="group" id="pots" data-page="settings">
+      <header class="group-head">
+        <h2>Grove HAT potentiometers</h2>
+        <p class="group-sub">Which Grove Base HAT channel drives each parameter. ISO/shutter/FPS/WB's free‑mode range and increment live with their step list in Value steps above; ClearHDR's stay here since those knobs aren't array settings.</p>
+        <p class="hw-note" id="potsHwNote" hidden></p>
+      </header>
+      <div class="cards" id="potsCards">
+        <div class="card" data-search="iso pot analog channel">
+          <div class="card-main">
+            <label class="card-label" for="f-isopot">ISO</label>
+            <p class="card-help">No effect until a channel is picked — free stepping and increment are set in Value steps above.</p>
+          </div>
+          <div class="card-control">
+            <select class="field-input" id="f-isopot" style="min-width:112px"><option>None</option><option selected>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
+          </div>
+        </div>
+        <div class="card" data-search="shutter pot analog channel">
+          <div class="card-main">
+            <label class="card-label" for="f-shutpot">Shutter angle</label>
+            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
+          </div>
+          <div class="card-control">
+            <select class="field-input" id="f-shutpot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option selected>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
+          </div>
+        </div>
+        <div class="card" data-search="fps pot analog channel">
+          <div class="card-main">
+            <label class="card-label" for="f-fpspot">Frame rate</label>
+            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
+          </div>
+          <div class="card-control">
+            <select class="field-input" id="f-fpspot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option selected>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
+          </div>
+        </div>
+        <div class="card" data-search="wb pot analog channel white balance">
+          <div class="card-main">
+            <label class="card-label" for="f-wbpot">White balance</label>
+            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
+          </div>
+          <div class="card-control">
+            <select class="field-input" id="f-wbpot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option selected>Channel 6</option><option>Channel 7</option></select>
+          </div>
+        </div>
+        <div class="card" data-search="hdr threshold low pot analog channel clearhdr free stepping increment continuous">
+          <div class="card-main">
+            <label class="card-label" for="f-hdrpot-thlow">ClearHDR threshold low</label>
+            <p class="card-help">Grove Base HAT channel for a physical knob on this value (range 0–4095). Free stepping sweeps continuously across that range instead of jumping by the increment below.</p>
+          </div>
+          <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
+            <select class="field-input" id="f-hdrpot-thlow" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
+            <div style="display:flex; gap:14px; align-items:flex-end">
+              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <button class="toggle" id="f-hdrpot-thlow-free" data-path="image_capture.hdr.threshold_low_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <input class="field-input num-input" type="number" id="f-hdrpot-thlow-inc" data-path="image_capture.hdr.threshold_low_free_increment" data-type="number" data-original="64" value="64" style="width:70px">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="card" data-search="hdr threshold high pot analog channel clearhdr free stepping increment continuous">
+          <div class="card-main">
+            <label class="card-label" for="f-hdrpot-thhigh">ClearHDR threshold high</label>
+            <p class="card-help">Same idea (range 0–4095).</p>
+          </div>
+          <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
+            <select class="field-input" id="f-hdrpot-thhigh" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
+            <div style="display:flex; gap:14px; align-items:flex-end">
+              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <button class="toggle" id="f-hdrpot-thhigh-free" data-path="image_capture.hdr.threshold_high_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <input class="field-input num-input" type="number" id="f-hdrpot-thhigh-inc" data-path="image_capture.hdr.threshold_high_free_increment" data-type="number" data-original="64" value="64" style="width:70px">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="card" data-search="hdr blend pot analog channel clearhdr free stepping increment continuous">
+          <div class="card-main">
+            <label class="card-label" for="f-hdrpot-blend">ClearHDR blend</label>
+            <p class="card-help">Same idea (range 0–8).</p>
+          </div>
+          <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
+            <select class="field-input" id="f-hdrpot-blend" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
+            <div style="display:flex; gap:14px; align-items:flex-end">
+              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <button class="toggle" id="f-hdrpot-blend-free" data-path="image_capture.hdr.blend_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <input class="field-input num-input" type="number" id="f-hdrpot-blend-inc" data-path="image_capture.hdr.blend_free_increment" data-type="number" data-original="1" value="1" style="width:70px">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="card" data-search="hdr gain adder pot analog channel clearhdr free stepping increment continuous">
+          <div class="card-main">
+            <label class="card-label" for="f-hdrpot-gainadder">ClearHDR gain adder</label>
+            <p class="card-help">Same idea (range 0–5).</p>
+          </div>
+          <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
+            <select class="field-input" id="f-hdrpot-gainadder" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
+            <div style="display:flex; gap:14px; align-items:flex-end">
+              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <button class="toggle" id="f-hdrpot-gainadder-free" data-path="image_capture.hdr.gain_adder_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <input class="field-input num-input" type="number" id="f-hdrpot-gainadder-inc" data-path="image_capture.hdr.gain_adder_free_increment" data-type="number" data-original="1" value="1" style="width:70px">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="group" id="quadrotary" data-page="settings">
+      <header class="group-head">
+        <h2>Quad rotary encoder</h2>
+        <p class="group-sub">Adafruit's four-encoder i²c board. Its rows address the board's own encoders, not GPIO pins.</p>
+        <p class="hw-note" id="quadHwNote" hidden></p>
+      </header>
+      <div class="cards" id="encodersList"></div>
+      <div class="add-control-row" id="quadAddRow">
+        <button class="btn btn-ghost" type="button" id="addEncoderBtn">+ Add encoder</button>
       </div>
     </section>
     <section class="group" id="gpio" data-page="settings">
@@ -4602,6 +4608,36 @@
     }).catch(function(){});
   }
 
+  /* New takes appear without a reload, and only when the list actually
+     changes: renderClipList() rebuilds every row from scratch, so polling it
+     blindly would clear the operator's checkboxes and swap fresh buttons in
+     under their cursor every few seconds. refreshSuppressed is the same guard
+     the download path already sets for exactly that reason. */
+  function rawTakeKey(list){
+    return (list || []).map(function(t){ return t.name; }).join('\u0000');
+  }
+
+  function rawCheckForNewTakes(){
+    if (activePage !== 'raw' || refreshSuppressed) return;
+    fetch('/settings-editor/api/raw/takes')
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok) return;
+        if (rawTakeKey(res.takes) === rawTakeKey(currentTakes)) return;
+        var wasChecked = selectedClipNames();
+        currentTakes = res.takes;
+        renderClipList();
+        document.querySelectorAll('.cliprow').forEach(function(row){
+          var cb = row.querySelector('.clip-check');
+          if (cb && wasChecked.indexOf(row.getAttribute('data-name')) !== -1) cb.checked = true;
+        });
+        if (typeof updateBulkBar === 'function') updateBulkBar();
+        loadRawStorage();   // a new take moves the free-space figure too
+      })
+      .catch(function(){ /* best-effort, like the rest of this pane */ });
+  }
+  setInterval(rawCheckForNewTakes, 4000);
+
   function refreshRawPane(){
     // A mid-download refresh rebuilds every row via renderClipList()'s
     // list.innerHTML = '', destroying the row holding the progress bar and
@@ -5937,7 +5973,7 @@
   var HW_PRESENCE_TARGETS = {
     grove: { note: 'potsHwNote', dim: ['potsCards'],
              label: 'No Grove Base HAT on the bus. These channel assignments are kept and will apply when one is attached.' },
-    quad_rotary: { note: 'quadHwNote', dim: ['quadSubtitle', 'encodersList', 'quadAddRow'],
+    quad_rotary: { note: 'quadHwNote', dim: ['encodersList', 'quadAddRow'],
              label: 'No quad rotary board on the bus. These encoder assignments are kept and will apply when one is attached.' },
     oled: { note: 'oledHwNote', dim: ['oledCards'],
              label: 'No display answering on the bus. These settings are kept and will apply when one is attached.' }

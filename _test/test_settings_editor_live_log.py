@@ -86,8 +86,8 @@ class LogRouteTests(unittest.TestCase):
             se._log_path = original
 
         body = "".join(seen)
-        self.assertIn("data: first message", body)
-        self.assertIn("data: second message", body)
+        self.assertIn("first message", body)
+        self.assertIn("second message", body)
 
 
 class ConsoleMarkupTests(unittest.TestCase):
@@ -128,6 +128,61 @@ class ConsoleMarkupTests(unittest.TestCase):
 
     def test_the_card_no_longer_promises_a_startup_sequence(self):
         self.assertNotIn("You'll see the real startup sequence", self.html)
+
+
+class LogColourTests(unittest.TestCase):
+    """The console mirrors the CLI's colours, from the CLI's own tables.
+
+    The module-to-colour mapping is stated once, in logger.ColoredFormatter,
+    and the route reads it -- so the template never has to know which module
+    is which colour. What the template does own is the palette, one CSS rule
+    per termcolor name, and that is what these guard.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = TEMPLATE.read_text(encoding="utf-8")
+
+    def _colours(self):
+        from module.logger import ColoredFormatter
+        names = {e["color"] for e in ColoredFormatter.MODULE_COLORS.values()}
+        names |= set(ColoredFormatter.LEVEL_COLORS.values())
+        names.add("dark_grey")          # the fallback
+        return names
+
+    def test_every_colour_the_formatter_can_produce_has_a_rule(self):
+        for name in sorted(self._colours()):
+            with self.subTest(colour=name):
+                self.assertRegex(self.html, rf"\.console \.lg-{name}\s*{{")
+
+    def test_a_module_takes_its_own_colour_over_the_level(self):
+        # redis_controller is green in MODULE_COLORS; the line is INFO, which
+        # is also green -- so use one where they differ.
+        self.assertEqual(se._line_colour(
+            "2026-09-05 23:04:19.030: INFO: cinepi_multi something"), "blue")
+
+    def test_an_unknown_module_falls_back_to_the_level(self):
+        self.assertEqual(se._line_colour(
+            "2026-09-05 23:04:19.030: WARNING: quad_rotary_controller x"), "yellow")
+        self.assertEqual(se._line_colour(
+            "2026-09-05 23:04:19.030: ERROR: _internal x"), "red")
+
+    def test_an_unparseable_line_is_not_an_exception(self):
+        self.assertEqual(se._line_colour("not a log line"), "dark_grey")
+
+    def test_libcameras_own_escape_codes_are_stripped(self):
+        # libcamera colours its stdout, cinepi-raw passes it through and
+        # cinemate logs it verbatim, so the file carries real escapes that a
+        # browser would show as literal "[1;32m" mid-message.
+        raw = ("2026-09-05 23:22:21.126: INFO: cinepi_multi [cam0] "
+               "\x1b[1;32m INFO \x1b[1;37mCamera \x1b[0mlibcamera v0.0.0")
+        event = se._log_event(raw)
+        self.assertNotIn("[1;32m", event)
+        self.assertIn("libcamera v0.0.0", event)
+        self.assertIn("INFO Camera", event)
+
+    def test_the_client_takes_the_colour_from_the_server(self):
+        self.assertIn("'lg-' + (colour || 'dark_grey')", self.html)
 
 
 if __name__ == "__main__":

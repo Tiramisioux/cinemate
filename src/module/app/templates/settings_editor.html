@@ -667,6 +667,28 @@
   @keyframes rise{ from{ opacity:0; transform: translateY(2px);} to{ opacity:1; transform:none; } }
   .console .tag-ok{ color: #8fce87; }
   .console .tag-warn{ color: #e0ac5c; }
+  /* The CLI's own palette, so a line reads the same here as in a terminal.
+     The names are termcolor's, from logger.ColoredFormatter -- the route
+     decides which one a line gets, from those same tables, so this file never
+     has to know which module is which colour. Bright variants throughout:
+     the formatter sets every record bold, which is what a terminal renders
+     bright, and the dark half of the palette is unreadable on this panel. */
+  .console .lg-black       { color:#6e6e6e; }
+  .console .lg-dark_grey   { color:#8a8a8a; }
+  .console .lg-light_grey  { color:#d0d0d0; }
+  .console .lg-white       { color:#ffffff; }
+  .console .lg-red         { color:#ff5f56; }
+  .console .lg-light_red   { color:#ff8b82; }
+  .console .lg-green       { color:#5cd65c; }
+  .console .lg-light_green { color:#8cf58c; }
+  .console .lg-yellow      { color:#e0c34a; }
+  .console .lg-light_yellow{ color:#ffe066; }
+  .console .lg-blue        { color:#5c9cff; }
+  .console .lg-light_blue  { color:#7fb8ff; }
+  .console .lg-cyan        { color:#56d8d8; }
+  .console .lg-light_cyan  { color:#8ff0f0; }
+  .console .lg-magenta     { color:#e07be0; }
+  .console .lg-light_magenta{ color:#ff9bff; }
   .console .prompt{ color: #7a7263; }
 
   .danger-zone{
@@ -6209,8 +6231,18 @@
     var es = new EventSource('/settings-editor/api/logs');
     es.onmessage = function(ev){
       if (!ev.data) return;
-      var cls = /\bERROR\b|\bCRITICAL\b/.test(ev.data) ? 'tag-warn' : '';
-      appendLogLine(el, ev.data, cls);
+      /* {t: line, c: termcolor name}. The colour is decided on the server from
+         logger.ColoredFormatter's own tables, so the module-to-colour mapping
+         is stated once, in the CLI, rather than copied into this file. */
+      var line, colour;
+      try {
+        var payload = JSON.parse(ev.data);
+        line = payload.t; colour = payload.c;
+      } catch (e) {
+        line = ev.data; colour = 'dark_grey';
+      }
+      if (!line) return;
+      appendLogLine(el, line, 'lg-' + (colour || 'dark_grey'));
     };
     /* No manual reconnect: the browser retries an EventSource on its own, and
        a hand-rolled retry on top of that just doubles up. */

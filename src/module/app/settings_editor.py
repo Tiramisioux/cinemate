@@ -11,6 +11,7 @@ import inspect
 import json
 import logging
 import os
+import re
 import tempfile
 import time
 import threading
@@ -853,6 +854,46 @@ LOG_TAIL_LINES = 800
 LOG_MAX_LINE = 2000
 
 
+# The console mirrors the CLI's colours. The tables are imported rather than
+# restated here: they are the CLI's, and a second copy would drift the moment
+# a module is added to one and not the other.
+_LOG_LINE = re.compile(r"^[\d\-]+ [\d:.]+: ([A-Z]+): (\S+)")
+
+
+def _line_colour(line: str) -> str:
+    """The colour ColoredFormatter would have given this line.
+
+    system.log is written by the plain file handler, so it carries no escape
+    codes to reuse -- the level and module are re-read from the text and put
+    back through the same lookup the console formatter uses: module first,
+    level as the fallback, dark_grey when neither is known.
+    """
+    from module.logger import ColoredFormatter
+
+    match = _LOG_LINE.match(line)
+    if not match:
+        return "dark_grey"
+    level, module = match.group(1), match.group(2)
+    entry = ColoredFormatter.MODULE_COLORS.get(module)
+    if entry:
+        return entry["color"]
+    return ColoredFormatter.LEVEL_COLORS.get(level, "dark_grey")
+
+
+# libcamera writes its own ANSI colour codes to stdout, cinepi-raw passes them
+# through, and cinemate logs the line verbatim -- so system.log carries escape
+# sequences that a browser renders as literal "[1;32m" rubbish mid-message.
+# The console colours a line by its module, so the embedded codes are noise
+# either way.
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def _log_event(line: str) -> str:
+    clean = _ANSI.sub("", line)
+    payload = json.dumps({"t": clean[:LOG_MAX_LINE], "c": _line_colour(clean)})
+    return f"data: {payload}\n\n"
+
+
 def _log_path() -> Path:
     from module.logger import log_directory
     return Path(log_directory()) / "system.log"
@@ -895,7 +936,7 @@ def stream_logs():
 
     def gen():
         for line in _tail_lines(path, LOG_TAIL_LINES):
-            yield f"data: {line[:LOG_MAX_LINE]}\n\n"
+            yield _log_event(line)
         yield ": backlog-end\n\n"
 
         handle = None
@@ -910,7 +951,7 @@ def stream_logs():
                         inode = os.fstat(handle.fileno()).st_ino
                     line = handle.readline()
                     if line:
-                        yield f"data: {line.rstrip()[:LOG_MAX_LINE]}\n\n"
+                        yield _log_event(line.rstrip())
                         continue
                     # Nothing new. Has the file been rotated out from under us?
                     try:

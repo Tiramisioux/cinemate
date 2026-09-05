@@ -101,7 +101,7 @@ bus, so opening this tab cannot disturb an encoder someone is turning or blank a
 | Adafruit quad rotary encoder | `0x49` | Four dials and push buttons on one board |
 | I²C OLED display | `0x3c` or `0x3d` | SSD1306 or SSD1309 — the two share a command set and an address, and neither has an ID register, so the pane names both rather than guessing. Shows the configured pixel size |
 | Real-time clock | `0x68` | Pi 4 only — see [Additional hardware](hardware-controls.md#real-time-clock) |
-| CFE Hat | `0x34` | Not really an I²C device: the card is PCIe and `0x34` is the hat's latch controller. If it does not answer there, the PCIe bridge node is checked instead, and the pane says which answered |
+| CFE Hat | `0x34` | The card is PCIe, but `0x34` — the hat's latch controller — is what says a hat is fitted, so that is what the pane goes on |
 
 Each row shows the address that answered. A device that is not found says which address was tried,
 so a board strapped to a different address is obvious rather than just missing.
@@ -115,6 +115,11 @@ so a board strapped to a different address is obvious rather than just missing.
 
 The camera's system clock sets itself whenever it can reach the internet, over Ethernet or joined
 Wi-Fi. The RTC keeps whatever it was last given, so the two only agree after you copy one across.
+
+Both tick live, in the camera's own timezone, and both are shown to the second in the same format so
+drift between them is obvious at a glance. The tick is done in the page from a timestamp the camera
+sends, and re-anchored every 30 seconds, so watching the clocks does not fork `hwclock` once a
+second.
 
 **Sync RTC** runs `hwclock --systohc` and then reads the clock back to check it took. That readback
 matters: the CLI's `set rtc time` discards `hwclock`'s exit status, so it reports success even with

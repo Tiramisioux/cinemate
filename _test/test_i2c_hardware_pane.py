@@ -12,6 +12,7 @@ those are pinned here against their sources. The SSD1306 pair is the one set
 this repo never states anywhere, which is exactly why it lives in a table.
 """
 
+import re
 import sys
 import types
 import unittest
@@ -104,6 +105,20 @@ class AddressTableTests(unittest.TestCase):
         by_key = {d["key"]: d["addresses"] for d in hardware_probe.DEVICES}
         self.assertEqual(by_key["grove"], (0x08,))        # analog_controls.py
         self.assertEqual(by_key["quad_rotary"], (0x49,))  # quad_rotary_controller.py
+
+    def test_the_cfe_hat_is_present_only_when_it_answers_on_i2c(self):
+        # SsdMonitor also accepts the Pi 5 PCIe bridge node, which every Pi 5
+        # has whether or not a hat is fitted -- that is a bridge test, not a
+        # hat test, so this pane does not use it.
+        original = hardware_probe._smbus
+        hardware_probe._smbus = lambda: None
+        try:
+            cfe = hardware_probe.detect_cfe_hat()
+        finally:
+            hardware_probe._smbus = original
+        self.assertFalse(cfe["present"])
+        self.assertIsNone(cfe["via"])
+        self.assertNotIn("PCIE", dir(hardware_probe))
 
     def test_the_bus_is_scoped_because_0x34_is_two_different_devices(self):
         # 0x34 is the CFE Hat on bus 1 and the StarlightEye IR-cut filter on
@@ -237,8 +252,10 @@ class HardwareRouteTests(unittest.TestCase):
         self.assertTrue(body["ok"])
         keys = {d["key"] for d in body["devices"]}
         self.assertEqual(keys, {"grove", "quad_rotary", "rtc", "oled", "cfe_hat"})
-        self.assertIn("system", body["clocks"])
-        self.assertIn("rtc", body["clocks"])
+        # both carry an epoch so the page can tick between polls rather than
+        # forking hwclock once a second
+        self.assertIn("epoch", body["clocks"]["system"])
+        self.assertIn("epoch", body["clocks"]["rtc"])
 
     def test_oled_geometry_is_taken_from_the_running_settings(self):
         original = hardware_probe._smbus
@@ -279,7 +296,19 @@ class PaneMarkupTests(unittest.TestCase):
         self.assertIn("activePage === 'i2c'", self.html)
 
     def test_the_pane_is_reprobed_on_every_arrival(self):
-        self.assertIn("if (page === 'i2c') i2cRefresh();", self.html)
+        self.assertIn("if (page === 'i2c'){ i2cRefresh(); i2cStartTicking(); }", self.html)
+
+    def test_the_clocks_stop_ticking_when_the_pane_is_left(self):
+        # a 1 Hz interval must not outlive the pane that shows it
+        self.assertIn("else { i2cStopTicking(); }", self.html)
+
+    def test_ticking_uses_the_cameras_timezone_not_the_browsers(self):
+        # the offset is recovered from the camera's own formatted string, so a
+        # browser in another zone still reads the camera's wall clock
+        fn = re.search(r"function i2cAnchor\(epoch, display\)\{(.*?)\n  \}",
+                       self.html, re.S).group(1)
+        self.assertIn("offsetMs", fn)
+        self.assertIn("Date.parse", fn)
 
     def test_the_pane_uses_cards_so_search_cannot_empty_it(self):
         # updateGroupVisibility hides any group with no .card/.actionrow/.cliprow

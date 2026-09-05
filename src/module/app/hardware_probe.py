@@ -38,15 +38,19 @@ logger = logging.getLogger(__name__)
 # The peripherals live on the Pi's main user bus.
 I2C_BUS = 1
 
-# The CFE Hat is the odd one out: the card itself is PCIe, and 0x34 is the
-# hat's latch/LED microcontroller. Same two-step test as
-# SsdMonitor._detect_cfe_hat -- I²C first, then the PCIe bridge node.
-CFE_PCIE_NODE = Path("/sys/bus/platform/drivers/brcm-pcie/1000110000.pcie")
+# The CFE Hat's card is PCIe, but 0x34 -- its latch/LED microcontroller -- is
+# what actually says a hat is fitted. SsdMonitor also falls back to the Pi 5
+# PCIe bridge node, and that fallback is a bridge-present test rather than a
+# hat-present one: every Pi 5 with brcm-pcie bound satisfies it, hat or no hat.
+# This pane reports what is attached, so it goes on the I²C answer alone.
 
 # /dev/rtc is what hwclock talks to. Without the overlay CineMate does not
 # manage (see docs/hardware-controls.md), the chip can ACK on the bus while
 # the kernel still has no RTC device -- so both are reported.
 RTC_DEV = Path("/dev/rtc")
+
+# Both clocks are shown in one format so they can be compared at a glance.
+CLOCK_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 # Known display types, and the extension point for the rest. i2c_oled.py
 # constructs SSD1306_I2C without an address and takes the library default, so
@@ -134,21 +138,14 @@ def _probe(addresses) -> int | None:
 
 
 def detect_cfe_hat() -> dict:
-    """Same two-step test as SsdMonitor._detect_cfe_hat, run live.
-
-    The PCIe fallback is a bridge-present test rather than a hat-present one,
-    so it is reported as a distinct route instead of being folded into a bare
-    yes -- any Pi 5 with that node bound satisfies it.
-    """
+    """Present when 0x34 answers on the bus, and only then."""
     address = _probe((0x34,))
-    if address is not None:
-        return {"present": True, "bus": f"i2c-{I2C_BUS}", "address": address, "via": "i2c"}
-    try:
-        if CFE_PCIE_NODE.exists():
-            return {"present": True, "bus": "pcie", "address": None, "via": "pcie-node"}
-    except OSError:
-        pass
-    return {"present": False, "bus": "pcie", "address": None, "via": None}
+    return {
+        "present": address is not None,
+        "bus": f"i2c-{I2C_BUS}",
+        "address": address,
+        "via": "i2c" if address is not None else None,
+    }
 
 
 def detect_oled(oled_settings: dict | None = None) -> dict:
@@ -244,25 +241,51 @@ def _run(argv: list[str], timeout: float = 5.0):
         return None
 
 
+def _parse_clock(text: str):
+    """hwclock -r prints e.g. 2026-09-05 22:10:32.723857+02:00."""
+    try:
+        return datetime.fromisoformat(text.strip().replace(" ", "T", 1))
+    except ValueError:
+        return None
+
+
 def read_rtc_time() -> dict:
     """The RTC's own clock, as a value rather than a log line.
 
     `sudo -n` throughout: without -n a machine whose sudoers lacks a NOPASSWD
     rule would sit at a password prompt on the console until the request timed
     out. Failing fast and saying so is the better answer.
+
+    Reported in the same shape as the system clock -- seconds, no microseconds,
+    no offset -- so the two can be read against each other at a glance, with an
+    epoch alongside so the page can tick between polls instead of forking
+    hwclock once a second.
     """
+    result = None
     for argv in (["hwclock", "-r"], ["sudo", "-n", "hwclock", "-r"]):
         result = _run(argv)
         if result is not None and result.returncode == 0 and result.stdout.strip():
-            return {"ok": True, "time": result.stdout.strip(), "error": None}
+            raw = result.stdout.strip()
+            parsed = _parse_clock(raw)
+            return {
+                "ok": True,
+                "time": parsed.strftime(CLOCK_FORMAT) if parsed else raw,
+                "epoch": parsed.timestamp() if parsed else None,
+                "raw": raw,
+                "error": None,
+            }
     detail = ""
     if result is not None:
         detail = (result.stderr or result.stdout or "").strip()
-    return {"ok": False, "time": None, "error": detail or "hwclock could not read the clock"}
+    return {
+        "ok": False, "time": None, "epoch": None, "raw": None,
+        "error": detail or "hwclock could not read the clock",
+    }
 
 
-def system_time() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def system_time() -> dict:
+    now = datetime.now()
+    return {"time": now.strftime(CLOCK_FORMAT), "epoch": now.timestamp()}
 
 
 def sync_rtc_to_system() -> dict:

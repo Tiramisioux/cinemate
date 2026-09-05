@@ -5834,20 +5834,61 @@
     });
   }
 
-  function i2cRenderClocks(clocks){
+  /* Both clocks tick between polls rather than sitting frozen at whatever the
+     last fetch said. Ticking is done here from an epoch the server sends, so
+     reading them costs one fork of hwclock per poll instead of one per second.
+     The camera's timezone is recovered from its own formatted string, so a
+     browser in another zone still sees the camera's wall clock. */
+  var i2cClocks = { system: null, rtc: null };
+  var i2cTicker = null;
+
+  function i2cAnchor(epoch, display){
+    if (typeof epoch !== 'number' || !display) return null;
+    var asUtc = Date.parse(String(display).replace(' ', 'T') + 'Z');
+    if (isNaN(asUtc)) return null;
+    return { epoch: epoch, offsetMs: asUtc - (epoch * 1000), at: Date.now() };
+  }
+
+  function i2cNow(anchor){
+    if (!anchor) return '—';
+    var ms = (anchor.epoch * 1000) + (Date.now() - anchor.at) + anchor.offsetMs;
+    return new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+  }
+
+  function i2cPaintClocks(){
     var sys = document.getElementById('i2cSystemTime');
     var rtc = document.getElementById('i2cRtcTime');
+    if (sys) sys.textContent = i2cNow(i2cClocks.system);
+    if (rtc && i2cClocks.rtc) rtc.textContent = i2cNow(i2cClocks.rtc);
+  }
+
+  function i2cStopTicking(){
+    if (i2cTicker){ clearInterval(i2cTicker); i2cTicker = null; }
+  }
+
+  function i2cStartTicking(){
+    i2cStopTicking();
+    i2cPaintClocks();
+    i2cTicker = setInterval(i2cPaintClocks, 1000);
+  }
+
+  function i2cRenderClocks(clocks){
+    var rtc = document.getElementById('i2cRtcTime');
     var help = document.getElementById('i2cRtcHelp');
-    if (sys) sys.textContent = (clocks && clocks.system) || '—';
-    if (!rtc) return;
+    var system = clocks && clocks.system;
+    if (system) i2cClocks.system = i2cAnchor(system.epoch, system.time);
+
     var reading = clocks && clocks.rtc;
     if (reading && reading.ok){
-      rtc.textContent = reading.time;
+      i2cClocks.rtc = i2cAnchor(reading.epoch, reading.time);
+      if (rtc && !i2cClocks.rtc) rtc.textContent = reading.time;   // unparseable: show it verbatim
       if (help) help.textContent = 'What the attached clock chip believes the time is.';
-    } else {
-      rtc.textContent = '—';
-      if (help) help.textContent = (reading && reading.error) || 'No clock could be read.';
+    } else if (reading){
+      i2cClocks.rtc = null;
+      if (rtc) rtc.textContent = '—';
+      if (help) help.textContent = reading.error || 'No clock could be read.';
     }
+    i2cPaintClocks();
   }
 
   /* The settings pane greys the two boards that are not on the bus. The
@@ -5884,7 +5925,12 @@
   }
 
   var i2cLoading = false;
+  var i2cResync = null;
   function i2cRefresh(){
+    /* Re-anchor from the camera every half minute while the pane is open, so
+       a ticking display cannot drift away from the clock it is reporting. */
+    if (i2cResync) { clearTimeout(i2cResync); i2cResync = null; }
+    if (activePage === 'i2c') i2cResync = setTimeout(i2cRefresh, 30000);
     if (i2cLoading) return;
     i2cLoading = true;
     fetch('/settings-editor/api/hardware')
@@ -5962,7 +6008,8 @@
     /* Same reasoning as the config refetch above: what is plugged in can change
        while this page sits open, so the bus is re-probed on every arrival
        rather than once at load. */
-    if (page === 'i2c') i2cRefresh();
+    if (page === 'i2c'){ i2cRefresh(); i2cStartTicking(); }
+    else { i2cStopTicking(); }
     /* The Live tab embeds the shooting screen in an iframe, and hiding an
        iframe does not stop it: its MJPEG stream and its Socket.IO connection
        stay live behind every other tab for the rest of the session. That is

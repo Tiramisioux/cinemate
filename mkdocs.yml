@@ -20,7 +20,7 @@ nav:
       - Simple GUI: simple-gui.md
       - Web GUI: web-gui.md
       - Playback: playback.md
-      - Web API: web-api.md
+      # - Web API: web-api.md   # unconfirmed - hidden from the menu, page still builds
       # - Lenses and image circles: image-circle.md   # unverified - hidden from the menu, page still builds
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md

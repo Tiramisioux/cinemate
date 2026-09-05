@@ -218,6 +218,8 @@ CineMate reads live in [`arrays`](settings-json.md#arrays).
 
 ## Resolution & sensor
 
+<a id="image_capture"></a>
+
 ![Resolution & sensor section of the CineMate settings editor](images/gui-resolution.png)
 
 Filters which sensor modes reach the camera's resolution control, and sets the startup values for

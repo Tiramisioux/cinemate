@@ -1283,6 +1283,14 @@
         // The LOG button reflects log_encode_cam0 — what the camera was
         // actually launched with, not the pending request.
         $('btn-log').classList.toggle('on', Boolean(V.log_badge_cam0));
+        // One button, both directions. It only ever said UNMOUNT and only ever
+        // sent unmount, so once the drive was out there was no way back to a
+        // mounted card from this page -- pressing it again sent unmount at an
+        // already-unmounted drive.
+        const mounted = truthy(V.is_mounted);
+        const mountBtn = $('btn-unmount');
+        mountBtn.textContent = mounted ? 'UNMOUNT' : 'MOUNT';
+        mountBtn.title = mounted ? 'unmount' : 'mount';
         $('btn-log').textContent = V.log_badge_cam0 || 'LOG';
     }
 
@@ -2160,7 +2168,10 @@
         cmd('rec');
     });
     $('btn-log').addEventListener('click', () => cmd('set log'));
-    $('btn-unmount').addEventListener('click', () => cmd('unmount'));
+    // Read at click time, not bound once: the state changes underneath this.
+    $('btn-unmount').addEventListener('click', () => {
+        cmd(truthy(V.is_mounted) ? 'unmount' : 'mount');
+    });
 
     // Built on first open rather than at load: a camera that never opens the
     // drawer pays nothing for it, and renderExperiment() no-ops while it is

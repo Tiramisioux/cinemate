@@ -162,18 +162,26 @@ class AnalogControls(threading.Thread):
             # it's tracking exposure time continuously across fps changes,
             # not just offering free-roam manual control.
             if c.shutter_a_sync_mode == 1:
+                # Sync mode is not free stepping: it keeps the full 1-360 sweep
+                # because it is tracking exposure time, not offering the array's
+                # stops. Its range deliberately does not follow the array.
                 return parameters.free_stepping_steps(1, 360, c.shutter_a_sync_increment)
             if c.shutter_a_free:
-                return parameters.free_stepping_steps(1, 360, c.shutter_a_free_increment)
+                # The controller already built this from the array's ends; going
+                # through it keeps one bounds rule instead of a second copy here.
+                return c.shutter_a_steps
             return c.shutter_a_steps_dynamic        # includes flicker-free angles
 
         if kind == 'fps':
             # NOTE: fps_max is set in CinePiController via int(get_fps_max()),
             # which truncates the raw sensor capability (e.g. 49.97 Hz) to 49.
             # Thus, even in free stepping, the range is 1..49, not up to 50.
-            if c.fps_free or c.shutter_a_sync_mode == 1:
+            if c.shutter_a_sync_mode == 1 and not c.fps_free:
+                # Sync mode alone still wants a continuous fps sweep over what
+                # the sensor can do, so it keeps 1..fps_max rather than the
+                # array's floor.
                 return parameters.free_stepping_steps(1, c.fps_max, c.fps_free_increment)
-            return c.fps_steps                      # snapped list
+            return c.fps_steps                      # free grid or snapped list
 
         if kind == 'wb':
             return c.wb_steps                       # free-stepping handled in controller

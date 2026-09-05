@@ -130,28 +130,36 @@ These map to `system.storage.auto_preroll`, `settings.conform_frame_rate`, `sett
 
 ![Value steps section of the CineMate settings editor](images/gui-steps.png)
 
-The click-stops each control cycles through. Enter adds a chip, × removes one, drag reorders, except
-shutter angle, always re-sorted low to high. ISO, shutter angle and frame rate stop at the list ends;
-white balance and anamorphic wrap.
+The click-stops each control cycles through. Enter adds a chip, × removes one. Numeric lists are held
+lowest-first at all times, so `inc`/`dec` always walk them in order. ISO, shutter angle and frame rate
+stop at the list ends; white balance and anamorphic wrap.
+
+With free stepping on, the stops in between stop being what the control lands on, so they are dimmed
+and the two ends move to the right of the row joined by an arrow — the range the control now sweeps.
 
 | Control | What it does |
 |---|---|
 | ISO stops | Default 100, 200, 400, 640, 800, 1200, 1600, 2500, 3200. |
-| Free stepping (ISO stops) | Sweeps continuously, ignoring the list. Default off. |
+| Free stepping (ISO stops) | Sweeps from the lowest stop to the highest in `Increment` steps, instead of landing on the stops. Default off. |
 | Increment (ISO stops) | Free-step size. Default 100. |
 | Shutter angle stops | Degrees. Default 1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360. |
-| Free stepping (Shutter angle stops) | Sweeps continuously. Default on. |
+| Free stepping (Shutter angle stops) | Sweeps from the lowest stop to the highest in `Increment` steps. Default on. |
 | Increment (Shutter angle stops) | Free-step size. Default 1°. |
 | Frame-rate stops | Default 25, 33, 50. |
-| Free stepping (Frame-rate stops) | Sweeps continuously. Default off. |
+| Free stepping (Frame-rate stops) | Sweeps from the lowest stop up to the sensor mode's `fps_max` in `Increment` steps. The list's own top entry does not raise that ceiling. Default off. |
 | Increment (Frame-rate stops) | Free-step size. Default 1 fps. |
 | White balance stops | Kelvin. Default 3200, 4400, 5600. |
-| Free stepping (White balance stops) | Sweeps continuously. Default on. |
+| Free stepping (White balance stops) | Sweeps from the lowest stop to the highest in `Increment` steps. Default on. |
 | Increment (White balance stops) | Free-step size. Default 100 K. |
 | Anamorphic desqueeze stops | Preview desqueeze factors; above 1 widens the preview, recording untouched. Step-only, no pot or free stepping. Default 1, 1.33, 2. |
 
 Free stepping drives pots, the quad encoders, the CLI `inc`/`dec` commands and the web GUI. Assign a
 pot in **Pots & free stepping**.
+
+The list still sets the range when free stepping is on — its lowest and highest entries are the ends
+of the sweep, so editing them moves what the control can reach. The stops in between stop mattering,
+which is why the editor mutes them and leaves the two ends lit. Empty the list entirely and the
+parameter falls back to its own full range.
 
 The swept range is fixed per parameter, not your chips, whatever the card text says. Only the
 increment is yours.

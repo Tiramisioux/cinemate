@@ -18,10 +18,36 @@ list, not an attribute name.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def steps_bounds(steps, fallback):
+    """Return ``(lowest, highest)`` of a parameter's ``steps`` table.
+
+    Free stepping sweeps between the ends of ``arrays.<name>.steps`` rather
+    than a range hardcoded at the call site, so its bounds now come from data
+    the settings editor lets an operator rewrite. That list can arrive empty
+    (every chip deleted), or carrying a ``null`` from a chip that failed to
+    parse; ``free_stepping_steps`` guards only its *increment*, so anything
+    unusable here would surface as a TypeError or ValueError deep in a rebuild.
+
+    Non-finite and non-numeric entries are dropped, and *fallback* -- the pair
+    that call site sweeps when it has nothing to go on -- is returned when
+    nothing usable is left. A single usable entry is honoured as written: the
+    lowest and the highest really are the same value, and the sweep collapses
+    to it.
+    """
+    values = [v for v in (steps or [])
+              if isinstance(v, (int, float))
+              and not isinstance(v, bool)
+              and math.isfinite(v)]
+    if not values:
+        return fallback
+    return min(values), max(values)
 
 
 def free_stepping_steps(min_value, max_value, increment):
@@ -45,6 +71,12 @@ def free_stepping_steps(min_value, max_value, increment):
     # step 16 is 255.9375 steps, which round() takes to 256 -> a spurious
     # 4096). The "append max_value if undershooting" line below is what
     # guarantees the true max is still always reachable.
+    # The bounds come from an operator-editable array (see steps_bounds), so
+    # they can arrive the wrong way round. Reversed used to die on values[-1]
+    # below, because range(count + 1) is empty when count is negative.
+    if max_value < min_value:
+        min_value, max_value = max_value, min_value
+
     count = int((max_value - min_value) / increment)
     values = [round(min_value + i * increment, 6) for i in range(count + 1)]
     if values[-1] < max_value:

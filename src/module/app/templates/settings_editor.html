@@ -387,6 +387,16 @@
   }
   .step-chip:active{ cursor: grabbing; }
   .step-chip.dragging{ opacity:.35; }
+  /* Free stepping sweeps from the lowest stop to the highest in increments of
+     free_increment, so the stops in between are no longer what the control
+     lands on. Mute them and leave the two ends lit, so the row reads as the
+     range it has become. The skin paints every chip white at (1,2,0), so the
+     muted rule is repeated under #app.skin-hud to outrank it. */
+  .step-chip.is-muted{ opacity:.34; }
+  .step-range-arrow{
+    font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted);
+    padding: 0 1px; user-select:none;
+  }
   .step-chip button{
     border:0; background:transparent; color: var(--muted); cursor:pointer; line-height:1; padding:0;
     font-size: 13px;
@@ -928,6 +938,8 @@
   #app.skin-hud .field-input::placeholder{ color: #7a7a7a; }
   #app.skin-hud .pin-badge small{ color: #4a4a4a; }
   #app.skin-hud .step-chip button{ color: #050403; opacity:.6; }
+  #app.skin-hud .step-chip.is-muted{ opacity:.34; }
+  #app.skin-hud .step-range-arrow{ color: var(--ink); }
   #app.skin-hud .step-chip button:hover{ opacity:1; color: var(--danger); }
   #app.skin-hud .step-add{ border-color: var(--line); color: var(--ink); background: transparent; }
 
@@ -2403,7 +2415,7 @@
       <div class="live-embed-wrap">
         <iframe id="liveEmbedFrame" class="live-embed-frame" src="/" title="Cinemate live camera preview" loading="lazy"></iframe>
       </div>
-      <p class="card-help" style="margin-top:14px;max-width:60ch">This is the page on port <span class="mono">5000</span> with <span class="mono">/settings-editor</span> dropped off the address — <a href="/" target="_blank" rel="noopener">open it in its own tab</a> if the controls feel cramped in here. The clean feed, no controls over it, is on port <span class="mono">8000</span> at <span class="mono">/stream</span> — same address, <span class="mono">8001</span> for cam1 on a dual‑sensor rig.</p>
+      <p class="card-help" style="margin-top:14px;max-width:60ch">This is the page on port <span class="mono">5000</span> with <span class="mono">/settings-editor</span> dropped off the address — <a href="/" target="_blank" rel="noopener">open it in its own tab</a> if the controls feel cramped in here. The clean feed, no controls over it, is on port <span class="mono">8000</span> — same address, <span class="mono">8001</span> for cam1 on a dual‑sensor rig.</p>
     </section>
 
   </main>
@@ -3432,6 +3444,9 @@
       var checked = t.getAttribute('aria-checked') === 'true';
       t.setAttribute('aria-checked', String(!checked));
       checkDirty(t);
+      // No change/input event fires for a .toggle, so the steplist has to be
+      // repainted from inside the handler that flipped it.
+      if (typeof syncAllFreeSteppingChips === 'function') syncAllFreeSteppingChips();
     });
     t.addEventListener('keydown', function(e){
       if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); t.click(); }
@@ -3517,7 +3532,36 @@
     });
   });
 
-  /* ---------- step chip lists (add / remove / drag to reorder) ---------- */
+  /* ---------- step chip lists (add / remove) ---------- */
+  /* Numeric step lists are held in ascending order at all times, in both
+     stepping modes. The stops are a range, and inc/dec walk the list in the
+     order it is stored, so a list out of order makes the control jump about.
+     Shutter angle was already re-sorted on load controller-side; this makes
+     every numeric list behave the same, and in the editor rather than only
+     after a round trip. String lists (the OLED fields) keep author order --
+     there the sequence is the content. */
+  function chipsAreNumeric(container){
+    return container.getAttribute('data-chip-type') === 'number';
+  }
+  function chipValue(chip){
+    return chip.firstChild ? parseFloat(chip.firstChild.textContent.trim()) : NaN;
+  }
+  function sortChipContainer(container){
+    if (!chipsAreNumeric(container)) return;
+    var addEl = container.querySelector('.step-add');
+    var chips = Array.prototype.slice.call(container.querySelectorAll('.step-chip'));
+    chips.sort(function(a, b){
+      var av = chipValue(a), bv = chipValue(b);
+      if (!isFinite(av) && !isFinite(bv)) return 0;
+      if (!isFinite(av)) return 1;          // anything unparseable sinks to the end
+      if (!isFinite(bv)) return -1;
+      return av - bv;
+    });
+    chips.forEach(function(chip){
+      if (addEl) container.insertBefore(chip, addEl); else container.appendChild(chip);
+    });
+  }
+
   function makeChipDraggable(chip, container){
     chip.setAttribute('draggable', 'true');
     chip.addEventListener('dragstart', function(){
@@ -3539,7 +3583,9 @@
   function wireChipContainer(container){
     container.querySelectorAll('.step-chip').forEach(function(chip){
       wireRemove(chip.querySelector('[data-remove]'));
-      makeChipDraggable(chip, container);
+      // A numeric list sorts itself, so offering a drag handle would promise a
+      // reorder that is undone the moment it lands.
+      if (!chipsAreNumeric(container)) makeChipDraggable(chip, container);
     });
     container.addEventListener('dragover', function(e){
       var dragging = container.querySelector('.step-chip.dragging');
@@ -3564,7 +3610,7 @@
           chip.appendChild(rm);
           container.insertBefore(chip, add);
           wireRemove(rm);
-          makeChipDraggable(chip, container);
+          if (!chipsAreNumeric(container)) makeChipDraggable(chip, container);
           add.value = '';
           onChipsChanged(container);
         }
@@ -3580,6 +3626,7 @@
     });
   }
   function onChipsChanged(container){
+    sortChipContainer(container);
     var currentArr = [];
     container.querySelectorAll('.step-chip').forEach(function(c){ currentArr.push(c.firstChild.textContent.trim()); });
     var origArr;
@@ -3588,8 +3635,76 @@
     if (isDirty) dirtyEls.add(container); else dirtyEls.delete(container);
     updateDirtyPill();
     refreshDrawer();
+    syncFreeSteppingChips(container);
   }
+  /* Which steplists carry a free-stepping toggle, and where that toggle lives.
+     Only these four have one: the four HDR free toggles sit in the Pots section
+     with no steplist beside them, and the other chip containers have no free
+     stepping at all. Mapped explicitly rather than walked up the DOM, because
+     these four steplists are nested inside .card-control while other chip
+     containers ARE the .card-control. */
+  var FREE_STEP_TOGGLES = {
+    'arrays.iso.steps':       'arrays.iso.free',
+    'arrays.shutter_a.steps': 'arrays.shutter_a.free',
+    'arrays.fps.steps':       'arrays.fps.free',
+    'arrays.wb.steps':        'arrays.wb.free'
+  };
+
+  function syncFreeSteppingChips(container){
+    if (!container) return;
+    var togglePath = FREE_STEP_TOGGLES[container.getAttribute('data-chip-path')];
+    if (!togglePath) return;
+    var toggle = document.querySelector('.toggle[data-path="' + togglePath + '"]');
+    var free = !!toggle && toggle.getAttribute('aria-checked') === 'true';
+    var addEl = container.querySelector('.step-add');
+    var arrow = container.querySelector('.step-range-arrow');
+    var chips = Array.prototype.slice.call(container.querySelectorAll('.step-chip'));
+    var values = chips.map(chipValue);
+    var finite = values.filter(function(v){ return isFinite(v); });
+    // The list is held ascending, but the ends are still found by value: a
+    // container that has not been sorted yet must not mark the wrong pair.
+    var lo = finite.length ? Math.min.apply(null, finite) : NaN;
+    var hi = finite.length ? Math.max.apply(null, finite) : NaN;
+    var loIdx = values.indexOf(lo);
+    var hiIdx = values.lastIndexOf(hi);
+
+    function clearRange(){
+      if (arrow) arrow.remove();
+      chips.forEach(function(chip){ chip.classList.remove('is-muted'); chip.style.order = ''; });
+      if (addEl) addEl.style.order = '';
+    }
+
+    // Nothing to state as a range when stepping is off, when no value parses,
+    // or when every chip holds the same number.
+    if (!free || !isFinite(lo) || loIdx === hiIdx){ clearRange(); return; }
+
+    if (!arrow){
+      arrow = document.createElement('span');
+      arrow.className = 'step-range-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '\u2192';
+      container.appendChild(arrow);
+    }
+
+    // Visual order only. The DOM keeps its ascending order because that is
+    // what onChipsChanged and buildState read the saved array back from.
+    chips.forEach(function(chip, i){
+      var isEnd = (i === loIdx || i === hiIdx);
+      chip.classList.toggle('is-muted', !isEnd);
+      chip.style.order = (i === loIdx) ? '1' : (i === hiIdx) ? '3' : '0';
+    });
+    arrow.style.order = '2';
+    if (addEl) addEl.style.order = '4';
+  }
+
+  function syncAllFreeSteppingChips(){
+    Object.keys(FREE_STEP_TOGGLES).forEach(function(path){
+      syncFreeSteppingChips(document.querySelector('[data-chip-path="' + path + '"]'));
+    });
+  }
+
   document.querySelectorAll('[data-chip-path]').forEach(wireChipContainer);
+  syncAllFreeSteppingChips();
 
   /* ---------- copy key path ---------- */
   document.querySelectorAll('.keypath[data-copy]').forEach(function(k){
@@ -3644,6 +3759,17 @@
   }
 
   function populateChipContainer(container, arr){
+    if (container.getAttribute('data-chip-type') === 'number'){
+      // Sorted before data-chip-original is written below, so a file that
+      // happens to be out of order does not load looking already edited.
+      arr = arr.slice().sort(function(a, b){
+        var av = parseFloat(a), bv = parseFloat(b);
+        if (!isFinite(av) && !isFinite(bv)) return 0;
+        if (!isFinite(av)) return 1;
+        if (!isFinite(bv)) return -1;
+        return av - bv;
+      });
+    }
     container.querySelectorAll('.step-chip').forEach(function(c){ c.remove(); });
     var addEl = container.querySelector('.step-add');
     arr.forEach(function(v){
@@ -3659,6 +3785,7 @@
     });
     wireChipContainer(container);
     container.setAttribute('data-chip-original', JSON.stringify(arr.map(String)));
+    syncFreeSteppingChips(container);
   }
 
   /* Buttons/switches/rotary encoders (B11.5): #controlsList is fully
@@ -3918,6 +4045,9 @@
     populateHardwareControlsAndQuadRotary(settings);
     clearSettingsDirtyState();
     refreshDrawer();
+    // applyControlValue writes aria-checked without going through the click
+    // handler, so the chips are re-read once the whole form has settled.
+    syncAllFreeSteppingChips();
   }
 
   function loadSettings(){
@@ -5583,15 +5713,30 @@
 
   /* Which page a reload lands on. The rail's links already put a section id
      in the hash (#cam0, #steps, ...) and every section declares its page via
-     data-page, so the hash alone answers this -- a separate storage key would
-     be a second source of truth that can contradict a URL like
-     .../settings-editor/#cam0 with no principled winner. An unknown or stale
-     id falls back to the default rather than showing nothing. */
+     data-page, so a URL that carries a hash answers this on its own. The hash
+     therefore always wins: a link to .../settings-editor/#cam0 must open cam0
+     no matter what this browser was last looking at.
+     A URL with NO hash used to fall straight to Settings, which is what made
+     the editor forget the pane when it is opened fresh or from a bookmarked
+     bare address. The last pane is remembered for that case only, so it can
+     never contradict a hash -- it is consulted when there is nothing else to
+     go on. Storage can throw outright (Safari private mode, site data blocked),
+     so every access is guarded and simply falls back to the default. */
   var PAGE_LANDING = { config: 'bootconfig', settings: 'welcome', raw: 'clips', live: 'live', playback: 'playback' };
   var DEFAULT_PAGE = 'settings';
+  var LAST_PAGE_KEY = 'cinemate.settingsEditor.lastPage';
+  function rememberPage(page){
+    if (!Object.prototype.hasOwnProperty.call(PAGE_LANDING, page)) return;
+    try { localStorage.setItem(LAST_PAGE_KEY, page); } catch (e) { /* not worth reporting */ }
+  }
+  function rememberedPage(){
+    var page;
+    try { page = localStorage.getItem(LAST_PAGE_KEY); } catch (e) { return DEFAULT_PAGE; }
+    return Object.prototype.hasOwnProperty.call(PAGE_LANDING, page) ? page : DEFAULT_PAGE;
+  }
   function pageFromHash(){
     var id = (location.hash || '').slice(1);
-    if (!id) return DEFAULT_PAGE;
+    if (!id) return rememberedPage();
     var el = document.getElementById(id);
     var group = el && el.closest('.group[data-page]');
     var page = group && group.getAttribute('data-page');
@@ -5617,6 +5762,7 @@
        put it back on the way in. */
     syncLiveEmbed(page);
     activePage = page;
+    rememberPage(page);
     pageTabButtons.forEach(function(b){
       var isActive = b.getAttribute('data-page-tab') === page;
       b.classList.toggle('active', isActive);

@@ -71,6 +71,7 @@ def make_stub():
     stub.fps_max = 50
     stub.calculate_dynamic_shutter_angles = lambda fps: list(stub.shutter_a_steps)
     stub._fps_steps_capped_at_max = CinePiController._fps_steps_capped_at_max.__get__(stub)
+    stub._free_bounds = CinePiController._free_bounds.__get__(stub)
     stub.initialize_shutter_angle_steps = CinePiController.initialize_shutter_angle_steps.__get__(stub)
     stub.calculate_flicker_free_steps = CinePiController.calculate_flicker_free_steps.__get__(stub)
     stub.redis_controller = types.SimpleNamespace(set_value=lambda key, value: None)
@@ -98,13 +99,15 @@ class RebuildStepsHonourFreeIncrementTests(unittest.TestCase):
         stub.iso_free = True
         stub.iso_free_increment = 50
         CinePiController._rebuild_iso_steps(stub)
-        self.assertEqual(stub.iso_steps, list(range(100, 3201, 50)))
+        # 100..400 are the stub array's own ends, not the old hardcoded 100..3200
+        self.assertEqual(stub.iso_steps, list(range(100, 401, 50)))
 
     def test_shutter_a_free_stepping_uses_the_configured_increment(self):
         stub = make_stub()
         stub.shutter_a_free = True
         CinePiController._rebuild_shutter_steps(stub)
-        self.assertEqual(stub.shutter_a_steps, list(range(1, 361)))
+        # the stub array is [45, 90, 180], so the sweep is 45..180, not 1..360
+        self.assertEqual(stub.shutter_a_steps, list(range(45, 181)))
 
     def test_fps_free_stepping_is_bounded_by_fps_max(self):
         stub = make_stub()
@@ -117,7 +120,8 @@ class RebuildStepsHonourFreeIncrementTests(unittest.TestCase):
         stub = make_stub()
         stub.wb_free = True
         CinePiController._rebuild_wb_steps(stub)
-        self.assertEqual(stub.wb_steps, list(range(2800, 6501, 100)))
+        # the stub array is [3200, 4400, 5600]; the old sweep was 2800..6500
+        self.assertEqual(stub.wb_steps, list(range(3200, 5601, 100)))
 
     def test_hdr_knobs_default_to_their_configured_steps_table(self):
         stub = make_stub()
@@ -175,6 +179,7 @@ def make_analog_controls_for_shutter_a(**controller_overrides):
         shutter_a_free_increment=1,
         shutter_a_sync_increment=0.1,
         shutter_a_steps_dynamic=["static-table-sentinel"],
+        shutter_a_steps=["free-table-sentinel"],
     )
     defaults.update(controller_overrides)
     ac = AnalogControls.__new__(AnalogControls)
@@ -190,13 +195,120 @@ class AnalogControlsShutterAPrecedenceTests(unittest.TestCase):
         )
         self.assertEqual(ac._get_steps('shutter_a'), parameters.free_stepping_steps(1, 360, 0.1))
 
-    def test_free_stepping_alone_uses_free_increment(self):
+    def test_free_stepping_alone_defers_to_the_controllers_table(self):
+        # The pot used to rebuild the free table from its own copy of the 1/360
+        # literals. It now reads the controller's, so the array-derived bounds
+        # are stated in exactly one place.
         ac = make_analog_controls_for_shutter_a(shutter_a_free=True, shutter_a_free_increment=1)
-        self.assertEqual(ac._get_steps('shutter_a'), parameters.free_stepping_steps(1, 360, 1))
+        self.assertEqual(ac._get_steps('shutter_a'), ["free-table-sentinel"])
 
     def test_neither_free_nor_sync_returns_the_static_table(self):
         ac = make_analog_controls_for_shutter_a()
         self.assertEqual(ac._get_steps('shutter_a'), ["static-table-sentinel"])
+
+
+class StepsBoundsTests(unittest.TestCase):
+    """parameters.steps_bounds() -- the guard that lets an operator-editable
+    array be trusted as the source of a free-stepping sweep's bounds."""
+
+    def test_returns_the_lowest_and_highest_entry(self):
+        self.assertEqual(parameters.steps_bounds([100, 3200, 400], (1, 2)), (100, 3200))
+
+    def test_order_in_the_file_does_not_matter(self):
+        self.assertEqual(parameters.steps_bounds([3200, 100], (1, 2)), (100, 3200))
+
+    def test_empty_array_falls_back(self):
+        # every chip deleted in the settings editor
+        self.assertEqual(parameters.steps_bounds([], (100, 3200)), (100, 3200))
+        self.assertEqual(parameters.steps_bounds(None, (100, 3200)), (100, 3200))
+
+    def test_unusable_entries_are_dropped(self):
+        # a chip that failed to parse is written to the file as null
+        self.assertEqual(parameters.steps_bounds([None, 200, "x", 800], (1, 2)), (200, 800))
+        self.assertEqual(parameters.steps_bounds([None, "x"], (1, 360)), (1, 360))
+
+    def test_booleans_are_not_treated_as_numbers(self):
+        self.assertEqual(parameters.steps_bounds([True, False], (1, 360)), (1, 360))
+
+    def test_non_finite_entries_are_dropped(self):
+        self.assertEqual(
+            parameters.steps_bounds([float("nan"), float("inf"), 50, 90], (1, 2)), (50, 90))
+
+    def test_a_single_entry_is_honoured_as_written(self):
+        # lowest and highest really are the same value; the sweep collapses to it
+        self.assertEqual(parameters.steps_bounds([180], (1, 360)), (180, 180))
+
+
+class ReversedBoundsTests(unittest.TestCase):
+    def test_reversed_bounds_no_longer_raise(self):
+        # used to die on values[-1]: range(count + 1) is empty when count < 0
+        self.assertEqual(parameters.free_stepping_steps(100, 50, 10), [50, 60, 70, 80, 90, 100])
+
+    def test_equal_bounds_collapse_to_one_value(self):
+        self.assertEqual(parameters.free_stepping_steps(180, 180, 1), [180])
+
+
+class FreeSteppingFollowsTheArrayTests(unittest.TestCase):
+    """The bounds of a free-stepping sweep are the ends of the parameter's own
+    steps array. They used to be literals at each call site, which made the
+    array's ends a lie as soon as an operator edited them."""
+
+    def test_widening_the_array_widens_the_sweep(self):
+        stub = make_stub()
+        stub.settings["arrays"]["iso"]["steps"] = [50, 6400]
+        stub.iso_free = True
+        stub.iso_free_increment = 50
+        CinePiController._rebuild_iso_steps(stub)
+        self.assertEqual(stub.iso_steps[0], 50)
+        self.assertEqual(stub.iso_steps[-1], 6400)
+
+    def test_narrowing_the_array_narrows_the_sweep(self):
+        stub = make_stub()
+        stub.settings["arrays"]["wb"]["steps"] = [4000, 4600]
+        stub.wb_free = True
+        CinePiController._rebuild_wb_steps(stub)
+        self.assertEqual(stub.wb_steps, [4000, 4100, 4200, 4300, 4400, 4500, 4600])
+
+    def test_an_emptied_array_falls_back_to_the_call_sites_own_range(self):
+        stub = make_stub()
+        stub.settings["arrays"]["iso"]["steps"] = []
+        stub.iso_free = True
+        stub.iso_free_increment = 100
+        CinePiController._rebuild_iso_steps(stub)
+        self.assertEqual(stub.iso_steps, list(range(100, 3201, 100)))
+
+    def test_a_null_chip_does_not_break_the_rebuild(self):
+        stub = make_stub()
+        stub.settings["arrays"]["hdr_blend"]["steps"] = [None, 2, 6]
+        stub.hdr_blend_free = True
+        CinePiController._rebuild_hdr_blend_steps(stub)
+        self.assertEqual(stub.hdr_blend_steps, [2, 3, 4, 5, 6])
+
+    def test_fps_takes_its_floor_from_the_array_but_its_ceiling_from_fps_max(self):
+        stub = make_stub()
+        stub.settings["arrays"]["fps"]["steps"] = [24, 30]
+        stub.fps_free = True
+        CinePiController._rebuild_fps_steps(stub)
+        # 24 is the array's floor; 50 is fps_max, which the array cannot raise
+        self.assertEqual(stub.fps_steps[0], 24)
+        self.assertEqual(stub.fps_steps[-1], stub.fps_max)
+
+    def test_an_fps_floor_above_fps_max_is_clamped_rather_than_inverted(self):
+        stub = make_stub()
+        stub.settings["arrays"]["fps"]["steps"] = [60, 120]
+        stub.fps_max = 50
+        stub.fps_free = True
+        CinePiController._rebuild_fps_steps(stub)
+        self.assertEqual(stub.fps_steps, [50])
+
+    def test_sync_mode_keeps_the_full_sweep_regardless_of_the_array(self):
+        # sync mode is not free stepping: it tracks exposure time and needs the
+        # whole 1-360 range, so it deliberately does not follow the array.
+        stub = make_stub()
+        stub.settings["arrays"]["shutter_a"]["steps"] = [90.0, 180.0]
+        stub.shutter_a_sync_increment = 0.1
+        CinePiController.set_shutter_a_sync_mode(stub, 1)
+        self.assertEqual(stub.shutter_angle_steps, parameters.free_stepping_steps(1, 360, 0.1))
 
 
 if __name__ == "__main__":

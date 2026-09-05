@@ -565,22 +565,44 @@ class CinePiController:
         return self._apply_resolution_mode(choice.mode, restore_user_fps=None)
         
     # ─── step-table helpers ────────────────────────────────────────────────
+    def _free_bounds(self, name, fallback):
+        """Bounds of *name*'s free-stepping sweep: the ends of its steps array.
+
+        Free stepping used to sweep a range hardcoded at each call site, which
+        made the array's own ends a lie the moment an operator edited them.
+        The array is the source of truth now; *fallback* is what that call site
+        sweeps if the array has been left with nothing usable in it.
+        """
+        steps = (self.settings.get('arrays', {}) or {}).get(name, {}) or {}
+        return parameters.steps_bounds(steps.get('steps', []), fallback)
+
     def _rebuild_iso_steps(self):
-        self.iso_steps = (parameters.free_stepping_steps(100, 3200, self.iso_free_increment)
-                        if self.iso_free
-                        else list(self.settings['arrays']['iso']['steps']))
+        if self.iso_free:
+            lo, hi = self._free_bounds('iso', (100, 3200))
+            self.iso_steps = parameters.free_stepping_steps(lo, hi, self.iso_free_increment)
+        else:
+            self.iso_steps = list(self.settings['arrays']['iso']['steps'])
 
     def _rebuild_shutter_steps(self):
-        self.shutter_a_steps = (parameters.free_stepping_steps(1, 360, self.shutter_a_free_increment)
-                                if self.shutter_a_free
-                                else list(self.settings['arrays']['shutter_a']['steps']))
+        if self.shutter_a_free:
+            lo, hi = self._free_bounds('shutter_a', (1, 360))
+            self.shutter_a_steps = parameters.free_stepping_steps(
+                lo, hi, self.shutter_a_free_increment)
+        else:
+            self.shutter_a_steps = list(self.settings['arrays']['shutter_a']['steps'])
         # keep the flicker-free additions in sync
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(
             self.current_fps)
 
     def _rebuild_fps_steps(self):
         if self.fps_free:
-            self.fps_steps = parameters.free_stepping_steps(1, self.fps_max, self.fps_free_increment)
+            # Only the floor comes from the array. The ceiling stays fps_max:
+            # that is the sensor mode's real limit, not a number an array can
+            # raise, and _fps_steps_capped_at_max below would clip it back
+            # anyway. Clamped so a floor above the ceiling cannot invert.
+            lo, _ = self._free_bounds('fps', (1, self.fps_max))
+            lo = min(lo, self.fps_max)
+            self.fps_steps = parameters.free_stepping_steps(lo, self.fps_max, self.fps_free_increment)
         else:
             self.fps_steps = list(self.settings['arrays']['fps']['steps'])
         self.fps_steps_dynamic = self._fps_steps_capped_at_max(self.fps_steps)
@@ -608,33 +630,39 @@ class CinePiController:
         ]
 
     def _rebuild_wb_steps(self):
-        self.wb_steps = (parameters.free_stepping_steps(2800, 6500, self.wb_free_increment)
-                        if self.wb_free
-                        else list(self.settings['arrays']['wb']['steps']))
+        if self.wb_free:
+            lo, hi = self._free_bounds('wb', (2800, 6500))
+            self.wb_steps = parameters.free_stepping_steps(lo, hi, self.wb_free_increment)
+        else:
+            self.wb_steps = list(self.settings['arrays']['wb']['steps'])
 
     def _rebuild_hdr_threshold_low_steps(self):
-        self.hdr_threshold_low_steps = (
-            parameters.free_stepping_steps(0, 4095, self.hdr_threshold_low_free_increment)
-            if self.hdr_threshold_low_free
-            else list(self.settings['arrays']['hdr_threshold_low']['steps']))
+        if self.hdr_threshold_low_free:
+            lo, hi = self._free_bounds('hdr_threshold_low', (0, 4095))
+            self.hdr_threshold_low_steps = parameters.free_stepping_steps(lo, hi, self.hdr_threshold_low_free_increment)
+        else:
+            self.hdr_threshold_low_steps = list(self.settings['arrays']['hdr_threshold_low']['steps'])
 
     def _rebuild_hdr_threshold_high_steps(self):
-        self.hdr_threshold_high_steps = (
-            parameters.free_stepping_steps(0, 4095, self.hdr_threshold_high_free_increment)
-            if self.hdr_threshold_high_free
-            else list(self.settings['arrays']['hdr_threshold_high']['steps']))
+        if self.hdr_threshold_high_free:
+            lo, hi = self._free_bounds('hdr_threshold_high', (0, 4095))
+            self.hdr_threshold_high_steps = parameters.free_stepping_steps(lo, hi, self.hdr_threshold_high_free_increment)
+        else:
+            self.hdr_threshold_high_steps = list(self.settings['arrays']['hdr_threshold_high']['steps'])
 
     def _rebuild_hdr_blend_steps(self):
-        self.hdr_blend_steps = (
-            parameters.free_stepping_steps(0, 8, self.hdr_blend_free_increment)
-            if self.hdr_blend_free
-            else list(self.settings['arrays']['hdr_blend']['steps']))
+        if self.hdr_blend_free:
+            lo, hi = self._free_bounds('hdr_blend', (0, 8))
+            self.hdr_blend_steps = parameters.free_stepping_steps(lo, hi, self.hdr_blend_free_increment)
+        else:
+            self.hdr_blend_steps = list(self.settings['arrays']['hdr_blend']['steps'])
 
     def _rebuild_hdr_gain_adder_steps(self):
-        self.hdr_gain_adder_steps = (
-            parameters.free_stepping_steps(0, 5, self.hdr_gain_adder_free_increment)
-            if self.hdr_gain_adder_free
-            else list(self.settings['arrays']['hdr_gain_adder']['steps']))
+        if self.hdr_gain_adder_free:
+            lo, hi = self._free_bounds('hdr_gain_adder', (0, 5))
+            self.hdr_gain_adder_steps = parameters.free_stepping_steps(lo, hi, self.hdr_gain_adder_free_increment)
+        else:
+            self.hdr_gain_adder_steps = list(self.settings['arrays']['hdr_gain_adder']['steps'])
 
     # ─── main public call ──────────────────────────────────────────────────
     def update_steps(self):
@@ -1108,7 +1136,12 @@ class CinePiController:
 
         # Update shutter angle steps immediately if changed
         if shutter_a_free:
-            self.shutter_angle_steps = parameters.free_stepping_steps(1, 360, self.shutter_a_free_increment)
+            # shutter_angle_steps is a second table alongside shutter_a_steps;
+            # the snap in update_shutter_angle_nom reads this one, so it has to
+            # follow the same bounds rule or the two disagree.
+            lo, hi = self._free_bounds('shutter_a', (1, 360))
+            self.shutter_angle_steps = parameters.free_stepping_steps(
+                lo, hi, self.shutter_a_free_increment)
         else:
             self.initialize_shutter_angle_steps()
 
@@ -2043,7 +2076,9 @@ class CinePiController:
 
             self.fps_max = self._refresh_fps_max()
             if self.fps_free:
-                self.fps_steps = parameters.free_stepping_steps(1, self.fps_max, self.fps_free_increment)
+                lo, _ = self._free_bounds('fps', (1, self.fps_max))
+                self.fps_steps = parameters.free_stepping_steps(
+                    min(lo, self.fps_max), self.fps_max, self.fps_free_increment)
 
             self.update_steps()
 

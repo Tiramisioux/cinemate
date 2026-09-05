@@ -100,7 +100,7 @@ Startup values come from `image_capture.hdr` in `settings.jsonc`. All four knobs
 
 ## Free stepping
 
-Free stepping ignores the preset arrays in `settings.jsonc` and dials any value the sensor supports. Each command toggles when the argument is omitted.
+Free stepping stops landing on the preset stops in `settings.jsonc` and sweeps between the lowest and highest entry of the parameter's own array instead, in `free_increment` steps. Frame rate is the exception: its ceiling is the sensor mode's `fps_max`, which the array cannot raise. Each command toggles when the argument is omitted.
 
 | Command | Argument | Method | What it does |
 |---|---|---|---|

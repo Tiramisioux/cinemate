@@ -886,8 +886,9 @@
         if (current !== undefined && current !== null) { sel.value = String(current); }
     }
 
-    // Free stepping replaces a preset table with a fine grid — 1-360 in whole
-    // degrees for SHUTTER — and the setter then accepts any value verbatim
+    // Free stepping replaces a preset table with a fine grid running between
+    // the ends of the parameter's own steps array, in increments of its
+    // free_increment — and the setter then accepts any value verbatim
     // instead of snapping to the table (cinepi_controller: "In sync mode, or
     // free-stepping, just accept it verbatim"; the fps setter clamps to
     // 1..fps_max the same way). So the interior entries stop being the legal

@@ -519,6 +519,17 @@
            smaller picture. The one restack in this file is the width-driven
            media query at the end, which is a different screen, not a
            different mode of the same screen. */
+        /* Embedded in the settings editor's Live view pane (?xp=1), where the
+           drawer is the point of the pane rather than something opened over a
+           shot. It takes the leftover height instead of a fixed cap, so it
+           fills to the bottom; the preview keeps a real share above it, and
+           the drawer's own overflow-y handles content taller than the space.
+           Both rows stay fr rather than auto -- an auto row here would size
+           off the preview, which sizes itself off its box, and the two would
+           chase each other through the ResizeObserver below. */
+        #app.xp-fill { grid-template-rows: auto minmax(0, 0.9fr) auto minmax(0, 1.1fr); }
+        #app.xp-fill #experiment { max-height: none; }
+
         #experiment {
             max-height: min(46vh, 460px);
             overflow-y: auto;
@@ -2076,6 +2087,7 @@
     // drawer is ~30 widgets touched on every state push, which is exactly what
     // the build-on-first-open above exists to avoid paying for.
     if (new URLSearchParams(window.location.search).get('xp') === '1') {
+        document.getElementById('app').classList.add('xp-fill');
         setExperimentOpen(true);
     }
 

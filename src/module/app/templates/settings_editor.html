@@ -5780,7 +5780,15 @@
       ? i2cHex(d.address) + ' on ' + d.bus
       : null;
     if (!d.present){
-      return 'Not found. Looked for ' + (d.expected || []).join(' or ') + ' on ' + d.bus + '.';
+      var missing = 'Not found. Looked for ' + (d.expected || []).join(' or ') + ' on ' + d.bus + '.';
+      if (d.key === 'rtc' && d.kernel_device){
+        // A Pi 5 has an RTC on board, so hwclock works with nothing on the
+        // bus. Saying only "not found" next to two clocks that plainly agree
+        // reads as a fault rather than as the normal Pi 5 case.
+        missing += ' The Pi has a clock of its own though — /dev/rtc is there and'
+                 + ' the times below are real. An add-on chip is only needed on a Pi 4.';
+      }
+      return missing;
     }
     if (d.key === 'cfe_hat' && d.via === 'pcie-node'){
       return 'Found via the PCIe bridge node — the hat did not answer on i2c, so this is the bridge '

@@ -316,6 +316,13 @@ class PaneMarkupTests(unittest.TestCase):
         self.assertIn('<div class="cards" id="i2cDeviceList"></div>', self.html)
         self.assertIn('id="i2cClockCards"', self.html)
 
+    def test_a_pi5_onboard_clock_is_not_reported_as_a_fault(self):
+        # no DS3231 on the bus but /dev/rtc present is the normal Pi 5 case,
+        # and the two clocks below it will plainly be working
+        fn = re.search(r"function i2cDeviceDetail\(d\)\{(.*?)\n  \}", self.html, re.S).group(1)
+        self.assertIn("d.key === 'rtc' && d.kernel_device", fn)
+        self.assertIn("only needed on a Pi 4", fn)
+
     def test_the_rail_group_carries_no_nav_links(self):
         # the scrollspy's section list is global, so links here would compete
         # with the settings rail's for the active-link computation

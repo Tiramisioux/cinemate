@@ -230,6 +230,18 @@
             overscroll-behavior: contain;   /* matches #experiment; the rails were missed */
         }
         .rail.fitted { --rail-pad: 0.4; }   /* reclaim the dead band once we are shrinking */
+        /* Upright on a phone the rails are as tall as the picture and sit
+           beside it, the proportion simple_gui draws on the HDMI overlay --
+           60x40 boxes flanking the image on a 1920x1080 canvas, not flanking
+           the empty space around it.
+           --preview-h is written by sizePreview(); the fallback keeps the
+           stretched behaviour if it has not run yet. fitRails() then measures
+           against this height instead of the row's, so the boxes scale to the
+           picture the way they do at 1080p. */
+        @media (orientation: portrait) and (max-width: 900px) {
+            #stage { align-items: center; }
+            #rail-left, #rail-right { height: var(--preview-h, 100%); }
+        }
         /* Fallback only, once the legibility floor above stops the shrink
            short of the rail's available height (fitRails sets .clipped).
            A mask paints in the element's own border box and does not scroll
@@ -1193,6 +1205,12 @@
         }
         frame.style.width = Math.floor(w) + 'px';
         frame.style.height = Math.floor(h) + 'px';
+        // Published for the portrait rule below. simple_gui flanks the image
+        // itself on its 1920x1080 canvas, so the rails are as tall as the
+        // picture there; on a phone held upright the stage row is much taller
+        // than a 16:9 picture, and rails stretched to the row tower over it.
+        $('stage').style.setProperty('--preview-h', Math.floor(h) + 'px');
+        scheduleFit();
     }
 
     function renderPreview() {
@@ -1903,7 +1921,12 @@
             updateRailFade(el);
         });
     }
-    const scheduleFit = () => { if (!fitPending) { fitPending = true; requestAnimationFrame(fitRails); } };
+    // A declaration, not a const arrow: sizePreview() calls this from well
+    // above here, and a const would still be in its temporal dead zone at
+    // that point -- a ReferenceError the first time the preview is sized.
+    function scheduleFit() {
+        if (!fitPending) { fitPending = true; requestAnimationFrame(fitRails); }
+    }
 
     function updateRailFade(el) {
         el.classList.toggle('more-above', el.scrollTop > 0);

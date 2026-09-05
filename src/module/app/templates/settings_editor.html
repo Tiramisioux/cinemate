@@ -147,23 +147,6 @@
     overflow-x: auto; scrollbar-width: none;
   }
   .topbar-scroll::-webkit-scrollbar{ display:none; }
-  /* The scrollbar is hidden, so nothing said the row continued past the edge
-     -- on a phone the controls after the search box were simply invisible.
-     A fade on whichever edge still has content, the same fallback the
-     camera's rails use when they are clipped. Save changes lives outside this
-     scroller and stays pinned right whatever it does. */
-  .topbar-scroll.more-right{
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-  }
-  .topbar-scroll.more-left{
-    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
-    mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
-  }
-  .topbar-scroll.more-left.more-right{
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
-    mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
-  }
   #dirtyPill, #saveBtn{ flex: 0 0 auto; }
   .hamburger{
     display:none;
@@ -176,16 +159,6 @@
     box-shadow: 0 -5px 0 var(--ink), 0 5px 0 var(--ink);
   }
   @media (max-width: 860px){ .hamburger{ display:flex; } }
-  /* Straight to the shooting screen. Shares the hamburger's box so the two
-     read as a pair, and sits beside it at every width -- the trip back to the
-     camera is not something to bury in a menu on a phone. */
-  .to-camera{
-    flex: 0 0 auto;
-    width:34px; height:34px; border-radius: var(--radius);
-    border:1px solid var(--line); background: var(--panel-2); color: var(--ink);
-    display:flex; align-items:center; justify-content:center; cursor:pointer;
-  }
-  .to-camera:hover{ border-color: var(--ink); }
 
   .search{
     flex: 1 1 120px; min-width: 60px; max-width: 420px;
@@ -915,21 +888,6 @@
     border-radius: var(--radius-lg); overflow:hidden; border: 1px solid #1c1c1c; background:#000;
   }
   .live-embed-frame{ width:100%; height:100%; border:0; display:block; }
-  /* Upright on a phone, 16/10 of a ~390px width is a 244px-tall frame, and
-     the shooting screen does not fit in that -- it rendered as a cropped
-     window inside a window with its own scrollbar, under a screen of empty
-     space. Give the frame the height the phone actually has instead, so the
-     embedded page lays out for a portrait viewport the way it would if it
-     were opened directly on port 5000, which is what most operators will do
-     from a phone anyway. */
-  @media (orientation: portrait) and (max-width: 860px){
-    .live-embed-wrap{
-      aspect-ratio: auto;
-      max-width: none;
-      height: calc(100vh - 200px);
-      min-height: 440px;
-    }
-  }
 
   .live-stage{
     background: #000; border-radius: var(--radius-lg); overflow:hidden;
@@ -1149,9 +1107,6 @@
     <button class="hamburger" id="hamburger" aria-label="Toggle sections menu" aria-expanded="false">
       <span></span>
     </button>
-    <a class="to-camera" id="toCameraBtn" href="/" title="Open the shooting screen" aria-label="Open the shooting screen">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-    </a>
     <div class="topbar-scroll">
       <label class="search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -5834,22 +5789,6 @@
   /* ---------- mobile rail ---------- */
   var rail = document.getElementById('rail');
   var railScrim = document.getElementById('railScrim');
-  /* Which way the topbar can still be scrolled, so a fade only appears on an
-     edge that actually has something past it. */
-  var topbarScroll = document.querySelector('.topbar-scroll');
-  function syncTopbarFade(){
-    if (!topbarScroll) return;
-    var max = topbarScroll.scrollWidth - topbarScroll.clientWidth;
-    var x = topbarScroll.scrollLeft;
-    topbarScroll.classList.toggle('more-right', max - x > 2);
-    topbarScroll.classList.toggle('more-left', x > 2);
-  }
-  if (topbarScroll){
-    topbarScroll.addEventListener('scroll', syncTopbarFade, { passive: true });
-    window.addEventListener('resize', syncTopbarFade);
-    syncTopbarFade();
-  }
-
   var hamburger = document.getElementById('hamburger');
   function openRail(){ rail.classList.add('open'); railScrim.classList.add('open'); hamburger.setAttribute('aria-expanded','true'); }
   function closeRail(){ rail.classList.remove('open'); railScrim.classList.remove('open'); hamburger.setAttribute('aria-expanded','false'); }
@@ -5895,9 +5834,6 @@
     document.getElementById('uploadBtn').hidden = noFilePage;
     if (!noFilePage) openJsonLabel.textContent = activePage === 'config' ? 'config.txt' : 'settings.jsonc';
     updateDirtyPill();
-    // The file controls just appeared or disappeared, so the row's width
-    // changed and the fade may no longer be telling the truth.
-    if (typeof syncTopbarFade === 'function') syncTopbarFade();
   }
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');

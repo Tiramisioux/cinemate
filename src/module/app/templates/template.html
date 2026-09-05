@@ -230,42 +230,6 @@
             overscroll-behavior: contain;   /* matches #experiment; the rails were missed */
         }
         .rail.fitted { --rail-pad: 0.4; }   /* reclaim the dead band once we are shrinking */
-        /* Upright on a phone: the rails are as tall as the picture and sit
-           beside it, the way simple_gui draws them on the HDMI overlay. The
-           rows above and below keep reflowing as they already do -- this is
-           only about the three columns of #stage.
-           --preview-h is written by sizePreview(); the fallback keeps the
-           stretched behaviour if it has not run yet. fitRails() then measures
-           against this height instead of the row's, so the shrink is computed
-           against the box the rail actually occupies. */
-        @media (orientation: portrait) and (max-width: 640px) {
-            #stage { align-items: center; }
-            #rail-left, #rail-right { height: var(--preview-h, 100%); }
-
-            /* Bigger targets for a finger. The rows above and below the
-               picture are allowed to reflow here -- they already wrap -- so
-               the extra height they take is not at the picture's expense the
-               way it would be on a desk. */
-            #top-row { font-size: 1.15em; row-gap: 0.9em; }
-            #top-row .group select { min-height: 40px; }
-            /* The cog is an <a>; give it the row's button shape so it does not
-           read as a stray link among buttons. */
-        #button-row .btn-link {
-            display: inline-flex; align-items: center; justify-content: center;
-            text-decoration: none;
-        }
-        #button-row button, #button-row .btn-link { min-height: 42px; padding-inline: 1.1em; }
-
-            /* One control per row in the drawer: four columns on a phone put
-               a slider in about 80px, which is not something a thumb can
-               place. The drawer scrolls here rather than fitting, which is
-               the right trade on a screen this size. */
-            #experiment { grid-template-columns: 1fr; max-height: 46vh; }
-            #experiment .xp-group.xp-wide { grid-column: 1 / -1; }
-            .xp-slider input[type="range"] { height: 2.6em; }
-            .xp-slider .value { flex: 0 0 4.2em; }
-            #experiment select, #experiment button { min-height: 40px; }
-        }
         /* Fallback only, once the legibility floor above stops the shrink
            short of the rail's available height (fitRails sets .clipped).
            A mask paints in the element's own border box and does not scroll
@@ -517,7 +481,7 @@
             border-top: 1px dashed var(--label);
         }
 
-        button, #button-row .btn-link {
+        button {
             font-family: inherit;
             font-weight: 700;
             font-size: calc(var(--value-size) * 0.62);
@@ -529,7 +493,7 @@
             cursor: pointer;
             white-space: nowrap;
         }
-        button:active, #button-row .btn-link:active { background: var(--label); color: #000; }
+        button:active { background: var(--label); color: #000; }
         button.on { background: var(--log-badge); border-color: var(--log-badge); color: #000; }
         button[disabled] { opacity: 0.45; cursor: default; }
 
@@ -598,30 +562,29 @@
            always takes a share -- so it takes the lower floors outright. */
         #app.xp-fill .rail { --floor-gap: 2px; --floor-label: 8px; --floor-box: 18px; --floor-height: 13px; }
 
-        /* Everything in the window, no scrolling in either direction.
-           The drawer cannot both be fully visible and leave the picture its
-           full size: measured on the camera, 713px of drawer against ~700px
-           of picture in an 857px window. So the drawer is packed denser and
-           the picture takes what is left.
-
-           Four columns with the slider groups spanning two, rather than the
-           full row they take on the shooting screen. That is the one real
-           cost: the sliders' track goes from 1113px to 434px, about 9 counts
-           per pixel on a 0-4095 threshold instead of 4. Not the 207px a
-           non-spanning layout gives, which is the ~20 counts per pixel the
-           full-row rule was written to avoid.
-
-           Measured: drawer 713 -> 562, so the picture keeps ~215px and the
-           page does not scroll. The max-height is a floor for windows too
-           short even for that -- there the drawer scrolls inside itself
-           rather than pushing the picture out of existence. */
+        /* Opening the drawer in this pane must not cost the picture any size.
+           The shooting screen deliberately trades the other way -- there the
+           page never scrolls and the drawer eats into the preview, because a
+           layout that grows under the operator mid-shot is worse than a
+           smaller picture. This pane is a desk tool, so it grows instead: the
+           stage is pinned to the height it had with the drawer closed, the
+           drawer runs to its full natural height, and the pane scrolls. */
+        #app.xp-fill.xp-open { height: auto; min-height: 100%; }
+        #app.xp-fill.xp-open #experiment { max-height: none; overflow-y: visible; }
+        html.xp-scroll, html.xp-scroll body { overflow: auto; height: auto; min-height: 100%; }
+        #app.xp-fill { grid-template-rows: auto minmax(240px, 1fr) auto auto; }
         #app.xp-fill #experiment {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            max-height: calc(100vh - 240px);
+            /* The picture comes first. An earlier cap let the drawer take
+               whatever it wanted, which pinned #stage at its floor and left a
+               302x170 preview inside a 1266px-wide pane -- and dragged the
+               rails down with it, since fitRails() sizes them off the stage's
+               height and their max() floors stop the shrink short, so the
+               badges stayed large beside a tiny picture. Measured on the
+               camera at 1400x900: this cap gives a 791x442 preview against
+               298x166 before, with the drawer still 240px and scrolling. */
+            max-height: min(28vh, 260px);
+            min-height: 0;
         }
-        #app.xp-fill #experiment .xp-group.xp-wide { grid-column: span 2; }
-        #app.xp-fill { grid-template-rows: auto minmax(140px, 1fr) auto auto; }
-        #app.xp-fill #experiment { min-height: 0; }
 
         #experiment {
             max-height: min(46vh, 460px);
@@ -899,13 +862,6 @@
             <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
             <button id="btn-unmount" title="unmount">UNMOUNT</button>
             <button id="btn-fullscreen">FULLSCREEN</button>
-            <!-- The way back to the full UI. An <a>, not a button with a JS
-                 navigation: it should behave like a link (middle-click, long
-                 press, open in a new tab) because on a phone that is often
-                 exactly what an operator wants. -->
-            <a id="btn-settings" class="btn-link" href="/settings-editor/" title="Settings, storage and playback" aria-label="Open the settings editor">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.13.35.4.63.74.79H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </a>
         </div>
 
         <!-- Built from the spec tables in the script below, not written out
@@ -1237,13 +1193,6 @@
         }
         frame.style.width = Math.floor(w) + 'px';
         frame.style.height = Math.floor(h) + 'px';
-        // Published for the portrait rule below: the rails match the picture
-        // rather than the row it sits in. On a phone held upright the row is
-        // tall and the 16:9 picture is short, so stretched rails tower over
-        // it -- simple_gui draws them beside the image, not beside the space
-        // around it.
-        $('stage').style.setProperty('--preview-h', Math.floor(h) + 'px');
-        scheduleFit();
     }
 
     function renderPreview() {
@@ -1334,14 +1283,6 @@
         // The LOG button reflects log_encode_cam0 — what the camera was
         // actually launched with, not the pending request.
         $('btn-log').classList.toggle('on', Boolean(V.log_badge_cam0));
-        // One button, both directions. It only ever said UNMOUNT, so once the
-        // drive was out there was no way back to a mounted card from this
-        // page -- pressing it again just sent unmount at an unmounted drive.
-        const mounted = truthy(V.is_mounted);
-        const mountBtn = $('btn-unmount');
-        mountBtn.textContent = mounted ? 'UNMOUNT' : 'MOUNT';
-        mountBtn.title = mounted ? 'unmount' : 'mount';
-        mountBtn.classList.toggle('on', !mounted);
         $('btn-log').textContent = V.log_badge_cam0 || 'LOG';
     }
 
@@ -1954,12 +1895,7 @@
             updateRailFade(el);
         });
     }
-    // A declaration, not a const arrow: sizePreview() calls this from well
-    // above here, and a const would still be in its temporal dead zone at
-    // that point -- a ReferenceError the first time the preview is sized.
-    function scheduleFit() {
-        if (!fitPending) { fitPending = true; requestAnimationFrame(fitRails); }
-    }
+    const scheduleFit = () => { if (!fitPending) { fitPending = true; requestAnimationFrame(fitRails); } };
 
     function updateRailFade(el) {
         el.classList.toggle('more-above', el.scrollTop > 0);
@@ -2224,10 +2160,7 @@
         cmd('rec');
     });
     $('btn-log').addEventListener('click', () => cmd('set log'));
-    // Read at click time, not bound once: the state changes underneath this.
-    $('btn-unmount').addEventListener('click', () => {
-        cmd(truthy(V.is_mounted) ? 'unmount' : 'mount');
-    });
+    $('btn-unmount').addEventListener('click', () => cmd('unmount'));
 
     // Built on first open rather than at load: a camera that never opens the
     // drawer pays nothing for it, and renderExperiment() no-ops while it is
@@ -2235,6 +2168,23 @@
     function setExperimentOpen(open) {
         const panel = $('experiment');
         if (open && !xpBuilt) { buildExperiment(); }
+        const app = $('app');
+        if (app.classList.contains('xp-fill')) {
+            const stage = $('stage');
+            if (open) {
+                // Measured before the drawer is shown, so this is the height
+                // the picture has with it closed -- pin that, and the drawer
+                // takes new space below rather than taking the picture's.
+                const h = Math.round(stage.getBoundingClientRect().height);
+                if (h > 0) { stage.style.height = h + 'px'; }
+                app.classList.add('xp-open');
+                document.documentElement.classList.add('xp-scroll');
+            } else {
+                app.classList.remove('xp-open');
+                document.documentElement.classList.remove('xp-scroll');
+                stage.style.height = '';
+            }
+        }
         panel.classList.toggle('hidden', !open);
         $('btn-experiment').classList.toggle('on', open);
         render();

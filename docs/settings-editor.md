@@ -76,6 +76,17 @@ Clicking **Save changes** on this tab:
 
 You can also apply a save-in-place, or just restart with nothing pending, from **System → Restart CineMate**.
 
+The console under **Restart CineMate** is a live tail of the camera's own `system.log`, so runtime
+messages appear there as they happen — not only around a restart. It reconnects by itself, which is
+what you want across a restart: the stream drops as the service goes down and resumes when it comes
+back, so the restart appears in the log as the camera's own output.
+
+!!! note "It used to be an animation"
+    The console previously replayed a fixed list of invented log lines with random timing. They
+    contradicted the machine they appeared on — two cameras on a one-camera rig, a port the web
+    server does not use, a frame rate unrelated to the camera's own. Everything shown now is either
+    a line from `system.log` or something this page did.
+
 ## Boot config (config.txt) tab
 
 !!! danger "No confirm, no revert — unlike the recovery console"

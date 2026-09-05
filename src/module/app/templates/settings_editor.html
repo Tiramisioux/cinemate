@@ -525,6 +525,13 @@
      pixels, so at --line's 1.27:1 it is invisible. Dotted at --muted reads
      roughly like a solid --line rule, and matches the dashed --muted
      underlines already used for the Remove / View raw links. */
+  /* The gesture select is a 10.5px uppercase chip and the command select is
+     12.5px text, so their boxes come out 22px and 27px. align-items:start
+     lines up their tops, and a 5px height difference under aligned tops is
+     exactly what reads as misaligned. Match the heights instead of centring:
+     centring would drop the action label out of line the moment the command
+     cell wraps its argument onto a second row. */
+  .gesture select.g-name-select{ min-height: 27px; }
   .gesture + .gesture{ border-top: 1px dotted var(--muted); }
   .gesture:first-child{ padding-top: 0; }
   .gesture:last-child{ padding-bottom: 0; }
@@ -2104,7 +2111,7 @@
             Restart Cinemate
           </button>
         </div>
-        <p class="card-help" style="max-width:60ch">Restarting applies any saved changes above and takes about 10 seconds. Recording stops if one is in progress. You'll see the real startup sequence below as it comes back up.</p>
+        <p class="card-help" style="max-width:60ch">Restarting applies any saved changes above and takes about 10 seconds. Recording stops if one is in progress. The console below reports when the camera answers again.</p>
         <div class="console" id="console" aria-live="polite"></div>
       </div>
 
@@ -6087,7 +6094,19 @@
     if (typeof updateBulkBar === 'function') updateBulkBar();
   });
 
-  /* ---------- boot sequence engine (shared by Cinemate restart & Pi reboot) ---------- */
+  /* ---------- boot sequence console (shared by Cinemate restart & Pi reboot) ----------
+     This used to replay a hardcoded array of log lines on a setTimeout with
+     random jitter, which looked like streaming output and was not: it claimed
+     two cameras on a one-camera rig, "phase_lock engaged" when phase lock
+     ships off, Flask on :80 when it serves :5000, and a fixed "iso 800 ·
+     172.8° · 25 fps" regardless of the camera's actual state. The card above
+     it promised "the real startup sequence".
+
+     There is no log stream to attach to -- log_queue never reaches the app
+     factory, and /api/v1/events carries Redis keys, not logs. So this reports
+     the one thing the browser can actually observe: the command that was
+     issued, and when the camera starts answering again. Everything printed
+     here is either something this page did or something the camera said. */
   function runBootSequence(opts){
     opts.btn.disabled = true;
     var svg = opts.btn.querySelector('svg');
@@ -6095,51 +6114,81 @@
     opts.dot.classList.add('restarting');
     opts.text.innerHTML = opts.busyText;
     opts.consoleEl.classList.add('open');
-    opts.consoleEl.innerHTML = '';
-    var delay = 0;
-    opts.lines.forEach(function(line, i){
-      delay += reduceMotion ? 0 : (opts.stepMs || 160) + Math.random() * (opts.jitterMs || 220);
-      setTimeout(function(){
-        var div = document.createElement('div');
-        div.className = 'ln' + (line.cls ? ' ' + line.cls : '');
-        div.textContent = line.t;
-        opts.consoleEl.appendChild(div);
-        opts.consoleEl.scrollTop = opts.consoleEl.scrollHeight;
-        if (i === opts.lines.length - 1){
-          opts.dot.classList.remove('restarting');
-          opts.text.innerHTML = opts.readyText;
-          opts.btn.disabled = false;
-          if (svg) svg.setAttribute('style', '');
-          showToast(opts.doneToast);
-        }
-      }, delay);
-    });
+
+    function say(text, cls){ appendLogLine(opts.consoleEl, text, cls); }
+    function finish(readyText, toast){
+      opts.dot.classList.remove('restarting');
+      opts.text.innerHTML = readyText;
+      opts.btn.disabled = false;
+      if (svg) svg.setAttribute('style', '');
+      showToast(toast);
+    }
+
+    var t0 = Date.now();
+    say(opts.command, 'prompt');
+    say(opts.waitText);
+    var deadline = t0 + (opts.timeoutMs || 90000);
+
+    /* Wait before the first poll. The server is still answering for a moment
+       after the command is dispatched, and a hit in that window would report
+       "back up" without anything having restarted. */
+    setTimeout(function poll(){
+      fetch('/api/v1/hello', { cache: 'no-store' })
+        .then(function(r){ if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
+        .then(function(text){
+          say(text.trim(), 'tag-ok');
+          say('answering again after ' + Math.round((Date.now() - t0) / 1000) + ' s', 'tag-ok');
+          finish(opts.readyText, opts.doneToast);
+        })
+        .catch(function(){
+          if (Date.now() > deadline){
+            say('no answer after ' + Math.round((Date.now() - t0) / 1000)
+                + ' s — the camera may still be coming up, or may need looking at', 'tag-warn');
+            finish(opts.readyText, 'No answer from the camera yet');
+            return;
+          }
+          setTimeout(poll, 1500);
+        });
+    }, opts.settleMs || 4000);
+  }
+
+  /* The console is a live tail of system.log, not just something that fills
+     up around a restart -- runtime messages appear here as they happen.
+     EventSource reconnects by itself, which is exactly the behaviour wanted
+     across a restart: the stream drops when the service goes down and picks
+     up again when it comes back, so the restart shows up in the log as the
+     camera's own output rather than as anything this page invented. */
+  var LOG_MAX_LINES = 400;
+  function appendLogLine(el, text, cls){
+    var div = document.createElement('div');
+    div.className = 'ln' + (cls ? ' ' + cls : '');
+    div.textContent = text;
+    el.appendChild(div);
+    while (el.childElementCount > LOG_MAX_LINES) el.removeChild(el.firstChild);
+    el.scrollTop = el.scrollHeight;
+  }
+  function startLogStream(el){
+    if (!el || !window.EventSource) return;
+    el.classList.add('open');
+    var es = new EventSource('/settings-editor/api/logs');
+    es.onmessage = function(ev){
+      if (!ev.data) return;
+      var cls = /\bERROR\b|\bCRITICAL\b/.test(ev.data) ? 'tag-warn' : '';
+      appendLogLine(el, ev.data, cls);
+    };
+    /* No manual reconnect: the browser retries an EventSource on its own, and
+       a hand-rolled retry on top of that just doubles up. */
   }
 
   var restartBtn = document.getElementById('restartBtn');
   var statusDot = document.getElementById('statusDot');
   var statusText = document.getElementById('statusText');
   var consoleEl = document.getElementById('console');
-  var bootLines = [
-    { t: '$ sudo systemctl restart cinemate-autostart', cls: 'prompt' },
-    { t: '[cinemate] stopping current session…' },
-    { t: '[cinemate] loading settings.jsonc' },
-    { t: '[sensor_detect] cam0 → imx585, 12‑bit ClearHDR', cls: 'tag-ok' },
-    { t: '[sensor_detect] cam1 → imx585, 12‑bit ClearHDR', cls: 'tag-ok' },
-    { t: '[redis] redis_controller connected on localhost:6379' },
-    { t: '[cinepi-raw] starting capture pipeline…' },
-    { t: '[cinepi-raw] cam0 phase_lock engaged', cls: 'tag-ok' },
-    { t: '[cinepi-raw] cam1 phase_lock engaged', cls: 'tag-ok' },
-    { t: '[wifi-hotspot] CinePi broadcasting' },
-    { t: '[web] Flask + Socket.IO listening on :80' },
-    { t: '[cinemate] ready — iso 800 · 172.8° · 25 fps', cls: 'tag-ok' }
-  ];
   restartBtn.addEventListener('click', function(){
-    // F-291: this used to only play the boot-sequence animation below and
-    // never actually asked the backend to restart anything. The animated
-    // lines are still a stylized "please wait" affordance, not a live log
-    // -- there is no streaming progress feed for this today -- but the
-    // restart itself is now real, gated on a successful /api/v1/cmd call.
+    // F-291: this used to only play an animation and never ask the backend to
+    // restart anything. The restart is real, gated on a successful
+    // /api/v1/cmd call, and the console now reports the camera actually
+    // coming back rather than a scripted sequence.
     restartBtn.disabled = true;
     apiCmd('restart cinemate').then(function(result){
       if (!result.ok) {
@@ -6148,7 +6197,9 @@
         return;
       }
       runBootSequence({
-        btn: restartBtn, dot: statusDot, text: statusText, consoleEl: consoleEl, lines: bootLines,
+        btn: restartBtn, dot: statusDot, text: statusText, consoleEl: consoleEl,
+        command: '$ sudo systemctl restart cinemate-autostart',
+        waitText: 'waiting for the camera to answer again…',
         busyText: 'Restarting Cinemate — <b class="din">please wait</b>',
         readyText: 'Cinemate is running — <b class="din">READY</b>',
         doneToast: 'Cinemate is back up'
@@ -6161,24 +6212,14 @@
   var cfgStatusDot = document.getElementById('cfgStatusDot');
   var cfgStatusText = document.getElementById('cfgStatusText');
   var cfgConsoleEl = document.getElementById('cfgConsole');
-  function buildRebootLines(){
-    var cam0 = cfgSensorLabel(document.getElementById('cfg-cam0-sensor').value);
-    var cam1 = cfgSensorLabel(document.getElementById('cfg-cam1-sensor').value);
-    return [
-      { t: '$ sudo reboot', cls: 'prompt' },
-      { t: '[system] stopping cinemate-autostart…' },
-      { t: '[system] syncing filesystems…' },
-      { t: '[system] Pi rebooting…' },
-      { t: '[boot] config.txt reloaded from /boot/firmware' },
-      { t: '[boot] camera_auto_detect: cam0 → ' + cam0 + ', cam1 → ' + cam1, cls: 'tag-ok' },
-      { t: '[cinemate-autostart] launching…' },
-      { t: '[cinemate] ready', cls: 'tag-ok' }
-    ];
-  }
   cfgRebootBtn.addEventListener('click', function(){
     runBootSequence({
-      btn: cfgRebootBtn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl, lines: buildRebootLines(),
-      stepMs: 260, jitterMs: 260,
+      btn: cfgRebootBtn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl,
+      command: '$ sudo reboot',
+      waitText: 'waiting for the Pi to come back…',
+      /* A full reboot is a lot slower than a service restart, and the network
+         has to come back with it. */
+      settleMs: 12000, timeoutMs: 180000,
       busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
       readyText: 'config.txt matches the running Pi — <b class="din">READY</b>',
       doneToast: 'Pi is back up'
@@ -6203,6 +6244,7 @@
   /* Probe once at load, so the settings pane already shows which boards are
      missing before the i2c tab has ever been opened. */
   i2cRefresh();
+  startLogStream(document.getElementById('console'));
   /* Back/forward across panes. The browser's fragment scroll fires BEFORE
      hashchange, so at that moment the target section is still display:none and
      the scroll is a no-op on a box-less element; scroll again once the page

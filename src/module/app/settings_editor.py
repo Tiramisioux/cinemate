@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -842,3 +843,92 @@ def sync_rtc():
     result = hardware_probe.sync_rtc_to_system()
     status = 200 if result["ok"] else 500
     return jsonify(result), status
+
+
+# ── live log ─────────────────────────────────────────────────────────────
+LOG_TAIL_LINES = 200
+LOG_MAX_LINE = 2000
+
+
+def _log_path() -> Path:
+    from module.logger import log_directory
+    return Path(log_directory()) / "system.log"
+
+
+def _tail_lines(path: Path, count: int) -> list[str]:
+    """The last *count* lines, read backwards so a large log stays cheap."""
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            end = handle.tell()
+            block, data, newlines = 8192, b"", 0
+            while end > 0 and newlines <= count:
+                step = min(block, end)
+                end -= step
+                handle.seek(end)
+                chunk = handle.read(step)
+                data = chunk + data
+                newlines += chunk.count(b"\n")
+        text = data.decode("utf-8", errors="replace")
+        return text.splitlines()[-count:]
+    except OSError:
+        return []
+
+
+@settings_editor_bp.route("/api/logs", methods=["GET"])
+def stream_logs():
+    """The real system.log, tailed.
+
+    The restart console used to replay a hardcoded script. This is the actual
+    file the logger writes, so it carries runtime messages too, not just what
+    happens around a restart.
+
+    The file is tailed rather than the logger's queue being shared out: that
+    queue has a single consumer, so a second reader would steal records from
+    whoever else is draining it, and every extra browser tab would compete for
+    the same lines. A file has as many readers as it likes.
+    """
+    path = _log_path()
+
+    def gen():
+        for line in _tail_lines(path, LOG_TAIL_LINES):
+            yield f"data: {line[:LOG_MAX_LINE]}\n\n"
+        yield ": backlog-end\n\n"
+
+        handle = None
+        inode = None
+        last_beat = time.monotonic()
+        try:
+            while True:
+                try:
+                    if handle is None:
+                        handle = path.open("r", errors="replace")
+                        handle.seek(0, os.SEEK_END)
+                        inode = os.fstat(handle.fileno()).st_ino
+                    line = handle.readline()
+                    if line:
+                        yield f"data: {line.rstrip()[:LOG_MAX_LINE]}\n\n"
+                        continue
+                    # Nothing new. Has the file been rotated out from under us?
+                    try:
+                        if os.stat(path).st_ino != inode:
+                            handle.close()
+                            handle = None
+                            continue
+                    except OSError:
+                        pass
+                except OSError:
+                    if handle is not None:
+                        handle.close()
+                    handle = None
+
+                now = time.monotonic()
+                if now - last_beat >= 15.0:
+                    yield ": ping\n\n"
+                    last_beat = now
+                time.sleep(0.4)
+        finally:
+            if handle is not None:
+                handle.close()
+
+    return Response(stream_with_context(gen()), mimetype="text/event-stream")

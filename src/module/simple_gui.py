@@ -838,6 +838,10 @@ class SimpleGUI(threading.Thread):
             "mic_wav_saved":  False,
             "mic_wav_recording": False,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
+            # The web GUI's mount button needs to know which way it goes.
+            # storage_type alone cannot answer that: it names the device, not
+            # whether it is mounted.
+            "is_mounted":          self.redis_controller.get_value(ParameterKey.IS_MOUNTED.value),
             "storage_type":        self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "storage_filesystem":  self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value) or "",
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",

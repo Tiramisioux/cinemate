@@ -47,26 +47,33 @@ class SlateToneTests(unittest.TestCase):
     def setUpClass(cls):
         cls.html = TEMPLATE.read_text(encoding="utf-8")
 
-    def test_frequency_has_a_card_bound_to_the_settings_key(self):
-        self.assertIn('id="f-tonehz"', self.html)
-        self.assertIn('data-path="hardware_outputs.rec_tone.frequency_hz"', self.html)
+    def test_the_pitch_is_edited_in_the_row_and_nowhere_else(self):
+        # It used to have a card as well, which made one value editable in two
+        # places. The row field sits next to the pin it applies to.
+        self.assertNotIn('id="f-tonehz"', self.html)
+        self.assertIn("var freqInput = document.createElement('input')", self.html)
+        self.assertIn("'Tone frequency in hertz'", self.html)
 
-    def test_frequency_card_is_labelled_in_hertz(self):
-        m = re.search(r'id="f-tonehz".*?</div>', self.html, re.S)
-        self.assertIsNotNone(m)
-        self.assertIn("Hz", m.group(0))
+    def test_the_pitch_still_reaches_the_file_from_the_row(self):
+        self.assertIn("state.hardware_outputs.rec_tone.frequency_hz = currentToneHz;", self.html)
 
-    def test_duty_cycle_card_still_bound(self):
-        self.assertIn('data-path="hardware_outputs.rec_tone.duty_cycle"', self.html)
+    def test_duty_cycle_has_no_field_but_is_still_written(self):
+        # 50% and staying there, so the card was noise -- but buildState's
+        # [data-path] walk cannot produce a key with no field behind it, and a
+        # save that omits it would let config_loader's setdefault decide it.
+        self.assertNotIn('data-path="hardware_outputs.rec_tone.duty_cycle"', self.html)
+        self.assertIn("prevTone.duty_cycle !== undefined", self.html)
+        self.assertIn("state.hardware_outputs.rec_tone.duty_cycle = prevTone.duty_cycle;",
+                      self.html)
 
-    def test_both_tone_cards_share_a_container_that_can_be_retired(self):
+    def test_what_remains_shares_a_container_that_can_be_retired(self):
         self.assertIn('id="toneCards"', self.html)
         self.assertIn("function syncToneCards()", self.html)
         self.assertIn("cards.hidden = !anyTone;", self.html)
 
     def test_frequency_is_synced_both_ways(self):
         self.assertIn("function syncToneHz(", self.html)
-        # The card seeds from settings, and the row fields mirror it.
+        # Seeded from settings on load, and every tone row's field mirrors it.
         self.assertIn("syncToneHz(loadedHz)", self.html)
         self.assertIn("syncToneHz(v, freqInput)", self.html)
         self.assertIn("syncToneHz(v, card)", self.html)

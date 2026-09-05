@@ -147,15 +147,15 @@ With all four configured, **+ Add encoder** reports "All four encoders are alrea
 3. Pick the pin from **Output** and confirm the remap.
 4. For a sync tone instead of a lamp, change **While rec** to **REC tone**.
 
-**REC tone** reveals an **at … Hz** field in the row and three cards below the list:
+**REC tone** reveals an **at … Hz** field in the row, and one card below the list:
 
 | Card                                 | Sets                                                        |
 | ------------------------------------ | ----------------------------------------------------------- |
-| **Slate tone frequency**             | Pitch in hertz                                              |
-| **Slate tone duty cycle**            | Pulse width in percent                                      |
 | **Mute the tone on a dropped frame** | Cuts the tone for about one frame when the camera drops one |
 
-One frequency serves every tone pin: the in‑row field and the card edit the same value. The cards are hidden while no pin is set to **REC tone**. Add as many tally and tone rows as you are wired for.
+One frequency serves every tone pin, edited in the row next to the pin it applies to. Duty cycle is
+fixed at 50% and has no field. The card is hidden while no pin is set to **REC tone**. Add as many
+tally and tone rows as you are wired for.
 
 !!! info ""
     Some push buttons are wired closed = 1 and open = 0. At startup CineMate detects buttons that read as pressed and reverses them, so both types work without special configuration.

@@ -985,7 +985,10 @@
      136, value 249, box grey 136, DROP purple 120/40/180) rather than the app
      shell's tokens: the point is that reading a recorded take looks like
      reading the live camera. Keep these in step with simple_gui's colours. */
-  .takestrip{ display:flex; gap:10px; overflow-x:auto; padding-bottom:10px; scrollbar-width:thin; min-width:0; }
+  /* Wraps rather than scrolling sideways: a card full of takes put every
+     take after the first few behind a horizontal scroll, which is a poor way
+     to find the one you just shot. */
+  .takestrip{ display:flex; flex-wrap:wrap; gap:10px; padding-bottom:10px; min-width:0; }
   .take{ flex:0 0 176px; width:176px; min-width:0; overflow:hidden; border:1px solid var(--line);
          background: var(--panel); cursor:pointer; text-align:left; padding:0; color:inherit; font:inherit; }
   .take:hover{ border-color: var(--muted); }
@@ -1149,7 +1152,7 @@
       <button type="button" data-page-tab="config" role="tab">config.txt<span class="tab-hint">boot &amp; sensors</span></button>
       <button type="button" data-page-tab="i2c" role="tab">i2c<span class="tab-hint">i2c hardware</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">settings.jsonc<span class="tab-hint">cameras, audio, controls</span></button>
-      <button type="button" data-page-tab="live" role="tab">Live view<span class="tab-hint">shoot now</span></button>
+      <button type="button" data-page-tab="live" role="tab">Live view<span class="tab-hint">test camera and controls</span></button>
       <button type="button" data-page-tab="playback" role="tab">Playback<span class="tab-hint">review takes</span></button>
       <button type="button" data-page-tab="raw" role="tab">RAW files<span class="tab-hint">browse &amp; download</span></button>
     </div>
@@ -2027,27 +2030,13 @@
       <div class="add-control-row">
         <button class="btn btn-ghost" type="button" id="addGpioOutBtn">+ Add pin</button>
       </div>
-      <!-- Both cards describe the slate tone, so they only mean anything once
-           a pin above is set to REC tone. Hidden together by syncToneCards(). -->
+      <!-- The pitch is edited in the row itself, next to the pin it belongs
+           to, so a card repeating it was a second place to change one value.
+           Duty cycle is 50% and stays there. Both keys are still written on
+           save -- see applyGpioOutToState. What is left describes the tone, so
+           it still only means anything once a pin above is set to REC tone,
+           and syncToneCards() still hides it. -->
       <div class="cards" style="margin-top:14px" id="toneCards">
-        <div class="card" data-search="rec tone frequency hz pitch slate">
-          <div class="card-main">
-            <label class="card-label" for="f-tonehz">Slate tone frequency</label>
-            <p class="card-help">Pitch of the tone, in hertz. One value for every pin set to REC tone.</p>
-          </div>
-          <div class="card-control">
-            <input class="field-input num-input" type="number" min="1" max="20000" id="f-tonehz" data-path="hardware_outputs.rec_tone.frequency_hz" data-type="number" data-original="1000" value="1000"> Hz
-          </div>
-        </div>
-        <div class="card" data-search="rec tone duty cycle pulse width">
-          <div class="card-main">
-            <label class="card-label" for="f-toneduty">Slate tone duty cycle</label>
-            <p class="card-help">Pulse width of the tone, in percent.</p>
-          </div>
-          <div class="card-control">
-            <input class="field-input num-input" type="number" min="1" max="99" id="f-toneduty" data-path="hardware_outputs.rec_tone.duty_cycle" data-type="number" data-original="50" value="50"> %
-          </div>
-        </div>
         <div class="card" data-search="rec tone relay drop frames mute dropped frame marker">
           <div class="card-main">
             <label class="card-label" for="f-relaydrop">Mute the tone on a dropped frame</label>
@@ -3915,7 +3904,7 @@
     });
   }
 
-  /* The frequency and duty-cycle cards describe the tone, so they are only
+  /* What is left in this block describes the tone, so it is only
      meaningful once some pin is set to REC tone. Now that [hidden] actually
      hides (see the rule at the top of this stylesheet), this works. */
   function syncToneCards(){
@@ -4065,11 +4054,19 @@
     state.hardware_outputs.rec_out_pin = recOutPins;
     state.hardware_outputs.rec_tone = state.hardware_outputs.rec_tone || {};
     state.hardware_outputs.rec_tone.pin = tonePins;
-    var hzCard = document.getElementById('f-tonehz');
-    var cardHz = hzCard && parseFloat(hzCard.value);
-    state.hardware_outputs.rec_tone.frequency_hz =
-      (cardHz && !isNaN(cardHz)) ? cardHz : currentToneHz;
+    /* The pitch card is gone; the row's own field is the only place it is
+       edited, and currentToneHz is what that field writes to. */
+    state.hardware_outputs.rec_tone.frequency_hz = currentToneHz;
     var prevOutputs = lastLoadedSettings && lastLoadedSettings.hardware_outputs;
+    /* duty_cycle has no field on the page any more, so buildState()'s
+       [data-path] walk no longer produces it. Carry it through from the last
+       real load, the same way pwm_pin is below -- otherwise every unrelated
+       save would drop the key and let config_loader's setdefault decide it. */
+    var prevTone = prevOutputs && prevOutputs.rec_tone;
+    if (prevTone && prevTone.duty_cycle !== undefined
+        && state.hardware_outputs.rec_tone.duty_cycle === undefined){
+      state.hardware_outputs.rec_tone.duty_cycle = prevTone.duty_cycle;
+    }
     if (prevOutputs && prevOutputs.pwm_pin !== undefined && state.hardware_outputs.pwm_pin === undefined){
       state.hardware_outputs.pwm_pin = prevOutputs.pwm_pin;
     }
@@ -4952,11 +4949,39 @@
      as recording stops"). This is the lightweight recheck: same recording
      flag the initial load already reads, without pbRenderTakes()/
      pbSelectTake() resetting the operator's place in the take strip. */
+  function pbTakeKey(list){
+    return (list || []).map(function(c){ return c.name; }).join('\u0000');
+  }
+
   function pbCheckRecording(){
     fetch('/settings-editor/api/playback/clips')
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res || !res.ok) return;
+        /* This poll already had the full take list and threw it away, so a
+           take shot with the pane open never appeared until a reload. Re-render
+           when the list actually changes -- not on every poll, which would
+           rebuild the strip under the operator three times a minute. */
+        var incoming = res.clips || [];
+        if (pbTakeKey(incoming) !== pbTakeKey(pbClips)){
+          var keepName = pbClip && pbClip.name;
+          pbClips = incoming;
+          pbRenderTakes();
+          var idx = -1;
+          for (var i = 0; i < pbClips.length; i++){
+            if (pbClips[i].name === keepName){ idx = i; break; }
+          }
+          if (idx >= 0){
+            /* Still there: restore the highlight only. pbSelectTake would
+               pause playback and reload the frame under someone watching. */
+            pbClip = pbClips[idx];
+            [].forEach.call(pbEl('pbTakeStrip').children, function(el, i){
+              el.setAttribute('aria-current', i === idx ? 'true' : 'false');
+            });
+          } else if (pbClips.length){
+            pbSelectTake(pbClips.length - 1);
+          }
+        }
         var wasRecordingLocked = pbState.recordingLocked;
         pbSetLocked(!!res.recording);
         // Resume only if THIS was what was locking us -- a take with no

@@ -380,10 +380,8 @@ pin; the trigger is always **While rec**.
 | + Add pin | New row: REC tally, no pin. |
 | Output | The row's pin, or **None** (dropped on save). Pins in use read "GPIO n — in use (…)" and are unselectable; a move asks to confirm. Ships GPIO 21 tally, GPIO 18 tone. |
 | Command | **REC tally** pulls the pin high for an LED or relay; **REC tone** puts a PWM sync beep on it for a recorder input. |
-| at … Hz | Tone pitch on REC tone rows; mirrors Slate tone frequency. |
+| at … Hz | Tone pitch on REC tone rows. The only place it is edited; all REC tone pins share it. 1–20000, default 1000. |
 | Remove | Deletes the row after a confirmation; gone from the file on save. |
-| Slate tone frequency | Hertz. 1–20000, default 1000. All REC tone pins share it. |
-| Slate tone duty cycle | Pulse width in percent. 1–99, default 50. |
 | Mute the tone on a dropped frame | Mutes the tone for about a frame on a drop. Default off; the gap makes drops findable by ear. |
 
 !!! tip ""

@@ -74,7 +74,7 @@
         * { box-sizing: border-box; }
 
         html, body {
-            height: 100%;
+            height: 100%;   /* fallback for anything without dvh */
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -83,6 +83,17 @@
             color: var(--value);
             -webkit-text-size-adjust: 100%;
             transition: background-color 90ms linear;
+        }
+
+        /* Safari and Chrome on a phone resolve 100% against the LARGE viewport
+           -- the one that exists when the toolbar is retracted -- so the foot
+           of a non-scrolling page sits behind the toolbar. With overflow
+           hidden there is no way to scroll it into view either, which is why
+           the button row, and FULLSCREEN with it, was simply unreachable on a
+           phone while emulation showed it on screen: emulation has no
+           toolbar. dvh is the visible viewport, toolbar included. */
+        @supports (height: 100dvh) {
+            html, body { height: 100dvh; }
         }
 
         #app {
@@ -239,8 +250,16 @@
            against this height instead of the row's, so the boxes scale to the
            picture the way they do at 1080p. */
         @media (orientation: portrait) and (max-width: 900px) {
-            #stage { align-items: center; }
-            #rail-left, #rail-right { height: var(--preview-h, 100%); }
+            /* align-self on the rails, NOT align-items on #stage: that stops
+               the preview column stretching too, so #preview-wrap collapses
+               to whatever --preview-h last said and sizePreview() then
+               letterboxes into that smaller box -- measured at 390x844, a
+               585px row with the picture settling at 237px and shrinking. */
+            #rail-left, #rail-right { align-self: center; height: var(--preview-h, 100%); }
+            /* The row is much taller than a 16:9 picture on a portrait phone,
+               so the buttons under it have room to be worth tapping. 23px was
+               the height they inherited from the desk layout. */
+            #button-row button, #button-row .btn-link { min-height: 40px; padding-inline: 1em; }
         }
         /* Fallback only, once the legibility floor above stops the shrink
            short of the rail's available height (fitRails sets .clipped).
@@ -484,6 +503,12 @@
             flex-direction: column;
             gap: calc(var(--gap) * 0.45);
         }
+        /* The cog is an <a>; give it the row's button shape so it does not
+           read as a stray link among buttons. */
+        #button-row .btn-link {
+            display: inline-flex; align-items: center; justify-content: center;
+            text-decoration: none;
+        }
         #button-row {
             display: flex;
             flex-wrap: wrap;
@@ -493,7 +518,7 @@
             border-top: 1px dashed var(--label);
         }
 
-        button {
+        button, #button-row .btn-link {
             font-family: inherit;
             font-weight: 700;
             font-size: calc(var(--value-size) * 0.62);
@@ -505,7 +530,7 @@
             cursor: pointer;
             white-space: nowrap;
         }
-        button:active { background: var(--label); color: #000; }
+        button:active, #button-row .btn-link:active { background: var(--label); color: #000; }
         button.on { background: var(--log-badge); border-color: var(--log-badge); color: #000; }
         button[disabled] { opacity: 0.45; cursor: default; }
 
@@ -870,6 +895,11 @@
         </div>
 
         <div id="button-row">
+            <!-- An <a>, not a button with a JS navigation, so long-press and
+                 open-in-new-tab behave the way they should on a phone. -->
+            <a id="btn-settings" class="btn-link" href="/settings-editor/" title="Settings, storage and playback" aria-label="Open the settings editor">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.13.35.4.63.74.79H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </a>
             <button id="btn-experiment" title="Show every remaining CLI control as a live widget">EXPERIMENT</button>
             <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
             <button id="btn-unmount" title="unmount">UNMOUNT</button>

@@ -9,4 +9,4 @@ During development you may want the Pi to join your normal Wi-Fi so it has inter
 If you plug an Ethernet cable into the Pi, you can keep the hotspot running while also having a wired connection for internet and local networking.
 
 !!! note ""
-    The web GUI only starts when `wlan0` or `eth0` already has an IP address. When networking is up, the UI is served at `<ip-address>:5000` and the clean preview stream is at `<ip-address>:8000/stream`. If the interface comes up only after CineMate has already started, restart CineMate to start the web server.
+    The web GUI only starts when `wlan0` or `eth0` already has an IP address. When networking is up, the UI is served at `<ip-address>:5000` and the clean preview stream is at `<ip-address>:8000`. If the interface comes up only after CineMate has already started, restart CineMate to start the web server.

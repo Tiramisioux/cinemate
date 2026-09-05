@@ -18,7 +18,7 @@ Burn the latest [CineMate image](https://github.com/Tiramisioux/cinemate/release
 - Plug in an HDMI monitor, **or**
 - Join the Wi‑Fi network `CinePi` (password `11111111`) and open `cinepi.local:5000`.
 
-Clean feed without the GUI: `cinepi.local:8000/stream`.
+Clean feed without the GUI: `cinepi.local:8000`.
 
 ## Recording
 

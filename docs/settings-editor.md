@@ -107,4 +107,4 @@ Reviews a take's frames, decoded live from the CinemaDNG files, at the settings'
 
 ## Live view tab
 
-Embeds the main [Web GUI](web-gui.md) (the page at the site root, port 5000) in an iframe — the same live image, ISO/shutter/fps/WB controls and record button, without leaving the settings editor. Open it in its own tab if the controls feel cramped here; the clean feed with no overlay is on port 8000 at `/stream` (`8001` for cam1 on a dual-sensor rig).
+Embeds the main [Web GUI](web-gui.md) (the page at the site root, port 5000) in an iframe — the same live image, ISO/shutter/fps/WB controls and record button, without leaving the settings editor. Open it in its own tab if the controls feel cramped here; the clean feed with no overlay is on port 8000 (`8001` for cam1 on a dual-sensor rig).

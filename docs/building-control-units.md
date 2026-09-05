@@ -271,7 +271,7 @@ while True:
 
 ## Design rules
 
-See [CineMate commands](cli-commands.md) for complete list of available commands. We are using the same syntax as for the CineMate CLI
+See [CineMate commands](cli-commands.md) for a complete list of available commands. We are using the same syntax as for the CineMate CLI.
 
 - **Send the command as plain text.** `POST "set iso 800"`, exactly what you would type. There is
   no `/iso` endpoint and there never will be. Because the commands themselves are the API, firmware

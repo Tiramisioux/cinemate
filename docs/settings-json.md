@@ -246,25 +246,12 @@ imx585 ClearHDR.
 
     An empty list is not a ban. Clear every chip, or turn both mode toggles off, and that filter stops applying, so every mode is offered. If a combination leaves a camera with nothing, CineMate logs a warning and keeps that camera's full mode list.
 
-The four ClearHDR values are seeded at launch. For a running camera use `set hdr threshold low/high`,
-`set hdr blend`, `set hdr gain adder`, or a pot / quad-rotary channel, with no restart. Nothing here
-is range-checked: an out-of-range value is written as typed.
-
-The embedded DNG thumbnail has no card here. `image_capture.thumbnail` is `0` off, `1` mono, `2`
-colour, colour by default, the standard Playback pane path. Change it with `set thumbnail`; it
-applies live, to new takes only.
-
-These map to `image_capture.k_steps`, `image_capture.bit_depths`, `image_capture.hdr` and
-`sensors.database_file`.
-
 ## Per-mode fps ceilings
-
 <a id="custom_modes"></a>
 
 ![Per-mode fps ceilings section of the CineMate settings editor](images/gui-fpsceilings.png)
 
-Caps the frame rate offered for one sensor mode, for when a trial recording shows that mode dropping
-frames.
+Caps the frame rate offered for one sensor mode, for when a trial recording shows that mode dropping frames.
 
 | Control | What it does |
 | --- | --- |

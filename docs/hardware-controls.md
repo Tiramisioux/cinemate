@@ -3,18 +3,18 @@
 !!! note ""
     All hardware on this page is optional. Add what you need, when you need it.
 
-| Hardware                                                                          | Connects to                                 | Typical use                                                 |                                                                 |
-| --------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
-| Push buttons                                                                      | any free GPIO pin + GND                     | start/stop recording, change resolution                     | ![Tactile push button](images/hardware/button.jpg)              |
-| Two- and three-way switches                                                       | GPIO pins + GND                             | zoom, shutter sync mode, fps presets                        | ![SPDT toggle switch](images/hardware/switch.jpg)               |
-| Rotary encoders                                                                   | two GPIO pins (+ button pin) + GND | stepping ISO, shutter angle, fps, WB                        | ![Rotary encoder](images/hardware/encoder.jpg)                  |
-| Potentiometers                                                                    | a Grove Base HAT analog port                | dials for ISO, shutter angle, fps, WB                       | ![Panel-mount potentiometer](images/hardware/pot.jpg)           |
-| [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/)   | GPIO header                                 | analog inputs for potentiometers | ![Grove Base HAT](images/hardware/grovehat.jpg)                 |
-| [Adafruit quad rotary encoder](https://www.adafruit.com/product/5752)             | I²C (STEMMA QT or SDA/SCL pins)             | four dials and push buttons in one module                   | ![Adafruit quad rotary encoder](images/hardware/quadrotary.jpg) |
-| [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) | PCIe (Raspberry Pi 5 only)                  | fast storage (CFexpress Type B)                 | ![CFE Hat](images/hardware/cfehat.jpg)                          |
-| LEDs                                                                              | a GPIO out pin + GND, via a resistor    | rec tally lamp                                              | ![5mm LED](images/hardware/led.jpg)                             |
-| Resistors | in series with an LED | limits the LED's current; 220 Ω is the usual value | ![Through-hole resistors](images/hardware/resistor.jpg) |
-| I²C OLED display | I²C (SDA/SCL pins) | status screen: ISO, timecode, space left | ![SSD1306 OLED display](images/hardware/oled.jpg) |
+| Hardware                                                                          | Connects to                          | Typical use                                     |                                                                 |
+| --------------------------------------------------------------------------------- | ------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- |
+| Push buttons                                                                      | any free GPIO pin + GND              | start/stop recording, change resolution         | ![Tactile push button](images/hardware/button.jpg)              |
+| Two- and three-way switches                                                       | GPIO pins + GND                      | zoom, shutter sync mode, fps presets            | ![SPDT toggle switch](images/hardware/switch.jpg)               |
+| Rotary encoders                                                                   | two GPIO pins (+ button pin) + GND   | stepping ISO, shutter angle, fps, WB            | ![Rotary encoder](images/hardware/encoder.jpg)                  |
+| Potentiometers                                                                    | a Grove Base HAT analog port         | dials for ISO, shutter angle, fps, WB           | ![Panel-mount potentiometer](images/hardware/pot.jpg)           |
+| [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/)   | GPIO header                          | analog inputs for potentiometers                | ![Grove Base HAT](images/hardware/grovehat.jpg)                 |
+| [Adafruit quad rotary encoder](https://www.adafruit.com/product/5752)             | I²C (STEMMA QT or SDA/SCL pins)      | four dials and push buttons in one module       | ![Adafruit quad rotary encoder](images/hardware/quadrotary.jpg) |
+| [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) | PCIe (Raspberry Pi 5 only)           | fast storage (CFexpress Type B)                 | ![CFE Hat](images/hardware/cfehat.jpg)                          |
+| LEDs                                                                              | a GPIO out pin + GND, via a resistor | rec tally lamp                                  | ![5mm LED](images/hardware/led.jpg)                             |
+| Resistor                                                                          | in series with an LED                | limits the LED's current; 220 Ω is a good value | ![220 Ω resistor](images/hardware/resistor.jpg)         |
+| I²C OLED display                                                                  | I²C (SDA/SCL pins)                   | status screen: ISO, timecode, space left        | ![SSD1306 OLED display](images/hardware/oled.jpg)               |
 
 Physical controls are mapped in [the settings file](settings-json.md). Type `editsettings` on the Pi to open it or use the Web UI. Changes apply at the next CineMate start. Controls call the same commands as the CLI and web GUI, listed under [commands reference](cli-commands.md).
 

@@ -90,7 +90,7 @@ you.
     dtoverlay=imx296,mono,cam1
     ```
 
-### Example of the stock config.txt created by the isntaller script
+### Example of the stock config.txt created by the installer script
 
 ```shell
 # >>> cinemate-install >>>

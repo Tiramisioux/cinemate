@@ -535,9 +535,17 @@
 
            #stage keeps a floor for the same reason -- whatever else happens,
            the picture does not disappear. */
-        #app.xp-fill { grid-template-rows: auto minmax(170px, 1fr) auto auto; }
+        #app.xp-fill { grid-template-rows: auto minmax(240px, 1fr) auto auto; }
         #app.xp-fill #experiment {
-            max-height: max(160px, calc(100vh - 330px));
+            /* The picture comes first. An earlier cap let the drawer take
+               whatever it wanted, which pinned #stage at its floor and left a
+               302x170 preview inside a 1266px-wide pane -- and dragged the
+               rails down with it, since fitRails() sizes them off the stage's
+               height and their max() floors stop the shrink short, so the
+               badges stayed large beside a tiny picture. Measured on the
+               camera at 1400x900: this cap gives a 791x442 preview against
+               298x166 before, with the drawer still 240px and scrolling. */
+            max-height: min(28vh, 260px);
             min-height: 0;
         }
 

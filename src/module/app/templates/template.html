@@ -241,6 +241,7 @@
             overscroll-behavior: contain;   /* matches #experiment; the rails were missed */
         }
         .rail.fitted { --rail-pad: 0.4; }   /* reclaim the dead band once we are shrinking */
+
         /* Upright on a phone the rails are as tall as the picture and sit
            beside it, the proportion simple_gui draws on the HDMI overlay --
            60x40 boxes flanking the image on a 1920x1080 canvas, not flanking
@@ -2296,6 +2297,16 @@
     const fsExit = document.exitFullscreen || document.webkitExitFullscreen;
     const fsActive = () => document.fullscreenElement || document.webkitFullscreenElement;
 
+    // iOS has no Fullscreen API on anything but a <video>, and this preview is
+    // an MJPEG <img>, so the button cannot work there and is hidden rather
+    // than left to throw. A "maximise" stand-in was tried and measured on a
+    // 390px-wide phone: hiding the readouts and rails changed the picture not
+    // at all -- 438x246 before and after -- because a 16:9 picture on a
+    // portrait phone is limited by width, not height, and the rails give back
+    // 31px a side out of ~490. A button that appears to do something and does
+    // nothing is worse than no button, which is the reason this one hides.
+    // Real screen on a phone comes from turning it landscape, or from Add to
+    // Home Screen, which drops the browser chrome entirely.
     show(fsBtn, Boolean(fsRequest && fsExit));
 
     if (fsRequest && fsExit) {

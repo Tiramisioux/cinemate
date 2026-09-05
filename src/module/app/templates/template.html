@@ -521,14 +521,25 @@
            different mode of the same screen. */
         /* Embedded in the settings editor's Live view pane (?xp=1), where the
            drawer is the point of the pane rather than something opened over a
-           shot. It takes the leftover height instead of a fixed cap, so it
-           fills to the bottom; the preview keeps a real share above it, and
-           the drawer's own overflow-y handles content taller than the space.
-           Both rows stay fr rather than auto -- an auto row here would size
-           off the preview, which sizes itself off its box, and the two would
-           chase each other through the ResizeObserver below. */
-        #app.xp-fill { grid-template-rows: auto minmax(0, 0.9fr) auto minmax(0, 1.1fr); }
-        #app.xp-fill #experiment { max-height: none; }
+           shot, so it is given a much taller cap than the shooting screen's.
+
+           The cap has to stay a definite length. Handing the drawer a flexible
+           row and letting it size itself does not work: a grid item's
+           automatic minimum is its content, so the row grows to the full
+           height of the controls, #stage is squeezed to 0 -- the preview
+           vanishes outright -- and overflow-y never engages because the box is
+           already as tall as its content. min-height:0 alone does not save it.
+           Measured on the camera: rows-and-fr gave stage 0px and 125px of
+           overflow, this gives stage 170px, drawer 527px and a drawer that
+           actually scrolls.
+
+           #stage keeps a floor for the same reason -- whatever else happens,
+           the picture does not disappear. */
+        #app.xp-fill { grid-template-rows: auto minmax(170px, 1fr) auto auto; }
+        #app.xp-fill #experiment {
+            max-height: max(160px, calc(100vh - 330px));
+            min-height: 0;
+        }
 
         #experiment {
             max-height: min(46vh, 460px);

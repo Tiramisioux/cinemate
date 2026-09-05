@@ -525,13 +525,23 @@
      pixels, so at --line's 1.27:1 it is invisible. Dotted at --muted reads
      roughly like a solid --line rule, and matches the dashed --muted
      underlines already used for the Remove / View raw links. */
-  /* The gesture select is a 10.5px uppercase chip and the command select is
-     12.5px text, so their boxes come out 22px and 27px. align-items:start
-     lines up their tops, and a 5px height difference under aligned tops is
-     exactly what reads as misaligned. Match the heights instead of centring:
-     centring would drop the action label out of line the moment the command
-     cell wraps its argument onto a second row. */
-  .gesture select.g-name-select{ min-height: 27px; }
+  /* One height for every control on a gesture row, so the boxes line up and
+     the text inside them centres on the same line. They start out different:
+     the gesture select is a 10.5px uppercase chip, the command select 12.5px
+     text, a number argument gets a number input's own taller default box, and
+     the pencil is a 26px square. Measured on the camera, that came out as
+     selects 27px, argument input 29px -- which shoved the command select down
+     a pixel -- and a pencil centring to a half-pixel.
+     Heights matched rather than centring the row: centring would drop the
+     action label out of line the moment the command cell wraps its argument
+     onto a second row, which is the case align-items:start exists for. */
+  .gesture select.g-name-select,
+  .gesture select.action-method,
+  .action-args select.field-input,
+  .action-args input.field-input,
+  .action-manual-toggle {
+    height: 27px; min-height: 27px; box-sizing: border-box;
+  }
   .gesture + .gesture{ border-top: 1px dotted var(--muted); }
   .gesture:first-child{ padding-top: 0; }
   .gesture:last-child{ padding-bottom: 0; }
@@ -1165,15 +1175,15 @@
     </div>
     <div class="rail-group" data-page="raw">
       <div class="rail-title eyebrow">RAW files</div>
-      <p class="rail-blurb">Everything on the active storage device — browse, sort and pull takes off over Wi‑Fi. Nothing here needs Cinemate to restart.</p>
+      <p class="rail-blurb">Everything on the active storage device — browse, sort and pull takes off over Wi‑Fi.</p>
     </div>
     <div class="rail-group" data-page="playback">
       <div class="rail-title eyebrow">Playback</div>
-      <p class="rail-blurb">Review takes off the card at the conform frame rate. Reads only — playback is held while a take is recording, so it can never cost you one.</p>
+      <p class="rail-blurb">Review takes off the card at the conform frame rate.</p>
     </div>
     <div class="rail-group" data-page="live">
       <div class="rail-title eyebrow">Live view</div>
-      <p class="rail-blurb">The shooting screen — image, ISO/shutter/fps/WB, and everything <span class="mono">simple_gui.py</span> already draws on the HDMI overlay, mirrored to the browser.</p>
+      <p class="rail-blurb">The shooting screen — image, ISO/shutter/fps/WB, and everything <span class="mono">simple_gui.py</span> already draws on the HDMI overlay, mirrored to the browser. It is the camera's own page on port <span class="mono">5000</span>, embedded here. For the picture on its own with nothing drawn over it, use port <span class="mono">8000</span> instead — <span class="mono">8001</span> for a second sensor.</p>
     </div>
   </nav>
 
@@ -1187,7 +1197,7 @@
       <button type="button" data-page-tab="raw" role="tab">RAW files<span class="tab-hint">browse &amp; download</span></button>
     </div>
     <p class="lede" data-page-lede="config" hidden></p>
-    <p class="lede" data-page-lede="settings"><strong>This edits <code class="mono">/home/pi/cinemate/settings.jsonc</code></strong></p>
+    <p class="lede" data-page-lede="settings" hidden></p>
     <p class="lede" data-page-lede="i2c" hidden></p>
     <p class="lede" data-page-lede="live" hidden></p>
     <p class="lede" data-page-lede="playback" hidden></p>
@@ -2220,7 +2230,6 @@
     <section class="group" id="playback" data-page="playback">
       <header class="group-head">
         <h2>Playback</h2>
-        <p class="group-sub">Frames are decoded from the CinemaDNG as you play — this is a review preview for framing, focus and motion, not a grade.</p>
       </header>
 
       <p class="eyebrow" style="margin-top:0">Takes on card</p>
@@ -4597,21 +4606,13 @@
       list.appendChild(row);
     });
 
-    footer.textContent = takes.length
-      ? 'Showing all ' + takes.length + ' take' + (takes.length === 1 ? '' : 's') + ' across mounted storage.'
-      : 'No takes found on mounted storage.';
-    // showDirectoryPicker() needs a secure context, and even there only
-    // Chromium implements it -- Safari and Firefox expose it on neither http
-    // nor https. Two different reasons read as the same missing button, so
-    // say which one applies rather than let it look like a bug either way.
-    if (!CAN_PICK_FOLDER) {
-      footer.textContent += window.isSecureContext
-        ? ' This browser has no folder picker (Chromium only, today) — enable ' +
-          '"Ask where to save each file" in your download settings to choose a folder yourself.'
-        : ' This page is served over plain HTTP, so it cannot ask where to save a download — turn on ' +
-          'system.https in settings.jsonc, or enable "Ask where to save each file" in your browser’s ' +
-          'download settings to choose a folder yourself.';
-    }
+    /* The count restated a list the operator is looking at, and the advisory
+       under it sent them to a system.https switch this editor does not have a
+       field for -- it exists in settings.jsonc and nowhere on this page, so
+       the instruction could not be followed from here. Both gone. The empty
+       case stays, because an empty list on its own is ambiguous: no takes, or
+       nothing mounted. */
+    footer.textContent = takes.length ? '' : 'No takes found on mounted storage.';
 
     wireClipRowActions();
     updateBulkBar();

@@ -45,9 +45,6 @@ from anywhere else, check it from the hotspot or poll `GET /api/v1/status` inste
 Either way: `hello` identifies the camera and `rec` starts a recording. Send `rec` again to stop.
 On the hotspot, `nc -ul 8888` also prints the status broadcast.
 
-If those work, every example below will work. If they do not, fix that first — see
-[Troubleshooting](#troubleshooting).
-
 ## Example projects
 
 ### ESP32 — record button and tally light

@@ -561,6 +561,17 @@
         /* The embedded pane is short whatever the window does -- the drawer
            always takes a share -- so it takes the lower floors outright. */
         #app.xp-fill .rail { --floor-gap: 2px; --floor-label: 8px; --floor-box: 18px; --floor-height: 13px; }
+
+        /* Opening the drawer in this pane must not cost the picture any size.
+           The shooting screen deliberately trades the other way -- there the
+           page never scrolls and the drawer eats into the preview, because a
+           layout that grows under the operator mid-shot is worse than a
+           smaller picture. This pane is a desk tool, so it grows instead: the
+           stage is pinned to the height it had with the drawer closed, the
+           drawer runs to its full natural height, and the pane scrolls. */
+        #app.xp-fill.xp-open { height: auto; min-height: 100%; }
+        #app.xp-fill.xp-open #experiment { max-height: none; overflow-y: visible; }
+        html.xp-scroll, html.xp-scroll body { overflow: auto; height: auto; min-height: 100%; }
         #app.xp-fill { grid-template-rows: auto minmax(240px, 1fr) auto auto; }
         #app.xp-fill #experiment {
             /* The picture comes first. An earlier cap let the drawer take
@@ -2034,6 +2045,12 @@
             // Dropping src first is what makes the browser re-request an
             // identical URL -- which is the reason the cache-buster was there.
             img.removeAttribute('src');
+            // This connection has produced nothing yet, whatever the last one
+            // managed. Without clearing the flag the watchdog below declines
+            // to arm, and a reconnect that lands silent -- the camera still
+            // coming up after a restart, which is exactly when reloadStreams()
+            // runs -- has nothing watching it and stays black.
+            img._gotFrame = false;
             img.src = img.dataset.streamBase;
             armStreamWatchdog(img);
         }, delay);
@@ -2151,6 +2168,23 @@
     function setExperimentOpen(open) {
         const panel = $('experiment');
         if (open && !xpBuilt) { buildExperiment(); }
+        const app = $('app');
+        if (app.classList.contains('xp-fill')) {
+            const stage = $('stage');
+            if (open) {
+                // Measured before the drawer is shown, so this is the height
+                // the picture has with it closed -- pin that, and the drawer
+                // takes new space below rather than taking the picture's.
+                const h = Math.round(stage.getBoundingClientRect().height);
+                if (h > 0) { stage.style.height = h + 'px'; }
+                app.classList.add('xp-open');
+                document.documentElement.classList.add('xp-scroll');
+            } else {
+                app.classList.remove('xp-open');
+                document.documentElement.classList.remove('xp-scroll');
+                stage.style.height = '';
+            }
+        }
         panel.classList.toggle('hidden', !open);
         $('btn-experiment').classList.toggle('on', open);
         render();

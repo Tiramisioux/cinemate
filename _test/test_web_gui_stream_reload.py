@@ -94,6 +94,19 @@ class FirstFrameWatchdogTests(unittest.TestCase):
         reload_fn = reload_fn[:reload_fn.index("\n    }")]
         self.assertIn("armStreamWatchdog(img)", reload_fn)
 
+    def test_a_reconnect_is_watched_even_after_a_working_stream(self):
+        # load fires once per connection, not per frame (measured on the
+        # camera: zero load events in ten seconds of a running stream), so
+        # _gotFrame describes the connection that set it and nothing else.
+        # Carrying it across a reconnect left every recovery unwatched --
+        # including the one reloadStreams() fires when the camera restarts,
+        # which is precisely when the new connection is likely to be silent.
+        reload_fn = self.html[self.html.index("function scheduleStreamReload("):]
+        reload_fn = reload_fn[:reload_fn.index("\n    }")]
+        self.assertIn("img._gotFrame = false;", reload_fn)
+        self.assertLess(reload_fn.index("img._gotFrame = false;"),
+                        reload_fn.index("img.src = img.dataset.streamBase;"))
+
     def test_the_first_frame_disarms_it_for_good(self):
         # not re-armed per load: whether a browser fires load per part of a
         # multipart/x-mixed-replace response is not worth betting a reconnect

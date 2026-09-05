@@ -91,12 +91,17 @@ class MergedClientShapeTests(unittest.TestCase):
         self.assertIsNotNone(m)
         self.assertIn("!CAN_PICK_FOLDER && names.length > 1", m.group(0))
 
-    def test_footer_names_the_right_reason_for_a_missing_picker(self):
-        # Two different reasons (plain HTTP vs. Safari/Firefox) used to read
-        # as the same missing button.
-        self.assertIn("window.isSecureContext", self.html)
-        self.assertIn("turn on ' +\n          'system.https in settings.jsonc", self.html)
-        self.assertIn("Chromium only, today", self.html)
+    def test_the_footer_does_not_send_operators_to_a_switch_that_is_not_there(self):
+        # It used to name two different reasons for the missing picker, one of
+        # which told the operator to turn on system.https "in settings.jsonc".
+        # That block exists in the file and has no field anywhere in this
+        # editor, so the instruction could not be carried out from the page
+        # giving it. Both branches are gone.
+        self.assertNotIn("system.https in settings.jsonc", self.html)
+        self.assertNotIn("Chromium only, today", self.html)
+        # the empty case stays: an empty list alone cannot say whether there
+        # are no takes or nothing is mounted
+        self.assertIn("'No takes found on mounted storage.'", self.html)
 
 
 class DeleteStorageAndReasonTests(unittest.TestCase):

@@ -1506,12 +1506,14 @@ class SimpleGUI(threading.Thread):
 
             storage = str(values.get("storage_type", "")).upper()
             if storage and storage != "NONE":
-                draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
-                               fill=BOX_COLOR)
-                tw, th = draw.textbbox((0, 0), storage, font=box_font)[2:]
-                tx = box_x + (BOX_W - tw) // 2
-                ty = y      + (BOX_H - th) // 2
-                draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
+                # Through _draw_status_box rather than drawn here, for its
+                # overflow fallback: this centred box_font directly, so NVME
+                # -- four characters where CFE and SSD are three -- drew wider
+                # than the box it sits in. That helper is what already keeps
+                # LOG10 inside its box.
+                self._draw_status_box(
+                    draw, [box_x, y, box_x + BOX_W, y + BOX_H],
+                    storage, BOX_COLOR, box_font, TEXT_COLOR)
                 y += BOX_H + BOX_GAP
                 fs_raw = str(values.get("storage_filesystem", "")).lower()
                 if fs_raw and fs_raw not in ("none", "unknown", ""):

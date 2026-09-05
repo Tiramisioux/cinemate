@@ -280,7 +280,7 @@ CineMate opens the first of these that answers:
 | `/dev/serial0` | The GPIO header's UART — Tx on GPIO 14, Rx on GPIO 15 |
 | `/dev/ttyS0` | The same UART under its other name |
 
-**9600 baud, 8N1, one command per line.** The line is handed to the same dispatcher the CLI and the
+**115200 baud, 8N1, one command per line.** The line is handed to the same dispatcher the CLI and the
 Web API use, so anything in the [commands reference](cli-commands.md) works unchanged:
 
 ```text

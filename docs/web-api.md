@@ -159,7 +159,7 @@ The stock [`settings.jsonc`](settings-json.md) already carries a full `system.we
 | Path | Transport | Same command lines? |
 |---|---|---|
 | CineMate CLI | `cinemate` in a terminal | Yes |
-| Serial | Tx/Rx pins or USB, 9600 baud | Yes |
+| Serial | Tx/Rx pins or USB, 115200 baud | Yes |
 | **Web API** | HTTP on port 5000 | **Yes** |
 | Web GUI | Browser on port 5000, posts to `/api/v1/cmd` | Yes |
 | GPIO / rotary / I²C | [`settings.jsonc`](settings-json.md) mappings | No — see below |

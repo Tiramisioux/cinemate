@@ -855,7 +855,11 @@ def run_application(args, log_queue):
     # SerialHandler to receive serial commands and treat them as CLI
     serial_handler = SerialHandler(
         callback=command_executor.handle_received_data,
-        baudrate=9600,
+        # 115200, matching SerialHandler's own default and the ESP32 example in
+        # docs/building-control-units.md. This passed 9600, so a controller
+        # built from the documentation talked to the camera at the wrong rate
+        # and got nothing but framing errors.
+        baudrate=115200,
         timeout=1,
         log_queue=log_queue  # Optional: for future serial logging
     )

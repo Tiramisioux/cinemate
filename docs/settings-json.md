@@ -154,7 +154,7 @@ and the two ends move to the right of the row joined by an arrow — the range t
 | Anamorphic desqueeze stops | Preview desqueeze factors; above 1 widens the preview, recording untouched. Step-only, no pot or free stepping. Default 1, 1.33, 2. |
 
 Free stepping drives pots, the quad encoders, the CLI `inc`/`dec` commands and the web GUI. Assign a
-pot in **Pots & free stepping**.
+pot in **Potentiometers**.
 
 The list still sets the range when free stepping is on — its lowest and highest entries are the ends
 of the sweep, so editing them moves what the control can reach. The stops in between stop mattering,
@@ -180,9 +180,9 @@ increment is yours.
 These map to `arrays.iso`, `arrays.shutter_a`, `arrays.fps`, `arrays.wb` and
 `hdmi_display.preview.anamorphic.steps`.
 
-## Pots & free stepping
+## Potentiometers
 
-![Pots & free stepping section of the CineMate settings editor](images/gui-pots.png)
+![Potentiometers section of the CineMate settings editor](images/gui-pots.png)
 
 Assign a Grove Base HAT ADC channel to each parameter you want on a dial. ISO, shutter angle, frame
 rate and white balance set their free stepping in **Value steps**. Only assign channels with a pot

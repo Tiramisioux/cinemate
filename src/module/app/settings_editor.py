@@ -846,7 +846,10 @@ def sync_rtc():
 
 
 # ── live log ─────────────────────────────────────────────────────────────
-LOG_TAIL_LINES = 200
+# Enough history to still hold a camera start after a busy stretch: the
+# encoder prints its configuration once, and that line is the one worth
+# reaching for when a take comes out wrong.
+LOG_TAIL_LINES = 800
 LOG_MAX_LINE = 2000
 
 

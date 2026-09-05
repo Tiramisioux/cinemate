@@ -153,6 +153,8 @@ class QuadRotaryController(threading.Thread):
         self.connected = False
         self._last_reconnect = 0
         self._stop_event = threading.Event()
+        self._ever_connected = False
+        self._absent_logged = False
 
         if self.enabled:
             self._initialize_device()
@@ -174,6 +176,7 @@ class QuadRotaryController(threading.Thread):
             for button in self.buttons.values():
                 button.reset_state()
             self.connected = True
+            self._ever_connected = True
             logging.info(
                 "Quad rotary controller initialized with positions=%s button_states=%s",
                 self.last_positions,
@@ -181,8 +184,22 @@ class QuadRotaryController(threading.Thread):
             )
         except Exception as exc:
             self.connected = False
-            logging.warning("Failed to initialize quad rotary controller: %s", exc)
             self._last_reconnect = time.time()
+            if self._ever_connected:
+                # It was there and went away: a bus glitch or a knocked cable,
+                # worth retrying and worth saying so each time.
+                logging.warning("Lost the quad rotary controller: %s", exc)
+            elif not self._absent_logged:
+                # Never present since startup. Say it once. Retrying every few
+                # seconds for a board that is simply not fitted filled the log
+                # with an identical line twelve times a minute, which buried
+                # everything else -- including the messages needed to diagnose
+                # anything else on the camera.
+                self._absent_logged = True
+                logging.info(
+                    "No quad rotary controller at 0x49; not looking again. "
+                    "Attach one and restart CineMate, or turn it off in "
+                    "input_peripherals.quad_rotary_controller.enabled. (%s)", exc)
 
     # ------------------------------------------------------------------
     def update(self):
@@ -190,6 +207,11 @@ class QuadRotaryController(threading.Thread):
             return
 
         if not self.connected:
+            # Only a board that was present at some point is worth waiting for.
+            # One that never answered is not going to start answering on its
+            # own, and probing for it forever is what filled the log.
+            if not self._ever_connected:
+                return
             now = time.time()
             if now - self._last_reconnect >= self.RECONNECT_INTERVAL:
                 self._initialize_device()

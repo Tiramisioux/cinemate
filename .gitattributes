@@ -1,3 +1,20 @@
-*.jpg filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
-*.ipynb filter=lfs diff=lfs merge=lfs -text
+# No git-lfs here. These three patterns used to carry
+# `filter=lfs diff=lfs merge=lfs`, but nothing was ever stored in LFS -- `git
+# lfs ls-files` returned nothing while 46 tracked images sat in the repo as
+# ordinary binaries. The filter therefore did nothing except report every one
+# of them as modified on every checkout, and that noise was not harmless: a
+# `git add -u` swept four of those phantom modifications in and committed
+# 130-byte pointer files over real PNGs, one of them the docs landing-page
+# figure.
+#
+# Worth knowing if LFS is ever reintroduced deliberately: `-c
+# filter.lfs.clean=cat` does NOT disable the filter, because
+# `filter.lfs.process` takes precedence and silently wins. Both must be
+# unset, and the result checked with `git cat-file -s`.
+#
+# `binary` is kept: it is shorthand for `-diff -merge -text`, so these files
+# stay marked binary exactly as the `-text` on the old lines did, and git does
+# no end-of-line translation on them.
+*.jpg binary
+*.png binary
+*.ipynb binary

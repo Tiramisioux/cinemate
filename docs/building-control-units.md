@@ -293,13 +293,9 @@ No JSON, no framing, no handshake — write the text and a newline.
 
 ### What the camera sends back
 
-One thing, unprompted: `rec` when a recording starts and `stop` when it ends. That is a tally for a
-lamp or a display on the other end of the wire, and it is driven by the camera's own recording state
-rather than by whatever asked for the recording — so it fires whether the take was started from the
-controller, a GPIO button, the web GUI or the CLI.
+One thing, unprompted: `rec` when a recording starts and `stop` when it ends. That is a tally for a lamp or a display on the other end of the wire, and it is driven by the camera's own recording state rather than by whatever asked for the recording — so it fires whether the take was started from the controller, a GPIO button, the web GUI or the CLI.
 
-Nothing else is echoed. A command's reply is not sent back over serial: if a controller needs to read
-a value, the [Web API](web-api.md)'s `/get/<key>` is the way, and that needs the network.
+Nothing else is echoed. A command's reply is not sent back over serial: if a controller needs to read a value, the [Web API](web-api.md)'s `/get/<key>` is the way, and that needs the network.
 
 !!! note "The SER badge means USB, specifically"
     The `SER` badge in the GUI and on the HDMI overlay tracks `/dev/ttyACM0` alone. A controller on
@@ -319,18 +315,14 @@ controller needs a level shifter on the line into GPIO 15, or it will damage the
 
 See [CineMate commands](cli-commands.md) for a complete list of available commands. We are using the same syntax as for the CineMate CLI.
 
-- **Send the command as plain text.** `POST "set iso 800"`, exactly what you would type. There is
-  no `/iso` endpoint and there never will be. Because the commands themselves are the API, firmware
+- **Send the command as plain text.** `POST "set iso 800"`, exactly what you would type. There is no `/iso` endpoint and there never will be. Because the commands themselves are the API, firmware
   you write today still works when new commands are added.
-- **Listen to the status broadcast instead of asking over and over.** The camera sends one packet
-  to everyone five times a second, so ten controllers cost it the same as one. Asking in a loop
-  costs it once per device.
+- **Listen to the status broadcast instead of asking over and over.** The camera sends one packet to everyone five times a second, so ten controllers cost it the same as one. Asking in a loop costs it once per device.
 - **To read one value, use `/api/v1/get/<key>`.** It replies with just the value as text, so there
   is nothing to parse and nothing to allocate.
 - **To read several, add `?keys=` to `/status`.** Without it you get every value, a few kilobytes,
   which is a lot to hand a Pico.
-- **Only open an SSE stream if you need every change the instant it happens.** The camera holds
-  four at most, and each one occupies a connection for as long as it is open.
+- **Only open an SSE stream if you need every change the instant it happens.** The camera holds four at most, and each one occupies a connection for as long as it is open.
 
 ## Troubleshooting
 

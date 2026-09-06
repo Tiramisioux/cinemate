@@ -4317,18 +4317,28 @@
     };
   }
 
+  /* Writes config.txt and, server-side, reboots: put_config_txt() schedules
+     cinepi_controller.reboot() 0.4 s after it answers, so `rebooting` in the
+     reply means a reboot is already on its way. Shared by the top bar's Save
+     and by the Save & reboot card, which used to play an animation and write
+     nothing -- see cfgRebootBtn below. */
+  function saveConfigTxt(){
+    return fetch('/settings-editor/api/config-txt', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentConfigState())
+    }).then(function(r){ return r.json(); }).then(function(res){
+      if (res.ok){ configDirty = false; updateDirtyPill(); }
+      return res;
+    }).catch(function(err){ return { ok: false, message: String(err) }; });
+  }
+
   /* ---------- save ---------- */
   document.getElementById('saveBtn').addEventListener('click', function(){
     if (activePage === 'config'){
-      fetch('/settings-editor/api/config-txt', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentConfigState())
-      }).then(function(r){ return r.json(); }).then(function(res){
+      saveConfigTxt().then(function(res){
         if (!res.ok){ showToast('Save failed: ' + res.message); return; }
         showToast(res.rebooting ? 'Saved. Rebooting the Pi…' : 'Saved config.txt.');
-        configDirty = false;
-        updateDirtyPill();
-      }).catch(function(err){ showToast('Save failed: ' + err); });
+      });
       return;
     }
 
@@ -6383,22 +6393,62 @@
   var cfgStatusDot = document.getElementById('cfgStatusDot');
   var cfgStatusText = document.getElementById('cfgStatusText');
   var cfgConsoleEl = document.getElementById('cfgConsole');
+  /* The animation is what happens AFTER the write, never instead of it. This
+     button used to call runBootSequence() alone: config.txt was never written,
+     nothing rebooted, and the card still finished on "Pi is back up" -- the
+     same defect F-291 fixed on Restart Cinemate, in the one place where the
+     operator has most reason to believe a reboot happened. */
   cfgRebootBtn.addEventListener('click', function(){
-    runBootSequence({
-      btn: cfgRebootBtn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl,
-      command: '$ sudo reboot',
-      waitText: 'waiting for the Pi to come back…',
-      /* A full reboot is a lot slower than a service restart, and the network
-         has to come back with it. */
-      settleMs: 12000, timeoutMs: 180000,
-      busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
-      readyText: 'config.txt matches the running Pi — <b class="din">READY</b>',
-      doneToast: 'Pi is back up'
+    cfgRebootBtn.disabled = true;
+    saveConfigTxt().then(function(res){
+      if (!res.ok){
+        cfgRebootBtn.disabled = false;
+        showToast('Save failed: ' + (res.message || 'unknown error'));
+        return;
+      }
+      if (!res.rebooting){
+        /* The file is written but no controller was attached to reboot, so
+           saying "Rebooting" would be the same lie in a smaller font. */
+        cfgRebootBtn.disabled = false;
+        showToast('Saved config.txt — reboot the Pi yourself to apply it.');
+        return;
+      }
+      runBootSequence({
+        btn: cfgRebootBtn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl,
+        command: '$ sudo reboot',
+        waitText: 'waiting for the Pi to come back…',
+        /* A full reboot is a lot slower than a service restart, and the network
+           has to come back with it. */
+        settleMs: 12000, timeoutMs: 180000,
+        busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
+        readyText: 'config.txt matches the running Pi — <b class="din">READY</b>',
+        doneToast: 'Pi is back up'
+      });
     });
   });
+  /* Reboot for any other reason: this one must NOT write config.txt. It used
+     to scroll to the boot-config card and click it, which meant "Reboot Pi"
+     silently carried whatever unsaved edits that page happened to be holding
+     -- and, because that button wrote nothing either, actually did neither. */
   document.getElementById('genericRebootBtn').addEventListener('click', function(){
-    document.getElementById('bootconfig').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-    cfgRebootBtn.click();
+    var btn = document.getElementById('genericRebootBtn');
+    btn.disabled = true;
+    apiCmd('reboot').then(function(result){
+      if (!result.ok){
+        btn.disabled = false;
+        showToast('Reboot failed: ' + (result.body || 'unknown error'));
+        return;
+      }
+      runBootSequence({
+        btn: btn, dot: statusDot, text: statusText, consoleEl: consoleEl,
+        command: '$ sudo reboot',
+        waitText: 'waiting for the Pi to come back…',
+        settleMs: 12000, timeoutMs: 180000,
+        busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
+        readyText: 'Cinemate is running — <b class="din">READY</b>',
+        doneToast: 'Pi is back up'
+      });
+    });
   });
 
   var styleTag = document.createElement('style');

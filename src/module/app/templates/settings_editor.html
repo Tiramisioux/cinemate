@@ -6308,19 +6308,39 @@
     /* Wait before the first poll. The server is still answering for a moment
        after the command is dispatched, and a hit in that window would report
        "back up" without anything having restarted. */
+    /* A silent spinner for up to three minutes is indistinguishable from a
+       page that has given up, which is exactly what a stuck "Rebooting the Pi
+       — please wait" looked like. Count the wait out loud so it is visibly
+       still trying, and so the elapsed number is there to report. */
+    var waited = 0;
+    var ticker = setInterval(function(){
+      waited += 5;
+      say('still waiting — ' + waited + ' s', 'tag-warn');
+    }, 5000);
+    function stopTicker(){ if (ticker){ clearInterval(ticker); ticker = null; } }
+
     setTimeout(function poll(){
       fetch('/api/v1/hello', { cache: 'no-store' })
         .then(function(r){ if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
         .then(function(text){
+          stopTicker();
           say(text.trim(), 'tag-ok');
           say('answering again after ' + Math.round((Date.now() - t0) / 1000) + ' s', 'tag-ok');
           finish(opts.readyText, opts.doneToast);
         })
         .catch(function(){
           if (Date.now() > deadline){
+            stopTicker();
+            /* NOT opts.readyText. Timing out means the camera never answered,
+               and settling the status line on "READY" said the opposite of
+               what had just happened -- the one place the page had to be
+               straight about it. */
             say('no answer after ' + Math.round((Date.now() - t0) / 1000)
                 + ' s — the camera may still be coming up, or may need looking at', 'tag-warn');
-            finish(opts.readyText, 'No answer from the camera yet');
+            say('if it is back but this never cleared, the browser probably lost its '
+                + 'route to it — reload this page', 'tag-warn');
+            finish(opts.timeoutText || 'No answer from the camera — <b class="din">UNKNOWN</b>',
+                   'No answer from the camera yet');
             return;
           }
           setTimeout(poll, 1500);

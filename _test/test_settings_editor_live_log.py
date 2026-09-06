@@ -142,6 +142,26 @@ class ConsoleMarkupTests(unittest.TestCase):
         self.assertIn("/api/v1/hello", self.html)
         self.assertIn("answering again after", self.html)
 
+    def test_a_timeout_does_not_settle_on_READY(self):
+        # Timing out means the camera never answered. finish(opts.readyText)
+        # put "READY" on the status line anyway -- the one place the page had
+        # to be straight about what had just happened.
+        block = self.html[self.html.index("if (Date.now() > deadline){"):]
+        block = block[:block.index("setTimeout(poll, 1500);")]
+        self.assertIn("opts.timeoutText", block)
+        self.assertNotIn("finish(opts.readyText", block)
+
+    def test_the_wait_is_visibly_alive(self):
+        # A silent spinner for up to three minutes is indistinguishable from a
+        # page that has given up -- which is what a stuck "Rebooting the Pi —
+        # please wait" looked like on the rig.
+        self.assertIn("still waiting — ' + waited + ' s'", self.html)
+        self.assertIn("function stopTicker()", self.html)
+        # and it must not keep ticking after either exit
+        engine = self.html[self.html.index("function runBootSequence(opts){"):]
+        engine = engine[:engine.index("\n  }")]
+        self.assertEqual(engine.count("stopTicker();"), 2)
+
     def test_the_first_poll_waits_so_it_cannot_see_the_old_server(self):
         # the server answers for a moment after the command is dispatched
         self.assertIn("opts.settleMs || 4000", self.html)

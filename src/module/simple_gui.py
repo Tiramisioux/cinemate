@@ -818,6 +818,12 @@ class SimpleGUI(threading.Thread):
             # value (see _draw_hdr_badge), not as a text suffix here.
             "res":            f"{display_width}×{display_height} :{display_bit_depth}b",
             "resolution_switching": resolution_switching,
+            # Dynamic resolution is holding a mode the operator did not pick.
+            # Computed here rather than only where the framebuffer GUI
+            # recolours RES, so the web GUI -- which renders this same dict --
+            # can tint its own readout instead of showing a substituted mode
+            # as though it were the chosen one.
+            "dynamic_resolution_indicator": self._dynamic_resolution_indicator_active(),
 
             # left column (CAM0)
             "sensor":         sensor_left,
@@ -1164,7 +1170,7 @@ class SimpleGUI(threading.Thread):
 
         if values["resolution_switching"]:
             self.colors["res"]["normal"] = RESOLUTION_SWITCHING_COLOR
-        elif self._dynamic_resolution_indicator_active():
+        elif values["dynamic_resolution_indicator"]:
             self.colors["res"]["normal"] = "lightgreen"
         else:
             self.colors["res"]["normal"] = (249, 249, 249)

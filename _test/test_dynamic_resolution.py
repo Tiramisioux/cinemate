@@ -165,10 +165,13 @@ class DynamicResolutionTests(unittest.TestCase):
         self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 12)
         self.assertTrue(choice.dynamic_active)
 
-    def test_max_resolution_downshift_still_reaches_10bit_when_12bit_cannot_sustain_fps(self):
-        # The 12-bit mode's own ceiling is 11.72fps; requesting faster than
-        # that at the same desired mode must still fall through to the
-        # tie-break (10-bit, faster) rather than return nothing.
+    def test_a_downshift_drops_resolution_and_never_bit_depth(self):
+        # Mode 9's own ceiling is 11.72fps, so 13fps cannot be served at that
+        # resolution. Mode 4 -- the same frame size at 10-bit -- would sustain
+        # it, and used to be chosen. It is not chosen now: a substitution the
+        # operator did not ask for may cost frame size, which they can see in
+        # the readout, but not bit depth, which they cannot. The answer is the
+        # largest 12-bit mode that clears the bar.
         choice = choose_resolution(
             sensor_modes=IMX477_MODES,
             desired_mode=9,
@@ -176,8 +179,41 @@ class DynamicResolutionTests(unittest.TestCase):
         )
 
         self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 8)
+        self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 12)
+        self.assertTrue(choice.dynamic_active)
+
+    def test_a_family_is_hdr_and_bit_depth_together(self):
+        # Three families on an imx585 running the 7-mode driver: SDR, 12-bit
+        # ClearHDR, 16-bit ClearHDR -- the same three blocks sensor_detect
+        # lays the mode table out in. A 16-bit HDR request that cannot be
+        # sustained must not land on a 12-bit HDR mode, however well that mode
+        # would serve the fps.
+        modes = {
+            0: {"width": 1928, "height": 1090, "bit_depth": 12, "fps_max": 87},
+            1: {"width": 3856, "height": 2180, "bit_depth": 12, "fps_max": 43},
+            2: {"width": 1928, "height": 1090, "bit_depth": 12, "hdr": True, "fps_max": 60},
+            3: {"width": 3856, "height": 2180, "bit_depth": 12, "hdr": True, "fps_max": 30},
+            4: {"width": 1928, "height": 1090, "bit_depth": 16, "hdr": True, "fps_max": 40},
+            5: {"width": 3856, "height": 2180, "bit_depth": 16, "hdr": True, "fps_max": 21},
+        }
+
+        choice = choose_resolution(sensor_modes=modes, desired_mode=5, requested_fps=30)
         self.assertEqual(choice.mode, 4)
-        self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 10)
+        self.assertEqual(modes[choice.mode]["bit_depth"], 16)
+        self.assertTrue(modes[choice.mode]["hdr"])
+
+        # Nothing in the 16-bit family reaches 45fps, so there is no answer --
+        # rather than the 12-bit HDR or SDR mode that would.
+        self.assertIsNone(
+            choose_resolution(sensor_modes=modes, desired_mode=5, requested_fps=45)
+        )
+
+        # And the SDR block does not reach into the HDR ones either.
+        self.assertEqual(
+            choose_resolution(sensor_modes=modes, desired_mode=1, requested_fps=60).mode,
+            0,
+        )
 
     def test_keeps_manual_desired_mode_when_it_is_already_the_low_one(self):
         choice = choose_resolution(

@@ -1,11 +1,17 @@
 """Dynamic resolution selection.
 
 Given a desired sensor mode and a requested fps, picks the highest-resolution
-mode (at or below the desired mode's own resolution, within its HDR class)
+mode (at or below the desired mode's own resolution, within its own family)
 whose sensor-declared ``fps_max`` (the value reported by
 ``cinepi-raw --list-cameras``, see sensor_detect.py) can sustain that fps.
-Always active -- there is no curated per-storage performance table or policy
-to configure; the ceiling is whatever the sensor itself reports for each mode.
+
+A *family* is (hdr, bit_depth) -- the same grouping sensor_detect._order_modes
+uses to lay the mode table out, so on an imx585 the three families are exactly
+the three blocks the operator sees: SDR, 12-bit ClearHDR, 16-bit ClearHDR. The
+bit depth is part of the key rather than a tie-break, so this only ever changes
+*resolution*. Trading 12-bit for 10-bit at the same frame size would buy fps by
+throwing away image data the operator explicitly asked for, and a substitution
+the operator did not ask for is not the place to make that trade.
 """
 
 from __future__ import annotations
@@ -78,7 +84,12 @@ def dynamic_resolution_is_lower_substitute(
     desired_area = _mode_area(desired_info) if desired_info else None
     if current_area is None or desired_area is None:
         return current != desired
-    return current_area < desired_area
+    # Not-larger rather than strictly-smaller. Two modes in one family can tie
+    # on area, and a substitution between them is still the system choosing
+    # the mode -- which is the whole thing the indicator reports. Only a
+    # current mode *above* the desired one is something dynamic resolution
+    # cannot have caused, so only that is excluded.
+    return current_area <= desired_area
 
 
 def dynamic_resolution_indicator_active(
@@ -99,12 +110,25 @@ def dynamic_resolution_indicator_active(
     )
 
 
+def mode_family(mode_info: dict[str, Any]) -> tuple[bool, int]:
+    """The (hdr, bit_depth) block a mode belongs to.
+
+    Matches sensor_detect._order_modes' sort key, so a family here is one
+    contiguous block of the operator's mode table rather than a set that
+    straddles it.
+    """
+    return (
+        bool(mode_info.get("hdr", False)),
+        _as_int(mode_info.get("bit_depth")) or 0,
+    )
+
+
 def _candidate_modes(
     normalized_modes: dict[int, dict[str, Any]],
     desired_mode: int,
 ) -> tuple[dict[str, Any], list[tuple[int, dict[str, Any], int]]] | None:
     """Return (desired_info, [(mode, info, area), ...]) for modes at or below
-    the desired mode's resolution within its HDR class, or None if the
+    the desired mode's resolution within its own family, or None if the
     desired mode itself is unknown."""
     desired_info = normalized_modes.get(desired_mode)
     if desired_info is None:
@@ -112,11 +136,11 @@ def _candidate_modes(
     desired_area = _mode_area(desired_info)
     if desired_area is None:
         return None
-    desired_hdr = bool(desired_info.get("hdr", False))
+    desired_family = mode_family(desired_info)
 
     candidates = []
     for mode, info in normalized_modes.items():
-        if bool(info.get("hdr", False)) != desired_hdr:
+        if mode_family(info) != desired_family:
             continue
         area = _mode_area(info)
         if area is None or area > desired_area:
@@ -161,36 +185,34 @@ def choose_resolution(
     if not eligible:
         return None
 
-    # F-286: two modes can share an area and differ only in bit depth (a
-    # sensor's max-resolution 10-bit and 12-bit modes always tie on area,
-    # since both sit at the sensor's ceiling). An explicit, sustainable
-    # request for the desired mode is honored directly, ahead of the
-    # tie-break below.
+    # An explicit, sustainable request for the desired mode is honored
+    # directly: no substitution is needed, so none is made.
     desired_eligible = next(
         (item for item in eligible if item[0] == desired_mode_int),
         None,
     )
     if desired_eligible is not None:
-        selected_mode, selected_area, selected_fps_max, _selected_bit_depth = desired_eligible
+        selected_mode, _selected_area, selected_fps_max, _bit_depth = desired_eligible
     else:
         # Genuine downgrade: the desired mode itself cannot sustain
-        # requested_fps, so a substitute must be chosen among candidates
-        # that all already clear the fps bar. Among those, bit depth ranks
-        # above fps_max -- once eligibility is satisfied, any fps_max a
-        # candidate has beyond requested_fps is unused headroom, not
-        # something the request needs, so it should not be traded against
-        # image quality. Ranked: area (resolution) first, then bit depth,
-        # then fps_max only to break a remaining tie.
-        selected_mode, selected_area, selected_fps_max, _selected_bit_depth = max(
-            eligible, key=lambda item: (item[1], item[3], item[2])
+        # requested_fps, so a substitute must be chosen among candidates that
+        # all already clear the fps bar. Every candidate shares the desired
+        # mode's family, so they all share its bit depth -- the only axis left
+        # is resolution, and the largest that clears the bar wins. fps_max
+        # breaks a remaining area tie; beyond requested_fps it is unused
+        # headroom, not something the request needs.
+        selected_mode, _selected_area, selected_fps_max, _bit_depth = max(
+            eligible, key=lambda item: (item[1], item[2])
         )
-    desired_area = _mode_area(desired_info)
     return DynamicResolutionChoice(
         mode=selected_mode,
         fps_max=selected_fps_max,
         desired_mode=desired_mode_int,
         desired_fps_max=desired_fps_max,
-        dynamic_active=selected_mode != desired_mode_int and selected_area < desired_area,
+        # Any substitution at all is the system governing the resolution --
+        # that is what the readout reports, so it does not additionally
+        # require the substitute to be strictly smaller.
+        dynamic_active=selected_mode != desired_mode_int,
     )
 
 

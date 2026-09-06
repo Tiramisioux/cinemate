@@ -80,7 +80,7 @@ Startup values come from `image_capture.hdr` in `settings.jsonc`. All four knobs
 | Command | Argument | Method | What it does |
 |---|---|---|---|
 | `set resolution [<mode>]` | int or none | `set_resolution` | Apply a sensor mode; omit the value to cycle. An aspect-ratio change relaunches cinepi-raw so the preview window is rebuilt; same-aspect changes stay seamless. With dynamic resolution on, the value becomes the desired mode. |
-| `set dynamic resolution [0/1]` | 0/1 or none | `set_dynamic_resolution_enabled` | Allow or block substituting a lower-resolution mode when the requested fps exceeds the desired mode's own `fps_max`. Omit the value to toggle. |
+| `set dynamic resolution [0/1]` | 0/1 or none | `set_dynamic_resolution_enabled` | Allow or block substituting a lower-resolution mode of the same bit depth and HDR class when the requested fps exceeds the desired mode's own `fps_max`. Omit the value to toggle. Off also drops `fps_max` back to the selected mode's own limit. Persists across a reboot, outranking `image_capture.dynamic_resolution`. |
 | `set anamorphic factor [<float>]` | float or none | `set_anamorphic_factor` | Set the preview's anamorphic stretch, or omit the value to step to the next preset. The value must be one of `hdmi_display.preview.anamorphic.steps`; anything else is rejected. Restarts the camera. |
 | `set zoom [<float>]` | float or none | `set_zoom` | Set the live-view digital zoom factor, clamped to `hdmi_display.preview.zoom_steps`. Omit the value to step through those steps. See [Digital zoom](digital-zoom.md). |
 | `inc zoom` / `dec zoom` | – | `inc_zoom` / `dec_zoom` | Step the preview zoom factor forwards or backwards, wrapping at the ends. |

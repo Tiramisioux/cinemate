@@ -197,8 +197,21 @@
 
   // ── image_capture: resolution / bit-depth / HDR filters ──────────────────
   "image_capture": {
+    // Which resolutions (in K) and bit depths the mode table offers. A value
+    // listed here is offered if the sensor has a mode for it; removing one
+    // hides those modes from the dial and both GUIs.
     "k_steps": [1.5, 2, 3, 4],
     "bit_depths": [10, 12, 16],
+    // Dynamic resolution: when the requested fps is higher than the selected
+    // mode can sustain, drop to the largest mode in the same family (same
+    // bit depth, same SDR/ClearHDR class) that can. Resolution is the only
+    // thing it changes -- never bit depth, never HDR.
+    //
+    // This is the startup default. `set dynamic resolution 0/1` overrides it
+    // live and the override persists in Redis, so a later boot reads that
+    // back rather than this. Turn it off here to have the camera always boot
+    // holding the mode you picked, and cap fps at that mode's own limit.
+    "dynamic_resolution": true,
     "hdr": {
       // ClearHDR (imx585) whitelist. Both true exposes the plain and the
       // HDR modes; set "imx585_clear_hdr" false to hide the HDR modes.

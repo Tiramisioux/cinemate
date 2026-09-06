@@ -235,8 +235,9 @@ imx585 ClearHDR.
 
 | Control | What it does |
 | --- | --- |
-| Crop factors offered | Which crops appear, as "K" categories. Modes group to the nearest half-K by width, so 1332×990 is 1.5 K. Default chips `1.5`, `2`, `3`, `4`; `+K` adds one, `×` removes one. |
-| Bit depths offered | Which raw depths appear. Default chips `10`, `12`, `16`; `+bit` adds one. `16` covers the imx585 16-bit ClearHDR modes. |
+| Resolutions offered | Which sizes appear, as "K" categories. Modes group to the nearest half-K by width, so 1332×990 is 1.5 K. One switch per category — `1.5`, `2`, `3`, `4` on by default, `5.5` (the imx283's 5568-wide modes) off. Those five are every category the sensor database can produce, so the switches are the whole catalogue. |
+| Bit depths offered | Which raw depths appear. Switches for `10`, `12` and `16`, all on by default. `16` covers the imx585 16-bit ClearHDR modes. |
+| Dynamic resolution | Startup default for the automatic FPS-driven mode substitution described under [Dynamic resolution](sensors.md#dynamic-resolution). On by default. `set dynamic resolution` overrides it live, and that override outlives a reboot. |
 | Expose plain (SDR) modes | Shows the sensor's non-HDR modes alongside ClearHDR. Default on; off leaves only ClearHDR. |
 | Expose imx585 ClearHDR modes | Shows them, at 12-bit and 16-bit. Default on; off keeps the sensor SDR-only. |
 | ClearHDR startup knobs | The four fields below, applied whenever a ClearHDR mode is selected. |
@@ -252,9 +253,13 @@ imx585 ClearHDR.
 
 !!! note "These are filters, not the mode list"
 
-    Crop factors and bit depths only decide which database modes get shown, and both lists are global: every sensor, not per camera. Hidden modes come back the moment you add the step again, so `5.5` brings the IMX283 5K modes back.
+    Resolutions and bit depths only decide which database modes get shown, and both lists are global: every sensor, not per camera. Hidden modes come straight back when you switch the category on again — 5.5K brings the IMX283 5K modes back.
 
-    An empty list is not a ban. Clear every chip, or turn both mode toggles off, and that filter stops applying, so every mode is offered. If a combination leaves a camera with nothing, CineMate logs a warning and keeps that camera's full mode list.
+    All-off is not a ban. Turn every switch in one of these sets off, or turn both mode toggles off, and that filter stops applying, so every mode is offered. If a combination leaves a camera with nothing, CineMate logs a warning and keeps that camera's full mode list.
+
+!!! note "Greyed rows"
+
+    A row the attached sensor has no mode for is dimmed — 1.5K, 3K, 5.5K and 10-bit on an IMX585, for instance. Dimmed, not disabled: the switch still flips, still saves and applies the moment a sensor that has those modes is fitted, the same way the Grove HAT's channel assignments survive the HAT being unplugged. With no camera detected at all, nothing is dimmed.
 
 ## Per-mode fps ceilings
 <a id="custom_modes"></a>

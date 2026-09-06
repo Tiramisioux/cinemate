@@ -341,6 +341,11 @@
           "default": 2,
           "description": "Embedded DNG thumbnail mode written by cinepi-raw's DNG encoder: 0 off, 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour by default -- verified on hardware (G10/G11) and the standard playback path; raw decode is far more demanding on the Pi and is no longer the Playback pane's fallback. New takes only -- a take recorded with this off (or before a rebuilt cinepi-raw shipped it) has no thumbnail and is not currently playable in the pane."
         },
+        "dynamic_resolution": {
+          "type": "boolean",
+          "default": true,
+          "description": "Startup default for dynamic resolution: when the requested fps is higher than the selected sensor mode can sustain, drop to the largest mode in the same family -- same bit depth, same SDR/ClearHDR class -- that can. Resolution is the only thing it changes; it never trades bit depth or the HDR flag for frame rate. `set dynamic resolution 0/1` overrides this live and the override persists in Redis, which a later boot reads back in preference to this value."
+        },
         "custom_modes": {
           "type": "object",
           "description": "Per-camera-name list of mode overrides/additions (F-298). An entry whose width/height/bit_depth/hdr matches an already-detected mode overrides that mode's fps_max in place; a non-matching entry adds a brand-new mode.",

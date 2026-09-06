@@ -36,7 +36,7 @@ transition instead of a stale value.
 
 | Key | Written by | Description | Safe to change manually? |
 |-----|------------|-------------|--------------------------|
-| dynamic_resolution_enabled | CineMate | Toggle for automatic FPS-driven resolution downgrade/upgrade (`set dynamic resolution`); persisted and read back at startup, defaulting to on when unset | Yes |
+| dynamic_resolution_enabled | CineMate | Toggle for automatic FPS-driven resolution downgrade/upgrade (`set dynamic resolution`); persisted and read back at startup. When unset, the startup value comes from `image_capture.dynamic_resolution` in `settings.jsonc` (on by default) | Yes |
 | dynamic_resolution_active | CineMate | `1` while a lower resolution mode is currently substituted in to sustain the requested FPS | No |
 | dynamic_resolution_desired_mode | CineMate | The sensor mode the user actually asked for; dynamic resolution switches away from and back to this mode as FPS allows | No |
 | resolution_switching | CineMate | `1` while a resolution change (manual or dynamic) is in flight; cleared when CinePi-raw's raw-stream-ready log line reports the new stream at the target size, or after a 2.5 s hold timer | No |

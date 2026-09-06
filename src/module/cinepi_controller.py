@@ -415,12 +415,23 @@ class CinePiController:
         return desired_mode
 
     def _get_startup_dynamic_resolution_enabled(self) -> bool:
+        """Redis first, settings.jsonc second, on by default.
+
+        Redis wins because it is the operator's most recent explicit answer:
+        `set dynamic resolution 0` is meant to survive the reboot that
+        follows it. settings.jsonc is what a camera that has never been told
+        either way boots with -- previously a hardcoded True, so a rig that
+        wanted the feature off had to be told so again after every flash.
+        """
         value = self.redis_controller.get_value(
             ParameterKey.DYNAMIC_RESOLUTION_ENABLED.value
         )
-        if value is None:
-            return True
-        return as_bool(value)
+        if value is not None:
+            return as_bool(value)
+        configured = (self.settings.get("image_capture", {}) or {}).get(
+            "dynamic_resolution", True
+        )
+        return as_bool(configured)
 
     def _publish_dynamic_resolution_state(self):
         self.redis_controller.set_value(
@@ -455,6 +466,26 @@ class CinePiController:
         else:
             self.dynamic_resolution_enabled = not self.dynamic_resolution_enabled
         logging.info(f"Dynamic resolution enabled {self.dynamic_resolution_enabled}")
+
+        if not self.dynamic_resolution_enabled:
+            # Whatever mode is on screen is now the operator's own selection:
+            # nothing is going to substitute for it, so it is also the mode
+            # the desired-mode bookkeeping has to track. Leaving the old
+            # desired mode behind would mean re-enabling the feature later
+            # silently jumps back to a resolution the operator has since
+            # moved away from.
+            self.dynamic_resolution_desired_mode = self.sensor_mode
+            self.dynamic_resolution_active = False
+
+        # The fps ceiling is context-dependent: with the feature on it is the
+        # best any mode in the desired family can do, with it off it is this
+        # one mode's own cap. Toggling used to publish the flag and stop
+        # there, so the ceiling -- and the fps step table built from it --
+        # stayed at whatever the other setting had left behind, and the dial
+        # kept offering frame rates the mode could not reach.
+        self._refresh_fps_max()
+        self._rebuild_fps_steps()
+
         self._publish_dynamic_resolution_state()
 
     def _current_user_fps_value(self):
@@ -1796,21 +1827,28 @@ class CinePiController:
         return f"{width}:{height}:{bit_depth}:{packing}"
 
     def _select_resolution_mode_for_fps(self, target_fps: float):
-        candidates = []
-        for mode, info in self.sensor_detect.res_modes.items():
-            try:
-                fps_max = float(info.get("fps_max") or 0)
-                area = int(info.get("width") or 0) * int(info.get("height") or 0)
-            except (TypeError, ValueError):
-                continue
-            if fps_max >= target_fps:
-                candidates.append((area, mode))
+        """The mode `set fps double` should land on to reach *target_fps*.
 
-        if not candidates:
-            return self.sensor_mode
+        Same rule as dynamic resolution, and via the same function: stay in
+        the current mode's family and never go up in resolution. This used to
+        sweep the whole mode table on area alone, so doubling the frame rate
+        from a 12-bit ClearHDR mode could land on a 10-bit SDR one -- a bit
+        depth and an HDR flag the operator never asked to give up, from a
+        button that says nothing about either.
 
-        candidates.sort(reverse=True)
-        return candidates[0][1]
+        Falls back to the current mode when no mode in the family can serve
+        the request; the caller then holds the resolution and clamps fps.
+        """
+        choice = choose_resolution(
+            sensor_modes=self.sensor_detect.res_modes,
+            desired_mode=(
+                self.dynamic_resolution_desired_mode
+                if self.dynamic_resolution_desired_mode is not None
+                else self.sensor_mode
+            ),
+            requested_fps=target_fps,
+        )
+        return self.sensor_mode if choice is None else choice.mode
 
     def switch_resolution(self, step=1):
         try:

@@ -139,10 +139,23 @@ Each mode reads out a physical area of the sensor. Binned modes keep the full fi
 
 ## Dynamic resolution
 
-CineMate always runs dynamic resolution: it remembers the mode you selected as the desired mode, and if you raise FPS above what that mode's own sensor-reported maximum can sustain, it switches to the highest-resolution mode that can. FPS returns to your desired mode once you dial back down. There is no setting for this and no separate performance table -- the ceiling always comes from the sensor's own reported numbers (the "Max FPS" columns above, the same values `cinepi-raw --list-cameras` reports).
+CineMate remembers the mode you selected as the *desired* mode. If you raise FPS above what that mode's own sensor-reported maximum can sustain, it switches to the highest-resolution mode that can, and returns to your desired mode once you dial back down. There is no separate performance table -- the ceiling always comes from the sensor's own reported numbers (the "Max FPS" columns above, the same values `cinepi-raw --list-cameras` reports).
+
+**Resolution is the only thing it changes.** Substitution is confined to the desired mode's own family, where a family is one bit depth and one SDR/ClearHDR class -- the three blocks the imx585 mode table is laid out in. A 12-bit request never lands on a 10-bit mode, and a ClearHDR request never lands on an SDR one, however well those would serve the frame rate: those are trades you make deliberately, not ones a frame-rate dial makes for you. If nothing in the family can sustain the requested FPS, the resolution holds and FPS is capped instead.
+
+Changing mode mid-take is allowed. cinepi-raw splits the recording around the camera reconfigure, so the take continues in a new clip folder and the clip list shows where the change happened. There is a short gap in frames across the split: the sensor has to be reprogrammed for the new mode, which means stopping and restarting the stream. cinepi-raw itself is *not* restarted.
+
+### Turning it off
+
+| Where | What it does |
+| --- | --- |
+| `image_capture.dynamic_resolution` in `settings.jsonc` | The startup default. `true` out of the box. |
+| `set dynamic resolution 0` / `1` (or the settings page switch) | Overrides it for the session, and persists -- the next boot reads this back in preference to the file. |
+
+With it off, the mode you select is the mode you get, and `fps_max` is that one mode's own limit rather than the best any mode in its family could do. Turning it off also adopts whatever mode is currently on screen as your selection, so turning it back on later does not jump you somewhere you have since moved away from.
 
 Storage pre-roll is intentionally different: it uses the live sensor maximum for the currently selected mode and temporarily suspends dynamic resolution so the mounted media is stress-tested before CineMate restores the user's FPS and applies the dynamic-resolution choice.
 
-The active resolution numbers turn green in the simple GUI only while dynamic resolution is actively substituting a lower-resolution mode for the current FPS instead of your desired mode. They stay white when the active mode is your desired resolution.
+The resolution readout turns green -- in the HDMI overlay and the web GUI alike -- whenever the mode on screen is one dynamic resolution chose rather than one you did. It stays white when the active mode is your desired resolution.
 
 Actual achievable FPS without dropped frames depends on your storage device and filesystem, which the sensor's own reported numbers don't account for -- a purple `DROP` indicator means you're above what your setup can sustain. Test your own setup and pick FPS values accordingly.

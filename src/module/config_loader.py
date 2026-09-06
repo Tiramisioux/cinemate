@@ -516,6 +516,11 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # 2 (colour): the embedded thumbnail is the standard playback path
         # now, not an opt-in -- see thumbnail_startup_value()'s docstring.
         "thumbnail": 2,
+        # Dynamic resolution: substitute a smaller mode from the same family
+        # when the requested fps outruns the selected one. Startup default
+        # only -- `set dynamic resolution 0/1` overrides it for the session
+        # and persists in Redis, which is what a later boot reads back.
+        "dynamic_resolution": True,
         "custom_modes": {},
     }
     for k, v in image_capture_defaults.items():

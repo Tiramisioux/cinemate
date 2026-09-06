@@ -388,6 +388,12 @@
   .pw-eye:hover{ color: var(--ink); }
 
   .steplist{ display:flex; align-items:center; gap:6px; flex-wrap: wrap; justify-content:flex-end; max-width: 320px; }
+  /* A closed catalogue of on/off members, laid out as one labelled switch
+     per row so the switch column lines up with every other toggle on the
+     page rather than reading as a second kind of control. */
+  .switchset{ display:flex; flex-direction:column; align-items:stretch; gap:8px; min-width:118px; }
+  .switchrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; cursor:pointer; }
+  .switchrow > span{ font-size:13px; color: var(--ink); white-space:nowrap; }
   .step-chip{
     font-family: ui-monospace, monospace; font-size: 12px; font-variant-numeric: tabular-nums;
     background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
@@ -1679,32 +1685,50 @@
     <section class="group" id="resolution" data-page="settings">
       <header class="group-head">
         <h2>Resolution &amp; sensor</h2>
-        <p class="group-sub">Which crop factors and bit depths are offered, and the startup values for imx585 ClearHDR.</p>
+        <p class="group-sub">Which resolutions and bit depths are offered, and the startup values for imx585 ClearHDR.</p>
+        <p class="hw-note" id="modeAvailabilityNote" hidden></p>
       </header>
       <div class="cards">
-        <div class="card" data-search="k steps crop factor resolution offered">
+        <!-- Switches, not editable chips. The catalogue is closed by the
+             sensor database, not by taste: a mode's K category is
+             round(width/1000*2)/2, and across every sensor in
+             resources/sensors.json that yields exactly 1.5, 2, 3, 4 and 5.5
+             (5.5 being the imx283's 5568-wide modes, which is why it is here
+             and off by default -- it is absent from the shipped k_steps).
+             Typing a number no sensor reports never added a mode; it only
+             narrowed the filter to nothing. So the question is which of the
+             known categories to offer: a row of on/off answers. -->
+        <div class="card" data-search="resolutions offered 1.5k 2k 3k 4k k steps">
           <div class="card-main">
-            <label class="card-label">Crop factors offered</label>
-            <p class="card-help">The set of sensor crops (in "K") available on the resolution control.</p>
+            <label class="card-label">Resolutions offered</label>
+            <p class="card-help">Which resolutions (in "K") the resolution control offers. Turning one off hides every mode at that size; a size this sensor has no mode for stays hidden either way. 5.5K is the imx283's 5568‑wide modes, off by default. Turning <em>every</em> switch off does not hide everything — it switches the filter off, so all modes are offered.</p>
           </div>
-          <div class="card-control steplist" data-chip-path="image_capture.k_steps" data-chip-type="number" data-chip-original="[1.5,2,3,4]">
-            <span class="step-chip">1.5K<button data-remove>×</button></span>
-            <span class="step-chip">2K<button data-remove>×</button></span>
-            <span class="step-chip">3K<button data-remove>×</button></span>
-            <span class="step-chip">4K<button data-remove>×</button></span>
-            <input class="step-add" placeholder="+K" inputmode="decimal">
+          <div class="card-control switchset" data-set-path="image_capture.k_steps" data-set-type="number">
+            <label class="switchrow"><span>1.5K</span><button class="toggle" data-set-item="1.5" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 1.5K"></button></label>
+            <label class="switchrow"><span>2K</span><button class="toggle" data-set-item="2" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 2K"></button></label>
+            <label class="switchrow"><span>3K</span><button class="toggle" data-set-item="3" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 3K"></button></label>
+            <label class="switchrow"><span>4K</span><button class="toggle" data-set-item="4" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 4K"></button></label>
+            <label class="switchrow"><span>5.5K</span><button class="toggle" data-set-item="5.5" data-type="bool" data-original="false" role="switch" aria-checked="false" aria-label="Offer 5.5K"></button></label>
           </div>
         </div>
         <div class="card" data-search="bit depths offered 10 12 16 raw">
           <div class="card-main">
             <label class="card-label">Bit depths offered</label>
-            <p class="card-help">Raw capture bit depths available on the resolution control.</p>
+            <p class="card-help">Which raw capture bit depths the resolution control offers. 16‑bit is imx585 ClearHDR only. As above, all off means the filter is off, not that nothing is offered.</p>
           </div>
-          <div class="card-control steplist" data-chip-path="image_capture.bit_depths" data-chip-type="number" data-chip-original="[10,12,16]">
-            <span class="step-chip">10‑bit<button data-remove>×</button></span>
-            <span class="step-chip">12‑bit<button data-remove>×</button></span>
-            <span class="step-chip">16‑bit<button data-remove>×</button></span>
-            <input class="step-add" placeholder="+bit" inputmode="numeric">
+          <div class="card-control switchset" data-set-path="image_capture.bit_depths" data-set-type="number">
+            <label class="switchrow"><span>10‑bit</span><button class="toggle" data-set-item="10" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 10-bit"></button></label>
+            <label class="switchrow"><span>12‑bit</span><button class="toggle" data-set-item="12" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 12-bit"></button></label>
+            <label class="switchrow"><span>16‑bit</span><button class="toggle" data-set-item="16" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 16-bit"></button></label>
+          </div>
+        </div>
+        <div class="card" data-search="dynamic resolution fps substitute automatic mode">
+          <div class="card-main">
+            <label class="card-label" for="f-dynres">Dynamic resolution</label>
+            <p class="card-help">When the requested frame rate is higher than the selected mode can sustain, drop to the largest mode of the same bit depth and HDR class that can. Resolution is the only thing it changes. Both GUIs show RES in green while a substitute is held. <code class="mono">set dynamic resolution</code> overrides this live, and that override outlives a reboot.</p>
+          </div>
+          <div class="card-control">
+            <button class="toggle" id="f-dynres" data-path="image_capture.dynamic_resolution" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
         <div class="card" data-search="hdr sdr modes exposed resolution control">
@@ -3169,6 +3193,16 @@
     document.querySelectorAll('[data-path]').forEach(function(el){
       setPath(state, el.getAttribute('data-path'), readControlValue(el));
     });
+    document.querySelectorAll('[data-set-path]').forEach(function(container){
+      var type = container.getAttribute('data-set-type');
+      var arr = [];
+      container.querySelectorAll('.toggle[data-set-item]').forEach(function(t){
+        if (t.getAttribute('aria-checked') !== 'true') return;
+        var raw = t.getAttribute('data-set-item');
+        arr.push(type === 'number' ? parseFloat(raw) : raw);
+      });
+      setPath(state, container.getAttribute('data-set-path'), arr);
+    });
     document.querySelectorAll('[data-chip-path]').forEach(function(container){
       var type = container.getAttribute('data-chip-type');
       var arr = [];
@@ -3315,7 +3349,43 @@
       if (!res.ok) return;
       renderFpsCeilings(res.sensors || {});
       renderConfigModes(res.sensors || {});
+      applyModeAvailability(res.available);
     }).catch(function(){ /* non-fatal -- the rest of the page still works */ });
+  }
+
+  /* Grey the categories the attached sensors have no mode for. Dimmed, not
+     disabled -- the same rule the i2c pane applies to an absent Grove HAT:
+     a rig can be configured before its sensor is fitted, and swapping a
+     camera must not silently rewrite the file that describes it. The
+     switches stay clickable and keep saving. */
+  function applyModeAvailability(available){
+    // No camera detected: nothing is known to be unavailable, so grey
+    // nothing. Greying everything would read as "none of this works".
+    if (!available || !available.known) return;
+    var sets = {
+      'image_capture.k_steps': (available.k_steps || []).map(Number),
+      'image_capture.bit_depths': (available.bit_depths || []).map(Number)
+    };
+    var anyAbsent = false;
+    Object.keys(sets).forEach(function(path){
+      var container = document.querySelector('[data-set-path="' + path + '"]');
+      if (!container) return;
+      container.querySelectorAll('.switchrow').forEach(function(row){
+        var toggle = row.querySelector('.toggle[data-set-item]');
+        if (!toggle) return;
+        var absent = sets[path].indexOf(parseFloat(toggle.getAttribute('data-set-item'))) === -1;
+        row.classList.toggle('hw-absent', absent);
+        row.title = absent ? 'No mode at this setting on the attached sensor. The switch still saves and applies.' : '';
+        if (absent) anyAbsent = true;
+      });
+    });
+    var note = document.getElementById('modeAvailabilityNote');
+    if (note){
+      note.textContent = anyAbsent
+        ? 'Greyed rows are settings the attached sensor has no mode for. They still save, and apply if you fit a sensor that has them.'
+        : '';
+      note.hidden = !anyAbsent;
+    }
   }
 
   function buildCustomModesState(){
@@ -3533,6 +3603,22 @@
       // No change/input event fires for a .toggle, so the steplist has to be
       // repainted from inside the handler that flipped it.
       if (typeof syncAllFreeSteppingChips === 'function') syncAllFreeSteppingChips();
+    });
+    t.addEventListener('keydown', function(e){
+      if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); t.click(); }
+    });
+  });
+
+  /* A switch inside a switchset is one member of an array, not a settings
+     path of its own -- buildState reads the whole container. Everything else
+     it needs (data-type, data-original, aria-checked) is what checkDirty
+     already looks at, so the dirty pill and the card highlight come for
+     free. */
+  document.querySelectorAll('.toggle[data-set-item]').forEach(function(t){
+    t.addEventListener('click', function(){
+      var checked = t.getAttribute('aria-checked') === 'true';
+      t.setAttribute('aria-checked', String(!checked));
+      checkDirty(t);
     });
     t.addEventListener('keydown', function(e){
       if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); t.click(); }
@@ -3841,6 +3927,22 @@
     document.querySelectorAll('[data-chip-path]').forEach(function(container){
       var arr = getPathValue(settings, container.getAttribute('data-chip-path'));
       if (Array.isArray(arr)) populateChipContainer(container, arr);
+    });
+    document.querySelectorAll('[data-set-path]').forEach(function(container){
+      var arr = getPathValue(settings, container.getAttribute('data-set-path'));
+      if (!Array.isArray(arr)) return;
+      // Compared as numbers where both sides parse: settings.jsonc may hold
+      // 2 or 2.0 for the switch labelled "2", and String() alone would call
+      // those different values and load the card looking already edited.
+      var on = arr.map(function(v){ var n = parseFloat(v); return isFinite(n) ? String(n) : String(v); });
+      container.querySelectorAll('.toggle[data-set-item]').forEach(function(t){
+        var raw = t.getAttribute('data-set-item');
+        var n = parseFloat(raw);
+        var isOn = on.indexOf(isFinite(n) ? String(n) : raw) !== -1;
+        t.setAttribute('aria-checked', String(isOn));
+        t.setAttribute('data-original', String(isOn));
+        markDirty(t, false);
+      });
     });
   }
 

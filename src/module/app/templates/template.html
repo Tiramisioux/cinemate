@@ -247,12 +247,22 @@
            picture -- #stage is the only 1fr track. They shrink instead, which
            is the same trade the rails already make. */
         @media (orientation: landscape) and (max-width: 950px) {
-            #top-row, #button-row { flex-wrap: nowrap; }
+            #top-row, #bottom-row, #button-row { flex-wrap: nowrap; }
             /* Let the groups give ground rather than overflow the row. */
             #top-row { gap: calc(var(--gap) * 0.5); }
             #top-row .group { min-width: 0; flex: 0 1 auto; }
             #top-row .value { font-size: calc(var(--value-size) * 0.82); }
             #top-row .label { font-size: calc(var(--label-size) * 0.9); }
+            /* The bottom row was left wrapping when the other two were fixed,
+               so CPU/TEMP/RAM still dropped to a second line -- the same cost
+               to the picture the rule above exists to avoid. Its clip name is
+               the one field with give in it: it already ellipsizes, so cap it
+               and let the fixed-width readouts keep the line. */
+            #bottom-row { gap: calc(var(--gap) * 0.3); }
+            #bottom-row .group { min-width: 0; flex: 0 0 auto; }
+            #bottom-row .group.clip { flex: 0 1 auto; min-width: 3em; }
+            #bottom-row .group.clip .value { max-width: 100%; }
+            #bottom-row .spacer { flex: 1 1 0; min-width: 0; }
             #button-row { gap: calc(var(--gap) * 0.35); }
             #button-row button, #button-row .btn-link { padding-inline: 0.55em; }
         }
@@ -480,7 +490,12 @@
         #bottom-row {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
+            /* baseline, not center. The clip name is ~0.44 the size of its
+               neighbours, so centring set it floating between their label and
+               value lines instead of sitting on the same line of text. The
+               one item with no text to align -- the buffer meter -- opts back
+               out below. */
+            align-items: baseline;
             gap: calc(var(--gap) * 0.4) calc(var(--gap) * 0.8);
             --value-size: clamp(0.9rem, 1.5vw, 1.4rem);
             --label-size: clamp(0.65rem, 1.05vw, 1rem);
@@ -507,6 +522,7 @@
         .warn.voltage { color: var(--voltage); }
 
         #buffer-meter {
+            align-self: center;   /* a bar has no baseline to share */
             width: clamp(46px, 6vw, 96px);
             height: calc(var(--value-size) * 0.42);
             background: rgba(136, 136, 136, 0.35);
@@ -832,6 +848,20 @@
                drawer exists to watch the picture change, not to replace it. */
             #experiment { max-height: 40vh; }
             .xp-slider .label { flex: 0 0 6em; }
+            /* Top and bottom row text a fifth larger than the clamp() gives.
+               The top row's values are the tap targets -- each .group carries
+               a transparent native <select> sized to the group -- so on a
+               phone the text is also the button, and the clamp()s were sized
+               against a mouse pointer. The rails and the drawer keep their
+               own sizes: nothing there is tapped to change a value. */
+            #top-row {
+                --value-size: clamp(1.26rem, 2.46vw, 2.28rem);
+                --label-size: clamp(0.864rem, 1.74vw, 1.62rem);
+            }
+            #bottom-row {
+                --value-size: clamp(1.08rem, 1.8vw, 1.68rem);
+                --label-size: clamp(0.78rem, 1.26vw, 1.2rem);
+            }
         }
     </style>
 </head>
@@ -1307,6 +1337,11 @@
         $('g-shutter').classList.toggle('locked', Boolean(V.shutter_a_nom_lock));
         $('g-iso').classList.toggle('locked', Boolean(V.iso_lock));
         $('g-res').classList.toggle('switching', truthy(V.resolution_switching));
+        // Green while dynamic resolution is holding a mode the operator did
+        // not choose -- the same signal the HDMI overlay gives, so RES never
+        // reads as a plain selection when it is a substitution.
+        $('g-res').classList.toggle('tinted',
+            !truthy(V.resolution_switching) && truthy(V.dynamic_resolution_indicator));
 
         const badge = $('v-hdr-badge');
         const badgeText = V.hdr_badge || '';

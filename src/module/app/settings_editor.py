@@ -530,7 +530,42 @@ def get_sensor_modes():
         entries.sort(key=lambda m: ((m["width"] or 0) * (m["height"] or 0), m["bit_depth"] or 0), reverse=True)
         sensors[camera_name] = entries
 
-    return jsonify({"ok": True, "sensors": sensors})
+    return jsonify({
+        "ok": True,
+        "sensors": sensors,
+        "available": _available_mode_categories(sensor_detect),
+    })
+
+
+def _available_mode_categories(sensor_detect) -> dict:
+    """Which K categories and bit depths the attached sensors actually have.
+
+    Read from sensor_modes_unfiltered, NOT sensor_resolutions: the latter is
+    what survived the settings.jsonc filters, so asking it whether a 3K mode
+    exists would answer "no" the moment 3K was switched off -- and the
+    settings page would grey out the switch that did it.
+
+    The K category is round(width/1000*2)/2, the same expression
+    _finalize_modes filters on. Restating it is deliberate: this endpoint has
+    to answer for a mode the filter has already rejected, which is exactly the
+    case the filter itself never sees.
+    """
+    k_values, bit_depths = set(), set()
+    for modes in (getattr(sensor_detect, "sensor_modes_unfiltered", None) or {}).values():
+        for mode in modes:
+            width = mode.get("width")
+            if width:
+                k_values.add(round(width / 1000 * 2) / 2)
+            depth = mode.get("bit_depth")
+            if depth:
+                bit_depths.add(int(depth))
+    return {
+        "k_steps": sorted(k_values),
+        "bit_depths": sorted(bit_depths),
+        # No camera detected at all is not the same as a camera with no 3K
+        # mode. The page greys nothing rather than greying everything.
+        "known": bool(k_values or bit_depths),
+    }
 
 
 @settings_editor_bp.route("/api/playback/clips", methods=["GET"])

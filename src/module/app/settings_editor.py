@@ -472,16 +472,29 @@ def put_config_txt():
 
     cinepi_controller = current_app.config.get("CINEPI_CONTROLLER")
     rebooting = False
+    message = "Saved."
     if cinepi_controller is not None and hasattr(cinepi_controller, "reboot"):
-        rebooting = True
-        # cinepi_controller.reboot() stops any active recording, then
-        # `sudo reboot`s -- give this HTTP response a moment to actually
-        # reach the client first.
-        timer = threading.Timer(0.4, cinepi_controller.reboot)
-        timer.daemon = True
-        timer.start()
+        # Ask the sudoers policy first. `rebooting` used to be True whenever
+        # the controller merely HAD a reboot method, so the page animated a
+        # reboot whether or not one was permitted -- and until this release
+        # CineMate's own sudoers drop-in never granted it, so on a Pi whose
+        # distro NOPASSWD rule had been removed the answer was always no.
+        rebooting = (not hasattr(cinepi_controller, "can_reboot")
+                     or cinepi_controller.can_reboot())
+        if rebooting:
+            # cinepi_controller.reboot() stops any active recording, then
+            # reboots -- give this HTTP response a moment to actually reach
+            # the client first.
+            timer = threading.Timer(0.4, cinepi_controller.reboot)
+            timer.daemon = True
+            timer.start()
+        else:
+            message = ("Saved, but this Pi will not let CineMate reboot itself: "
+                       "`systemctl reboot` is not in its sudoers rule. Re-run "
+                       "cinemate-install.sh, or reboot it yourself to apply the change.")
+            logger.warning("config.txt saved but reboot is not permitted by sudoers")
 
-    return jsonify({"ok": True, "message": "Saved.", "rebooting": rebooting})
+    return jsonify({"ok": True, "message": message, "rebooting": rebooting})
 
 
 @settings_editor_bp.route("/api/actions", methods=["GET"])

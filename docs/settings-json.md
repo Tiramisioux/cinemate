@@ -447,6 +447,15 @@ Applies changes you already saved, and shows CineMate's live log.
 | Reboot Pi | Real reboot, and only a reboot: it sends the `reboot` command through the same dispatcher as the CLI and the GPIO 13 triple-click, and does **not** write `config.txt` — unsaved edits on Boot config are left where they are. Recording stops first. The console reports the Pi answering again; allow about 25 seconds. On failure: "Reboot failed" toast, nothing rebooted. |
 | config.txt (link) | Inline link in the Reboot Pi text; switches to Boot config. |
 
+!!! warning "An older install may refuse to reboot itself"
+
+    CineMate runs as `pi`, so rebooting needs a sudoers grant — and until this release its
+    drop-in never had one. On a Pi whose distro `NOPASSWD` rule is still in place nothing
+    changes; where it had been removed, every reboot path failed silently. Re-run
+    `cinemate-install.sh` to add the grant. Both buttons now say so instead of animating a
+    reboot that will not happen.
+
+
 !!! note "config.txt reboots itself"
     Saving on **Boot config** (sensors, buses, RP1 overclock) reboots the Pi by itself, no Reboot Pi
     button needed.

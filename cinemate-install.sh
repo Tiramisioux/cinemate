@@ -1670,6 +1670,18 @@ $PI_USER ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 $PI_USER ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 $PI_USER ALL=(ALL) NOPASSWD: /usr/bin/systemd-run --no-block --collect --unit=cinemate-restart-trigger -- systemctl restart cinemate-autostart
 $PI_USER ALL=(ALL) NOPASSWD: $CONFIG_TXT_APPLY_HELPER
+# Reboot and power off. CineMate runs as $PI_USER (cinemate-autostart.service
+# sets User=pi), so `reboot` from the CLI, the GPIO triple-click, the web API
+# and the settings editor's own buttons all need a grant -- and there was
+# none. Whether they worked at all depended on the distro's own
+# 010_<user>-nopasswd rule still being in place, and where it had been
+# removed they failed silently, because controller.reboot() ran the command
+# through os.system() and discarded the exit status.
+#
+# The systemctl form rather than /sbin/reboot: an exact, unambiguous path
+# that cannot be reached through a /sbin -> /usr/sbin symlink under a
+# different spelling, matching the systemd-run grant above.
+$PI_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reboot, /usr/bin/systemctl poweroff
 EOF
     sudo visudo -cf /etc/sudoers.d/pi_cinemate >/dev/null
     detail "sudoers validation passed"

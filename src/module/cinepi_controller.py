@@ -2449,17 +2449,65 @@ class CinePiController:
         value = self.redis_controller.get_value(redis_key)
         return value
     
-    def reboot(self):
+    def _power_command(self, verb: str, what: str) -> bool:
+        """Run `systemctl <verb>` as root, and say whether it was accepted.
+
+        os.system() was the whole defect here. It returns the shell's status
+        and both callers discarded it, so a refusal was indistinguishable from
+        a reboot that simply had not happened yet -- and a refusal is exactly
+        what a Pi gives back: cinemate-autostart.service runs as `pi`, and
+        CineMate's own sudoers drop-in never granted reboot or poweroff. Where
+        the distro's 010_<user>-nopasswd rule had been removed, every reboot
+        path (CLI, GPIO triple-click, web API, the settings editor's buttons)
+        failed in silence.
+
+        `-n` so a machine without the grant fails immediately instead of
+        waiting on a password prompt at a console nobody is watching.
+        """
         if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
             self.stop_recording()
-        logging.info("Initiating safe system shutdown.")
-        os.system("sudo reboot")
-        
-    def safe_shutdown(self):
-        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
-            self.stop_recording()
-        logging.info("Initiating safe system shutdown.")
-        os.system("sudo shutdown -h now")
+        logging.info("Initiating safe system %s.", what)
+        try:
+            result = subprocess.run(
+                ["sudo", "-n", "systemctl", verb],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            logging.error("Could not %s: %s", what, exc)
+            return False
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            if "password" in detail.lower() or "sudo:" in detail.lower():
+                detail = ("sudo refused: `systemctl %s` is not in CineMate's sudoers "
+                          "rule on this machine. Re-run cinemate-install.sh, or add it "
+                          "to /etc/sudoers.d/pi_cinemate." % verb)
+            logging.error("%s refused (exit %s): %s", what.capitalize(), result.returncode, detail)
+            return False
+        return True
+
+    def can_reboot(self) -> bool:
+        """Whether `systemctl reboot` would actually be permitted, without
+        running it.
+
+        `sudo -l <command>` asks the sudoers policy about one command and
+        answers without executing it; `-n` keeps it from prompting. This is
+        what lets the settings editor say "saved, reboot it yourself" instead
+        of animating a reboot that sudo is about to refuse.
+        """
+        try:
+            result = subprocess.run(
+                ["sudo", "-n", "-l", "/usr/bin/systemctl", "reboot"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return result.returncode == 0
+
+    def reboot(self) -> bool:
+        return self._power_command("reboot", "reboot")
+
+    def safe_shutdown(self) -> bool:
+        return self._power_command("poweroff", "shutdown")
     
     def mount(self):
         self.ssd_monitor.mount_drive()

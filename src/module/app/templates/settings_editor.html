@@ -4337,7 +4337,8 @@
     if (activePage === 'config'){
       saveConfigTxt().then(function(res){
         if (!res.ok){ showToast('Save failed: ' + res.message); return; }
-        showToast(res.rebooting ? 'Saved. Rebooting the Pi…' : 'Saved config.txt.');
+          showToast(res.rebooting ? 'Saved. Rebooting the Pi…'
+                                : (res.message || 'Saved config.txt.'));
       });
       return;
     }
@@ -6407,10 +6408,12 @@
         return;
       }
       if (!res.rebooting){
-        /* The file is written but no controller was attached to reboot, so
-           saying "Rebooting" would be the same lie in a smaller font. */
+        /* Written, but this Pi will not let CineMate reboot itself -- no
+           controller attached, or sudo refuses. Animating one anyway would be
+           the same lie in a smaller font, so say what happened and why; the
+           server's message names the reason. */
         cfgRebootBtn.disabled = false;
-        showToast('Saved config.txt — reboot the Pi yourself to apply it.');
+        showToast(res.message || 'Saved config.txt — reboot the Pi yourself to apply it.');
         return;
       }
       runBootSequence({

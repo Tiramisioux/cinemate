@@ -6297,7 +6297,11 @@
     }
 
     var t0 = Date.now();
-    say(opts.command, 'prompt');
+    /* No invented "$ sudo ..." line. It never matched what actually ran --
+       a restart goes through systemd-run, not a bare systemctl -- and the
+       console below is a live tail of the camera's own log, so the real
+       startup sequence arrives here on its own as the service comes back.
+       Narrating the wait is fine; narrating a command is fiction. */
     say(opts.waitText);
     var deadline = t0 + (opts.timeoutMs || 90000);
 
@@ -6339,11 +6343,22 @@
     while (el.childElementCount > LOG_MAX_LINES) el.removeChild(el.firstChild);
     el.scrollTop = el.scrollHeight;
   }
+  /* One EventSource, fanned out to every console on the page. The boot-config
+     card has its own console and used to get NO stream at all -- so a reboot
+     there showed an invented "$ sudo reboot" and a wait message and nothing
+     else, while the real startup sequence went only to the settings page's
+     console. A second EventSource per console would have worked too, but the
+     server caps SSE clients (system.web_api.max_sse_clients, 4 by default)
+     and two per browser tab spends that budget on the same bytes twice. */
+  var logSinks = [];
+  var logStream = null;
   function startLogStream(el){
     if (!el || !window.EventSource) return;
     el.classList.add('open');
-    var es = new EventSource('/settings-editor/api/logs');
-    es.onmessage = function(ev){
+    if (logSinks.indexOf(el) === -1) logSinks.push(el);
+    if (logStream) return;
+    logStream = new EventSource('/settings-editor/api/logs');
+    logStream.onmessage = function(ev){
       if (!ev.data) return;
       /* {t: line, c: termcolor name}. The colour is decided on the server from
          logger.ColoredFormatter's own tables, so the module-to-colour mapping
@@ -6356,7 +6371,8 @@
         line = ev.data; colour = 'dark_grey';
       }
       if (!line) return;
-      appendLogLine(el, line, 'lg-' + (colour || 'dark_grey'));
+      for (var i = 0; i < logSinks.length; i++)
+        appendLogLine(logSinks[i], line, 'lg-' + (colour || 'dark_grey'));
     };
     /* No manual reconnect: the browser retries an EventSource on its own, and
        a hand-rolled retry on top of that just doubles up. */
@@ -6380,7 +6396,6 @@
       }
       runBootSequence({
         btn: restartBtn, dot: statusDot, text: statusText, consoleEl: consoleEl,
-        command: '$ sudo systemctl restart cinemate-autostart',
         waitText: 'waiting for the camera to answer again…',
         busyText: 'Restarting Cinemate — <b class="din">please wait</b>',
         readyText: 'Cinemate is running — <b class="din">READY</b>',
@@ -6418,7 +6433,6 @@
       }
       runBootSequence({
         btn: cfgRebootBtn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl,
-        command: '$ sudo reboot',
         waitText: 'waiting for the Pi to come back…',
         /* A full reboot is a lot slower than a service restart, and the network
            has to come back with it. */
@@ -6444,7 +6458,6 @@
       }
       runBootSequence({
         btn: btn, dot: statusDot, text: statusText, consoleEl: consoleEl,
-        command: '$ sudo reboot',
         waitText: 'waiting for the Pi to come back…',
         settleMs: 12000, timeoutMs: 180000,
         busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
@@ -6469,6 +6482,9 @@
      missing before the i2c tab has ever been opened. */
   i2cRefresh();
   startLogStream(document.getElementById('console'));
+  /* The boot-config card's console shows the same live log: a reboot's own
+     startup sequence is exactly what an operator is watching that card for. */
+  startLogStream(document.getElementById('cfgConsole'));
   /* Back/forward across panes. The browser's fragment scroll fires BEFORE
      hashchange, so at that moment the target section is still display:none and
      the scroll is a no-op on a box-less element; scroll again once the page

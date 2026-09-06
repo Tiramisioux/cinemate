@@ -111,6 +111,26 @@ class ConsoleMarkupTests(unittest.TestCase):
         self.assertIn("new EventSource('/settings-editor/api/logs')", self.html)
         self.assertIn("startLogStream(document.getElementById('console'))", self.html)
 
+    def test_the_boot_config_console_streams_it_too(self):
+        # It had no stream at all: a reboot there showed an invented
+        # "$ sudo reboot" and a wait message, and the real startup sequence
+        # went only to the settings page's console.
+        self.assertIn("startLogStream(document.getElementById('cfgConsole'))", self.html)
+
+    def test_one_connection_feeds_every_console(self):
+        # The server caps SSE clients (system.web_api.max_sse_clients), so two
+        # EventSources per tab would spend that budget on the same bytes twice.
+        self.assertIn("var logSinks = []", self.html)
+        self.assertIn("if (logStream) return;", self.html)
+
+    def test_no_invented_shell_prompt(self):
+        # runBootSequence used to print a "$ sudo ..." line that never matched
+        # what actually ran -- a restart goes through systemd-run, not a bare
+        # systemctl -- while the real sequence was already arriving in the
+        # console underneath it.
+        self.assertNotIn("command: '$ sudo", self.html)
+        self.assertNotIn("say(opts.command", self.html)
+
     def test_a_restart_does_not_wipe_the_log(self):
         # the console carries runtime history; clearing it on restart would
         # throw away the lines explaining whatever prompted the restart

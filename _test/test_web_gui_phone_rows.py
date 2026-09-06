@@ -41,16 +41,133 @@ def block(html, opener):
         i += 1
 
 
+LANDSCAPE_QUERY = "@media (orientation: landscape) and (max-width: 950px)"
+
+
 class LandscapeOneLineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.html = TEMPLATE.read_text(encoding="utf-8")
-        cls.landscape = block(
-            cls.html, "@media (orientation: landscape) and (max-width: 950px)")
+        cls.landscape = block(cls.html, LANDSCAPE_QUERY)
 
     def test_all_three_rows_stay_on_one_line(self):
         self.assertIn("#top-row, #bottom-row, #button-row { flex-wrap: nowrap; }",
                       self.landscape)
+
+    def test_the_nowrap_rule_outranks_every_rows_own_flex_wrap(self):
+        """Source order, not just presence -- the bug this test exists for.
+
+        All four declarations are on id selectors, so they tie on specificity
+        and the last one in the file wins. The media query used to sit up by
+        the rails, above #bottom-row's and #button-row's own rules: #top-row
+        obeyed it and the other two silently kept `wrap`. Every text assertion
+        about the rule passed the whole time, because the rule was there --
+        it just lost. Measured before the fix at 844x390: #bottom-row and
+        #button-row both computed to `wrap`.
+        """
+        query_at = self.html.index(LANDSCAPE_QUERY)
+        for row in ("#top-row", "#bottom-row", "#button-row"):
+            with self.subTest(row=row):
+                # The row's own rule, identified by its display:flex -- not
+                # whichever "#row {" the media query happens to open with.
+                base = block(self.html, "%s {\n            display: flex;" % row)
+                self.assertIn("flex-wrap: wrap;", base,
+                              "%s no longer declares its own flex-wrap; this "
+                              "test's premise needs rechecking" % row)
+                self.assertLess(
+                    self.html.index(base), query_at,
+                    "%s's own flex-wrap:wrap sits AFTER the landscape query, "
+                    "ties it on specificity and silently wins" % row)
+
+    def test_a_row_that_truly_cannot_fit_wraps_rather_than_hiding_a_reading(self):
+        """The clip name is the only field with an ellipsis, so it is the only
+        one that can be shrunk. Twelve fields at once -- MEDIA, write speed,
+        BUF + bar, recording time, clip name, WAV, LOCK, VOLTAGE, CPU, TEMP,
+        RAM, BATT -- do not fit a 667px phone even with the name reduced to
+        nothing, and nowrap then pushed BATT off the side of the screen with
+        nothing on the page to say so. Measured: BATT's right edge at 723 in a
+        667px viewport.
+
+        Shrinking any other field was tried and rejected: none of them
+        ellipsizes, so they overlap instead -- "BUF 0%" ran straight through
+        the recording time.
+
+        A media query cannot ask this question (it knows the viewport, not how
+        many warnings are lit), so it is measured, the way fitRails() measures
+        the rails. Verified at 667 (wraps only once warnings are lit), and at
+        844 and 932, where even every warning plus a battery stays on one
+        line.
+        """
+        self.assertIn("#bottom-row.cramped { flex-wrap: wrap; }", self.html)
+        body = block(self.html, "    function fitBottomRow() {")
+        # Measure with the class off, or the row is measured in the wrapped
+        # state the class itself caused and never comes back.
+        self.assertLess(body.index("classList.remove('cramped')"),
+                        body.index("getBoundingClientRect"))
+        self.assertIn("row.classList.toggle('cramped',", body)
+
+    def test_the_wrap_decision_has_hysteresis(self):
+        """A single threshold flaps, and the flap is expensive.
+
+        For roughly nine pixels of viewport width per warning state the row
+        sits within one glyph of its own edge. There, a reading gaining a
+        digit -- write speed 98 -> 101 MB/s -- crossed the threshold and back,
+        and each crossing added or removed a line. That line comes off
+        #stage, the only 1fr track, so the picture jumped about 25px (9% of
+        its height) every time the number changed. Reproduced at 731x375 and
+        800x375 with warnings lit; invisible to a fixed-content sweep, which
+        measures each state once and settled.
+
+        The release margin is derived from the rendered font size rather than
+        hardcoded, because this row's text is 20% larger on a phone, and the
+        band has to stay wider than a two-digit swing at whatever size it is.
+        """
+        body = block(self.html, "    function fitBottomRow() {")
+        self.assertIn("const wasCramped = row.classList.contains('cramped');", body)
+        self.assertIn("const settled = overflows === bottomFitLast;", body)
+        self.assertIn("row.classList.toggle('cramped', settled ? overflows : wasCramped);",
+                      body)
+
+    def test_the_latch_needs_no_slack_to_measure(self):
+        """Why agreement, and not a pixel hysteresis band.
+
+        Near the narrow end the row is at capacity in every state -- it only
+        fits because the clip name ellipsizes -- so there is no spare width
+        for a release margin to measure against. A band sized in pixels was
+        tried and measured: once a warning had lit at 667px the row never
+        came back to one line after it cleared. Agreement between two
+        consecutive measurements needs no slack at all.
+        """
+        body = block(self.html, "    function fitBottomRow() {")
+        # Strip comments: the rejected approach is described in prose there,
+        # and the point is that no code implements it.
+        code = re.sub(r"//.*", "", body)
+        for token in ("release", "clearance", "fontSize", ".spacer"):
+            with self.subTest(token=token):
+                self.assertNotIn(token, code)
+
+    def test_the_fit_is_not_driven_by_an_observer_on_the_row_it_resizes(self):
+        # .cramped changes #bottom-row's own height, so a ResizeObserver on
+        # that row would re-enter on every toggle.
+        self.assertNotIn("ResizeObserver(fitBottomRow)", self.html)
+        self.assertIn("scheduleBottomFit();", self.html)
+        # render() is where the row's contents change; resize covers rotation.
+        render = block(self.html, "    function render() {")
+        self.assertIn("scheduleBottomFit();", render)
+        self.assertIn("window.addEventListener('resize', () => scheduleBottomFit());",
+                      self.html)
+
+    def test_the_rows_cannot_push_their_own_grid_track_wider_than_the_viewport(self):
+        """A grid item's automatic minimum size is its content size.
+
+        With the rows wrapping, each row's min-content width was small and
+        this never bit. With nowrap it is the whole row, so #bottom grew to
+        721px inside a 667px #app -- RAM's value off the right edge, and the
+        clip name declining to ellipsize because from the row's point of view
+        there was no shortfall to absorb. Width-axis twin of #stage's
+        min-height:0.
+        """
+        self.assertIn("#app > * { min-width: 0; }", self.html)
 
     def test_the_clip_name_is_the_field_that_gives(self):
         # Everything else in the row is a short fixed readout; the clip name
@@ -68,6 +185,16 @@ class ClipNameAlignmentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.html = TEMPLATE.read_text(encoding="utf-8")
+
+    def test_the_wav_badge_sits_on_the_clip_names_line(self):
+        # .badge is align-self:center, which parks the pill against a group
+        # box whose height comes from the clip name's own line -- so it read
+        # as a separate item beside the text rather than part of it.
+        rule = block(self.html, "        .badge.wav {")
+        self.assertIn("align-self: baseline;", rule)
+        # Order matters: .badge and .badge.wav both set align-self, and
+        # .badge.wav only wins by being later as well as more specific.
+        self.assertLess(self.html.index("        .badge {"), self.html.index(rule))
 
     def test_the_bottom_row_aligns_on_the_text_baseline(self):
         # The row's own rule, not the landscape override of the same

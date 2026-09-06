@@ -103,6 +103,15 @@
             padding: calc(var(--gap) * 0.6) var(--gap);
             gap: calc(var(--gap) * 0.5);
         }
+        /* A grid item's automatic minimum size is its CONTENT size, so a row
+           whose content cannot wrap pushes its own track wider than the
+           viewport rather than being constrained by it -- and the flex
+           shrink inside that row is then never asked to do anything, because
+           from its point of view there is no shortfall. Measured at 667x375:
+           #bottom sat at 721px inside a 667px #app and RAM's value was off
+           the right edge, with the clip name declining to ellipsize.
+           This is the width-axis twin of #stage's min-height:0. */
+        #app > * { min-width: 0; }
 
         /* ── top info row ────────────────────────────────────────────────
            simple_gui justifies six label+value groups between
@@ -196,6 +205,15 @@
         .badge.wav {
             background: var(--box);
             font-size: max(8px, calc(var(--value-size) * 0.34));
+            /* Overrides .badge's align-self:center. The WAV pill belongs to
+               the clip name, not to the row: centred, it floated against a
+               group box whose height is set by the clip name's own line, so
+               it read as a separate item parked beside the text. On the
+               baseline it sits on the clip name's line, which is where
+               simple_gui draws it. (.clip-lines is a column, so on a
+               dual-sensor rig that line is the first clip name -- the same
+               one the group's own baseline comes from.) */
+            align-self: baseline;
         }
         .badge.wav.recording { background: var(--wav-rec); }
         .badge.hidden { display: none; }
@@ -241,31 +259,6 @@
             overscroll-behavior: contain;   /* matches #experiment; the rails were missed */
         }
         .rail.fitted { --rail-pad: 0.4; }   /* reclaim the dead band once we are shrinking */
-        /* Landscape on a phone: the top row and the button row each stay on
-           one line. Wrapping spends a second row of height in the orientation
-           that has the least of it, and every one of those rows comes off the
-           picture -- #stage is the only 1fr track. They shrink instead, which
-           is the same trade the rails already make. */
-        @media (orientation: landscape) and (max-width: 950px) {
-            #top-row, #bottom-row, #button-row { flex-wrap: nowrap; }
-            /* Let the groups give ground rather than overflow the row. */
-            #top-row { gap: calc(var(--gap) * 0.5); }
-            #top-row .group { min-width: 0; flex: 0 1 auto; }
-            #top-row .value { font-size: calc(var(--value-size) * 0.82); }
-            #top-row .label { font-size: calc(var(--label-size) * 0.9); }
-            /* The bottom row was left wrapping when the other two were fixed,
-               so CPU/TEMP/RAM still dropped to a second line -- the same cost
-               to the picture the rule above exists to avoid. Its clip name is
-               the one field with give in it: it already ellipsizes, so cap it
-               and let the fixed-width readouts keep the line. */
-            #bottom-row { gap: calc(var(--gap) * 0.3); }
-            #bottom-row .group { min-width: 0; flex: 0 0 auto; }
-            #bottom-row .group.clip { flex: 0 1 auto; min-width: 3em; }
-            #bottom-row .group.clip .value { max-width: 100%; }
-            #bottom-row .spacer { flex: 1 1 0; min-width: 0; }
-            #button-row { gap: calc(var(--gap) * 0.35); }
-            #button-row button, #button-row .btn-link { padding-inline: 0.55em; }
-        }
 
         /* Upright on a phone the rails are as tall as the picture and sit
            beside it, the proportion simple_gui draws on the HDMI overlay --
@@ -822,6 +815,53 @@
         }
         #toast.show { opacity: 1; }
 
+        /* ── landscape on a phone: one line per row ───────────────────
+           Wrapping spends a second row of height in the orientation with the
+           least of it, and every one of those rows comes off the picture --
+           #stage is the only 1fr track. The rows shrink instead, the same
+           trade the rails already make.
+
+           This block MUST stay below #top-row, #bottom-row and #button-row's
+           own rules. All four declare flex-wrap on an id selector, so they
+           tie on specificity and source order decides. It used to sit up by
+           the rails, above two of the three: #top-row obeyed it and the other
+           two silently kept `wrap`, which is why the bottom row went on
+           reflowing after it was supposedly fixed. There is no !important
+           here on purpose -- the ordering is the contract, and a test pins
+           it (test_web_gui_phone_rows.py). */
+        @media (orientation: landscape) and (max-width: 950px) {
+            #top-row, #bottom-row, #button-row { flex-wrap: nowrap; }
+            /* Let the groups give ground rather than overflow the row. */
+            #top-row { gap: calc(var(--gap) * 0.5); }
+            #top-row .group { min-width: 0; flex: 0 1 auto; }
+            #top-row .value { font-size: calc(var(--value-size) * 0.82); }
+            #top-row .label { font-size: calc(var(--label-size) * 0.9); }
+            /* Every readout in the bottom row is a short fixed string; the
+               clip name is the one field with give in it, since it already
+               ellipsizes. So it is the only shrinkable item, and it needs
+               min-width:0 all the way down: .clip-lines is itself a flex
+               container, and a flex item's automatic minimum size is its
+               content, so without this the column refuses to shrink and the
+               whole group keeps its full natural width. */
+            #bottom-row { gap: calc(var(--gap) * 0.3); }
+            #bottom-row .group { min-width: 0; flex: 0 0 auto; }
+            #bottom-row .group.clip { flex: 0 1 auto; min-width: 2.5em; }
+            #bottom-row .group.clip .clip-lines { min-width: 0; flex: 0 1 auto; }
+            #bottom-row .group.clip .value { max-width: 100%; }
+            #bottom-row .spacer { flex: 1 1 0; min-width: 0; }
+            /* The clip name is the ONLY thing that gives. Every other field
+               here is a short reading with no ellipsis, so shrinking one
+               means glyphs overlapping the next field rather than a graceful
+               truncation -- tried, and it put "BUF 0%" through the recording
+               time. When the name is spent and the row still does not fit,
+               the row wraps: see fitBottomRow() below, which sets .cramped.
+               A second line is a visible cost; a reading pushed off the side
+               of the screen is not, and that is the outcome worth avoiding. */
+            #bottom-row.cramped { flex-wrap: wrap; }
+            #button-row { gap: calc(var(--gap) * 0.35); }
+            #button-row button, #button-row .btn-link { padding-inline: 0.55em; }
+        }
+
         /* ── narrow screens: scale, don't reflow (B11.7 / F-297) ──────────
            This used to restack #stage into rows and turn each .rail into a
            horizontal strip above/below the preview at <=900px or portrait
@@ -1309,6 +1349,9 @@
     }
 
     window.addEventListener('resize', sizePreview);
+    // The bottom row's fit is width-dependent, and a rotation changes the
+    // width without changing anything render() watches.
+    window.addEventListener('resize', () => scheduleBottomFit());
 
     function renderTopRow() {
         // Labels come from populate_values() too (fps_label, shutter_label,
@@ -1968,6 +2011,7 @@
         renderSelectors();
         renderExperiment();
         scheduleFit();
+        scheduleBottomFit();
     }
 
     // ── W1+W2: shrink-to-fit rails ───────────────────────────────────────
@@ -2009,6 +2053,71 @@
         if (!fitPending) { fitPending = true; requestAnimationFrame(fitRails); }
     }
 
+    // Landscape keeps the bottom row on one line, and the clip name gives up
+    // whatever width the row is short by. That is enough in every ordinary
+    // state, but the row can be asked to hold eleven fields at once -- MEDIA,
+    // write speed, BUF + bar, recording time, clip name, WAV, LOCK, VOLTAGE,
+    // CPU, TEMP, RAM, BATT -- and on a 667px phone that does not fit even
+    // with the name ellipsized to nothing. Nothing else in the row can
+    // shrink: none of those readings has an ellipsis, so squeezing one only
+    // laps its glyphs over its neighbour.
+    //
+    // So when it genuinely does not fit, let it wrap. CSS cannot ask that
+    // question -- a media query knows the viewport, not how many warnings
+    // are lit -- so it is measured, like fitRails() measures the rails. The
+    // class is removed before measuring, or the row would be measured in the
+    // wrapped state that the class itself caused and never come back.
+    // Deliberately NOT a ResizeObserver on #bottom-row: the class it sets
+    // changes that row's own height, so observing it would re-enter on every
+    // toggle. render() is where the row's contents change and where the fit
+    // can actually have become stale; a resize is covered by the listener
+    // below.
+    let bottomFitPending = false;
+    // Previous overflow answer, for the two-sample latch in fitBottomRow().
+    let bottomFitLast = null;
+    function scheduleBottomFit() {
+        if (bottomFitPending) { return; }
+        bottomFitPending = true;
+        requestAnimationFrame(() => { bottomFitPending = false; fitBottomRow(); });
+    }
+
+    function fitBottomRow() {
+        const row = $('bottom-row');
+        if (!row || !row.isConnected) { return; }
+        const wasCramped = row.classList.contains('cramped');
+        row.classList.remove('cramped');
+        // scrollWidth ignores the absolutely-positioned <select> overlays'
+        // deliberate negative inset, which is why the last child's right edge
+        // is the test rather than a scrollWidth comparison.
+        const kids = [...row.children].filter((c) => c.offsetWidth || c.offsetHeight);
+        const last = kids[kids.length - 1];
+        if (!last) { return; }
+        const overflows = last.getBoundingClientRect().right
+            > row.getBoundingClientRect().right + 1;
+
+        // Two agreeing measurements before the class changes. A single
+        // threshold flaps: for about nine pixels of viewport width per
+        // warning state the row sits within one glyph of its own edge, and
+        // there a reading gaining a digit -- write speed 98 -> 101 MB/s --
+        // crosses it and back. Each crossing adds or removes a line, which
+        // comes off #stage, the only 1fr track, so the picture jumped ~25px
+        // (9% of its height) every time the number changed. Reproduced at
+        // 731x375 and 800x375 with warnings lit.
+        //
+        // A pixel hysteresis band was tried first and is wrong here: near the
+        // narrow end the row is at capacity in every state, only fitting
+        // because the clip name ellipsizes, so there is no slack for a
+        // release margin to measure and the row stayed wrapped for good once
+        // a warning had lit. Latching on agreement needs no slack. A value
+        // that alternates gives alternating answers, neither repeats, and the
+        // row simply holds what it has; a real change -- a warning clearing,
+        // a rotation -- gives the same answer every time and lands on the
+        // second measurement.
+        const settled = overflows === bottomFitLast;
+        bottomFitLast = overflows;
+        row.classList.toggle('cramped', settled ? overflows : wasCramped);
+    }
+
     function updateRailFade(el) {
         el.classList.toggle('more-above', el.scrollTop > 0);
         el.classList.toggle('more-below', el.scrollTop + el.clientHeight < el.scrollHeight - 1);
@@ -2025,6 +2134,9 @@
     // the EXPERIMENT drawer opens, with no window resize -- exactly the case
     // a media query cannot see.
     if (window.ResizeObserver) { new ResizeObserver(scheduleFit).observe($('stage')); }
+    // Once at startup: render() covers every later change, but the first
+    // paint happens before any socket data arrives.
+    scheduleBottomFit();
 
     // ── push: server → browser only (module/app/main/events.py) ────────
     const socket = io();

@@ -433,17 +433,17 @@ Saving restarts CineMate; the OLED is set up at startup, so changes come up on t
 These map to `output_peripherals.oled`, listed under
 [`output_peripherals`](settings-json.md#output_peripherals).
 
-## Restart & raw file
+## Restart and log output
 
-![Restart & raw file section of the CineMate settings editor](images/gui-system.png)
+![Restart and log output section of the CineMate settings editor](images/gui-system.png)
 
-Applies changes you already saved, and reaches the raw file.
+Applies changes you already saved, and shows CineMate's live log.
 
 | Control | What it does |
 | --- | --- |
 | Cinemate is running — READY | Fixed coloured-dot label, not a live health check: always READY, except "Restarting Cinemate — please wait" during the animation. |
 | Restart Cinemate | Real restart. Sends `restart cinemate` to the page API, the same dispatcher entry as the CLI and the default GPIO 13 double-click. systemd restarts `cinemate-autostart`, ~10 s per the page. Recording stops, page unresponsive until the service returns. On failure: "Restart failed" toast, nothing restarted. |
-| Restart console | Opens under the button while restarting. Fixed stylised animation, same lines every time, not a live log. |
+| Log console | A live tail of `system.log`, streamed over server-sent events and coloured with the same per-module and per-level palette the CineMate CLI uses. Always running, not only during a restart; a restart does not clear it, since the lines explaining why you restarted are usually the ones you want. Shows when the camera answers again after a restart. |
 | Reboot Pi | Does not reboot. Clicks through to the **Save & reboot Pi** card on Boot config, which only plays the same animation (no `config.txt` write, no reboot) and does not switch pages, so you see only a "Pi is back up" toast. Real reboot: Save changes on Boot config, `reboot` over SSH, or GPIO 13 triple-click. |
 | config.txt (link) | Inline link in the Reboot Pi text; switches to Boot config. |
 

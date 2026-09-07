@@ -75,6 +75,10 @@
   a{ color: inherit; }
   button{ font: inherit; color: inherit; }
   code, .mono{ font-family: ui-monospace, SF Mono, Menlo, Consolas, monospace; }
+  /* A string resources/gui-text/ could not supply. Loud on purpose -- a blank
+     space is something nobody reports; tools/gui_text_check.py gates these at
+     zero in CI, so one reaching a camera means the check did not run. */
+  .gui-text-missing{ background:#b00020; color:#fff; padding:1px 5px; border-radius:3px; font-weight:700; }
 
   .din{ font-family: 'DIN2014', Arial Narrow, Arial, sans-serif; }
   .eyebrow{
@@ -1135,72 +1139,72 @@
   <div class="rail-scrim" id="railScrim"></div>
   <nav class="rail" id="rail" aria-label="Settings sections">
     <div class="rail-group" data-page="config">
-      <div class="rail-title eyebrow">Boot config</div>
-      <p class="rail-blurb">Sensor overlays, hardware buses and the RP1 overclock — everything Cinemate writes into <code class="mono">config.txt</code>. Every change here needs a reboot.</p>
+      <div class="rail-title eyebrow">{{ t('rail.boot-config.title') }}</div>
+      <p class="rail-blurb">{{ t('rail.boot-config.blurb') }}</p>
     </div>
     <div class="rail-group" data-page="settings">
-      <div class="rail-title eyebrow">Look &amp; feel</div>
-      <a href="#welcome" data-nav>Welcome screen</a>
-      <a href="#wifi" data-nav>Wi‑Fi hotspot</a>
+      <div class="rail-title eyebrow">{{ t('rail.look-and-feel.title') }}</div>
+      <a href="#welcome" data-nav>{{ t('raillink.welcome.label') }}</a>
+      <a href="#wifi" data-nav>{{ t('raillink.wifi.label') }}</a>
     </div>
     <div class="rail-group" data-page="settings">
-      <div class="rail-title eyebrow">Cameras</div>
-      <a href="#cam0" data-nav>Camera 0</a>
-      <a href="#cam1" data-nav>Camera 1</a>
+      <div class="rail-title eyebrow">{{ t('rail.cameras.title') }}</div>
+      <a href="#cam0" data-nav>{{ t('raillink.cam0.label') }}</a>
+      <a href="#cam1" data-nav>{{ t('raillink.cam1.label') }}</a>
     </div>
     <div class="rail-group" data-page="settings">
-      <div class="rail-title eyebrow">Timing</div>
-      <a href="#sync" data-nav>Timing &amp; sync</a>
+      <div class="rail-title eyebrow">{{ t('rail.timing.title') }}</div>
+      <a href="#sync" data-nav>{{ t('raillink.sync.label') }}</a>
     </div>
     <div class="rail-group" data-page="settings">
-      <div class="rail-title eyebrow">Exposure &amp; steps</div>
-      <a href="#steps" data-nav>Value steps</a>
-      <a href="#resolution" data-nav>Resolution &amp; sensor</a>
-      <a href="#fpsceilings" data-nav>Per-mode fps ceilings</a>
+      <div class="rail-title eyebrow">{{ t('rail.exposure-and-steps.title') }}</div>
+      <a href="#steps" data-nav>{{ t('raillink.steps.label') }}</a>
+      <a href="#resolution" data-nav>{{ t('raillink.resolution.label') }}</a>
+      <a href="#fpsceilings" data-nav>{{ t('raillink.fpsceilings.label') }}</a>
     </div>
     <div class="rail-group" data-page="settings">
-      <div class="rail-title eyebrow">Recording</div>
-      <a href="#audio" data-nav>Audio</a>
-      <a href="#hdmi" data-nav>HDMI &amp; preview</a>
+      <div class="rail-title eyebrow">{{ t('rail.recording.title') }}</div>
+      <a href="#audio" data-nav>{{ t('raillink.audio.label') }}</a>
+      <a href="#hdmi" data-nav>{{ t('raillink.hdmi.label') }}</a>
     </div>
     <div class="rail-group" data-page="settings">
-      <div class="rail-title eyebrow">Physical controls</div>
-      <a href="#controls" data-nav>Buttons &amp; switches</a>
-      <a href="#pots" data-nav>Grove HAT potentiometers</a>
-      <a href="#quadrotary" data-nav>Quad rotary encoder</a>
-      <a href="#gpio" data-nav>Rec tally &amp; GPIO out</a>
-      <a href="#oled" data-nav>OLED status display</a>
+      <div class="rail-title eyebrow">{{ t('rail.physical-controls.title') }}</div>
+      <a href="#controls" data-nav>{{ t('raillink.controls.label') }}</a>
+      <a href="#pots" data-nav>{{ t('raillink.pots.label') }}</a>
+      <a href="#quadrotary" data-nav>{{ t('raillink.quadrotary.label') }}</a>
+      <a href="#gpio" data-nav>{{ t('raillink.gpio.label') }}</a>
+      <a href="#oled" data-nav>{{ t('raillink.oled.label') }}</a>
     </div>
     <div class="rail-group" data-page="settings">
-      <div class="rail-title eyebrow">System</div>
-      <a href="#system" data-nav>Restart Cinemate</a>
+      <div class="rail-title eyebrow">{{ t('rail.system.title') }}</div>
+      <a href="#system" data-nav>{{ t('raillink.system.label') }}</a>
     </div>
     <div class="rail-group" data-page="i2c">
-      <div class="rail-title eyebrow">i2c hardware</div>
-      <p class="rail-blurb">What is attached to the camera's I²C bus, probed each time you open this tab. Everything here is optional — the camera shoots without any of it.</p>
+      <div class="rail-title eyebrow">{{ t('rail.i2c-hardware.title') }}</div>
+      <p class="rail-blurb">{{ t('rail.i2c-hardware.blurb') }}</p>
     </div>
     <div class="rail-group" data-page="raw">
-      <div class="rail-title eyebrow">RAW files</div>
-      <p class="rail-blurb">Everything on the active storage device — browse, sort and pull takes off over Wi‑Fi.</p>
+      <div class="rail-title eyebrow">{{ t('rail.raw-files.title') }}</div>
+      <p class="rail-blurb">{{ t('rail.raw-files.blurb') }}</p>
     </div>
     <div class="rail-group" data-page="playback">
-      <div class="rail-title eyebrow">Playback</div>
-      <p class="rail-blurb">Review takes off the card at the conform frame rate.</p>
+      <div class="rail-title eyebrow">{{ t('rail.playback.title') }}</div>
+      <p class="rail-blurb">{{ t('rail.playback.blurb') }}</p>
     </div>
     <div class="rail-group" data-page="live">
-      <div class="rail-title eyebrow">Live view</div>
-      <p class="rail-blurb">The shooting screen — image, ISO/shutter/fps/WB, and everything <span class="mono">simple_gui.py</span> already draws on the HDMI overlay, mirrored to the browser. It is the camera's own page on port <span class="mono">5000</span>, embedded here. For the picture on its own with nothing drawn over it, use port <span class="mono">8000</span> instead — <span class="mono">8001</span> for a second sensor.</p>
+      <div class="rail-title eyebrow">{{ t('rail.live-view.title') }}</div>
+      <p class="rail-blurb">{{ t('rail.live-view.blurb') }}</p>
     </div>
   </nav>
 
   <main class="main" id="main">
     <div class="page-tabs" role="tablist" aria-label="Cinemate app pages">
-      <button type="button" data-page-tab="config" role="tab">config.txt<span class="tab-hint">boot &amp; sensors</span></button>
-      <button type="button" data-page-tab="i2c" role="tab">i2c<span class="tab-hint">i2c hardware</span></button>
-      <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">settings.jsonc<span class="tab-hint">cameras, audio, controls</span></button>
-      <button type="button" data-page-tab="live" role="tab">Live view<span class="tab-hint">test camera &amp; controls</span></button>
-      <button type="button" data-page-tab="playback" role="tab">Playback<span class="tab-hint">review takes</span></button>
-      <button type="button" data-page-tab="raw" role="tab">RAW files<span class="tab-hint">browse &amp; download</span></button>
+      <button type="button" data-page-tab="config" role="tab">{{ t('tab.config.label') }}<span class="tab-hint">{{ t('tab.config.hint') }}</span></button>
+      <button type="button" data-page-tab="i2c" role="tab">{{ t('tab.i2c.label') }}<span class="tab-hint">{{ t('tab.i2c.hint') }}</span></button>
+      <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">{{ t('tab.settings.label') }}<span class="tab-hint">{{ t('tab.settings.hint') }}</span></button>
+      <button type="button" data-page-tab="live" role="tab">{{ t('tab.live.label') }}<span class="tab-hint">{{ t('tab.live.hint') }}</span></button>
+      <button type="button" data-page-tab="playback" role="tab">{{ t('tab.playback.label') }}<span class="tab-hint">{{ t('tab.playback.hint') }}</span></button>
+      <button type="button" data-page-tab="raw" role="tab">{{ t('tab.raw.label') }}<span class="tab-hint">{{ t('tab.raw.hint') }}</span></button>
     </div>
     <p class="lede" data-page-lede="config" hidden></p>
     <p class="lede" data-page-lede="settings" hidden></p>
@@ -1212,14 +1216,14 @@
     <!-- WELCOME -->
     <section class="group" id="welcome" data-page="settings">
       <header class="group-head">
-        <h2>Welcome screen</h2>
-        <p class="group-sub">What operators see on the HDMI output for a moment after the camera boots.</p>
+        <h2>{{ t('pane.welcome.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.welcome.sub') }}</p>
       </header>
       <div class="cards">
         <div class="card" data-search="show welcome message boot greeting screen">
           <div class="card-main">
-            <label class="card-label" for="f-welcome-on">Show welcome message</label>
-            <p class="card-help">Displays a greeting over the image for a few seconds after boot, before the live view takes over.</p>
+            <label class="card-label" for="f-welcome-on">{{ t('card.system.welcome.show.label') }}</label>
+            <p class="card-help">{{ t('card.system.welcome.show.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-welcome-on" data-path="system.welcome.show" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1227,8 +1231,8 @@
         </div>
         <div class="card" data-search="welcome message text greeting">
           <div class="card-main">
-            <label class="card-label" for="f-welcome-text">Message text</label>
-            <p class="card-help">The exact words shown on screen. Keep it short — it sits over the image, not on black.</p>
+            <label class="card-label" for="f-welcome-text">{{ t('card.system.welcome.message.label') }}</label>
+            <p class="card-help">{{ t('card.system.welcome.message.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input wide" type="text" id="f-welcome-text" data-path="system.welcome.message" data-type="string" data-original="THIS IS A COOL MACHINE" value="THIS IS A COOL MACHINE">
@@ -1236,8 +1240,8 @@
         </div>
         <div class="card" data-search="welcome image logo splash upload png">
           <div class="card-main">
-            <label class="card-label" for="f-welcome-img-input">Welcome image</label>
-            <p class="card-help">Optional logo or splash image shown over the message, for a moment after boot. PNG only.</p>
+            <label class="card-label" for="f-welcome-img-input">{{ t('card.system.welcome.image.label') }}</label>
+            <p class="card-help">{{ t('card.system.welcome.image.help') }}</p>
           </div>
           <div class="card-control">
             <div class="upload-control">
@@ -1257,14 +1261,14 @@
     </section>
     <section class="group" id="wifi" data-page="settings">
       <header class="group-head">
-        <h2>Wi‑Fi hotspot</h2>
-        <p class="group-sub">The network the camera broadcasts so you can reach this page from a phone or laptop.</p>
+        <h2>{{ t('pane.wifi.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.wifi.sub') }}</p>
       </header>
       <div class="cards">
         <div class="card" data-search="wifi hotspot enabled network broadcast">
           <div class="card-main">
-            <label class="card-label" for="f-wifi-on">Broadcast hotspot</label>
-            <p class="card-help">Turns the camera into its own Wi‑Fi access point. Turning this off means you'll need a wired connection to reach it again.</p>
+            <label class="card-label" for="f-wifi-on">{{ t('card.system.wifi_hotspot.enabled.label') }}</label>
+            <p class="card-help">{{ t('card.system.wifi_hotspot.enabled.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-wifi-on" data-path="system.wifi_hotspot.enabled" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1272,8 +1276,8 @@
         </div>
         <div class="card" data-search="wifi network name ssid">
           <div class="card-main">
-            <label class="card-label" for="f-wifi-name">Network name</label>
-            <p class="card-help">The SSID that shows up in Wi‑Fi lists. Useful to rename once you're running more than one unit.</p>
+            <label class="card-label" for="f-wifi-name">{{ t('card.system.wifi_hotspot.name.label') }}</label>
+            <p class="card-help">{{ t('card.system.wifi_hotspot.name.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input" type="text" id="f-wifi-name" data-path="system.wifi_hotspot.name" data-type="string" data-original="CinePi" value="CinePi">
@@ -1281,8 +1285,8 @@
         </div>
         <div class="card" data-search="wifi password hotspot key">
           <div class="card-main">
-            <label class="card-label" for="f-wifi-pass">Password</label>
-            <p class="card-help">At least 8 characters. Anyone with this can join the hotspot and open this settings page.</p>
+            <label class="card-label" for="f-wifi-pass">{{ t('card.system.wifi_hotspot.password.label') }}</label>
+            <p class="card-help">{{ t('card.system.wifi_hotspot.password.help') }}</p>
           </div>
           <div class="card-control">
             <div class="pw-wrap">
@@ -1297,14 +1301,14 @@
     </section>
     <section class="group" id="cam0" data-page="settings">
       <header class="group-head">
-        <h2>Camera 0</h2>
-        <p class="group-sub">Sensor mounted on connector <span class="mono">cam0</span>. Geometry, HDMI routing, and the name it reports over USB.</p>
+        <h2>{{ t('pane.cam0.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.cam0.sub') }}</p>
       </header>
       <div class="cards">
         <div class="card" data-search="cam0 rotate 180 upside down">
           <div class="card-main">
-            <label class="card-label" for="f-c0-rot">Rotate 180°</label>
-            <p class="card-help">For rigs where the sensor is mounted upside‑down.</p>
+            <label class="card-label" for="f-c0-rot">{{ t('card.sensors.cam0.geometry.rotate_180.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.geometry.rotate_180.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-c0-rot" data-path="sensors.cam0.geometry.rotate_180" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -1312,8 +1316,8 @@
         </div>
         <div class="card" data-search="cam0 horizontal flip mirror">
           <div class="card-main">
-            <label class="card-label" for="f-c0-hf">Flip horizontal</label>
-            <p class="card-help">Mirrors the image left–right, e.g. for a periscope or mirror‑rig build.</p>
+            <label class="card-label" for="f-c0-hf">{{ t('card.sensors.cam0.geometry.horizontal_flip.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.geometry.horizontal_flip.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-c0-hf" data-path="sensors.cam0.geometry.horizontal_flip" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -1321,8 +1325,8 @@
         </div>
         <div class="card" data-search="cam0 vertical flip">
           <div class="card-main">
-            <label class="card-label" for="f-c0-vf">Flip vertical</label>
-            <p class="card-help">Mirrors the image top–bottom.</p>
+            <label class="card-label" for="f-c0-vf">{{ t('card.sensors.cam0.geometry.vertical_flip.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.geometry.vertical_flip.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-c0-vf" data-path="sensors.cam0.geometry.vertical_flip" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -1330,8 +1334,8 @@
         </div>
         <div class="card" data-search="cam0 hdmi output port monitor">
           <div class="card-main">
-            <label class="card-label" for="f-c0-hdmi">HDMI output</label>
-            <p class="card-help">Which physical HDMI port shows this sensor's image on the monitor.</p>
+            <label class="card-label" for="f-c0-hdmi">{{ t('card.sensors.cam0.output.hdmi_port.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.output.hdmi_port.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-c0-hdmi" data-path="sensors.cam0.output.hdmi_port" data-type="number" data-original="0">
@@ -1342,8 +1346,8 @@
         </div>
         <div class="card" data-search="cam0 phase lock frame rate clock drift">
           <div class="card-main">
-            <label class="card-label" for="f-c0-pl">Phase lock</label>
-            <p class="card-help">Keeps the sensor's frame timing locked to the Pi's clock instead of free‑running — the fix for slow, cumulative frame‑rate drift.</p>
+            <label class="card-label" for="f-c0-pl">{{ t('card.sensors.cam0.phase_lock.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.phase_lock.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-c0-pl" data-path="sensors.cam0.phase_lock" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1351,8 +1355,8 @@
         </div>
         <div class="card" data-search="cam0 usb camera name override editing software">
           <div class="card-main">
-            <label class="card-label" for="f-c0-namer">Report a different USB name</label>
-            <p class="card-help">Some NLEs and capture tools behave better when they see a known camera name over USB, instead of the raw sensor name.</p>
+            <label class="card-label" for="f-c0-namer">{{ t('card.sensors.cam0.override_camera_name.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.override_camera_name.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-c0-namer" data-path="sensors.cam0.override_camera_name" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1360,8 +1364,8 @@
         </div>
         <div class="card" data-search="cam0 camera name blackmagic pocket">
           <div class="card-main">
-            <label class="card-label" for="f-c0-name">Reported name</label>
-            <p class="card-help">Only used while the override above is on.</p>
+            <label class="card-label" for="f-c0-name">{{ t('card.sensors.cam0.camera_name.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.camera_name.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input wide" type="text" id="f-c0-name" data-path="sensors.cam0.camera_name" data-type="string" data-original="CinePi" value="CinePi">
@@ -1369,8 +1373,8 @@
         </div>
         <div class="card" data-search="cam0 tuning file override colour science upload custom">
           <div class="card-main">
-            <label class="card-label" for="f-c0-tune">Custom tuning file</label>
-            <p class="card-help">Overrides the auto‑detected colour tuning with a file from <span class="mono">resources/tuning_files/</span> — pick one already on the card, or upload a new one if yours isn't listed.</p>
+            <label class="card-label" for="f-c0-tune">{{ t('card.sensors.cam0.tuning_file_override.enabled.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.tuning_file_override.enabled.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <button class="toggle" id="f-c0-tune" data-path="sensors.cam0.tuning_file_override.enabled" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -1383,8 +1387,8 @@
         </div>
         <div class="card" data-search="cam0 cinemate log encode target bit depth">
           <div class="card-main">
-            <label class="card-label" for="f-c0-log">CineMate Log</label>
-            <p class="card-help">Records log instead of linear. "On" uses this mode's own default target; force 10 or 12‑bit where the live bit depth supports it.</p>
+            <label class="card-label" for="f-c0-log">{{ t('card.sensors.cam0.log_encode.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.log_encode.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-c0-log" data-path="sensors.cam0.log_encode" data-type="json" data-original="false">
@@ -1399,14 +1403,14 @@
     </section>
     <section class="group" id="cam1" data-page="settings">
       <header class="group-head">
-        <h2>Camera 1</h2>
-        <p class="group-sub">Sensor mounted on connector <span class="mono">cam1</span> — same options, independent values.</p>
+        <h2>{{ t('pane.cam1.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.cam1.sub') }}</p>
       </header>
       <div class="cards">
         <div class="card" data-search="cam1 rotate 180 upside down">
           <div class="card-main">
-            <label class="card-label" for="f-c1-rot">Rotate 180°</label>
-            <p class="card-help">For rigs where this sensor is mounted upside‑down.</p>
+            <label class="card-label" for="f-c1-rot">{{ t('card.sensors.cam1.geometry.rotate_180.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam1.geometry.rotate_180.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-c1-rot" data-path="sensors.cam1.geometry.rotate_180" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -1414,8 +1418,8 @@
         </div>
         <div class="card" data-search="cam1 hdmi output port monitor">
           <div class="card-main">
-            <label class="card-label" for="f-c1-hdmi">HDMI output</label>
-            <p class="card-help">Which physical HDMI port shows this sensor's image.</p>
+            <label class="card-label" for="f-c1-hdmi">{{ t('card.sensors.cam1.output.hdmi_port.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam1.output.hdmi_port.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-c1-hdmi" data-path="sensors.cam1.output.hdmi_port" data-type="number" data-original="1">
@@ -1426,8 +1430,8 @@
         </div>
         <div class="card" data-search="cam1 phase lock frame rate clock drift">
           <div class="card-main">
-            <label class="card-label" for="f-c1-pl">Phase lock</label>
-            <p class="card-help">Locks this sensor's frame timing to the Pi's clock to prevent slow frame‑rate drift.</p>
+            <label class="card-label" for="f-c1-pl">{{ t('card.sensors.cam1.phase_lock.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam1.phase_lock.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-c1-pl" data-path="sensors.cam1.phase_lock" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1435,8 +1439,8 @@
         </div>
         <div class="card" data-search="cam1 tuning file override colour science upload custom">
           <div class="card-main">
-            <label class="card-label" for="f-c1-tune">Custom tuning file</label>
-            <p class="card-help">Same idea as cam0 — override with a file from <span class="mono">resources/tuning_files/</span> or upload a new one.</p>
+            <label class="card-label" for="f-c1-tune">{{ t('card.sensors.cam1.tuning_file_override.enabled.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam1.tuning_file_override.enabled.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <button class="toggle" id="f-c1-tune" data-path="sensors.cam1.tuning_file_override.enabled" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -1449,8 +1453,8 @@
         </div>
         <div class="card" data-search="cam1 cinemate log encode target bit depth">
           <div class="card-main">
-            <label class="card-label" for="f-c1-log">CineMate Log</label>
-            <p class="card-help">Same idea as cam0 — records log instead of linear, target forced or auto per mode.</p>
+            <label class="card-label" for="f-c1-log">{{ t('card.sensors.cam1.log_encode.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam1.log_encode.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-c1-log" data-path="sensors.cam1.log_encode" data-type="json" data-original="false">
@@ -1463,8 +1467,8 @@
         </div>
         <div class="card" data-search="record policy dual recording both cameras follow preview always both lock">
           <div class="card-main">
-            <label class="card-label" for="f-recpolicy">Dual‑sensor record policy</label>
-            <p class="card-help">"Follow preview" records whatever's on screen — one camera full‑screen records alone. "Always both" ignores the preview and records both every take. A camera token on <span class="mono">rec</span> overrides either for one take.</p>
+            <label class="card-label" for="f-recpolicy">{{ t('card.sensors.record_policy.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.record_policy.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-recpolicy" data-path="sensors.record_policy" data-type="string" data-original="follow_preview" style="min-width:180px">
@@ -1477,14 +1481,14 @@
     </section>
     <section class="group" id="sync" data-page="settings">
       <header class="group-head">
-        <h2>Timing &amp; sync</h2>
-        <p class="group-sub">How strictly the recorder watches frame timing before it warns you or flags a take.</p>
+        <h2>{{ t('pane.sync.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.sync.sub') }}</p>
       </header>
       <div class="cards">
         <div class="card" data-search="auto storage preroll wait before recording">
           <div class="card-main">
-            <label class="card-label" for="f-preroll">Auto storage pre‑roll</label>
-            <p class="card-help">Lets the storage device settle before recording is allowed to start, avoiding a rocky first few frames.</p>
+            <label class="card-label" for="f-preroll">{{ t('card.system.storage.auto_preroll.label') }}</label>
+            <p class="card-help">{{ t('card.system.storage.auto_preroll.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-preroll" data-path="system.storage.auto_preroll" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1492,8 +1496,8 @@
         </div>
         <div class="card" data-search="light hz mains flicker frequency 50 60">
           <div class="card-main">
-            <label class="card-label">Local mains frequency</label>
-            <p class="card-help">Frequencies considered when computing flicker‑free shutter angles for artificial light.</p>
+            <label class="card-label">{{ t('card.sync.1.label') }}</label>
+            <p class="card-help">{{ t('card.sync.1.help') }}</p>
           </div>
           <div class="card-control steplist" data-chip-path="settings.light_hz" data-chip-type="number" data-chip-original="[50,60]">
             <span class="step-chip">50<button data-remove aria-label="Remove 50 Hz">×</button></span>
@@ -1503,8 +1507,8 @@
         </div>
         <div class="card" data-search="conform frame rate project timeline base">
           <div class="card-main">
-            <label class="card-label" for="f-conform">Conform frame rate</label>
-            <p class="card-help">The project frame rate everything is timecode‑conformed to, regardless of the capture rate.</p>
+            <label class="card-label" for="f-conform">{{ t('card.settings.conform_frame_rate.label') }}</label>
+            <p class="card-help">{{ t('card.settings.conform_frame_rate.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-conform" data-path="settings.conform_frame_rate" data-type="number" data-original="25">
@@ -1516,8 +1520,8 @@
         </div>
         <div class="card" data-search="live sync warning tolerance frames">
           <div class="card-main">
-            <label class="card-label" for="f-livewarn">Live sync warning tolerance</label>
-            <p class="card-help">How many frames audio and video may drift apart during a take before the on‑screen sync warning appears.</p>
+            <label class="card-label" for="f-livewarn">{{ t('card.settings.sync_tolerances.live_sync_warning_frames.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_tolerances.live_sync_warning_frames.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-livewarn" data-path="settings.sync_tolerances.live_sync_warning_frames" data-type="number" data-original="5" value="5"> fr
@@ -1525,8 +1529,8 @@
         </div>
         <div class="card" data-search="live sync startup guard frames">
           <div class="card-main">
-            <label class="card-label" for="f-startguard">Startup guard</label>
-            <p class="card-help">Frames of extra tolerance right at the start of a take, while sync is still settling in.</p>
+            <label class="card-label" for="f-startguard">{{ t('card.settings.sync_tolerances.live_sync_startup_guard_frames.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_tolerances.live_sync_startup_guard_frames.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-startguard" data-path="settings.sync_tolerances.live_sync_startup_guard_frames" data-type="number" data-original="10" value="10"> fr
@@ -1534,8 +1538,8 @@
         </div>
         <div class="card" data-search="final sync analysis tolerance frames end of take">
           <div class="card-main">
-            <label class="card-label" for="f-finalsync">Final sync tolerance</label>
-            <p class="card-help">How much drift is allowed in the end‑of‑take analysis before a clip is flagged as out of sync.</p>
+            <label class="card-label" for="f-finalsync">{{ t('card.settings.sync_tolerances.final_sync_analysis_frames.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_tolerances.final_sync_analysis_frames.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-finalsync" data-path="settings.sync_tolerances.final_sync_analysis_frames" data-type="number" data-original="1" value="1"> fr
@@ -1543,8 +1547,8 @@
         </div>
         <div class="card" data-search="timecode drop jitter tolerance frames">
           <div class="card-main">
-            <label class="card-label" for="f-tcjitter">Timecode jitter tolerance</label>
-            <p class="card-help">Small timecode hiccups within this many frames are ignored instead of logged as a drop.</p>
+            <label class="card-label" for="f-tcjitter">{{ t('card.settings.sync_tolerances.tc_drop_jitter_frames.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_tolerances.tc_drop_jitter_frames.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-tcjitter" data-path="settings.sync_tolerances.tc_drop_jitter_frames" data-type="number" data-original="1" value="1"> fr
@@ -1554,14 +1558,14 @@
     </section>
     <section class="group" id="steps" data-page="settings">
       <header class="group-head">
-        <h2>Value steps</h2>
-        <p class="group-sub">The click‑stops each control cycles through, and — for the four with a pot channel assigned in Pots below — the free‑running range between the lowest and highest stop.</p>
+        <h2>{{ t('pane.steps.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.steps.sub') }}</p>
       </header>
       <div class="cards">
         <div class="card" data-search="iso steps values stops sensitivity free stepping increment continuous">
           <div class="card-main">
-            <label class="card-label">ISO stops</label>
-            <p class="card-help">Values the ISO control steps through, in order. Free stepping lets an assigned pot sweep ISO continuously between the lowest and highest stop here instead of snapping to one — Increment sets how finely it quantizes while sweeping.</p>
+            <label class="card-label">{{ t('card.arrays.iso.free.label') }}</label>
+            <p class="card-help">{{ t('card.arrays.iso.free.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end">
             <div class="steplist" data-chip-path="arrays.iso.steps" data-chip-type="number" data-chip-original="[100,200,400,640,800,1200,1600,2500,3200]">
@@ -1578,11 +1582,11 @@
             </div>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.arrays.iso.free.0') }}</span>
                 <button class="toggle" id="f-isofree" data-path="arrays.iso.free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.arrays.iso.free.1') }}</span>
                 <input class="field-input num-input" type="number" id="f-isoinc" data-path="arrays.iso.free_increment" data-type="number" data-original="10" value="10" style="width:70px">
               </label>
             </div>
@@ -1590,8 +1594,8 @@
         </div>
         <div class="card" data-search="shutter angle steps values stops degrees free stepping increment continuous">
           <div class="card-main">
-            <label class="card-label">Shutter angle stops</label>
-            <p class="card-help">Values the shutter angle control steps through, in degrees. Free stepping sweeps continuously between the lowest and highest stop here — Increment sets the degree step while sweeping.</p>
+            <label class="card-label">{{ t('card.arrays.shutter_a.free.label') }}</label>
+            <p class="card-help">{{ t('card.arrays.shutter_a.free.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end">
             <div class="steplist" data-chip-path="arrays.shutter_a.steps" data-chip-type="number" data-chip-original="[1,45,90,135,172.8,180,225,270,315,346.6,360]">
@@ -1610,11 +1614,11 @@
             </div>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.arrays.shutter_a.free.0') }}</span>
                 <button class="toggle" id="f-shutfree" data-path="arrays.shutter_a.free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.arrays.shutter_a.free.1') }}</span>
                 <input class="field-input num-input" type="number" id="f-shutinc" data-path="arrays.shutter_a.free_increment" data-type="number" data-original="1" value="1" style="width:70px">
               </label>
             </div>
@@ -1622,8 +1626,8 @@
         </div>
         <div class="card" data-search="fps steps values stops frame rate free stepping increment continuous">
           <div class="card-main">
-            <label class="card-label">Frame‑rate stops</label>
-            <p class="card-help">Values the FPS control steps through. Free stepping sweeps continuously between the lowest and highest stop here — Increment sets the fps step while sweeping.</p>
+            <label class="card-label">{{ t('card.arrays.fps.free.label') }}</label>
+            <p class="card-help">{{ t('card.arrays.fps.free.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end">
             <div class="steplist" data-chip-path="arrays.fps.steps" data-chip-type="number" data-chip-original="[25,33,50]">
@@ -1634,11 +1638,11 @@
             </div>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.arrays.fps.free.0') }}</span>
                 <button class="toggle" id="f-fpsfree" data-path="arrays.fps.free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.arrays.fps.free.1') }}</span>
                 <input class="field-input num-input" type="number" id="f-fpsinc" data-path="arrays.fps.free_increment" data-type="number" data-original="1" value="1" style="width:70px">
               </label>
             </div>
@@ -1646,8 +1650,8 @@
         </div>
         <div class="card" data-search="white balance wb steps values stops kelvin free stepping increment continuous">
           <div class="card-main">
-            <label class="card-label">White balance stops</label>
-            <p class="card-help">Values the WB control steps through, in Kelvin. Free stepping (on by default) sweeps continuously between the lowest and highest stop here — Increment sets the Kelvin step while sweeping.</p>
+            <label class="card-label">{{ t('card.arrays.wb.free.label') }}</label>
+            <p class="card-help">{{ t('card.arrays.wb.free.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end">
             <div class="steplist" data-chip-path="arrays.wb.steps" data-chip-type="number" data-chip-original="[3200,4400,5600]">
@@ -1658,11 +1662,11 @@
             </div>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.arrays.wb.free.0') }}</span>
                 <button class="toggle" id="f-wbfree" data-path="arrays.wb.free" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.arrays.wb.free.1') }}</span>
                 <input class="field-input num-input" type="number" id="f-wbinc" data-path="arrays.wb.free_increment" data-type="number" data-original="100" value="100" style="width:70px">
               </label>
             </div>
@@ -1670,8 +1674,8 @@
         </div>
         <div class="card" data-search="anamorphic factor steps desqueeze preview">
           <div class="card-main">
-            <label class="card-label">Anamorphic desqueeze stops</label>
-            <p class="card-help">Preview desqueeze factors available on the anamorphic control. No pot or free stepping — this one's step‑only.</p>
+            <label class="card-label">{{ t('card.steps.4.label') }}</label>
+            <p class="card-help">{{ t('card.steps.4.help') }}</p>
           </div>
           <div class="card-control steplist" data-chip-path="hdmi_display.preview.anamorphic.steps" data-chip-type="number" data-chip-original="[1,1.33,2]">
             <span class="step-chip">1.0×<button data-remove>×</button></span>
@@ -1684,8 +1688,8 @@
     </section>
     <section class="group" id="resolution" data-page="settings">
       <header class="group-head">
-        <h2>Resolution &amp; sensor</h2>
-        <p class="group-sub">Which resolutions and bit depths are offered, and the startup values for imx585 ClearHDR.</p>
+        <h2>{{ t('pane.resolution.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.resolution.sub') }}</p>
         <p class="hw-note" id="modeAvailabilityNote" hidden></p>
       </header>
       <div class="cards">
@@ -1700,8 +1704,8 @@
              known categories to offer: a row of on/off answers. -->
         <div class="card" data-search="resolutions offered 1.5k 2k 3k 4k k steps">
           <div class="card-main">
-            <label class="card-label">Resolutions offered</label>
-            <p class="card-help">Which resolutions (in "K") the resolution control offers. Turning one off hides every mode at that size; a size this sensor has no mode for stays hidden either way. 5.5K is the imx283's 5568‑wide modes, off by default. Turning <em>every</em> switch off does not hide everything — it switches the filter off, so all modes are offered.</p>
+            <label class="card-label">{{ t('card.resolution.0.label') }}</label>
+            <p class="card-help">{{ t('card.resolution.0.help') }}</p>
           </div>
           <div class="card-control switchset" data-set-path="image_capture.k_steps" data-set-type="number">
             <label class="switchrow"><span>1.5K</span><button class="toggle" data-set-item="1.5" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 1.5K"></button></label>
@@ -1713,8 +1717,8 @@
         </div>
         <div class="card" data-search="bit depths offered 10 12 16 raw">
           <div class="card-main">
-            <label class="card-label">Bit depths offered</label>
-            <p class="card-help">Which raw capture bit depths the resolution control offers. 16‑bit is imx585 ClearHDR only. As above, all off means the filter is off, not that nothing is offered.</p>
+            <label class="card-label">{{ t('card.resolution.1.label') }}</label>
+            <p class="card-help">{{ t('card.resolution.1.help') }}</p>
           </div>
           <div class="card-control switchset" data-set-path="image_capture.bit_depths" data-set-type="number">
             <label class="switchrow"><span>10‑bit</span><button class="toggle" data-set-item="10" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 10-bit"></button></label>
@@ -1724,8 +1728,8 @@
         </div>
         <div class="card" data-search="dynamic resolution fps substitute automatic mode">
           <div class="card-main">
-            <label class="card-label" for="f-dynres">Dynamic resolution</label>
-            <p class="card-help">When the requested frame rate is higher than the selected mode can sustain, drop to the largest mode of the same bit depth and HDR class that can. Resolution is the only thing it changes. Both GUIs show RES in green while a substitute is held. <code class="mono">set dynamic resolution</code> overrides this live, and that override outlives a reboot.</p>
+            <label class="card-label" for="f-dynres">{{ t('card.image_capture.dynamic_resolution.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.dynamic_resolution.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-dynres" data-path="image_capture.dynamic_resolution" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1733,8 +1737,8 @@
         </div>
         <div class="card" data-search="hdr sdr modes exposed resolution control">
           <div class="card-main">
-            <label class="card-label" for="f-hdr-sdr">Expose plain (SDR) modes</label>
-            <p class="card-help">Show the sensor's non‑HDR modes on the resolution control, alongside ClearHDR.</p>
+            <label class="card-label" for="f-hdr-sdr">{{ t('card.image_capture.hdr.sdr.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.sdr.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-hdr-sdr" data-path="image_capture.hdr.sdr" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1742,8 +1746,8 @@
         </div>
         <div class="card" data-search="clearhdr imx585 12 bit modes exposed companded ccmp">
           <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr-12">Expose 12‑bit ClearHDR modes</label>
-            <p class="card-help">Companded capture — cinepi‑raw applies the CCMP decompand.</p>
+            <label class="card-label" for="f-hdr-clearhdr-12">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-hdr-clearhdr-12" data-path="image_capture.hdr.imx585_clear_hdr_12bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1751,8 +1755,8 @@
         </div>
         <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear">
           <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr">Expose 16‑bit ClearHDR modes</label>
-            <p class="card-help">Delivered linear, with no compander in the path. Both off keeps the sensor SDR‑only.</p>
+            <label class="card-label" for="f-hdr-clearhdr">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-hdr-clearhdr" data-path="image_capture.hdr.imx585_clear_hdr_16bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1760,24 +1764,24 @@
         </div>
         <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">
           <div class="card-main">
-            <label class="card-label">ClearHDR startup knobs</label>
-            <p class="card-help">Applied when a ClearHDR mode is selected. Adjust live afterwards with <span class="mono">set hdr …</span> or a pot/quad‑rotary channel. Leave a threshold blank to keep the sensor driver’s own pair (low 0, high 4095) — setting both to the same value flattens the image.</p>
+            <label class="card-label">{{ t('card.image_capture.hdr.threshold_low.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.threshold_low.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">Threshold low</span>
+              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.0') }}</span>
               <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">Threshold high</span>
+              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.1') }}</span>
               <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">Blend</span>
+              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.2') }}</span>
               <input class="field-input num-input" type="number" id="f-hdr-blend" data-path="image_capture.hdr.blend" data-type="number" data-original="0" value="0" style="width:56px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">Gain adder</span>
+              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.3') }}</span>
               <input class="field-input num-input" type="number" id="f-hdr-gainadder" data-path="image_capture.hdr.gain_adder" data-type="number" data-original="1" value="1" style="width:56px">
             </label>
           </div>
@@ -1798,8 +1802,8 @@
         <input type="hidden" data-path="image_capture.thumbnail" data-type="number" data-original="2" value="2">
         <div class="card" data-search="sensor database file resources sensors json advanced">
           <div class="card-main">
-            <label class="card-label">Sensor database</label>
-            <p class="card-help">Source file describing every supported sensor's modes. Edit only if you're adding hardware support.</p>
+            <label class="card-label">{{ t('card.sensors.database_file.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.database_file.help') }}</p>
           </div>
           <div class="card-control">
             <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>{{ sensor_db_path }}</span>
@@ -1816,21 +1820,21 @@
     </section>
     <section class="group" id="fpsceilings" data-page="settings">
       <header class="group-head">
-        <h2>Per-mode fps ceilings</h2>
-        <p class="group-sub">These are what <span class="mono">cinepi-raw --list-cameras</span> reported on this board, not a fixed property of the sensor: the figure is clamped by the RP1 pixel rate, so enabling the RP1 overclock can raise it (imx585 4K 12-bit reads 43 stock, 50 overclocked), and it is rounded <em>down</em> to a whole frame — 43 can mean 43.98. It is also not a guarantee this storage/CPU can sustain it. Leave a field blank to keep using the detected value; fill one in only for a mode you've found a lower real-world ceiling for by trial. Raising above the detected value is allowed but logged as a warning — the sensor never reported it.</p>
+        <h2>{{ t('pane.fpsceilings.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.fpsceilings.sub') }}</p>
       </header>
-      <div class="cards" id="fpsCeilingsList"><p class="card-help">Loading detected modes…</p></div>
+      <div class="cards" id="fpsCeilingsList"><p class="card-help">{{ t('help.fpsceilings.0.body') }}</p></div>
     </section>
     <section class="group" id="audio" data-page="settings">
       <header class="group-head">
-        <h2>Audio</h2>
-        <p class="group-sub">Input gain and timecode alignment, set separately for each bit depth.</p>
+        <h2>{{ t('pane.audio.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.audio.sub') }}</p>
       </header>
       <div class="cards">
         <div class="card" data-search="24bit capture gain db audio input level">
           <div class="card-main">
-            <label class="card-label" for="f-g24">24‑bit capture gain</label>
-            <p class="card-help">Extra gain applied to the 24‑bit audio path, in dB.</p>
+            <label class="card-label" for="f-g24">{{ t('card.audio_capture.24bit.capture_gain_db.label') }}</label>
+            <p class="card-help">{{ t('card.audio_capture.24bit.capture_gain_db.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" step="0.5" id="f-g24" data-path="audio_capture.24bit.capture_gain_db" data-type="number" data-original="6" value="6"> dB
@@ -1838,8 +1842,8 @@
         </div>
         <div class="card" data-search="24bit timecode offset frames sync">
           <div class="card-main">
-            <label class="card-label" for="f-tc24">24‑bit timecode offset</label>
-            <p class="card-help">Frame‑count correction applied to the 24‑bit path's embedded timecode, to cancel out a known, fixed sync bias.</p>
+            <label class="card-label" for="f-tc24">{{ t('card.audio_capture.24bit.timecode_offset_frames.label') }}</label>
+            <p class="card-help">{{ t('card.audio_capture.24bit.timecode_offset_frames.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-tc24" data-path="audio_capture.24bit.timecode_offset_frames" data-type="number" data-original="2" value="2"> fr
@@ -1847,8 +1851,8 @@
         </div>
         <div class="card" data-search="16bit capture gain db audio input level">
           <div class="card-main">
-            <label class="card-label" for="f-g16">16‑bit capture gain</label>
-            <p class="card-help">Extra gain applied to the 16‑bit audio path, in dB.</p>
+            <label class="card-label" for="f-g16">{{ t('card.audio_capture.16bit.capture_gain_db.label') }}</label>
+            <p class="card-help">{{ t('card.audio_capture.16bit.capture_gain_db.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" step="0.5" id="f-g16" data-path="audio_capture.16bit.capture_gain_db" data-type="number" data-original="6" value="6"> dB
@@ -1856,8 +1860,8 @@
         </div>
         <div class="card" data-search="16bit timecode offset frames sync">
           <div class="card-main">
-            <label class="card-label" for="f-tc16">16‑bit timecode offset</label>
-            <p class="card-help">Same correction as above, for the 16‑bit path.</p>
+            <label class="card-label" for="f-tc16">{{ t('card.audio_capture.16bit.timecode_offset_frames.label') }}</label>
+            <p class="card-help">{{ t('card.audio_capture.16bit.timecode_offset_frames.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-tc16" data-path="audio_capture.16bit.timecode_offset_frames" data-type="number" data-original="2" value="2"> fr
@@ -1867,14 +1871,14 @@
     </section>
     <section class="group" id="hdmi" data-page="settings">
       <header class="group-head">
-        <h2>HDMI &amp; preview</h2>
-        <p class="group-sub">What's overlaid on the monitor, and how the two feeds are framed.</p>
+        <h2>{{ t('pane.hdmi.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.hdmi.sub') }}</p>
       </header>
       <div class="cards">
         <div class="card" data-search="vu meter buffer audio levels overlay">
           <div class="card-main">
-            <label class="card-label" for="f-vu">Show audio VU meter</label>
-            <p class="card-help">Overlays live input levels on the HDMI monitor.</p>
+            <label class="card-label" for="f-vu">{{ t('card.hdmi_display.overlays.buffer_vu_meter.label') }}</label>
+            <p class="card-help">{{ t('card.hdmi_display.overlays.buffer_vu_meter.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-vu" data-path="hdmi_display.overlays.buffer_vu_meter" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1882,8 +1886,8 @@
         </div>
         <div class="card" data-search="vu meter hatch lines clip warning">
           <div class="card-main">
-            <label class="card-label" for="f-vuhatch">VU meter clip hatching</label>
-            <p class="card-help">Adds diagonal hatch lines to the top of the meter as a clipping warning.</p>
+            <label class="card-label" for="f-vuhatch">{{ t('card.hdmi_display.overlays.vu_meter_hatch_lines.label') }}</label>
+            <p class="card-help">{{ t('card.hdmi_display.overlays.vu_meter_hatch_lines.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-vuhatch" data-path="hdmi_display.overlays.vu_meter_hatch_lines" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
@@ -1891,8 +1895,8 @@
         </div>
         <div class="card" data-search="hdmi display resolution monitor width height">
           <div class="card-main">
-            <label class="card-label">Monitor resolution</label>
-            <p class="card-help">Native resolution of the attached HDMI display — match your monitor for a pixel‑accurate overlay.</p>
+            <label class="card-label">{{ t('card.hdmi_display.width.label') }}</label>
+            <p class="card-help">{{ t('card.hdmi_display.width.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-hw" data-path="hdmi_display.width" data-type="number" data-original="1920" value="1920" style="width:76px">
@@ -1902,8 +1906,8 @@
         </div>
         <div class="card" data-search="mirror both hdmi ports single sensor">
           <div class="card-main">
-            <label class="card-label" for="f-mirror">Mirror to both HDMI ports</label>
-            <p class="card-help">Single‑sensor rigs only — shows the one preview (with GUI) on both connectors. No effect with two sensors; the dual‑sensor compositor already owns both feeds.</p>
+            <label class="card-label" for="f-mirror">{{ t('card.hdmi_display.mirror_to_both_ports.label') }}</label>
+            <p class="card-help">{{ t('card.hdmi_display.mirror_to_both_ports.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-mirror" data-path="hdmi_display.mirror_to_both_ports" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -1911,8 +1915,8 @@
         </div>
         <div class="card" data-search="preview default hdmi source both cam0 cam1 monitor feed">
           <div class="card-main">
-            <label class="card-label" for="f-src">Monitor shows</label>
-            <p class="card-help">Which feed the HDMI output opens on at boot.</p>
+            <label class="card-label" for="f-src">{{ t('card.hdmi_display.preview.default_hdmi_source.label') }}</label>
+            <p class="card-help">{{ t('card.hdmi_display.preview.default_hdmi_source.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-src" data-path="hdmi_display.preview.default_hdmi_source" data-type="string" data-original="both">
@@ -1924,8 +1928,8 @@
         </div>
         <div class="card" data-search="default zoom preview crop magnify">
           <div class="card-main">
-            <label class="card-label" for="f-zoom">Default zoom</label>
-            <p class="card-help">Preview magnification at boot. 2.0 punches into the centre of frame for focus checking.</p>
+            <label class="card-label" for="f-zoom">{{ t('card.hdmi_display.preview.default_zoom.label') }}</label>
+            <p class="card-help">{{ t('card.hdmi_display.preview.default_zoom.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-zoom" data-path="hdmi_display.preview.default_zoom" data-type="number" data-original="1">
@@ -1936,8 +1940,8 @@
         </div>
         <div class="card" data-search="picture in picture pip scale corner margin second camera">
           <div class="card-main">
-            <label class="card-label">Picture‑in‑picture</label>
-            <p class="card-help">Size, corner and edge margin for the small inset feed when a monitor shows one camera full‑screen.</p>
+            <label class="card-label">{{ t('card.hdmi_display.preview.pip.corner.label') }}</label>
+            <p class="card-help">{{ t('card.hdmi_display.preview.pip.corner.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-pipcorner" data-path="hdmi_display.preview.pip.corner" data-type="string" data-original="lower_right" style="min-width:118px">
@@ -1952,8 +1956,8 @@
     </section>
     <section class="group" id="controls" data-page="settings">
       <header class="group-head">
-        <h2>GPIO in</h2>
-        <p class="group-sub">What's wired to each GPIO pin, translated from the raw action list into plain gestures. Every button, switch and rotary encoder in <code class="mono">hardware_controls</code> shows here — add as many as you're wired for.</p>
+        <h2>{{ t('pane.controls.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.controls.sub') }}</p>
       </header>
       <div class="cards" id="controlsList"></div>
       <div class="add-control-row">
@@ -1964,20 +1968,20 @@
       </div>
       <div class="note">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <span>Move a control to a different pin or encoder from the dropdown — occupied ones are greyed out and it asks before remapping. Pick the command from the list (grouped like <span class="mono">cli_commands.py</span>, legal arguments only) or hit the pencil to type it by hand. The box after the command is its argument: leave it on <strong>Cycle through the list</strong> and the control steps through the values in <a href="#steps" data-nav>Value steps</a>, or pick one value to jump straight to it. Commands marked <strong>Needs a value</strong> do nothing useful until you choose one.</span>
+        <span>{{ t('note.controls.0.body') }}</span>
       </div>
     </section>
     <section class="group" id="pots" data-page="settings">
       <header class="group-head">
-        <h2>Grove HAT potentiometers</h2>
-        <p class="group-sub">Which Grove Base HAT channel drives each parameter. ISO/shutter/FPS/WB's free‑mode range and increment live with their step list in Value steps above; ClearHDR's stay here since those knobs aren't array settings.</p>
+        <h2>{{ t('pane.pots.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.pots.sub') }}</p>
         <p class="hw-note" id="potsHwNote" hidden></p>
       </header>
       <div class="cards" id="potsCards">
         <div class="card" data-search="iso pot analog channel">
           <div class="card-main">
-            <label class="card-label" for="f-isopot">ISO</label>
-            <p class="card-help">No effect until a channel is picked — free stepping and increment are set in Value steps above.</p>
+            <label class="card-label" for="f-isopot">{{ t('card.pots.0.label') }}</label>
+            <p class="card-help">{{ t('card.pots.0.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-isopot" style="min-width:112px"><option>None</option><option selected>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
@@ -1985,8 +1989,8 @@
         </div>
         <div class="card" data-search="shutter pot analog channel">
           <div class="card-main">
-            <label class="card-label" for="f-shutpot">Shutter angle</label>
-            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
+            <label class="card-label" for="f-shutpot">{{ t('card.pots.1.label') }}</label>
+            <p class="card-help">{{ t('card.pots.1.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-shutpot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option selected>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
@@ -1994,8 +1998,8 @@
         </div>
         <div class="card" data-search="fps pot analog channel">
           <div class="card-main">
-            <label class="card-label" for="f-fpspot">Frame rate</label>
-            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
+            <label class="card-label" for="f-fpspot">{{ t('card.pots.2.label') }}</label>
+            <p class="card-help">{{ t('card.pots.2.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-fpspot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option selected>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
@@ -2003,8 +2007,8 @@
         </div>
         <div class="card" data-search="wb pot analog channel white balance">
           <div class="card-main">
-            <label class="card-label" for="f-wbpot">White balance</label>
-            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
+            <label class="card-label" for="f-wbpot">{{ t('card.pots.3.label') }}</label>
+            <p class="card-help">{{ t('card.pots.3.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-wbpot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option selected>Channel 6</option><option>Channel 7</option></select>
@@ -2012,18 +2016,18 @@
         </div>
         <div class="card" data-search="hdr threshold low pot analog channel clearhdr free stepping increment continuous">
           <div class="card-main">
-            <label class="card-label" for="f-hdrpot-thlow">ClearHDR threshold low</label>
-            <p class="card-help">Grove Base HAT channel for a physical knob on this value (range 0–4095). Free stepping sweeps continuously across that range instead of jumping by the increment below.</p>
+            <label class="card-label" for="f-hdrpot-thlow">{{ t('card.image_capture.hdr.threshold_low_free.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.threshold_low_free.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <select class="field-input" id="f-hdrpot-thlow" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low_free.0') }}</span>
                 <button class="toggle" id="f-hdrpot-thlow-free" data-path="image_capture.hdr.threshold_low_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low_free.1') }}</span>
                 <input class="field-input num-input" type="number" id="f-hdrpot-thlow-inc" data-path="image_capture.hdr.threshold_low_free_increment" data-type="number" data-original="64" value="64" style="width:70px">
               </label>
             </div>
@@ -2031,18 +2035,18 @@
         </div>
         <div class="card" data-search="hdr threshold high pot analog channel clearhdr free stepping increment continuous">
           <div class="card-main">
-            <label class="card-label" for="f-hdrpot-thhigh">ClearHDR threshold high</label>
-            <p class="card-help">Same idea (range 0–4095).</p>
+            <label class="card-label" for="f-hdrpot-thhigh">{{ t('card.image_capture.hdr.threshold_high_free.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.threshold_high_free.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <select class="field-input" id="f-hdrpot-thhigh" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_high_free.0') }}</span>
                 <button class="toggle" id="f-hdrpot-thhigh-free" data-path="image_capture.hdr.threshold_high_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_high_free.1') }}</span>
                 <input class="field-input num-input" type="number" id="f-hdrpot-thhigh-inc" data-path="image_capture.hdr.threshold_high_free_increment" data-type="number" data-original="64" value="64" style="width:70px">
               </label>
             </div>
@@ -2050,18 +2054,18 @@
         </div>
         <div class="card" data-search="hdr blend pot analog channel clearhdr free stepping increment continuous">
           <div class="card-main">
-            <label class="card-label" for="f-hdrpot-blend">ClearHDR blend</label>
-            <p class="card-help">Same idea (range 0–8).</p>
+            <label class="card-label" for="f-hdrpot-blend">{{ t('card.image_capture.hdr.blend_free.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.blend_free.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <select class="field-input" id="f-hdrpot-blend" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.blend_free.0') }}</span>
                 <button class="toggle" id="f-hdrpot-blend-free" data-path="image_capture.hdr.blend_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.blend_free.1') }}</span>
                 <input class="field-input num-input" type="number" id="f-hdrpot-blend-inc" data-path="image_capture.hdr.blend_free_increment" data-type="number" data-original="1" value="1" style="width:70px">
               </label>
             </div>
@@ -2069,18 +2073,18 @@
         </div>
         <div class="card" data-search="hdr gain adder pot analog channel clearhdr free stepping increment continuous">
           <div class="card-main">
-            <label class="card-label" for="f-hdrpot-gainadder">ClearHDR gain adder</label>
-            <p class="card-help">Same idea (range 0–5).</p>
+            <label class="card-label" for="f-hdrpot-gainadder">{{ t('card.image_capture.hdr.gain_adder_free.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.gain_adder_free.help') }}</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <select class="field-input" id="f-hdrpot-gainadder" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.gain_adder_free.0') }}</span>
                 <button class="toggle" id="f-hdrpot-gainadder-free" data-path="image_capture.hdr.gain_adder_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Increment</span>
+                <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.gain_adder_free.1') }}</span>
                 <input class="field-input num-input" type="number" id="f-hdrpot-gainadder-inc" data-path="image_capture.hdr.gain_adder_free_increment" data-type="number" data-original="1" value="1" style="width:70px">
               </label>
             </div>
@@ -2090,8 +2094,8 @@
     </section>
     <section class="group" id="quadrotary" data-page="settings">
       <header class="group-head">
-        <h2>Quad rotary encoder</h2>
-        <p class="group-sub">Adafruit's four-encoder i²c board. Its rows address the board's own encoders, not GPIO pins.</p>
+        <h2>{{ t('pane.quadrotary.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.quadrotary.sub') }}</p>
         <p class="hw-note" id="quadHwNote" hidden></p>
       </header>
       <div class="cards" id="encodersList"></div>
@@ -2101,8 +2105,8 @@
     </section>
     <section class="group" id="gpio" data-page="settings">
       <header class="group-head">
-        <h2>GPIO out</h2>
-        <p class="group-sub">Physical signals the camera drives while recording — tally lamps, a slate tone, a relay. Add as many tally or tone pins as you're wired for.</p>
+        <h2>{{ t('pane.gpio.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.gpio.sub') }}</p>
       </header>
       <div class="cards" id="gpioOutList"></div>
       <div class="add-control-row">
@@ -2117,8 +2121,8 @@
       <div class="cards" style="margin-top:14px" id="toneCards">
         <div class="card" data-search="rec tone relay drop frames mute dropped frame marker">
           <div class="card-main">
-            <label class="card-label" for="f-relaydrop">Mute the tone on a dropped frame</label>
-            <p class="card-help">When the camera drops a frame, cut the slate tone for about one frame, then resume. The gap is audible on the recorded scratch track, so a dropped frame is findable by ear in the edit.</p>
+            <label class="card-label" for="f-relaydrop">{{ t('card.hardware_outputs.rec_tone.relay_drop_frames.label') }}</label>
+            <p class="card-help">{{ t('card.hardware_outputs.rec_tone.relay_drop_frames.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-relaydrop" data-path="hardware_outputs.rec_tone.relay_drop_frames" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -2128,15 +2132,15 @@
     </section>
     <section class="group" id="oled" data-page="settings">
       <header class="group-head">
-        <h2>OLED status display</h2>
-        <p class="group-sub">The small i²c screen some rigs mount near the handle.</p>
+        <h2>{{ t('pane.oled.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.oled.sub') }}</p>
         <p class="hw-note" id="oledHwNote" hidden></p>
       </header>
       <div class="cards" id="oledCards">
         <div class="card" data-search="oled enabled i2c display screen">
           <div class="card-main">
-            <label class="card-label" for="f-oled">Enabled</label>
-            <p class="card-help">No OLED detected on this build — leave off unless one is wired to the i²c bus.</p>
+            <label class="card-label" for="f-oled">{{ t('card.output_peripherals.oled.enabled.label') }}</label>
+            <p class="card-help">{{ t('card.output_peripherals.oled.enabled.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-oled" data-path="output_peripherals.oled.enabled" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -2144,8 +2148,8 @@
         </div>
         <div class="card" data-search="oled values rows shown iso timecode recording">
           <div class="card-main">
-            <label class="card-label">Rows shown</label>
-            <p class="card-help">Which live values are printed on the screen, top to bottom.</p>
+            <label class="card-label">{{ t('card.oled.1.label') }}</label>
+            <p class="card-help">{{ t('card.oled.1.help') }}</p>
           </div>
           <div class="card-control steplist" data-chip-path="output_peripherals.oled.values" data-chip-type="string" data-chip-original='["iso","tc_cam0","RECORDING_TC"]'>
             <span class="step-chip">iso<button data-remove>×</button></span>
@@ -2156,8 +2160,8 @@
         </div>
         <div class="card" data-search="oled font size 128 64">
           <div class="card-main">
-            <label class="card-label" for="f-oledfont">Font size</label>
-            <p class="card-help">Text size on a 128×64 panel — larger reads from further away but fits fewer rows.</p>
+            <label class="card-label" for="f-oledfont">{{ t('card.output_peripherals.oled.font_size.label') }}</label>
+            <p class="card-help">{{ t('card.output_peripherals.oled.font_size.help') }}</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-oledfont" data-path="output_peripherals.oled.font_size" data-type="number" data-original="20" value="20" style="width:60px"> px
@@ -2167,8 +2171,8 @@
     </section>
     <section class="group" id="system" data-page="settings">
       <header class="group-head">
-        <h2>Restart and log output</h2>
-        <p class="group-sub">Apply saved changes, and watch what CineMate is doing — the console below is a live tail of its log.</p>
+        <h2>{{ t('pane.system.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.system.sub') }}</p>
       </header>
 
       <div class="restart-card">
@@ -2182,21 +2186,21 @@
             Restart Cinemate
           </button>
         </div>
-        <p class="card-help" style="max-width:60ch">Restarting applies any saved changes above and takes about 10 seconds. Recording stops if one is in progress. The console below reports when the camera answers again.</p>
+        <p class="card-help" style="max-width:60ch">{{ t('help.system.0.body') }}</p>
         <div class="console" id="console" aria-live="polite"></div>
       </div>
 
       <div class="danger-zone" style="margin-top:16px">
         <div>
           <div class="eyebrow">Reboot the Pi</div>
-          <p>A full reboot for any other reason.</p>
+          <p>{{ t('text.system.0.body') }}</p>
         </div>
         <button class="btn btn-danger-outline" id="genericRebootBtn">Reboot Pi</button>
       </div>
 
       <div class="note" style="margin-top:16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-        <span>Every field on this page is one key in <code class="mono">settings.jsonc</code> on the Pi. Open the drawer any time to see exactly what Save would write — nothing here is a separate database.</span>
+        <span>{{ t('note.system.0.body') }}</span>
       </div>
     </section>
 
@@ -2227,10 +2231,10 @@
     <!-- CLIPS -->
     <section class="group" id="clips" data-page="raw">
       <header class="group-head">
-        <h2>Clips &amp; downloads</h2>
+        <h2>{{ t('pane.clips.heading') }}</h2>
       </header>
 
-      <div id="storageCards"><p class="card-help">Loading storage…</p></div>
+      <div id="storageCards"><p class="card-help">{{ t('help.clips.0.body') }}</p></div>
 
       <div class="clip-toolbar">
         <label class="left"><input type="checkbox" id="selectAllClips"> Select all</label>
@@ -2262,7 +2266,7 @@
     <!-- PLAYBACK -->
     <section class="group" id="playback" data-page="playback">
       <header class="group-head">
-        <h2>Playback</h2>
+        <h2>{{ t('pane.playback.heading') }}</h2>
       </header>
 
       <p class="eyebrow" style="margin-top:0">Takes on card</p>
@@ -2316,15 +2320,15 @@
       </div>
       <div class="note" style="margin-top:14px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <span><strong>Achieved rate is measured, not assumed.</strong> The player holds the clock and skips frames the camera could not decode in time, and shows the count — rather than letting the take quietly run slow.</span>
+        <span>{{ t('note.playback.0.body') }}</span>
       </div>
 
       <p class="eyebrow">Playback settings</p>
       <div class="cards">
         <div class="card" data-search="conform frame rate playback speed slow motion">
           <div class="card-main">
-            <div class="card-label">Use conform frame rate <span class="mono" id="pbConformLabel">—</span></div>
-            <div class="card-help">Plays every take on the project's conform rate, from <span class="mono">settings.conform_frame_rate</span>. A take shot faster than the conform rate plays as slow motion — the same speed it will run on the timeline. Off plays each take at the rate it was shot.</div>
+            <div class="card-label">{{ t('card.playback.0.label') }} <span class="mono" id="pbConformLabel">—</span></div>
+            <div class="card-help">{{ t('card.playback.0.help') }}</div>
           </div>
           <div class="card-control"><button class="toggle" role="switch" aria-checked="true" id="pbToggleConform"></button></div>
         </div>
@@ -2345,20 +2349,20 @@
     <!-- BOOT CONFIG -->
     <section class="group" id="bootconfig" data-page="config">
       <header class="group-head">
-        <h2>Boot config</h2>
-        <p class="group-sub">What loads at power‑on — sensor overlays, hardware buses, the RP1 overclock. Lives in <code class="mono">/boot/firmware/config.txt</code>, a different file from Cinemate's own settings.</p>
+        <h2>{{ t('pane.bootconfig.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.bootconfig.sub') }}</p>
       </header>
 
       <div class="note">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <span>Every change here needs a full <strong>reboot</strong> to take effect — restarting Cinemate alone won't pick it up. Cinemate only manages the block fenced between its install markers; anything you add outside it survives updates.</span>
+        <span>{{ t('note.bootconfig.0.body') }}</span>
       </div>
 
       <div class="cards" style="margin-top:14px">
         <div class="card" data-search="camera 0 sensor overlay dtoverlay imx477 imx585 imx296 imx283">
           <div class="card-main">
-            <label class="card-label" for="cfg-cam0-sensor">Camera 0 sensor</label>
-            <p class="card-help">Which driver loads on the cam0 connector. Only one overlay per port — Cinemate comments out the others for you.</p>
+            <label class="card-label" for="cfg-cam0-sensor">{{ t('card.bootconfig.0.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.0.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="cfg-cam0-sensor" style="min-width:230px">
@@ -2374,8 +2378,8 @@
 
         <div class="card" data-search="camera 1 sensor overlay dtoverlay imx585 mono dual">
           <div class="card-main">
-            <label class="card-label" for="cfg-cam1-sensor">Camera 1 sensor</label>
-            <p class="card-help">Same idea for cam1, if you're running dual sensors.</p>
+            <label class="card-label" for="cfg-cam1-sensor">{{ t('card.bootconfig.1.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.1.help') }}</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="cfg-cam1-sensor" style="min-width:230px">
@@ -2391,8 +2395,8 @@
 
         <div class="card" data-search="rp1 overclock frame rate clock io die">
           <div class="card-main">
-            <label class="card-label" for="cfg-rp1">RP1 overclock</label>
-            <p class="card-help">Raises the RP1 I/O die clock so higher sensor frame rates are reachable. Needs the overlay built first and a stable supply. The clock is set by the device tree at boot, so this only takes effect after a reboot — and it's what unlocks the link-frequency picks below.</p>
+            <label class="card-label" for="cfg-rp1">{{ t('card.bootconfig.2.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.2.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="cfg-rp1" data-cfg role="switch" aria-checked="false"></button>
@@ -2401,8 +2405,8 @@
 
         <div class="card" id="cfg-cam0-link-card" data-search="cam0 link frequency csi-2 mipi lane rate mbps imx585 starlighteye" hidden>
           <div class="card-main">
-            <label class="card-label" for="cfg-cam0-link-freq">Camera 0 link frequency</label>
-            <p class="card-help">CSI-2 lane rate for the IMX585 on cam0 — this is what sets the frame-rate ceiling. <span class="cfg-link-warn" id="cfg-cam0-link-warn" hidden>Anything above the default needs the RP1 overclock; without it the RP1 caps out near 43.8 fps at 4K whatever the sensor sends.</span></p>
+            <label class="card-label" for="cfg-cam0-link-freq">{{ t('card.bootconfig.3.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.3.help') }} <span class="cfg-link-warn" id="cfg-cam0-link-warn" hidden>{{ t('warn.bootconfig.0.body') }}</span></p>
           </div>
           <div class="card-control">
             <select class="field-input" id="cfg-cam0-link-freq" style="min-width:230px"></select>
@@ -2411,8 +2415,8 @@
 
         <div class="card" id="cfg-cam1-link-card" data-search="cam1 link frequency csi-2 mipi lane rate mbps imx585 starlighteye" hidden>
           <div class="card-main">
-            <label class="card-label" for="cfg-cam1-link-freq">Camera 1 link frequency</label>
-            <p class="card-help">Same for the IMX585 on cam1. Each port carries its own rate. <span class="cfg-link-warn" id="cfg-cam1-link-warn" hidden>Anything above the default needs the RP1 overclock; without it the RP1 caps out near 43.8 fps at 4K whatever the sensor sends.</span></p>
+            <label class="card-label" for="cfg-cam1-link-freq">{{ t('card.bootconfig.4.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.4.help') }} <span class="cfg-link-warn" id="cfg-cam1-link-warn" hidden>{{ t('warn.bootconfig.1.body') }}</span></p>
           </div>
           <div class="card-control">
             <select class="field-input" id="cfg-cam1-link-freq" style="min-width:230px"></select>
@@ -2421,16 +2425,16 @@
 
         <div class="card" id="cfg-modes-card" data-search="detected modes list-cameras resolution bit depth frame rate fps sensor live">
           <div class="card-main">
-            <label class="card-label">Detected modes</label>
-            <p class="card-help">What <code class="mono">cinepi-raw --list-cameras</code> reports for the sensor that is actually attached right now — not what the selections above will produce after a reboot. Frame rates are the ceiling for each mode.</p>
+            <label class="card-label">{{ t('card.bootconfig.5.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.5.help') }}</p>
             <div id="cfg-modes-list"><p class="card-help">Loading detected modes…</p></div>
           </div>
         </div>
 
         <div class="card" data-search="i2c bus quad rotary controller oled accessories">
           <div class="card-main">
-            <label class="card-label" for="cfg-i2c">I²C bus</label>
-            <p class="card-help">Needed by the quad rotary controller and the OLED status display.</p>
+            <label class="card-label" for="cfg-i2c">{{ t('card.bootconfig.6.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.6.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="cfg-i2c" data-cfg role="switch" aria-checked="true"></button>
@@ -2439,8 +2443,8 @@
 
         <div class="card" data-search="i2s bus audio hat">
           <div class="card-main">
-            <label class="card-label" for="cfg-i2s">I²S bus</label>
-            <p class="card-help">Some audio HATs need this instead of USB.</p>
+            <label class="card-label" for="cfg-i2s">{{ t('card.bootconfig.7.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.7.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="cfg-i2s" data-cfg role="switch" aria-checked="false"></button>
@@ -2449,8 +2453,8 @@
 
         <div class="card" data-search="spi bus accessories">
           <div class="card-main">
-            <label class="card-label" for="cfg-spi">SPI bus</label>
-            <p class="card-help">For SPI accessories — displays, some sensors.</p>
+            <label class="card-label" for="cfg-spi">{{ t('card.bootconfig.8.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.8.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="cfg-spi" data-cfg role="switch" aria-checked="false"></button>
@@ -2459,8 +2463,8 @@
 
         <div class="card" data-search="onboard audio codec snd_bcm2835">
           <div class="card-main">
-            <label class="card-label" for="cfg-audio">Onboard audio codec</label>
-            <p class="card-help">The Pi's own audio output. Leave off if you're only ever using USB mic input.</p>
+            <label class="card-label" for="cfg-audio">{{ t('card.bootconfig.9.label') }}</label>
+            <p class="card-help">{{ t('card.bootconfig.9.help') }}</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="cfg-audio" data-cfg role="switch" aria-checked="true"></button>
@@ -2479,13 +2483,13 @@
             Save &amp; reboot Pi
           </button>
         </div>
-        <p class="card-help" style="max-width:60ch">Writes these choices into the managed block of <code class="mono">config.txt</code> and reboots — about 25 seconds, camera included.</p>
+        <p class="card-help" style="max-width:60ch">{{ t('help.bootconfig.0.body') }}</p>
         <div class="console" id="cfgConsole" aria-live="polite"></div>
       </div>
 
       <div class="note" style="margin-top:16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-        <span>Need something not covered here? SSH in and edit <code class="mono">config.txt</code> directly — Cinemate's block stays fenced between install markers, so hand edits outside it survive updates. <a href="#" data-open-config>View the reconstructed file</a></span>
+        <span>{{ t('note.bootconfig.1.body') }}</span>
       </div>
     </section>
 
@@ -2494,34 +2498,34 @@
     <!-- LIVE VIEW -->
     <section class="group" id="i2cbus" data-page="i2c">
       <header class="group-head">
-        <h2>i2c hardware</h2>
-        <p class="group-sub">Optional peripherals on the camera's I²C bus.</p>
+        <h2>{{ t('pane.i2cbus.0.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.i2cbus.0.sub') }}</p>
       </header>
       <div class="cards" id="i2cDeviceList"></div>
 
       <header class="group-head" style="margin-top:26px">
-        <h2>Real-time clock</h2>
-        <p class="group-sub">The system clock sets itself whenever the camera can reach the internet. The RTC keeps whatever it was last given, so it only matches after you copy the time across.</p>
+        <h2>{{ t('pane.i2cbus.1.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.i2cbus.1.sub') }}</p>
       </header>
       <div class="cards" id="i2cClockCards">
         <div class="card" data-search="system time clock now">
           <div class="card-main">
-            <div class="card-label">System time</div>
-            <p class="card-help">What the Pi believes the time is.</p>
+            <div class="card-label">{{ t('card.i2cbus.0.label') }}</div>
+            <p class="card-help">{{ t('card.i2cbus.0.help') }}</p>
           </div>
           <div class="card-control"><span class="mono" id="i2cSystemTime">—</span></div>
         </div>
         <div class="card" data-search="rtc time clock hwclock battery">
           <div class="card-main">
-            <div class="card-label">RTC time</div>
-            <p class="card-help" id="i2cRtcHelp">What the attached clock chip believes the time is.</p>
+            <div class="card-label">{{ t('card.i2cbus.1.label') }}</div>
+            <p class="card-help" id="i2cRtcHelp">{{ t('card.i2cbus.1.help') }}</p>
           </div>
           <div class="card-control"><span class="mono" id="i2cRtcTime">—</span></div>
         </div>
         <div class="card" data-search="sync rtc set clock systohc">
           <div class="card-main">
-            <div class="card-label">Copy system time to the RTC</div>
-            <p class="card-help">Runs <span class="mono">hwclock --systohc</span> and reads the clock back to check it took.</p>
+            <div class="card-label">{{ t('card.i2cbus.2.label') }}</div>
+            <p class="card-help">{{ t('card.i2cbus.2.help') }}</p>
           </div>
           <div class="card-control"><button class="btn btn-primary" id="i2cSyncRtcBtn" type="button">Sync RTC</button></div>
         </div>
@@ -2530,7 +2534,7 @@
 
     <section class="group" id="live" data-page="live">
       <header class="group-head">
-        <h2>Live view</h2>
+        <h2>{{ t('pane.live.heading') }}</h2>
       </header>
       <div class="live-embed-wrap">
         <iframe id="liveEmbedFrame" class="live-embed-frame" src="/?xp=1" title="Cinemate live camera preview" loading="lazy"></iframe>

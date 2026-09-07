@@ -23,6 +23,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+
+from module.app.gui_text import load_gui_text  # noqa: E402
 TEMPLATE = ROOT / "src/module/app/templates/settings_editor.html"
 SETTINGS = ROOT / "settings.jsonc"
 SCHEMA = ROOT / "settings.schema.json"
@@ -81,9 +83,13 @@ class SwitchSetMarkupTests(unittest.TestCase):
                 self.assertNotIn(f'data-chip-path="{path}"', self.html)
 
     def test_these_are_called_resolutions_not_crop_factors(self):
-        self.assertIn("Resolutions offered", self.html)
-        self.assertNotIn("Crop factors offered", self.html)
-        self.assertNotIn("crop factors and bit depths", self.html)
+        # The wording lives in resources/gui-text/, not in the template --
+        # the template only carries the key it looks the string up by. Read
+        # the copy itself, which is what the operator actually reads.
+        copy = " ".join(load_gui_text().values())
+        self.assertIn("Resolutions offered", copy)
+        self.assertNotIn("Crop factors offered", copy)
+        self.assertNotIn("crop factors and bit depths", copy)
 
 
     def test_the_catalogue_covers_every_k_the_sensor_database_can_produce(self):

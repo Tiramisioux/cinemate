@@ -26,10 +26,14 @@ Verified in a browser with the keys absent: both fields blank, placeholder
 """
 
 import re
+import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from module.app.gui_text import load_gui_text  # noqa: E402
 TEMPLATE = ROOT / "src" / "module" / "app" / "templates" / "settings_editor.html"
 
 
@@ -55,9 +59,12 @@ class ClearHdrThresholdMarkupTests(unittest.TestCase):
 
     def test_blank_is_explained_to_the_operator(self):
         # A blank box that silently means "keep the driver's pair" is not
-        # self-describing; the card has to say so.
-        self.assertIn("Leave a threshold blank", self.html)
-        self.assertIn("low 0, high 4095", self.html)
+        # self-describing; the card has to say so. The sentence lives in
+        # resources/gui-text/ now, so read it there -- the template holds
+        # only the key.
+        help_text = load_gui_text()["card.image_capture.hdr.threshold_low.help"]
+        self.assertIn("Leave a threshold blank", help_text)
+        self.assertIn("low 0, high 4095", help_text)
 
     def test_both_thresholds_still_bound_to_their_settings_keys(self):
         self.assertIn('data-path="image_capture.hdr.threshold_low"', self.html)

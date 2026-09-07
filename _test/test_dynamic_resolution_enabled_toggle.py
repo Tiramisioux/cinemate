@@ -155,6 +155,34 @@ class DynamicResolutionEnabledToggleTests(unittest.TestCase):
         self.assertEqual(controller.dynamic_resolution_desired_mode, 0)
         self.assertFalse(controller.dynamic_resolution_active)
 
+    def test_turning_it_on_adopts_the_mode_on_screen_as_the_desired_one(self):
+        # Hardware-confirmed 2026-09-07. A camera that BOOTED with the feature
+        # off never runs the disable branch this session, so the desired mode
+        # is whatever a previous boot left in Redis. Here: running mode 1,
+        # stored desired mode 0. Enabling must not adopt that stale 0 -- a
+        # substitute is never larger or richer than the desired mode, so the
+        # next fps change would drop the camera out of the mode it is in.
+        controller = self.controller(FakeRedis(), sensor_mode=1, desired_mode=0)
+        controller.dynamic_resolution_enabled = False
+
+        controller.set_dynamic_resolution_enabled(1)
+
+        self.assertEqual(controller.dynamic_resolution_desired_mode, 1)
+        self.assertFalse(controller.dynamic_resolution_active)
+
+    def test_re_enabling_an_already_enabled_feature_keeps_the_substitute(self):
+        # The adopt-on-enable above must fire only on a real off->on
+        # transition. While the feature is already on, sensor_mode may BE a
+        # substitute the ladder chose -- adopting it would quietly promote a
+        # substitution into the operator's own selection and strand them
+        # there.
+        controller = self.controller(FakeRedis(), sensor_mode=0, desired_mode=1)
+        controller.dynamic_resolution_enabled = True
+
+        controller.set_dynamic_resolution_enabled(1)
+
+        self.assertEqual(controller.dynamic_resolution_desired_mode, 1)
+
     def test_invalid_value_raises(self):
         controller = self.controller(FakeRedis())
         with self.assertRaises(ValueError):

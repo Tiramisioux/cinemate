@@ -496,6 +496,7 @@ class CinePiController:
         # mode for the next good boot.
 
     def set_dynamic_resolution_enabled(self, value=None):
+        was_enabled = self.dynamic_resolution_enabled
         if value is not None:
             if value in (0, False):
                 self.dynamic_resolution_enabled = False
@@ -514,6 +515,24 @@ class CinePiController:
             # desired mode behind would mean re-enabling the feature later
             # silently jumps back to a resolution the operator has since
             # moved away from.
+            self.dynamic_resolution_desired_mode = self.sensor_mode
+            self.dynamic_resolution_active = False
+        elif not was_enabled:
+            # Off -> on, and the same argument runs the other way. While the
+            # feature was off nothing was substituting, so the mode on screen
+            # is again the operator's own selection -- and the stored desired
+            # mode is whatever was left behind before it was switched off,
+            # possibly by a previous boot entirely.
+            #
+            # Hardware-confirmed 2026-09-07: a camera sitting in mode 6
+            # (16-bit ClearHDR 4K) with the feature off had
+            # dynamic_resolution_desired_mode = 0 still in Redis. Enabling it
+            # would have adopted mode 0 as "what the operator asked for", and
+            # since a substitute is never larger or richer than the desired
+            # mode, the next fps change would have dropped the camera out of
+            # 4K 16-bit on its own. The disable branch above has guarded the
+            # mirror image of this since F-286; this is the half that was
+            # missing.
             self.dynamic_resolution_desired_mode = self.sensor_mode
             self.dynamic_resolution_active = False
 

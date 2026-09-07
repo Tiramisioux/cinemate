@@ -1038,6 +1038,11 @@
      take after the first few behind a horizontal scroll, which is a poor way
      to find the one you just shot. */
   .takestrip{ display:flex; flex-wrap:wrap; gap:10px; padding-bottom:10px; min-width:0; }
+  /* One row instead of a grid: stop wrapping and let it scroll sideways.
+     scroll-padding keeps a take that pbSelectTake scrolls to from landing
+     flush against either end. */
+  .takestrip.one-row{ flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden;
+                      scroll-padding-inline:10px; }
   .take{ flex:0 0 176px; width:176px; min-width:0; overflow:hidden; border:1px solid var(--line);
          background: var(--panel); cursor:pointer; text-align:left; padding:0; color:inherit; font:inherit; }
   .take:hover{ border-color: var(--muted); }
@@ -2282,6 +2287,31 @@
         <h2>{{ t('pane.playback.heading') }}</h2>
       </header>
 
+      <p class="eyebrow" style="margin-top:0">Takes on card</p>
+      <div class="clip-toolbar">
+        <div class="left">
+          Sort
+          <!-- "Oldest first" is selected because that is the order
+               playback.list_clips() returns and the order this strip has
+               always read in: first take upper-left, each later take to its
+               right. The other two match the RAW pane's wording so one
+               vocabulary covers both panes. -->
+          <select class="field-input" id="pbTakeSort" style="min-width:150px">
+            <option value="oldest" selected>Oldest first</option>
+            <option value="newest">Newest first</option>
+            <option value="largest">Largest first</option>
+          </select>
+        </div>
+        <div class="left">
+          View
+          <select class="field-input" id="pbTakeView" style="min-width:130px">
+            <option value="row" selected>One row</option>
+            <option value="grid">Grid</option>
+          </select>
+        </div>
+      </div>
+      <div class="takestrip one-row" id="pbTakeStrip"></div>
+
       <div class="pb-stage" id="pbStage">
         <img id="pbFrame" alt="Current frame">
         <div class="pb-overlay">
@@ -2332,24 +2362,6 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <span>{{ t('note.playback.0.body') }}</span>
       </div>
-
-      <p class="eyebrow">Takes on card</p>
-      <div class="clip-toolbar">
-        <div class="left">
-          Sort
-          <!-- "Oldest first" is selected because that is the order
-               playback.list_clips() returns and the order this strip has
-               always read in: first take upper-left, each later take to its
-               right. The other two match the RAW pane's wording so one
-               vocabulary covers both panes. -->
-          <select class="field-input" id="pbTakeSort" style="min-width:150px">
-            <option value="oldest" selected>Oldest first</option>
-            <option value="newest">Newest first</option>
-            <option value="largest">Largest first</option>
-          </select>
-        </div>
-      </div>
-      <div class="takestrip" id="pbTakeStrip"></div>
 
       <p class="eyebrow">Playback settings</p>
       <div class="cards">
@@ -5032,6 +5044,7 @@
   /* Re-order the strip without disturbing the stage: the selected take keeps
      playing, it just moves. pbSelectTake would pause it and reload the frame
      under someone watching, so only the highlight is re-applied. */
+  pbEl('pbTakeView').addEventListener('change', pbApplyTakeView);
   pbEl('pbTakeSort').addEventListener('change', function(){
     var keepName = pbClip && pbClip.name;
     pbSortClips();
@@ -5177,6 +5190,15 @@
     return best;
   }
 
+  /* One row (scrolling sideways) or a grid of every take. Purely how the
+     strip is laid out -- it changes no state the player or the sort read, so
+     switching it never disturbs what is playing. */
+  function pbApplyTakeView(){
+    var strip = pbEl('pbTakeStrip');
+    var view = (pbEl('pbTakeView') || {}).value || 'row';
+    if (strip) strip.classList.toggle('one-row', view === 'row');
+  }
+
   function pbIndexOfName(name){
     for (var i = 0; i < pbClips.length; i++){
       if (pbClips[i].name === name) return i;
@@ -5301,6 +5323,7 @@
       strip.appendChild(b);
       if (c.frame_count) pbQueueThumb(b.querySelector('.take-thumb'), pbFrameUrl(c.name, 0, 8));
     });
+    pbApplyTakeView();
   }
 
   /* Thumbnails load one at a time. The camera caps concurrent decodes and
@@ -5331,10 +5354,11 @@
       if (i === idx) el.scrollIntoView({ block: 'nearest', inline: 'nearest',
                                          behavior: reduceMotion ? 'auto' : 'smooth' });
     });
-    // The strip sits below the player, so picking a take from it leaves the
-    // thing you just asked to look at off the top of the screen. Only on a
-    // real click: the automatic selection on load (and after a poll picks up
-    // a newly shot take) must not yank the page around on its own.
+    // The strip sits above the player, so picking a take from it leaves the
+    // thing you just asked to look at below the fold -- more so in grid view,
+    // where the strip can be most of a screen on its own. Only on a real
+    // click: the automatic selection on load (and after a poll picks up a
+    // newly shot take) must not yank the page around on its own.
     if (fromClick){
       var stage = pbEl('pbStage');
       if (stage) stage.scrollIntoView({ block: 'start',

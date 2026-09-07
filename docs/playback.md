@@ -18,7 +18,7 @@ Choose **Playback · review takes**. Over the camera's own hotspot the settings 
 
 ## Choosing a take
 
-The player sits at the top of the pane; **Takes on card** is below it, listing every take across mounted storage with a thumbnail from its first frame. Picking one loads it into the player and scrolls you back up to it. Each card shows the take name, its frame count and its recorded frame rate, plus badges:
+**Takes on card** heads the pane, listing every take across mounted storage with a thumbnail from its first frame. Picking one loads it into the player below and scrolls you down to it. Each card shows the take name, its frame count and its recorded frame rate, plus badges:
 
 | Badge | Meaning |
 |---|---|
@@ -27,7 +27,11 @@ The player sits at the top of the pane; **Takes on card** is below it, listing e
 | `WAV` | The take has an audio sidecar |
 | `0.50× SLOMO`, `2.00× FAST` | The take's playback speed against the conform rate. Absent when the take plays at 1.00× |
 
-**Sort** orders the strip: *oldest first* (the default — shooting order, so the first take is upper-left and each later one to its right), *newest first*, or *largest first*. Re-ordering does not disturb whatever is on the player; the selected take keeps playing and simply moves. The same three orders are offered on the RAW files pane.
+**Sort** orders the strip: *oldest first* (the default — shooting order, so the first take is leftmost and each later one to its right), *newest first*, or *largest first*. The same three orders are offered on the RAW files pane.
+
+**View** picks the shape: *one row*, which scrolls sideways and keeps the player in sight on a card with a lot of takes, or *grid*, which wraps every take onto the screen at once for picking one out visually.
+
+Neither disturbs what is on the player. The selected take keeps playing and simply moves.
 
 ## Playing
 

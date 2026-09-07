@@ -89,7 +89,7 @@ jobs:
           python-version: '3.11'
       - run: python -m pip install jsonschema
 
-      # These four exist because the same defect kept recurring: two copies of
+      # These exist because the same defect kept recurring: two copies of
       # one fact, kept in step by hand, drifting apart. A comment is not a
       # check. Each gates the boundary it was written for.
 
@@ -113,6 +113,14 @@ jobs:
 
       - name: Link frequencies live only in the sensor database
         run: python3 tools/link_frequency_drift_check.py --repo . --strict
+
+      # Gated at zero, three ways: a key the template asks for and the
+      # markdown does not define, a string the markdown defines and nothing
+      # asks for, and -- the one that matters -- a new sentence typed straight
+      # into the template instead of into resources/gui-text/. The last is how
+      # the settings editor's copy would quietly stop living in one place.
+      - name: Settings editor copy lives in resources/gui-text
+        run: python3 tools/gui_text_check.py --repo . --strict
 
       # Needs both repositories: the key contract spans them.
       - name: Check out cinepi-raw

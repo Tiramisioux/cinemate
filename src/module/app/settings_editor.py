@@ -31,7 +31,10 @@ from flask import (
     stream_with_context,
 )
 
+from markupsafe import Markup
+
 from module.app import hardware_probe
+from module.app.gui_text import load_gui_text, lookup
 from module.sensor_database import resolve_database_path
 from module.config_loader import (
     DEFAULT_CONFORM_FRAME_RATE,
@@ -157,6 +160,28 @@ ACTION_METHODS = [
     {"group": "System", "value": "reboot", "label": "Reboot the Pi"},
     {"group": "System", "value": "safe_shutdown", "label": "Safe shutdown"},
 ]
+
+
+@settings_editor_bp.record_once
+def _install_gui_text(state) -> None:
+    """Give the app serving this blueprint its `t()` template global.
+
+    The editor's copy lives in resources/gui-text/*.md, not in the template.
+    It is read once, when the blueprint is registered -- i.e. at CineMate
+    start -- so a page load costs nothing and every request sees the same
+    text. Editing a string means restarting CineMate, the same as editing
+    anything else under src/.
+
+    Registered here rather than in create_app() because the template belongs
+    to this blueprint: anything that serves the settings editor gets the text
+    with it, including a test harness that builds a bare Flask app around
+    just this blueprint.
+    """
+    gui_text = load_gui_text()
+    state.app.config["GUI_TEXT"] = gui_text
+    # Markup, not str: these strings carry their own <span class="mono"> and
+    # <strong>, and render_inline has already escaped what came from markdown.
+    state.app.jinja_env.globals["t"] = lambda key: Markup(lookup(gui_text, key))
 
 
 def _public_method_names(obj) -> set[str]:

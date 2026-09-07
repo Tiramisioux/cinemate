@@ -239,7 +239,7 @@ imx585 ClearHDR.
 | Bit depths offered | Which raw depths appear. Switches for `10`, `12` and `16`, all on by default. `16` covers the imx585 16-bit ClearHDR modes. |
 | Dynamic resolution | Startup default for the automatic FPS-driven mode substitution described under [Dynamic resolution](sensors.md#dynamic-resolution). On by default. `set dynamic resolution` overrides it live, and that override outlives a reboot. |
 | Expose plain (SDR) modes | Shows the sensor's non-HDR modes alongside ClearHDR. Default on; off leaves only ClearHDR. |
-| Expose imx585 ClearHDR modes | Shows them, at 12-bit and 16-bit. Default on; off keeps the sensor SDR-only. |
+| Expose imx585 ClearHDR modes | Shows the ClearHDR modes — both the 12-bit and the 16-bit ones, so you can select between them. This is the SDR/ClearHDR class, not a depth; which depths appear is **Bit depths offered** above. Default on; off keeps the sensor SDR-only. |
 | ClearHDR startup knobs | The four fields below, applied whenever a ClearHDR mode is selected. |
 | Threshold low | Raw level below which the sensor reads pure high-gain. Range 0–4095. Blank by default (field reads `driver`), keeping the driver's 0. |
 | Threshold high | Raw level above which it reads pure low-gain. Range 0–4095. Blank by default (field reads `driver`), keeping the driver's 4095. |

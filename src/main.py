@@ -260,10 +260,60 @@ def current_stderr_tty_path() -> str | None:
         return None
 
 
+def cinemate_service_is_coming_back(systemctl: str) -> bool:
+    """True when a start/restart job for cinemate-autostart is queued.
+
+    A queued job is the difference between "CineMate is stopping" and
+    "CineMate is restarting", and nothing in the unit's *state* shows it --
+    it reads "deactivating" for both. Asking for tty1 during a restart is
+    what leaves the operator at a shell prompt: the getty start is parked
+    behind cinemate-autostart's own start job by Before=getty@tty1.service,
+    released once the new instance is up, and Conflicts= then stops it.
+
+    Read-only and unprivileged; `list-jobs` needs no PolicyKit round trip.
+    """
+    try:
+        result = subprocess.run(
+            [systemctl, "list-jobs", "--no-legend", "--no-pager"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            text=True,
+        )
+    except OSError as exc:
+        logging.debug("Could not read the systemd job queue: %s", exc)
+        return False
+
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) < 3:
+            continue
+        _job_id, unit, job_type = fields[0], fields[1], fields[2]
+        if unit == "cinemate-autostart.service" and job_type in ("start", "restart"):
+            return True
+    return False
+
+
 def restore_local_console_prompt() -> bool:
     """Restore a visible tty1 prompt after Cinemate stop (SSH or local launch)."""
     systemctl = shutil.which("systemctl")
     if systemctl:
+        # Even outside the service, this can kill the service. A foreground
+        # CineMate that the run lock's SIGTERM takes down -- which is exactly
+        # what happens when cinemate-autostart starts while one is running in
+        # an SSH session -- lands here and asks for tty1 while that service is
+        # 10 s into its own start. Observed on the rig:
+        #
+        #   02:52:29.485  Starting cinemate-autostart.service...
+        #   02:52:30.543  sudo pi (pts/1): systemctl restart getty@tty1.service
+        #   02:52:40.120  Started cinemate-autostart.service
+        #   02:52:40.143  Started getty@tty1.service            <- +23 ms
+        #   02:52:40.244  cinemate-autostart.service: Deactivated successfully.
+        #
+        # The request is 10 s old by the time it runs, and it is fatal.
+        if cinemate_service_is_coming_back(systemctl):
+            logging.debug("cinemate-autostart is restarting; leaving tty1 to it")
+            return False
         # Restart getty@tty1 to ensure it's running and rendering.
         #
         # --job-mode=fail is load-bearing, not cosmetic. cinemate-autostart

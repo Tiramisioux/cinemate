@@ -118,6 +118,21 @@ GPIO buttons and switches, rotary encoders and oled display for controlling came
 <img src="docs/images/gui-gpio-in-top.png" alt="The settings editor's GPIO in pane, listing each wired pin with its gesture and the command it runs" width="640"><br>
 <em>The settings editor's <strong>GPIO in</strong> pane, at <code>cinepi.local:5000/settings-editor/#gpio-in</code>. One row per wired pin: the gesture on the left — press, single, double or triple click, hold, or a switch's on and off — and the command it runs on the right. Buttons, two- and three-way switches and rotary encoders are added from the buttons underneath; an I²C quad rotary board appears as its own four encoders.</em>
 
+## The settings editor
+
+The same browser page carries the rest of the camera. Its panes, at `cinepi.local:5000/settings-editor`:
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/pane-settings-jsonc.png" alt="The settings.jsonc pane of the Cinemate settings editor"><br><em><strong>settings.jsonc</strong> — cameras, audio and controls, as cards rather than a text file. The sidebar jumps between sections; nothing is saved until you press Save changes.</em></td>
+<td width="50%"><img src="docs/images/pane-config-txt.png" alt="The config.txt pane of the Cinemate settings editor"><br><em><strong>config.txt</strong> — boot and sensor settings, staged and written for you. Saving here reboots immediately, with no confirm step.</em></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/pane-i2c.png" alt="The i2c pane of the Cinemate settings editor"><br><em><strong>i2c</strong> — what is actually on the bus right now: the Grove HAT, a quad rotary board, an OLED, a real-time clock, the CFE Hat's latch.</em></td>
+<td width="50%"><img src="docs/images/pane-raw-files.png" alt="The RAW files pane of the Cinemate settings editor"><br><em><strong>RAW files</strong> — every take across mounted storage, with its size and frame count. Download or delete them, and format the drive.</em></td>
+</tr>
+</table>
+
 ## Documentation
 Full manual installation instructions, configuration guides in the [documentation](https://tiramisioux.github.io/cinemate/).
 

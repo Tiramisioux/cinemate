@@ -68,7 +68,12 @@ Which raw capture bit depths the resolution control offers. 16‑bit is imx585 C
 ### Dynamic resolution
 <!-- key: card.image_capture.dynamic_resolution -->
 
-When the requested frame rate is higher than the selected mode can sustain, drop to the largest mode of the same bit depth and HDR class that can. Resolution is the only thing it changes. Both GUIs show RES in green while a substitute is held. `set dynamic resolution` overrides this live, and that override outlives a reboot.
+When the requested frame rate is higher than the selected mode can sustain, drop to the best mode that can. A substitute is never bigger or better than what you picked, and both GUIs show RES in green while one is held. `set dynamic resolution` overrides this live, and that override outlives a reboot.
+
+### Dynamic resolution priority
+<!-- key: card.image_capture.dynamic_resolution_priority -->
+
+Which half of the picture to give up first, once the selected mode's own class — its bit depth and SDR/ClearHDR setting — has nothing left that can sustain the frame rate. **Follow mode** holds the class and drops resolution first: 16‑bit 4K, then 16‑bit HD, then 4K SDR, then HD SDR. **Follow resolution** holds the frame size and drops the class first: 16‑bit 4K, then 4K SDR, then HD SDR. **Never leave the mode** does what dynamic resolution did before this setting existed — resolution is the only thing that ever changes, and the frame rate is capped at what your class can reach. Mid‑take the class is held whatever you pick here, because changing it restarts the camera; the ladder settles when the take ends.
 
 ### Expose plain (SDR) modes
 <!-- key: card.image_capture.hdr.sdr -->

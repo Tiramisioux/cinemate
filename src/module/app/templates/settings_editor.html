@@ -1735,6 +1735,19 @@
             <button class="toggle" id="f-dynres" data-path="image_capture.dynamic_resolution" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
+        <div class="card" data-search="dynamic resolution priority ladder hdr sdr bit depth class follow mode follow resolution">
+          <div class="card-main">
+            <label class="card-label" for="f-dynres-priority">{{ t('card.image_capture.dynamic_resolution_priority.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.dynamic_resolution_priority.help') }}</p>
+          </div>
+          <div class="card-control">
+            <select class="field-input" id="f-dynres-priority" data-path="image_capture.dynamic_resolution_priority" data-type="string" data-original="mode" style="min-width:180px">
+              <option value="mode" selected>Follow mode</option>
+              <option value="resolution">Follow resolution</option>
+              <option value="none">Never leave the mode</option>
+            </select>
+          </div>
+        </div>
         <div class="card" data-search="hdr sdr modes exposed resolution control">
           <div class="card-main">
             <label class="card-label" for="f-hdr-sdr">{{ t('card.image_capture.hdr.sdr.label') }}</label>
@@ -5708,6 +5721,7 @@
     { group: 'Zoom / anamorphic', value: 'set_anamorphic_factor', label: 'Set anamorphic desqueeze', noArg: 'cycle', arg: { type: 'select', options: [1,1.33,2], suffix: '×' } },
     { group: 'Resolution / preview', value: 'set_resolution', label: 'Change resolution', noArg: 'cycle', arg: { type: 'number', placeholder: 'mode #' } },
     { group: 'Resolution / preview', value: 'set_dynamic_resolution_enabled', label: 'Toggle dynamic resolution', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Resolution / preview', value: 'set_dynamic_resolution_priority', label: 'Dynamic resolution priority', noArg: 'cycle', arg: { type: 'select', options: ['mode', 'resolution', 'none'] } },
     { group: 'Resolution / preview', value: 'set_preview_source', label: 'Set HDMI preview source', noArg: 'cycle', arg: { type: 'select', options: ['cam0','cam1','cam0+cam1','pip_cam0','pip_cam1'] } },
     { group: 'Storage', value: 'mount', label: 'Mount storage' },
     { group: 'Storage', value: 'unmount', label: 'Unmount storage' },

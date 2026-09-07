@@ -1599,6 +1599,15 @@
     // set_preview_source()'s cycle order. Only visible with two sensors.
     const PREVIEW_SOURCES = ['both', 'cam0', 'cam1', 'pip_cam0', 'pip_cam1'];
 
+    // set_dynamic_resolution_priority()'s three policies, in its cycle order.
+    // Which half of the picture dynamic resolution gives up first once the
+    // selected mode's own class runs out — see docs/sensors.md.
+    const DYN_RES_PRIORITIES = [
+        { value: 'mode',       text: 'FOLLOW MODE' },
+        { value: 'resolution', text: 'FOLLOW RES' },
+        { value: 'none',       text: 'NEVER CROSS' },
+    ];
+
     // A range input fires on every pixel of a drag. The API's default ceiling
     // is 20 commands/sec per client (web_api_settings) and every accepted
     // line takes CommandExecutor's dispatch lock, so coalesce to one send per
@@ -1847,6 +1856,22 @@
         srcWrap.appendChild(srcSel);
         selects.appendChild(srcWrap);
 
+        const dynWrap = document.createElement('div');
+        dynWrap.className = 'xp-select';
+        dynWrap.id = 'xp-dynres-priority-wrap';
+        const dynLabel = document.createElement('span');
+        dynLabel.className = 'label';
+        dynLabel.textContent = 'DYN RES';
+        const dynSel = document.createElement('select');
+        dynSel.id = 'xp-dynres-priority';
+        dynSel.title = 'set dynamic resolution priority — what to give up first for frame rate';
+        fillSelect(dynSel, DYN_RES_PRIORITIES);
+        dynSel.addEventListener('change',
+            (e) => cmd('set dynamic resolution priority ' + e.target.value));
+        dynWrap.appendChild(dynLabel);
+        dynWrap.appendChild(dynSel);
+        selects.appendChild(dynWrap);
+
         const actions = xpRow('xp-row');
         XP_ACTIONS.forEach((spec) => {
             const btn = document.createElement('button');
@@ -1994,6 +2019,10 @@
         // Single-sensor rigs have no HDMI preview source to pick.
         show($('xp-preview-wrap'), Boolean(V.sensor_cam1));
         $('xp-preview-source').value = V.hdmi_preview_source || 'both';
+        // Nothing to choose between while the substitution itself is off:
+        // the DYN RES toggle above is the switch that matters then.
+        show($('xp-dynres-priority-wrap'), truthy(V.dynamic_resolution_enabled));
+        $('xp-dynres-priority').value = V.dynamic_resolution_priority || 'mode';
     }
 
     function render() {

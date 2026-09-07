@@ -141,6 +141,7 @@ ACTION_METHODS = [
     {"group": "Resolution / preview", "value": "set_resolution", "label": "Change resolution", "no_arg": "cycle",
      "arg": {"type": "number", "placeholder": "mode #"}},
     {"group": "Resolution / preview", "value": "set_dynamic_resolution_enabled", "label": "Toggle dynamic resolution", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Resolution / preview", "value": "set_dynamic_resolution_priority", "label": "Dynamic resolution priority", "no_arg": "cycle", "arg": {"type": "select", "options": ["mode", "resolution", "none"]}},
     {"group": "Resolution / preview", "value": "set_preview_source", "label": "Set HDMI preview source", "no_arg": "cycle",
      "arg": {"type": "select", "options": ["cam0", "cam1", "cam0+cam1", "pip_cam0", "pip_cam1"]}},
     {"group": "Storage", "value": "mount", "label": "Mount storage"},

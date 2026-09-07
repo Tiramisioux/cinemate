@@ -46,6 +46,7 @@ class FakeController:
         self.dynamic_resolution_enabled = True
         self.dynamic_resolution_active = False
         self.dynamic_resolution_desired_mode = 0
+        self.dynamic_resolution_priority = "mode"
         self.sensor_mode = 0
         self.iso_free = False
         self.shutter_a_free = False

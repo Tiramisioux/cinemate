@@ -1,6 +1,6 @@
 # CineMate
 
-**Cinemate** is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw video using off-the-shelf parts, and provides a minimal starting point you can extend with your own controls and accessories.
+**CineMate** is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw video using off-the-shelf parts, and provides a minimal starting point you can extend with your own controls and accessories.
 
 It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw), built on the [CinePi-RAW recorder by Csaba Nagy](https://github.com/cinepi).
 
@@ -13,13 +13,13 @@ It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https
 - [Web API](https://tiramisioux.github.io/cinemate/web-api/) — build wireless controllers and tally lights from an ESP32, Pico W or M5Stack ([Building control units](https://tiramisioux.github.io/cinemate/building-control-units/))
 - GPIO buttons, switches, rotary encoders, pots and an OLED, mapped in one settings file ([Additional hardware](https://tiramisioux.github.io/cinemate/hardware-controls/))
 - Multi-drive RAW hot-swap with a standby drive; SSD, NVMe or CFE Hat storage
-- [Recovery console](https://tiramisioux.github.io/cinemate/recovery-console/) on `:8080` that stays reachable when Cinemate itself won't start
+- [Recovery console](https://tiramisioux.github.io/cinemate/recovery-console/) on `:8080` that stays reachable when CineMate itself won't start
 
 See the [changelog](https://tiramisioux.github.io/cinemate/changelog/) for what's new in version 3.4.0.
 
 ## Required hardware
 
-For a basic Cinemate setup you need:
+For a basic CineMate setup you need:
 - Raspberry Pi 4 or 5 / CM5 with **4 GB RAM or more**. 2 GB boards run the prebuilt image, but are not recommended for UHD/4K: raw frames are buffered in RAM and a watchdog auto-stops recording once total RAM use hits 80 %. 4 GB is also recommended for compiling `cinepi-raw` on the Pi.
 - Official HQ or GS camera module
 - SSD drive such as a Samsung T7 formatted as `exFAT` or `ext4` and labelled `RAW`
@@ -57,7 +57,7 @@ Physical controls are mapped in [`settings.jsonc`](#customization). CineMate use
 
 ## Installation
 
-There are three options for installing Cinemate:
+There are three options for installing CineMate:
 ### 1. Use the prebuilt image file
 
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for the preinstalled image and Quick Start Guide.
@@ -89,7 +89,7 @@ The installer defaults to an `imx477` on camera port `cam0` and writes a stock-s
 
 Naming the sensor up front still matters in two cases: `imx585_mono` also applies the `rp1-cfe` kernel patch that mono 16-bit [ClearHDR](https://tiramisioux.github.io/cinemate/clear-hdr/) needs, and `imx585` also installs the IR filter helper. Neither happens when you switch sensor in the browser later.
 
-After installing, reboot the system and Cinemate should start automatically.
+After installing, reboot the system and CineMate should start automatically.
 
 ### 3. Manual install
 
@@ -97,7 +97,7 @@ For the full manual install, configuration steps, and CLI reference, please see 
 
 ## First run
 
-<img src="docs/images/gui-web-overview.png" alt="The Cinemate web GUI in a browser, showing the live preview framed by the camera readouts" width="640"><br>
+<img src="docs/images/gui-web-overview.png" alt="The CineMate web GUI in a browser, showing the live preview framed by the camera readouts" width="640"><br>
 <em>The live preview at <code>cinepi.local:5000</code>, full size. Frame rate, shutter, exposure, EI, white balance and the sensor mode across the top; media space, write speed, buffer fill, CPU and temperature across the bottom. Tap the picture to start and stop recording.</em>
 
 After boot, the HDMI monitor shows the live preview with the camera GUI. To use a phone or laptop instead:
@@ -123,11 +123,11 @@ GPIO buttons and switches, rotary encoders and oled display for controlling came
 The same browser page carries the rest of the camera, at `cinepi.local:5000/settings-editor`. Its panes, in the order the tab bar shows them:
 
 <p>
-<img src="docs/images/gui-config-txt.png" align="top" width="19%" alt="The config.txt pane of the Cinemate settings editor">
-<img src="docs/images/gui-i2c.png" align="top" width="19%" alt="The i2c pane of the Cinemate settings editor">
-<img src="docs/images/pane-settings-jsonc.png" align="top" width="19%" alt="The settings.jsonc pane of the Cinemate settings editor">
-<img src="docs/images/gui-playback.png" align="top" width="19%" alt="The Playback pane of the Cinemate settings editor">
-<img src="docs/images/gui-raw-files.png" align="top" width="19%" alt="The RAW files pane of the Cinemate settings editor">
+<img src="docs/images/gui-config-txt.png" align="top" width="19%" alt="The config.txt pane of the CineMate settings editor">
+<img src="docs/images/gui-i2c.png" align="top" width="19%" alt="The i2c pane of the CineMate settings editor">
+<img src="docs/images/pane-settings-jsonc.png" align="top" width="19%" alt="The settings.jsonc pane of the CineMate settings editor">
+<img src="docs/images/gui-playback.png" align="top" width="19%" alt="The Playback pane of the CineMate settings editor">
+<img src="docs/images/gui-raw-files.png" align="top" width="19%" alt="The RAW files pane of the CineMate settings editor">
 </p>
 
 ## Documentation
@@ -139,7 +139,7 @@ Join the [CinePi Discord](https://discord.gg/Hr4dfhuK) for discussions and shari
 
 ## Acknowledgements
 
-The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on top of several open-source projects. Special thanks to all authors!
+The [**CineMate**](https://github.com/Tiramisioux/cinemate) stack is built on top of several open-source projects. Special thanks to all authors!
 
 - [**CinePi-raw**](https://github.com/cinepi/cinepi-raw) – Csaba Nagy
 - [**IMX585 and IMX283 drivers**](https://github.com/will127534) – Will Whang

@@ -97,8 +97,8 @@ For the full manual install, configuration steps, and CLI reference, please see 
 
 ## First run
 
-<img src="docs/images/gui-web-experiment-open.png" alt="The settings editor's Live pane: camera readouts around a live preview, with the experimenting drawer open below it" width="640"><br>
-<em>The live view and experimenting drawer for camera functions, at <code>cinepi.local:5000/settings-editor/#live</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode across the top; media space, write speed, buffer fill, CPU and temperature across the bottom. Tap the preview to start and stop recording. The drawer underneath puts ISO, shutter, frame rate and white balance on sliders, with the ClearHDR knobs below them.</em>
+<img src="docs/images/gui-web-overview.png" alt="The Cinemate web GUI in a browser, showing the live preview framed by the camera readouts" width="640"><br>
+<em>The live preview at <code>cinepi.local:5000</code>, full size. Frame rate, shutter, exposure, EI, white balance and the sensor mode across the top; media space, write speed, buffer fill, CPU and temperature across the bottom. Tap the picture to start and stop recording.</em>
 
 After boot, the HDMI monitor shows the live preview with the camera GUI. To use a phone or laptop instead:
 
@@ -106,6 +106,9 @@ After boot, the HDMI monitor shows the live preview with the camera GUI. To use 
 2. Open `cinepi.local:5000` — live preview and controls. Tap the preview to start and stop recording. A clean feed without the GUI is at `cinepi.local:8000/stream`, and the settings editor at `cinepi.local:5000/settings-editor`.
 3. Attach a drive formatted `exFAT` (or `ext4`) and labelled `RAW`.
 4. For a physical record button, wire a momentary button between **GPIO7** and **GND**.
+
+<img src="docs/images/gui-web-experiment-open.png" alt="The settings editor's Live pane: camera readouts around a live preview, with the experimenting drawer open below it" width="640"><br>
+<em>The live view and experimenting drawer for camera functions, at <code>cinepi.local:5000/settings-editor/#live</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode across the top; media space, write speed, buffer fill, CPU and temperature across the bottom. Tap the preview to start and stop recording. The drawer underneath puts ISO, shutter, frame rate and white balance on sliders, with the ClearHDR knobs below them.</em>
 
 See the [Quick start](https://tiramisioux.github.io/cinemate/getting-started/) for the full walkthrough.
 

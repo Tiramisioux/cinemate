@@ -104,8 +104,8 @@ After boot, the HDMI monitor shows the live preview with the camera GUI. To use 
 3. Attach a drive formatted `exFAT` (or `ext4`) and labelled `RAW`.
 4. For a physical record button, wire a momentary button between **GPIO7** and **GND** — physical pins 26 and 25, right next to each other.
 
-<img src="docs/images/gui-web-overview.png" alt="The Cinemate web GUI in a browser, showing the live preview framed by the camera readouts" width="640"><br>
-<em>The live view at <code>cinepi.local:5000</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode run across the top; media space, write speed, buffer fill and Pi temperature across the bottom. Tap the picture to start and stop recording.</em>
+<img src="docs/images/gui-web-experiment-open.png" alt="The Cinemate web GUI in a browser: live preview framed by the camera readouts, with the EXPERIMENT drawer open underneath showing exposure and ClearHDR sliders" width="640"><br>
+<em>The live view at <code>cinepi.local:5000</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode run across the top; media space, write speed, buffer fill and Pi temperature across the bottom. Tap the picture to start and stop recording. <strong>EXPERIMENT</strong> opens the drawer underneath — ISO, shutter, fps and white balance on sliders, the ClearHDR knobs and preview zoom, with the locks, free-stepping toggles and one-shot actions below them.</em>
 
 See the [Quick start](https://tiramisioux.github.io/cinemate/getting-started/) for the full walkthrough.
 

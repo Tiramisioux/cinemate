@@ -18,7 +18,7 @@ Choose **Playback · review takes**. Over the camera's own hotspot the settings 
 
 ## Choosing a take
 
-**Takes on card** heads the pane, listing every take across mounted storage with a thumbnail from its first frame. Picking one loads it into the player below and scrolls you down to it. Each card shows the take name, its frame count and its recorded frame rate, plus badges:
+The take strip heads the pane, listing every take across mounted storage with a thumbnail from its first frame. Picking one loads it into the player below and scrolls you down to it. Each card shows the take name, its frame count and its recorded frame rate, plus badges:
 
 | Badge | Meaning |
 |---|---|

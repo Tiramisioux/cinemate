@@ -97,15 +97,15 @@ For the full manual install, configuration steps, and CLI reference, please see 
 
 ## First run
 
+<img src="docs/images/gui-web-experiment-open.png" alt="The settings editor's Live pane: camera readouts around a live preview, with the experimenting drawer open below it" width="640"><br>
+<em>The live view and experimenting drawer for camera functions, at <code>http://cinepi.local:5000/settings-editor/#live</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode across the top; media space, write speed, buffer fill, CPU and temperature across the bottom. Tap the preview to start and stop recording. The drawer underneath puts ISO, shutter, frame rate and white balance on sliders, with the ClearHDR knobs below them.</em>
+
 After boot, the HDMI monitor shows the live preview with the camera GUI. To use a phone or laptop instead:
 
 1. Join the Pi's Wi-Fi hotspot **CinePi** (password `11111111`).
 2. Open `http://cinepi.local:5000` — live preview and controls. Tap the preview to start and stop recording. A clean feed without the GUI is at `cinepi.local:8000/stream`, and the settings editor at `cinepi.local:5000/settings-editor`.
 3. Attach a drive formatted `exFAT` (or `ext4`) and labelled `RAW`.
-4. For a physical record button, wire a momentary button between **GPIO7** and **GND** — physical pins 26 and 25, right next to each other.
-
-<img src="docs/images/gui-web-experiment-open.png" alt="The settings editor's Live pane: camera readouts around a live preview, with the experimenting drawer open below it" width="640"><br>
-<em>The live view and experimenting drawer for camera functions, at <code>http://cinepi.local:5000/settings-editor/#live</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode across the top; media space, write speed, buffer fill, CPU and temperature across the bottom. Tap the preview to start and stop recording. The drawer underneath puts ISO, shutter, frame rate and white balance on sliders, with the ClearHDR knobs below them.</em>
+4. For a physical record button, wire a momentary button between **GPIO7** and **GND**.
 
 See the [Quick start](https://tiramisioux.github.io/cinemate/getting-started/) for the full walkthrough.
 

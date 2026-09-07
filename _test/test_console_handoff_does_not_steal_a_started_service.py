@@ -77,5 +77,39 @@ class HandoffGuardTests(unittest.TestCase):
                         code.index("is-active cinemate-autostart.service"))
 
 
+class OnlyOneGettyStarterUnderSystemdTests(unittest.TestCase):
+    """Two things started a getty on tty1 during a stop; only one can judge it.
+
+    main.py's restore_local_console_prompt() runs while the unit is still
+    "deactivating", so it cannot tell a plain stop from a restart -- and it
+    then sleeps 2.5 s inside a 5 s TimeoutStopSec holding that decision open,
+    which is ample for the next instance to come up behind it and be stopped
+    by the conflict. It also has no sudoers grant, so under systemd its
+    privileged form fails and only the unprivileged fallback ever did
+    anything.
+
+    The ExecStopPost script can judge it: it runs as root, after this process
+    is gone, and checks whether CineMate is back before taking the console.
+    So under systemd it is the only one that runs. Outside systemd -- the
+    `cinemate` shell command this function was written for -- there is no
+    ExecStopPost and no conflicting unit, and it stays.
+    """
+
+    def test_cleanup_skips_the_console_restore_under_systemd(self):
+        src = (ROOT / "src/main.py").read_text(encoding="utf-8")
+        guard = ("if not shutdown_in_progress and not "
+                 "running_under_systemd_service():")
+        self.assertIn(guard, src)
+        after = src[src.index(guard) + len(guard):src.index(guard) + len(guard) + 120]
+        self.assertIn("restore_local_console_prompt()", after)
+
+    def test_it_still_runs_outside_systemd(self):
+        # The guard must be the systemd predicate, not a blanket removal:
+        # `cinemate` from an SSH session still has to hand the console back.
+        src = (ROOT / "src/main.py").read_text(encoding="utf-8")
+        self.assertIn("def restore_local_console_prompt()", src)
+        self.assertIn("running_under_systemd_service()", src)
+
+
 if __name__ == "__main__":
     unittest.main()

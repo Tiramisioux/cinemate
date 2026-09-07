@@ -1084,7 +1084,24 @@ def run_application(args, log_queue):
                 join_timeout=join_timeout,
                 teardown_before_join=not shutdown_in_progress,
             )
-        if not shutdown_in_progress:
+        # Under systemd, the console is ExecStopPost's job, not ours. Two
+        # things start a getty on tty1 during a stop -- this and
+        # cinemate-console-handoff.sh -- and cinemate-autostart declares
+        # Conflicts=getty@tty1.service, so whichever of them wins a race with
+        # the NEXT instance's start gets that instance stopped again. The
+        # handoff script is the one that can judge it: it runs as root after
+        # this process is gone, and it checks whether CineMate is back before
+        # taking the console. This one cannot -- it runs while the unit is
+        # still "deactivating", so it cannot tell a stop from a restart, and
+        # it then sleeps 2.5 s inside a 5 s TimeoutStopSec holding that
+        # decision open. It also has no sudoers grant, so under systemd its
+        # privileged form fails anyway and it was only ever the unprivileged
+        # fallback doing anything.
+        #
+        # Outside systemd -- `cinemate` from an SSH session or straight on the
+        # console, which is what this function was written for -- there is no
+        # ExecStopPost and no conflicting unit, so it stays.
+        if not shutdown_in_progress and not running_under_systemd_service():
             restore_local_console_prompt()
         join_thread(dmesg_monitor, "DmesgMonitor")
         join_thread(command_executor, "CommandExecutor")

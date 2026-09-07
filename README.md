@@ -120,16 +120,20 @@ GPIO buttons and switches, rotary encoders and oled display for controlling came
 
 ## The settings editor
 
-The same browser page carries the rest of the camera. Its panes, at `cinepi.local:5000/settings-editor`:
+The same browser page carries the rest of the camera, at `cinepi.local:5000/settings-editor` — `config.txt`, the i2c bus, `settings.jsonc`, Playback and the RAW files:
 
 <table>
 <tr>
-<td width="50%"><img src="docs/images/pane-settings-jsonc.png" alt="The settings.jsonc pane of the Cinemate settings editor"><br><em><strong>settings.jsonc</strong> — cameras, audio and controls, as cards rather than a text file. The sidebar jumps between sections; nothing is saved until you press Save changes.</em></td>
-<td width="50%"><img src="docs/images/pane-config-txt.png" alt="The config.txt pane of the Cinemate settings editor"><br><em><strong>config.txt</strong> — boot and sensor settings, staged and written for you. Saving here reboots immediately, with no confirm step.</em></td>
+<td width="50%"><img src="docs/images/pane-config-txt.png" alt="The config.txt pane of the Cinemate settings editor"></td>
+<td width="50%"><img src="docs/images/pane-i2c.png" alt="The i2c pane of the Cinemate settings editor"></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/images/pane-i2c.png" alt="The i2c pane of the Cinemate settings editor"><br><em><strong>i2c</strong> — what is actually on the bus right now: the Grove HAT, a quad rotary board, an OLED, a real-time clock, the CFE Hat's latch.</em></td>
-<td width="50%"><img src="docs/images/pane-raw-files.png" alt="The RAW files pane of the Cinemate settings editor"><br><em><strong>RAW files</strong> — every take across mounted storage, with its size and frame count. Download or delete them, and format the drive.</em></td>
+<td width="50%"><img src="docs/images/pane-settings-jsonc.png" alt="The settings.jsonc pane of the Cinemate settings editor"></td>
+<td width="50%"><img src="docs/images/pane-playback.png" alt="The Playback pane of the Cinemate settings editor"></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/pane-raw-files.png" alt="The RAW files pane of the Cinemate settings editor"></td>
+<td width="50%"></td>
 </tr>
 </table>
 

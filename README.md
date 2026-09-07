@@ -53,7 +53,7 @@ All of it optional — add what you need, when you need it. Drivers and mappings
 Physical controls are mapped in [`settings.jsonc`](#customization). CineMate uses **BCM** pin numbering — the `GPIO n` labels, not the physical pin positions. Full reference: [Additional hardware](https://tiramisioux.github.io/cinemate/hardware-controls/).
 
 ## Camera stack
-<img src="docs/images/camera-stack3.png" alt="Camera stack exploded" width="250"><br>
+<p align="center"><img src="docs/images/camera-stack3.png" alt="Camera stack exploded" width="250"></p>
 
 ## Installation
 

@@ -156,9 +156,11 @@ class DynamicResolutionEnabledToggleTests(unittest.TestCase):
         self.assertFalse(controller.dynamic_resolution_active)
 
     def test_turning_it_on_adopts_the_mode_on_screen_as_the_desired_one(self):
-        # Hardware-confirmed 2026-09-07. A camera that BOOTED with the feature
-        # off never runs the disable branch this session, so the desired mode
-        # is whatever a previous boot left in Redis. Here: running mode 1,
+        # Seen on an operator's camera 2026-09-07. A camera that BOOTED with
+        # the feature off never runs the disable branch this session, so the
+        # desired mode is whatever a previous boot left in Redis. The stale
+        # value was observed; what it would have done was read off the code.
+        # Here: running mode 1,
         # stored desired mode 0. Enabling must not adopt that stale 0 -- a
         # substitute is never larger or richer than the desired mode, so the
         # next fps change would drop the camera out of the mode it is in.

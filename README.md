@@ -104,16 +104,16 @@ After boot, the HDMI monitor shows the live preview with the camera GUI. To use 
 3. Attach a drive formatted `exFAT` (or `ext4`) and labelled `RAW`.
 4. For a physical record button, wire a momentary button between **GPIO7** and **GND** — physical pins 26 and 25, right next to each other.
 
-<img src="docs/images/gui-web-experiment-open.png" alt="The Cinemate web GUI in a browser: live preview framed by the camera readouts, with the EXPERIMENT drawer open underneath showing exposure and ClearHDR sliders" width="640"><br>
-<em>The live view at <code>cinepi.local:5000</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode run across the top; media space, write speed, buffer fill and Pi temperature across the bottom. Tap the picture to start and stop recording. <strong>EXPERIMENT</strong> opens the drawer underneath — ISO, shutter, fps and white balance on sliders, the ClearHDR knobs and preview zoom, with the locks, free-stepping toggles and one-shot actions below them.</em>
+<img src="docs/images/gui-web-experiment-open.png" alt="The settings editor's Live pane: camera readouts around a live preview, with the experimenting drawer open below it" width="640"><br>
+<em>The live view and experimenting drawer for camera functions, at <code>http://cinepi.local:5000/settings-editor/#live</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode across the top; media space, write speed, buffer fill, CPU and temperature across the bottom. Tap the preview to start and stop recording. The drawer underneath puts ISO, shutter, frame rate and white balance on sliders, with the ClearHDR knobs below them.</em>
 
 See the [Quick start](https://tiramisioux.github.io/cinemate/getting-started/) for the full walkthrough.
 
 ## Customization
 GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/settings.jsonc` file. On the Pi, type `editsettings` in the terminal to open this file, or use the settings editor at `cinepi.local:5000/settings-editor` from a browser.
 
-<img src="docs/images/gui-gpio-in.png" alt="The GPIO in pane of the Cinemate settings editor, listing each wired pin with its gesture and the command it runs" width="640"><br>
-<em>The settings editor's <strong>GPIO in</strong> pane writes the same <code>settings.jsonc</code> by hand-editing it. Each row is one wired pin: the gesture on the left (press, single/double/triple click, hold, or a switch's on and off), the command it runs on the right. Buttons, two- and three-way switches and rotary encoders are added from the buttons underneath, and an I²C quad rotary board appears as its own four encoders.</em>
+<img src="docs/images/gui-gpio-in-top.png" alt="The settings editor's GPIO in pane, listing each wired pin with its gesture and the command it runs" width="640"><br>
+<em>The settings editor's <strong>GPIO in</strong> pane, at <code>http://cinepi.local:5000/settings-editor/#gpio-in</code>. One row per wired pin: the gesture on the left — press, single, double or triple click, hold, or a switch's on and off — and the command it runs on the right. Buttons, two- and three-way switches and rotary encoders are added from the buttons underneath; an I²C quad rotary board appears as its own four encoders.</em>
 
 ## Documentation
 Full manual installation instructions, configuration guides in the [documentation](https://tiramisioux.github.io/cinemate/).

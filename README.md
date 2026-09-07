@@ -122,20 +122,17 @@ GPIO buttons and switches, rotary encoders and oled display for controlling came
 
 The same browser page carries the rest of the camera, at `cinepi.local:5000/settings-editor` — `config.txt`, the i2c bus, `settings.jsonc`, Playback and the RAW files:
 
-<table>
-<tr>
-<td width="50%"><img src="docs/images/pane-config-txt.png" alt="The config.txt pane of the Cinemate settings editor"></td>
-<td width="50%"><img src="docs/images/pane-i2c.png" alt="The i2c pane of the Cinemate settings editor"></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/images/pane-settings-jsonc.png" alt="The settings.jsonc pane of the Cinemate settings editor"></td>
-<td width="50%"><img src="docs/images/pane-playback.png" alt="The Playback pane of the Cinemate settings editor"></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/images/pane-raw-files.png" alt="The RAW files pane of the Cinemate settings editor"></td>
-<td width="50%"></td>
-</tr>
-</table>
+<p>
+<img src="docs/images/gui-config-txt.png" width="49%" alt="The config.txt pane of the Cinemate settings editor">
+<img src="docs/images/gui-i2c.png" width="49%" alt="The i2c pane of the Cinemate settings editor">
+</p>
+<p>
+<img src="docs/images/pane-settings-jsonc.png" width="49%" alt="The settings.jsonc pane of the Cinemate settings editor">
+<img src="docs/images/gui-playback.png" width="49%" alt="The Playback pane of the Cinemate settings editor">
+</p>
+<p>
+<img src="docs/images/gui-raw-files.png" width="49%" alt="The RAW files pane of the Cinemate settings editor">
+</p>
 
 ## Documentation
 Full manual installation instructions, configuration guides in the [documentation](https://tiramisioux.github.io/cinemate/).

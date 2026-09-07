@@ -70,7 +70,7 @@ Clicking **Save changes** on this tab:
 2. Writes your changes. If only values changed, the surgical writer keeps every comment, the key order and the file's formatting. If a key was added or removed (a structural change), it falls back to a full rewrite, which is correct but drops every comment.
 
     !!! warning "A structural save loses comments without saying so"
-        The server composes a warning when this happens, but the page does not show it — the toast reads `Saved. Restarting Cinemate…` either way. If you keep notes in `settings.jsonc`, recover them from the newest file in `.settings-backups/` after a save that added or removed a key.
+        The server composes a warning when this happens, but the page does not show it — the toast reads `Saved. Restarting CineMate…` either way. If you keep notes in `settings.jsonc`, recover them from the newest file in `.settings-backups/` after a save that added or removed a key.
 
 3. Restarts CineMate automatically to apply the new file — the same effect as the CLI's `restart cinemate`, not a reboot. Recording stops if one is in progress.
 

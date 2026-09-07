@@ -836,7 +836,7 @@ Use HDMI port `0` for `HDMI-A-1` and port `1` for `HDMI-A-2`.
 
 #### Optional: install Plymouth for the boot spinner
 
-If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The CineMate theme below keeps the spinner centered on the HDMI framebuffer during Pi startup and shutdown, while CineMate itself shows the welcome message after Plymouth hands off to the app.
+If you want the same boot spinner and clean spinner-to-CineMate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The CineMate theme below keeps the spinner centered on the HDMI framebuffer during Pi startup and shutdown, while CineMate itself shows the welcome message after Plymouth hands off to the app.
 
 Install the required packages:
 

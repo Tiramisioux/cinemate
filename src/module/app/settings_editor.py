@@ -156,7 +156,7 @@ ACTION_METHODS = [
     # 0 or 1 only and has no toggle branch, whatever its old label implied.
     {"group": "Sensor", "value": "set_filter", "label": "Set IR-cut filter", "no_arg": "required", "arg": {"type": "toggle01"}},
     {"group": "Locks", "value": "set_all_lock", "label": "Toggle all-parameter lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
-    {"group": "System", "value": "restart_cinemate", "label": "Restart Cinemate"},
+    {"group": "System", "value": "restart_cinemate", "label": "Restart CineMate"},
     {"group": "System", "value": "restart_camera", "label": "Restart camera process"},
     {"group": "System", "value": "reboot", "label": "Reboot the Pi"},
     {"group": "System", "value": "safe_shutdown", "label": "Safe shutdown"},

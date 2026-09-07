@@ -454,8 +454,8 @@ Applies changes you already saved, and shows CineMate's live log.
 
 | Control | What it does |
 | --- | --- |
-| Cinemate is running — READY | Fixed coloured-dot label, not a live health check: always READY, except "Restarting Cinemate — please wait" during the animation. |
-| Restart Cinemate | Real restart. Sends `restart cinemate` to the page API, the same dispatcher entry as the CLI and the default GPIO 13 double-click. systemd restarts `cinemate-autostart`, ~10 s per the page. Recording stops, page unresponsive until the service returns. On failure: "Restart failed" toast, nothing restarted. |
+| CineMate is running — READY | Fixed coloured-dot label, not a live health check: always READY, except "Restarting CineMate — please wait" during the animation. |
+| Restart CineMate | Real restart. Sends `restart cinemate` to the page API, the same dispatcher entry as the CLI and the default GPIO 13 double-click. systemd restarts `cinemate-autostart`, ~10 s per the page. Recording stops, page unresponsive until the service returns. On failure: "Restart failed" toast, nothing restarted. |
 | Log console | A live tail of `system.log`, streamed over server-sent events and coloured with the same per-module and per-level palette the CineMate CLI uses. Always running, not only during a restart; a restart does not clear it, since the lines explaining why you restarted are usually the ones you want. Shows when the camera answers again after a restart. |
 | Reboot Pi | Real reboot, and only a reboot: it sends the `reboot` command through the same dispatcher as the CLI and the GPIO 13 triple-click, and does **not** write `config.txt` — unsaved edits on Boot config are left where they are. Recording stops first. The console reports the Pi answering again; allow about 25 seconds. On failure: "Reboot failed" toast, nothing rebooted. |
 

@@ -1,8 +1,8 @@
 # ───────────────────────────
 # Project basics
 # ───────────────────────────
-site_name: Cinemate Docs
-site_description: Documentation for Cinemate 
+site_name: CineMate Docs
+site_description: Documentation for CineMate 
 site_url: https://tiramisioux.github.io/cinemate/
 repo_url: https://github.com/tiramisioux/cinemate
 edit_uri: blob/main/docs/
@@ -50,18 +50,18 @@ nav:
       - Compiling cinepi-raw: compiling-cinepi-raw.md
       # - Overclocking the Pi: overclocking.md   # shipped on by the installer; pending fact-check - hidden from the menu, page still builds
   - Reference:
-      - Cinemate terminal commands: cli-commands.md
+      - CineMate terminal commands: cli-commands.md
       - CinePi RAW terminal commands: cli-user-guide.md
       # - Redis API: redis-guide.md   # hidden from the menu, page still builds
       # - Redis Key reference: redis-keys.md   # hidden from the menu, page still builds
-      # - How Cinemate launches CinePi-raw: cinepi-multi.md   # hidden from the menu, page still builds
+      # - How CineMate launches CinePi-raw: cinepi-multi.md   # hidden from the menu, page still builds
       - Changelog: changelog.md
-  # - Cinemate builds:
+  # - CineMate builds:
   #     - Box build: brick.md
   - About:
       # - Todo: todo.md
       - Acknowledgements: acknowledgments.md
-  #- Download PDF: renders/Cinemate-Docs.pdf
+  #- Download PDF: renders/CineMate-Docs.pdf
 # Theme
 # ───────────────────────────
 theme:
@@ -132,12 +132,12 @@ plugins:
   #     # ── cover & back cover ───────────────
   #     cover: true
   #     back_cover: true
-  #     cover_title: "Cinemate"
+  #     cover_title: "CineMate"
   #     cover_subtitle: "User & Builder Guide"
   #     cover_logo: docs/assets/images/CINEMATE.jpg   # relative to docs/
 
   #     # ── build behaviour ─────────────────
-  #     output_path: renders/Cinemate-Docs.pdf  # already using this
+  #     output_path: renders/CineMate-Docs.pdf  # already using this
       
   #     # ── layout ─────────────────
   #     two_columns_level: 2        # experimental two-column layout

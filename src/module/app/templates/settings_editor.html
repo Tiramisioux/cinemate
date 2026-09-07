@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Cinemate — Settings</title>
+<title>CineMate — Settings</title>
 <style>
   @font-face {
     font-family: 'DIN2014';
@@ -1203,7 +1203,7 @@
   </nav>
 
   <main class="main" id="main">
-    <div class="page-tabs" role="tablist" aria-label="Cinemate app pages">
+    <div class="page-tabs" role="tablist" aria-label="CineMate app pages">
       <button type="button" data-page-tab="config" role="tab">{{ t('tab.config.label') }}<span class="tab-hint">{{ t('tab.config.hint') }}</span></button>
       <button type="button" data-page-tab="i2c" role="tab">{{ t('tab.i2c.label') }}<span class="tab-hint">{{ t('tab.i2c.hint') }}</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">{{ t('tab.settings.label') }}<span class="tab-hint">{{ t('tab.settings.hint') }}</span></button>
@@ -2197,11 +2197,11 @@
         <div class="restart-row">
           <div class="status-line">
             <span class="status-dot" id="statusDot"></span>
-            <span class="status-text" id="statusText">Cinemate is running — <b class="din">READY</b></span>
+            <span class="status-text" id="statusText">CineMate is running — <b class="din">READY</b></span>
           </div>
           <button class="btn btn-primary" id="restartBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Restart Cinemate
+            Restart CineMate
           </button>
         </div>
         <p class="card-help" style="max-width:60ch">{{ t('help.system.0.body') }}</p>
@@ -2576,7 +2576,7 @@
         <h2>{{ t('pane.live.heading') }}</h2>
       </header>
       <div class="live-embed-wrap">
-        <iframe id="liveEmbedFrame" class="live-embed-frame" src="/?xp=1" title="Cinemate live camera preview" loading="lazy"></iframe>
+        <iframe id="liveEmbedFrame" class="live-embed-frame" src="/?xp=1" title="CineMate live camera preview" loading="lazy"></iframe>
       </div>
     </section>
 
@@ -4409,7 +4409,7 @@
       body: JSON.stringify(payload)
     }).then(function(r){ return r.json(); }).then(function(res){
       if (!res.ok){ showToast('Save failed: ' + res.message); return; }
-      showToast(res.restarting ? 'Saved. Restarting Cinemate…' : 'Saved settings.jsonc.');
+      showToast(res.restarting ? 'Saved. Restarting CineMate…' : 'Saved settings.jsonc.');
       lastLoadedSettings = payload;
       clearSettingsDirtyState();
     }).catch(function(err){ showToast('Save failed: ' + err); });
@@ -5823,7 +5823,7 @@
     { group: 'Storage', value: 'format_drive', label: 'Format drive', noArg: 'required', arg: { type: 'select', options: ['exfat','ext4','ntfs'] } },
     { group: 'Sensor', value: 'set_filter', label: 'Set IR‑cut filter', noArg: 'required', arg: { type: 'toggle01' } },
     { group: 'Locks', value: 'set_all_lock', label: 'Toggle all‑parameter lock', noArg: 'toggle', arg: { type: 'toggle01' } },
-    { group: 'System', value: 'restart_cinemate', label: 'Restart Cinemate' },
+    { group: 'System', value: 'restart_cinemate', label: 'Restart CineMate' },
     { group: 'System', value: 'restart_camera', label: 'Restart camera process' },
     { group: 'System', value: 'reboot', label: 'Reboot the Pi' },
     { group: 'System', value: 'safe_shutdown', label: 'Safe shutdown' }
@@ -6537,9 +6537,9 @@
       runBootSequence({
         btn: restartBtn, dot: statusDot, text: statusText, consoleEl: consoleEl,
         waitText: 'waiting for the camera to answer again…',
-        busyText: 'Restarting Cinemate — <b class="din">please wait</b>',
-        readyText: 'Cinemate is running — <b class="din">READY</b>',
-        doneToast: 'Cinemate is back up'
+        busyText: 'Restarting CineMate — <b class="din">please wait</b>',
+        readyText: 'CineMate is running — <b class="din">READY</b>',
+        doneToast: 'CineMate is back up'
       });
     });
   });
@@ -6552,7 +6552,7 @@
   /* The animation is what happens AFTER the write, never instead of it. This
      button used to call runBootSequence() alone: config.txt was never written,
      nothing rebooted, and the card still finished on "Pi is back up" -- the
-     same defect F-291 fixed on Restart Cinemate, in the one place where the
+     same defect F-291 fixed on Restart CineMate, in the one place where the
      operator has most reason to believe a reboot happened. */
   cfgRebootBtn.addEventListener('click', function(){
     cfgRebootBtn.disabled = true;
@@ -6601,7 +6601,7 @@
         waitText: 'waiting for the Pi to come back…',
         settleMs: 12000, timeoutMs: 180000,
         busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
-        readyText: 'Cinemate is running — <b class="din">READY</b>',
+        readyText: 'CineMate is running — <b class="din">READY</b>',
         doneToast: 'Pi is back up'
       });
     });

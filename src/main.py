@@ -184,7 +184,7 @@ def systemd_ready(status: str) -> bool:
     return notified
 
 
-def mark_runtime_ready(status: str = "Cinemate running") -> bool:
+def mark_runtime_ready(status: str = "CineMate running") -> bool:
     global APP_RUNTIME_READY
     APP_RUNTIME_READY = True
     if STARTUP_READY_SENT:
@@ -752,9 +752,9 @@ def run_application(args, log_queue):
         if fb_splash is None:
             splash_thread, splash_stop = start_splash(welcome_text)
             if splash_thread is not None:
-                systemd_status("Cinemate text splash active")
+                systemd_status("CineMate text splash active")
         else:
-            systemd_status("Cinemate splash active")
+            systemd_status("CineMate splash active")
         splash_visible_started_at = time.monotonic()
         startup_ready_notified = True
 
@@ -982,9 +982,9 @@ def run_application(args, log_queue):
             time.sleep(remaining_splash_time)
 
     if startup_ready_notified:
-        systemd_status("Cinemate GUI starting")
+        systemd_status("CineMate GUI starting")
     else:
-        systemd_ready("Cinemate GUI starting")
+        systemd_ready("CineMate GUI starting")
         startup_ready_notified = True
 
     if restart_camera_after_startup_handoff and not defer_startup_message_until_after_plymouth:
@@ -1085,7 +1085,7 @@ def run_application(args, log_queue):
     # Wait until the welcome-message/Plymouth handoff and preview rebind are
     # finished before warming the storage media.
     storage_preroll.mark_startup_ready()
-    mark_runtime_ready("Cinemate running")
+    mark_runtime_ready("CineMate running")
     
     # Ensure system cleanup on exit
     cleanup_called = False
@@ -1236,18 +1236,18 @@ def main():
     try:
         return run_application(args, log_queue)
     except SettingsLoadError as exc:
-        systemd_status("Cinemate startup failed: invalid settings.jsonc")
-        logging.error("Cinemate startup aborted: %s", exc.detail)
-        report_startup_failure("Cinemate could not start", exc.format_for_cli())
+        systemd_status("CineMate startup failed: invalid settings.jsonc")
+        logging.error("CineMate startup aborted: %s", exc.detail)
+        report_startup_failure("CineMate could not start", exc.format_for_cli())
         return 1
     except Exception as exc:
-        systemd_status("Cinemate startup failed before ready")
-        logging.exception("Cinemate crashed during startup")
+        systemd_status("CineMate startup failed before ready")
+        logging.exception("CineMate crashed during startup")
         report_startup_failure(
-            "Cinemate crashed during startup",
+            "CineMate crashed during startup",
             "\n".join(
                 [
-                    "Problem: Cinemate exited before the GUI finished starting.",
+                    "Problem: CineMate exited before the GUI finished starting.",
                     f"Reason: {exc.__class__.__name__}: {exc}",
                     "",
                     "Recommended fix: Review the startup sequence below, then retry from SSH if you need the full traceback in the shell.",

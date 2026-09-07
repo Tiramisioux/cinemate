@@ -17,6 +17,14 @@ It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https
 
 See the [changelog](https://tiramisioux.github.io/cinemate/changelog/) for what's new in version 3.4.0.
 
+## Required hardware
+
+For a basic Cinemate setup you need:
+- Raspberry Pi 4 or 5 / CM5 with **4 GB RAM or more**. 2 GB boards run the prebuilt image, but are not recommended for UHD/4K: raw frames are buffered in RAM and a watchdog auto-stops recording once total RAM use hits 80 %. 4 GB is also recommended for compiling `cinepi-raw` on the Pi.
+- Official HQ or GS camera module
+- SSD drive such as a Samsung T7 formatted as `exFAT` or `ext4` and labelled `RAW`
+- HDMI monitor or a phone/tablet connected to the Pi hotspot for preview
+
 ## Compatible sensors
 
 - IMX477 (official Raspberry Pi HQ camera)
@@ -24,38 +32,28 @@ See the [changelog](https://tiramisioux.github.io/cinemate/changelog/) for what'
 - IMX283 ([OneInchEye](https://www.tindie.com/products/will123321/oneincheye-v20/) by Will Whang)
 - IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
 
-## Works out of the box with
+## Additional hardware
 
-Drivers and mappings for these come preinstalled:
+All of it optional — add what you need, when you need it. Drivers and mappings come preinstalled.
 
-- [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)
-- [Grove Base Hat](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/)
-- [Adafruit I2C Quad Rotary Encoder](https://www.adafruit.com/product/5752)
+| Hardware | Connects to | Typical use |  |
+|---|---|---|---|
+| Push buttons | any free GPIO pin + GND | start/stop recording, change resolution | ![Tactile push button](docs/images/hardware/button.jpg) |
+| Two- and three-way switches | GPIO pins + GND | zoom, shutter sync mode, fps presets | ![SPDT toggle switch](docs/images/hardware/switch.jpg) |
+| Rotary encoders | two GPIO pins (+ button pin) + GND | stepping ISO, shutter angle, fps, WB | ![Rotary encoder](docs/images/hardware/encoder.jpg) |
+| Potentiometers | a Grove Base HAT analog port | dials for ISO, shutter angle, fps, WB | ![Panel-mount potentiometer](docs/images/hardware/pot.jpg) |
+| [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/) | GPIO header | analog inputs for potentiometers | ![Grove Base HAT](docs/images/hardware/grovehat.jpg) |
+| [Adafruit quad rotary encoder](https://www.adafruit.com/product/5752) | I²C (STEMMA QT or SDA/SCL pins) | four dials and push buttons in one module | ![Adafruit quad rotary encoder](docs/images/hardware/quadrotary.jpg) |
+| [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) | PCIe (Raspberry Pi 5 only) | fast storage (CFexpress Type B) | ![CFE Hat](docs/images/hardware/cfehat.jpg) |
+| LEDs | a GPIO out pin + GND, via a resistor | rec tally lamp | ![5mm LED](docs/images/hardware/led.jpg) |
+| Resistor | in series with an LED | limits the LED's current; 220 Ω is a good value | ![220 Ω resistor](docs/images/hardware/resistor.jpg) |
+| I²C OLED display | I²C (SDA/SCL pins) | status screen: ISO, timecode, space left | ![SSD1306 OLED display](docs/images/hardware/oled.jpg) |
+| Real-time clock | I²C (SDA/SCL pins) | keeps the clock across a power cycle, Pi 4 only | ![DS3231 real-time clock module](docs/images/hardware/rtc.jpg) |
+
+Physical controls are mapped in [`settings.jsonc`](#customization). CineMate uses **BCM** pin numbering — the `GPIO n` labels, not the physical pin positions. Full reference: [Additional hardware](https://tiramisioux.github.io/cinemate/hardware-controls/).
 
 ## Camera stack
 <img src="docs/images/camera-stack3.png" alt="Camera stack exploded" width="250"><br>
-
-| Layer | Responsibility |
-|---|---|
-| Camera sensor | Captures the image. One module on the Pi's CSI port, or two on a board with two ports. |
-| Raspberry Pi SoC | Receives the CSI-2 stream and lands the raw frames in memory. |
-| libcamera | Patched fork ([`Tiramisioux/libcamera`](https://github.com/Tiramisioux/libcamera), branch `cinemate`), built by the installer. Configures the sensor mode and delivers raw frames to the recorder. |
-| CinePi-RAW (C++) | One process per detected camera. Writes CinemaDNG frames to the RAW drive (`/media/RAW`), composites the HDMI preview, serves the MJPEG preview stream on port `8000` (`8001` for a second sensor), and supervises the separate `cinepi-audio-capture` helper that records the WAV sidecar. |
-| Cinemate (Python) | The user interface: the on-camera HDMI GUI, the [web GUI](https://tiramisioux.github.io/cinemate/web-gui/) and [settings editor](https://tiramisioux.github.io/cinemate/settings-editor/) on port `5000`, the [terminal commands](https://tiramisioux.github.io/cinemate/cli-commands/), the [Web API](https://tiramisioux.github.io/cinemate/web-api/) and the GPIO controls. Launches and supervises the CinePi-RAW processes. |
-
-Cinemate and CinePi-RAW are separate programs, and Redis is the whole interface between them. Each side writes a key and then publishes the key name on the `cp_controls` channel. Cinemate writes the setting you asked for; CinePi-RAW applies it and writes back the value it actually used, plus per-frame statistics on the `cp_stats` channel that Cinemate turns into the live readouts.
-
-The web GUI and the Web API post a CLI command line to `/api/v1/cmd` — the same dispatcher the terminal and the serial port use. GPIO buttons, pots and rotary encoders call the controller directly instead.
-
-More: [Redis API quick start](https://tiramisioux.github.io/cinemate/redis-guide/), [Redis key reference](https://tiramisioux.github.io/cinemate/redis-keys/) and [How Cinemate launches CinePi-raw](https://tiramisioux.github.io/cinemate/cinepi-multi/).
-
-## Hardware
-
-For a basic Cinemate setup you need:
-- Raspberry Pi 4 or 5 / CM5 with **4 GB RAM or more**. 2 GB boards run the prebuilt image, but are not recommended for UHD/4K: raw frames are buffered in RAM and a watchdog auto-stops recording once total RAM use hits 80 %. 4 GB is also recommended for compiling `cinepi-raw` on the Pi.
-- Official HQ or GS camera module
-- SSD drive such as a Samsung T7 formatted as `exFAT` or `ext4` and labelled `RAW`
-- HDMI monitor or a phone/tablet connected to the Pi hotspot for preview
 
 ## Installation
 
@@ -106,10 +104,16 @@ After boot, the HDMI monitor shows the live preview with the camera GUI. To use 
 3. Attach a drive formatted `exFAT` (or `ext4`) and labelled `RAW`.
 4. For a physical record button, wire a momentary button between **GPIO7** and **GND** — physical pins 26 and 25, right next to each other.
 
+<img src="docs/images/gui-web-overview.png" alt="The Cinemate web GUI in a browser, showing the live preview framed by the camera readouts" width="640"><br>
+<em>The live view at <code>cinepi.local:5000</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode run across the top; media space, write speed, buffer fill and Pi temperature across the bottom. Tap the picture to start and stop recording.</em>
+
 See the [Quick start](https://tiramisioux.github.io/cinemate/getting-started/) for the full walkthrough.
 
 ## Customization
 GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/settings.jsonc` file. On the Pi, type `editsettings` in the terminal to open this file, or use the settings editor at `cinepi.local:5000/settings-editor` from a browser.
+
+<img src="docs/images/gui-gpio-in.png" alt="The GPIO in pane of the Cinemate settings editor, listing each wired pin with its gesture and the command it runs" width="640"><br>
+<em>The settings editor's <strong>GPIO in</strong> pane writes the same <code>settings.jsonc</code> by hand-editing it. Each row is one wired pin: the gesture on the left (press, single/double/triple click, hold, or a switch's on and off), the command it runs on the right. Buttons, two- and three-way switches and rotary encoders are added from the buttons underneath, and an I²C quad rotary board appears as its own four encoders.</em>
 
 ## Documentation
 Full manual installation instructions, configuration guides in the [documentation](https://tiramisioux.github.io/cinemate/).

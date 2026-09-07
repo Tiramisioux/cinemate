@@ -1045,6 +1045,15 @@ class SimpleGUI(threading.Thread):
         values["hdmi_preview_source"] = str(
             self.redis_controller.get_value(ParameterKey.HDMI_PREVIEW_SOURCE.value) or "both"
         )
+        # Which axis of quality dynamic resolution gives up first. A string,
+        # not a flag, so it rides alongside hdmi_preview_source rather than in
+        # the boolean sweep below.
+        values["dynamic_resolution_priority"] = str(
+            self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_PRIORITY.value
+            )
+            or getattr(controller, "dynamic_resolution_priority", "mode")
+        )
         # From redis, not from the controller: the controller keeps no live
         # shutter_a_nom attribute -- set_shutter_a_nom() writes
         # self.shutter_angle_nom and the redis key.

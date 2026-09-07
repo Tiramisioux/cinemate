@@ -97,6 +97,7 @@ class ResolutionGuiStateTests(unittest.TestCase):
         controller.dynamic_resolution_enabled = True
         controller.dynamic_resolution_desired_mode = 0
         controller.dynamic_resolution_active = False
+        controller.dynamic_resolution_priority = "mode"
         controller.fps_steps = [24, 25, 40, 50]
         controller.fps_steps_dynamic = list(controller.fps_steps)
         controller.fps_free = False

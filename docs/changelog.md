@@ -41,6 +41,12 @@ Max fps figures are measured at the sensor's highest supported link frequency, *
 - **Automatic dual-camera** — two connected sensors are each detected and driven by their own `cinepi-raw` process, with frame capture synchronised by libcamera (cam0 server, cam1 client).
 - **HDMI preview switching** — new command `set preview` cycles side-by-side → cam0 → cam1 → pip_cam0 → pip_cam1 (picture-in-picture).
 - **Per-sensor recording** — record both sensors or just the previewed one (`sensors.record_policy` can be set in settings.jsonc), or target sensors with `rec cam0` / `rec cam1` / `rec both`. Each sensor writes its own `..._cam0` / `..._cam1` clip folder.
+#### Dynamic resolution
+
+- **Substitution can now cross the SDR/ClearHDR and bit-depth boundary** — when the requested frame rate outruns everything in the selected mode's own class, the ladder continues into the next class down instead of stopping. On an imx585 with 12-bit ClearHDR hidden, 16-bit ClearHDR 4K now reaches 87fps by walking down to HD SDR, where it used to cap at 40.
+- **New `image_capture.dynamic_resolution_priority`** — `mode` (default) holds bit depth and ClearHDR and drops resolution first; `resolution` holds the frame size and drops the class first; `none` is the previous behaviour, never leaving the class. Live via `set dynamic resolution priority mode|resolution|none` (bare cycles), from the settings page, or from the live drawer's DYN RES select. `mode` answers identically to `none` for every frame rate `none` could serve, so the default only adds reach. A substitute is never larger or richer than the mode you selected under any policy.
+- **Mid-take the class is held** — bit depth and `--hdr sensor` are launch arguments, so crossing a class relaunches cinepi-raw, which would end a running take. For the length of a take the ladder and the fps ceiling are pinned to the class actually running; a held-back change is applied the moment the take ends.
+
 #### Web GUI
 
 - **Settings editor config.txt write fix, `cinepi.local` mDNS** — saving `config.txt` used to fail silently (`EACCES`, runs as `pi`); now goes through a scoped helper (`cinemate-apply-config-txt`) that preserves owner/mode. Installer also enables mDNS for `cinepi.local` and fixes a stale `/etc/hosts` entry.

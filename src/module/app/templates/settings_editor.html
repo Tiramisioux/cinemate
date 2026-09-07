@@ -1735,6 +1735,19 @@
             <button class="toggle" id="f-dynres" data-path="image_capture.dynamic_resolution" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
+        <div class="card" data-search="dynamic resolution priority ladder hdr sdr bit depth class follow mode follow resolution">
+          <div class="card-main">
+            <label class="card-label" for="f-dynres-priority">{{ t('card.image_capture.dynamic_resolution_priority.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.dynamic_resolution_priority.help') }}</p>
+          </div>
+          <div class="card-control">
+            <select class="field-input" id="f-dynres-priority" data-path="image_capture.dynamic_resolution_priority" data-type="string" data-original="mode" style="min-width:180px">
+              <option value="mode" selected>Follow mode</option>
+              <option value="resolution">Follow resolution</option>
+              <option value="none">Never leave the mode</option>
+            </select>
+          </div>
+        </div>
         <div class="card" data-search="hdr sdr modes exposed resolution control">
           <div class="card-main">
             <label class="card-label" for="f-hdr-sdr">{{ t('card.image_capture.hdr.sdr.label') }}</label>
@@ -2269,9 +2282,6 @@
         <h2>{{ t('pane.playback.heading') }}</h2>
       </header>
 
-      <p class="eyebrow" style="margin-top:0">Takes on card</p>
-      <div class="takestrip" id="pbTakeStrip"></div>
-
       <div class="pb-stage" id="pbStage">
         <img id="pbFrame" alt="Current frame">
         <div class="pb-overlay">
@@ -2322,6 +2332,24 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <span>{{ t('note.playback.0.body') }}</span>
       </div>
+
+      <p class="eyebrow">Takes on card</p>
+      <div class="clip-toolbar">
+        <div class="left">
+          Sort
+          <!-- "Oldest first" is selected because that is the order
+               playback.list_clips() returns and the order this strip has
+               always read in: first take upper-left, each later take to its
+               right. The other two match the RAW pane's wording so one
+               vocabulary covers both panes. -->
+          <select class="field-input" id="pbTakeSort" style="min-width:150px">
+            <option value="oldest" selected>Oldest first</option>
+            <option value="newest">Newest first</option>
+            <option value="largest">Largest first</option>
+          </select>
+        </div>
+      </div>
+      <div class="takestrip" id="pbTakeStrip"></div>
 
       <p class="eyebrow">Playback settings</p>
       <div class="cards">
@@ -5001,6 +5029,20 @@
     updateBulkBar();
   });
   document.getElementById('clipSort').addEventListener('change', renderClipList);
+  /* Re-order the strip without disturbing the stage: the selected take keeps
+     playing, it just moves. pbSelectTake would pause it and reload the frame
+     under someone watching, so only the highlight is re-applied. */
+  pbEl('pbTakeSort').addEventListener('change', function(){
+    var keepName = pbClip && pbClip.name;
+    pbSortClips();
+    pbRenderTakes();
+    var idx = pbIndexOfName(keepName);
+    if (idx >= 0){
+      [].forEach.call(pbEl('pbTakeStrip').children, function(el, i){
+        el.setAttribute('aria-current', i === idx ? 'true' : 'false');
+      });
+    }
+  });
   document.getElementById('refreshClips').addEventListener('click', refreshRawPane);
   document.getElementById('bulkDelete').addEventListener('click', function(){
     var names = selectedClipNames();
@@ -5110,6 +5152,38 @@
     return pbState.conform ? pbConform : pbClip.fps;
   }
 
+  /* pbClips is sorted IN PLACE rather than rendered through a sorted copy,
+     because everything downstream of it addresses takes by index -- the
+     strip's aria-current sweep, pbSelectTake, and the poll's keep-the-
+     selection lookup. One order for the array and the strip keeps those
+     honest; the cost is that "the newest take" is no longer "the last one",
+     which is what pbNewestIndex() is for. Same three orders and the same
+     wording as the RAW pane's clipSort. */
+  function pbSortClips(){
+    var sort = (pbEl('pbTakeSort') || {}).value || 'oldest';
+    pbClips.sort(function(a, b){
+      if (sort === 'newest') return (b.mtime || 0) - (a.mtime || 0);
+      if (sort === 'largest') return (b.size_bytes || 0) - (a.size_bytes || 0);
+      return (a.mtime || 0) - (b.mtime || 0);
+    });
+  }
+
+  function pbNewestIndex(){
+    var best = -1, bestAt = -Infinity;
+    for (var i = 0; i < pbClips.length; i++){
+      var at = pbClips[i].mtime || 0;
+      if (at >= bestAt){ bestAt = at; best = i; }
+    }
+    return best;
+  }
+
+  function pbIndexOfName(name){
+    for (var i = 0; i < pbClips.length; i++){
+      if (pbClips[i].name === name) return i;
+    }
+    return -1;
+  }
+
   function refreshPlaybackPane(){
     fetch('/settings-editor/api/playback/clips')
       .then(function(r){ return r.json(); })
@@ -5119,6 +5193,7 @@
         pbRenderToken = res.render_token || '0';
         pbEl('pbConformLabel').textContent = pbConform;
         pbClips = res.clips || [];   // shooting order, oldest first (playback.list_clips())
+        pbSortClips();
         pbRenderTakes();
         pbSetLocked(!!res.recording);
         // Default to the most recently shot take (the last one in shooting
@@ -5126,7 +5201,7 @@
         // just shot this, let me check it," and the strip's own left-to-
         // right layout already shows the full shooting order for anyone
         // who wants an earlier one.
-        if (pbClips.length) pbSelectTake(pbClips.length - 1);
+        if (pbClips.length) pbSelectTake(pbNewestIndex());
       })
       .catch(function(){ /* best-effort, same as the RAW pane */ });
   }
@@ -5158,11 +5233,9 @@
         if (pbTakeKey(incoming) !== pbTakeKey(pbClips)){
           var keepName = pbClip && pbClip.name;
           pbClips = incoming;
+          pbSortClips();
           pbRenderTakes();
-          var idx = -1;
-          for (var i = 0; i < pbClips.length; i++){
-            if (pbClips[i].name === keepName){ idx = i; break; }
-          }
+          var idx = pbIndexOfName(keepName);
           if (idx >= 0){
             /* Still there: restore the highlight only. pbSelectTake would
                pause playback and reload the frame under someone watching. */
@@ -5171,7 +5244,7 @@
               el.setAttribute('aria-current', i === idx ? 'true' : 'false');
             });
           } else if (pbClips.length){
-            pbSelectTake(pbClips.length - 1);
+            pbSelectTake(pbNewestIndex());
           }
         }
         var wasRecordingLocked = pbState.recordingLocked;
@@ -5224,7 +5297,7 @@
         '<div class="take-meta">' + (c.frame_count || 0) + ' frames · ' +
         (c.fps ? c.fps.toFixed(3) + ' fps' : 'rate unknown') + '</div>' +
         '<div class="take-badges">' + badges + '</div></div>';
-      b.addEventListener('click', function(){ pbSelectTake(idx); });
+      b.addEventListener('click', function(){ pbSelectTake(idx, true); });
       strip.appendChild(b);
       if (c.frame_count) pbQueueThumb(b.querySelector('.take-thumb'), pbFrameUrl(c.name, 0, 8));
     });
@@ -5245,18 +5318,28 @@
     probe.src = job[1];
   }
 
-  function pbSelectTake(idx){
+  function pbSelectTake(idx, fromClick){
     pbPause();
     pbClip = pbClips[idx];
     if (!pbClip) return;
     [].forEach.call(pbEl('pbTakeStrip').children, function(el, i){
       el.setAttribute('aria-current', i === idx ? 'true' : 'false');
-      // The default selection is now the newest take -- the last, rightmost
-      // one in shooting order -- so it needs to be scrolled into view on a
-      // card with enough takes to overflow the strip, not just the first.
+      // Keep the highlighted take visible in the strip itself. block:'nearest'
+      // so this does not fight the scroll-to-player below: it moves the page
+      // only when the take is actually off-screen, and the player scroll runs
+      // after it and wins when both want to move.
       if (i === idx) el.scrollIntoView({ block: 'nearest', inline: 'nearest',
                                          behavior: reduceMotion ? 'auto' : 'smooth' });
     });
+    // The strip sits below the player, so picking a take from it leaves the
+    // thing you just asked to look at off the top of the screen. Only on a
+    // real click: the automatic selection on load (and after a poll picks up
+    // a newly shot take) must not yank the page around on its own.
+    if (fromClick){
+      var stage = pbEl('pbStage');
+      if (stage) stage.scrollIntoView({ block: 'start',
+                                        behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
     pbState.skipped = 0;
     pbEl('pbName').textContent = pbClip.name;
     pbEl('pbMetaFps').textContent = pbClip.fps ? pbClip.fps.toFixed(3) : '—';
@@ -5708,6 +5791,7 @@
     { group: 'Zoom / anamorphic', value: 'set_anamorphic_factor', label: 'Set anamorphic desqueeze', noArg: 'cycle', arg: { type: 'select', options: [1,1.33,2], suffix: '×' } },
     { group: 'Resolution / preview', value: 'set_resolution', label: 'Change resolution', noArg: 'cycle', arg: { type: 'number', placeholder: 'mode #' } },
     { group: 'Resolution / preview', value: 'set_dynamic_resolution_enabled', label: 'Toggle dynamic resolution', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Resolution / preview', value: 'set_dynamic_resolution_priority', label: 'Dynamic resolution priority', noArg: 'cycle', arg: { type: 'select', options: ['mode', 'resolution', 'none'] } },
     { group: 'Resolution / preview', value: 'set_preview_source', label: 'Set HDMI preview source', noArg: 'cycle', arg: { type: 'select', options: ['cam0','cam1','cam0+cam1','pip_cam0','pip_cam1'] } },
     { group: 'Storage', value: 'mount', label: 'Mount storage' },
     { group: 'Storage', value: 'unmount', label: 'Unmount storage' },

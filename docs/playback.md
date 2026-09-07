@@ -18,7 +18,7 @@ Choose **Playback · review takes**. Over the camera's own hotspot the settings 
 
 ## Choosing a take
 
-**Takes on card** lists every take across mounted storage, newest first, with a thumbnail from its first frame. Each card shows the take name, its frame count and its recorded frame rate, plus badges:
+The player sits at the top of the pane; **Takes on card** is below it, listing every take across mounted storage with a thumbnail from its first frame. Picking one loads it into the player and scrolls you back up to it. Each card shows the take name, its frame count and its recorded frame rate, plus badges:
 
 | Badge | Meaning |
 |---|---|
@@ -26,6 +26,8 @@ Choose **Playback · review takes**. Over the camera's own hotspot the settings 
 | `HDR` | The take holds HDR-range data (see [Take metadata](#take-metadata)) |
 | `WAV` | The take has an audio sidecar |
 | `0.50× SLOMO`, `2.00× FAST` | The take's playback speed against the conform rate. Absent when the take plays at 1.00× |
+
+**Sort** orders the strip: *oldest first* (the default — shooting order, so the first take is upper-left and each later one to its right), *newest first*, or *largest first*. Re-ordering does not disturb whatever is on the player; the selected take keeps playing and simply moves. The same three orders are offered on the RAW files pane.
 
 ## Playing
 

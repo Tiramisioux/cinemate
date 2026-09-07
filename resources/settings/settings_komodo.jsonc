@@ -1,11 +1,17 @@
 // Komodo-cage hardware reference. This is a PARTIAL settings file -- copy
-// the sections you need (hardware_controls.buttons, hardware_controls.
-// rotary_encoders, hardware_controls.combined_actions, input_peripherals.
-// pots) into your own settings.jsonc rather than replacing it wholesale;
-// there's no system/sensors/settings/arrays/image_capture/audio_capture/
-// hdmi_display block here, so loading this file standalone would run on
-// nothing but built-in defaults for everything except the wiring below.
+// the sections you need (hardware_outputs, arrays.iso, input_peripherals.
+// pots, hardware_controls.buttons, hardware_controls.rotary_encoders,
+// hardware_controls.combined_actions) into your own settings.jsonc rather
+// than replacing it wholesale; there's no system/sensors/settings/
+// image_capture/audio_capture/hdmi_display/output_peripherals block here,
+// so loading this file standalone would run on nothing but built-in
+// defaults for everything except the wiring below.
+//
+// Every "method" string below is checked against CinePiController by
+// _test/test_settings_method_names_resolve.py -- nothing else does, and a
+// name that no longer resolves is a control that silently does nothing.
 {
+  "$schema": "../../settings.schema.json",
   "hardware_outputs": {
     "pwm_pin": 19,
     "rec_out_pin": [6, 21]

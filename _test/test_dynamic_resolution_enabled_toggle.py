@@ -56,6 +56,7 @@ class DynamicResolutionEnabledToggleTests(unittest.TestCase):
         controller.dynamic_resolution_enabled = True
         controller.dynamic_resolution_active = False
         controller.dynamic_resolution_desired_mode = desired_mode
+        controller.dynamic_resolution_priority = "mode"
         # The toggle re-derives the fps ceiling, so the fake needs the same
         # mode table the real controller reads it from.
         controller.sensor_mode = sensor_mode

@@ -355,7 +355,13 @@
         "dynamic_resolution": {
           "type": "boolean",
           "default": true,
-          "description": "Startup default for dynamic resolution: when the requested fps is higher than the selected sensor mode can sustain, drop to the largest mode in the same family -- same bit depth, same SDR/ClearHDR class -- that can. Resolution is the only thing it changes; it never trades bit depth or the HDR flag for frame rate. `set dynamic resolution 0/1` overrides this live and the override persists in Redis, which a later boot reads back in preference to this value."
+          "description": "Startup default for dynamic resolution: when the requested fps is higher than the selected sensor mode can sustain, drop to the best mode that can (see `dynamic_resolution_priority` for what \"best\" means). `set dynamic resolution 0/1` overrides this live and the override persists in Redis, which a later boot reads back in preference to this value."
+        },
+        "dynamic_resolution_priority": {
+          "type": "string",
+          "enum": ["mode", "resolution", "none"],
+          "default": "mode",
+          "description": "Which axis of quality dynamic resolution gives up first once the selected mode's own class (bit depth + SDR/ClearHDR) runs out of modes that can sustain the frame rate. `mode` holds the class and drops resolution first (16-bit 4K -> 16-bit HD -> 4K SDR -> HD SDR); `resolution` holds the frame size and drops the class first (16-bit 4K -> 4K SDR -> HD SDR); `none` never leaves the class, so resolution is the only thing that ever changes and fps is capped at what the class can do. A substitute is never larger or richer than the selected mode under any policy. `set dynamic resolution priority mode|resolution|none` overrides this live and the override persists in Redis, which a later boot reads back in preference to this value."
         },
         "custom_modes": {
           "type": "object",

@@ -138,6 +138,7 @@ class ShutterActualAttributeStalenessTests(unittest.TestCase):
         c.dynamic_resolution_enabled = False
         c.dynamic_resolution_active = False
         c.dynamic_resolution_desired_mode = None
+        c.dynamic_resolution_priority = "mode"
         c.user_fps = 25
         c.fps_max = 50
         c.redis_controller.set_value(ParameterKey.FPS_MAX.value, "50")
@@ -167,6 +168,7 @@ class ShutterActualAttributeStalenessTests(unittest.TestCase):
         c.dynamic_resolution_enabled = False
         c.dynamic_resolution_active = False
         c.dynamic_resolution_desired_mode = None
+        c.dynamic_resolution_priority = "mode"
         c.user_fps = 25
         c.redis_controller.set_value(ParameterKey.FPS_MAX.value, "50")
         c.shutter_a_sync_mode = 1

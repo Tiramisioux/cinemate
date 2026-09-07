@@ -58,6 +58,7 @@ class ParameterKey(Enum):
     DYNAMIC_RESOLUTION_ENABLED = "dynamic_resolution_enabled"
     DYNAMIC_RESOLUTION_ACTIVE = "dynamic_resolution_active"
     DYNAMIC_RESOLUTION_DESIRED_MODE = "dynamic_resolution_desired_mode"
+    DYNAMIC_RESOLUTION_PRIORITY = "dynamic_resolution_priority"
     RESOLUTION_TARGET_MODE = "resolution_target_mode"
     RESOLUTION_TARGET_WIDTH = "resolution_target_width"
     RESOLUTION_TARGET_HEIGHT = "resolution_target_height"

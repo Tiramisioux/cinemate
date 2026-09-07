@@ -203,15 +203,34 @@
     "k_steps": [1.5, 2, 3, 4],
     "bit_depths": [10, 12, 16],
     // Dynamic resolution: when the requested fps is higher than the selected
-    // mode can sustain, drop to the largest mode in the same family (same
-    // bit depth, same SDR/ClearHDR class) that can. Resolution is the only
-    // thing it changes -- never bit depth, never HDR.
+    // mode can sustain, drop to the best mode that can.
     //
     // This is the startup default. `set dynamic resolution 0/1` overrides it
     // live and the override persists in Redis, so a later boot reads that
     // back rather than this. Turn it off here to have the camera always boot
     // holding the mode you picked, and cap fps at that mode's own limit.
     "dynamic_resolution": true,
+    // What "best" means above: which half of the picture is given up first
+    // once the selected mode's own class (its bit depth and SDR/ClearHDR
+    // setting) has no mode left that can sustain the frame rate.
+    //
+    //   "mode"        hold the class, drop resolution first. On an imx585
+    //                 with 12-bit ClearHDR hidden, 16-bit 4K walks down
+    //                 16-bit 4K -> 16-bit HD -> 4K SDR -> HD SDR.
+    //   "resolution"  hold the frame size, drop the class first. Same
+    //                 camera: 16-bit 4K -> 4K SDR -> HD SDR.
+    //   "none"        never leave the class. Resolution is the only thing
+    //                 that ever changes, and fps is capped at what the
+    //                 class can do -- how dynamic resolution behaved before
+    //                 the ladder existed.
+    //
+    // A substitute is never richer than what you selected: never a larger
+    // frame, never a better class. Both GUIs show RES in green while one is
+    // held, and the RES readout carries the bit depth and the SDR/HDR badge,
+    // so a class change is visible where a substitution is reported.
+    // `set dynamic resolution priority mode|resolution|none` overrides this
+    // live, and that override persists in Redis exactly like the toggle.
+    "dynamic_resolution_priority": "mode",
     "hdr": {
       // ClearHDR (imx585) whitelist. Both true exposes the plain and the
       // HDR modes; set "imx585_clear_hdr" false to hide the HDR modes.

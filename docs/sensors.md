@@ -141,9 +141,33 @@ Each mode reads out a physical area of the sensor. Binned modes keep the full fi
 
 CineMate remembers the mode you selected as the *desired* mode. If you raise FPS above what that mode's own sensor-reported maximum can sustain, it switches to the highest-resolution mode that can, and returns to your desired mode once you dial back down. There is no separate performance table -- the ceiling always comes from the sensor's own reported numbers (the "Max FPS" columns above, the same values `cinepi-raw --list-cameras` reports).
 
-**Resolution is the only thing it changes.** Substitution is confined to the desired mode's own family, where a family is one bit depth and one SDR/ClearHDR class -- the three blocks the imx585 mode table is laid out in. A 12-bit request never lands on a 10-bit mode, and a ClearHDR request never lands on an SDR one, however well those would serve the frame rate: those are trades you make deliberately, not ones a frame-rate dial makes for you. If nothing in the family can sustain the requested FPS, the resolution holds and FPS is capped instead.
+**A substitute is never bigger or better than what you picked.** Every mode sits at a point on two axes: its frame size, and its *class* -- one bit depth and one SDR/ClearHDR setting, the three blocks the imx585 mode table is laid out in. Dynamic resolution only ever looks at modes that are no better than your selection on either axis. It never hands you a larger frame or a richer class than the one you asked for.
+
+Which of the two it gives up first is yours to choose.
+
+### Priority: which half of the picture goes first
+
+Once your mode's own class has nothing left that can sustain the frame rate, `image_capture.dynamic_resolution_priority` decides where the ladder goes next. Take an imx585 with 12-bit ClearHDR hidden, sitting in 16-bit ClearHDR 4K:
+
+| Priority | The ladder | What it protects |
+| --- | --- | --- |
+| `mode` (default) | 16-bit 4K -> 16-bit HD -> 4K SDR -> HD SDR | Your bit depth and ClearHDR for as long as the sensor can hold them, at the cost of frame size |
+| `resolution` | 16-bit 4K -> 4K SDR -> HD SDR | Your frame size for as long as the sensor can hold it, at the cost of bit depth and ClearHDR |
+| `none` | 16-bit 4K -> 16-bit HD, then nothing | Both -- it never leaves your class at all, so past 16-bit HD the resolution holds and FPS is capped instead |
+
+`mode` is the default because it is the policy that changes least: it walks your own class all the way down before it crosses anything, so every frame rate `none` can serve, it serves identically. It differs only where `none` runs out of answers. `none` is how dynamic resolution behaved before this setting existed; pick it if you would rather the frame-rate dial simply stop than trade away bit depth or ClearHDR.
+
+Where two rungs tie -- 16-bit HD and 4K SDR both reach 40fps above -- the priority decides, and the rung that loses never wins at any frame rate, because the one that beat it already covers everything it could serve. That is why `resolution`'s ladder above has three rungs and not four.
+
+A class change costs more than a resolution change: bit depth is part of `--mode` and ClearHDR is the `--hdr sensor` launch flag, so cinepi-raw is relaunched for it. Mid-take it is not made at all -- see below.
+
+Change it live with `set dynamic resolution priority mode|resolution|none`, or from the settings page. Bare `set dynamic resolution priority` cycles the three, so it can be bound to a button. Like the on/off toggle, a live change persists and outranks `settings.jsonc` on the next boot.
+
+### While recording
 
 Changing mode mid-take is allowed. cinepi-raw splits the recording around the camera reconfigure, so the take continues in a new clip folder and the clip list shows where the change happened. There is a short gap in frames across the split: the sensor has to be reprogrammed for the new mode, which means stopping and restarting the stream. cinepi-raw itself is *not* restarted.
+
+Changing *class* mid-take is not, whatever priority you picked. That one needs cinepi-raw relaunched, and a relaunch would end the take rather than split it. So for the length of a take the ladder is pinned to the class actually running, and FPS is capped at what that class can reach -- 40 rather than 87 in the table above. The ladder settles the moment the take ends: if a class change was held back, it is applied then, with no further input from you.
 
 ### Turning it off
 
@@ -152,10 +176,10 @@ Changing mode mid-take is allowed. cinepi-raw splits the recording around the ca
 | `image_capture.dynamic_resolution` in `settings.jsonc` | The startup default. `true` out of the box. |
 | `set dynamic resolution 0` / `1` (or the settings page switch) | Overrides it for the session, and persists -- the next boot reads this back in preference to the file. |
 
-With it off, the mode you select is the mode you get, and `fps_max` is that one mode's own limit rather than the best any mode in its family could do. Turning it off also adopts whatever mode is currently on screen as your selection, so turning it back on later does not jump you somewhere you have since moved away from.
+With it off, the mode you select is the mode you get, and `fps_max` is that one mode's own limit rather than the best any mode on its ladder could do. Turning it off also adopts whatever mode is currently on screen as your selection, so turning it back on later does not jump you somewhere you have since moved away from.
 
 Storage pre-roll is intentionally different: it uses the live sensor maximum for the currently selected mode and temporarily suspends dynamic resolution so the mounted media is stress-tested before CineMate restores the user's FPS and applies the dynamic-resolution choice.
 
-The resolution readout turns green -- in the HDMI overlay and the web GUI alike -- whenever the mode on screen is one dynamic resolution chose rather than one you did. It stays white when the active mode is your desired resolution.
+The resolution readout turns green -- in the HDMI overlay and the web GUI alike -- whenever the mode on screen is one dynamic resolution chose rather than one you did. It stays white when the active mode is your desired resolution. The readout carries the bit depth, and the SDR/HDR badge sits next to it, so a class substitution is legible in the same place a resolution substitution is.
 
 Actual achievable FPS without dropped frames depends on your storage device and filesystem, which the sensor's own reported numbers don't account for -- a purple `DROP` indicator means you're above what your setup can sustain. Test your own setup and pick FPS values accordingly.

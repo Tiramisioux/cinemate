@@ -60,6 +60,7 @@ class DynamicResolutionPriorityTests(unittest.TestCase):
         controller.dynamic_resolution_priority = priority
         controller.dynamic_resolution_suspended = False
         controller.dynamic_resolution_deferred = False
+        controller.dynamic_resolution_deferred_fps = None
         controller.sensor_mode = sensor_mode
         controller.current_sensor = "imx585"
         controller.sensor_detect = FakeSensorDetect()
@@ -197,13 +198,103 @@ class DynamicResolutionPriorityTests(unittest.TestCase):
         locked = self.controller(redis=FakeRedis(is_recording=1), priority="none")
         self.assertIsNone(locked._in_take_fps_ceiling())
 
-    def test_a_held_back_class_change_settles_when_the_take_ends(self):
-        controller = self.controller(redis=FakeRedis(is_recording=1))
-        controller.redis_controller.set_value(ParameterKey.FPS_USER.value, 60)
+    # ── the fps that is applied is the fps the mode is chosen for ────────
+    def _fps_driveable(self, *, recording=False, sensor_mode=3, desired=3,
+                       priority="mode", steps=(24, 25, 30, 50, 60, 100)):
+        """A controller stubbed just far enough to run set_fps() end to end."""
+        controller = self.controller(
+            redis=FakeRedis(is_recording=1) if recording else FakeRedis(),
+            sensor_mode=sensor_mode, desired_mode=desired, priority=priority,
+        )
+        controller.fps_steps = list(steps)
+        controller.settings["arrays"]["fps"]["steps"] = list(steps)
+        controller.shutter_a_sync_mode = 0
+        controller.fps_lock = False
+        controller.lock_override = False
+        controller.shutter_a_steps_dynamic = [180]
+        controller.shutter_angle_actual = 180.0
+        controller.initialize_shutter_angle_steps = lambda: None
+        controller.seconds_to_fraction_text = lambda _s: ""
+        controller.fps_max = controller._refresh_fps_max()
+        controller._rebuild_fps_steps()
+        applied = []
+
+        def apply(mode, restore_user_fps=None, restart_process=False):
+            applied.append(mode)
+            controller.sensor_mode = mode
+            controller.fps_max = controller._refresh_fps_max()
+            controller._rebuild_fps_steps()
+            return True
+
+        controller._apply_resolution_mode = apply
+        return controller, applied
+
+    def test_an_unreachable_fps_request_still_lands_on_a_mode_that_can_serve_it(self):
+        # The operator puts 100 in the fps array to explore what the camera
+        # can actually do. 100 is not reachable by anything, so the ladder was
+        # asked about it, answered "nothing", and no switch happened -- and
+        # THEN the value was snapped down to the ladder's own 87 ceiling. 87
+        # was commanded in the 16-bit 4K mode, whose ceiling is 21.
+        #
+        # The ladder must be asked about the fps that will be applied, not the
+        # one that was requested.
+        controller, applied = self._fps_driveable()
+        self.assertEqual(controller.fps_steps_dynamic, [24, 25, 30, 50, 60, 87])
+
+        controller.set_fps(100)
+
+        self.assertEqual(controller.current_fps, 87)
+        self.assertEqual(applied, [0])
+        self.assertLessEqual(
+            controller.current_fps,
+            MODES[controller.sensor_mode]["fps_max"],
+        )
+
+    def test_the_take_scoped_cap_also_lands_on_a_mode_that_can_serve_it(self):
+        # Same defect through the other cap. Recording in 16-bit 4K (21fps),
+        # the operator ramps to 60: the class pin means nothing serves 60, so
+        # no switch -- then the take ceiling caps to 40, which the 16-bit HD
+        # mode does serve. It has to actually go there.
+        controller, applied = self._fps_driveable(recording=True)
+
+        controller.set_fps(60)
+
+        self.assertEqual(controller.current_fps, 40)
+        self.assertEqual(applied, [2])
+        self.assertLessEqual(
+            controller.current_fps,
+            MODES[controller.sensor_mode]["fps_max"],
+        )
+        # ...and the class was never left, because that needs a relaunch.
+        self.assertTrue(MODES[controller.sensor_mode]["hdr"])
+        # The operator's real target is remembered for the settle.
+        self.assertEqual(controller.dynamic_resolution_deferred_fps, 60.0)
+
+    def test_no_reachable_request_ever_outruns_the_mode_it_lands_in(self):
+        # The invariant behind both cases above, swept.
+        for priority in ("mode", "resolution", "none"):
+            for recording in (False, True):
+                for fps in (24, 25, 30, 40, 50, 60, 87, 100, 250):
+                    with self.subTest(priority=priority, recording=recording, fps=fps):
+                        controller, _ = self._fps_driveable(
+                            priority=priority, recording=recording)
+                        controller.set_fps(fps)
+                        self.assertLessEqual(
+                            controller.current_fps,
+                            MODES[controller.sensor_mode]["fps_max"],
+                        )
+
+    def _stoppable(self, **kw):
+        controller = self.controller(redis=FakeRedis(is_recording=1), **kw)
         controller._cancel_timed_recording_stop = lambda: None
         controller.stop_recording_worker = lambda: None
         applied = []
-        controller._maybe_apply_dynamic_resolution_for_fps = applied.append
+        controller.set_fps = applied.append
+        return controller, applied
+
+    def test_a_held_back_class_change_settles_when_the_take_ends(self):
+        controller, applied = self._stoppable()
+        controller.redis_controller.set_value(ParameterKey.FPS_USER.value, 60)
 
         controller._dynamic_resolution_choice_for_fps(60)
         self.assertTrue(controller.dynamic_resolution_deferred)
@@ -213,13 +304,43 @@ class DynamicResolutionPriorityTests(unittest.TestCase):
         self.assertEqual(applied, [60.0])
         self.assertFalse(controller.dynamic_resolution_deferred)
 
+    def test_the_settle_goes_to_the_operators_target_not_the_take_scoped_cap(self):
+        # The cap that stood in for their request while the class was pinned
+        # is take-scoped. Settling at it would quietly make it permanent: they
+        # asked for 60 and would be left at 40 with no way to tell why.
+        controller, applied = self._stoppable()
+        controller.redis_controller.set_value(ParameterKey.FPS_USER.value, 40)
+        controller.dynamic_resolution_deferred = True
+        controller.dynamic_resolution_deferred_fps = 60.0
+
+        controller.stop_recording()
+
+        self.assertEqual(applied, [60.0])
+        self.assertIsNone(controller.dynamic_resolution_deferred_fps)
+
+    def test_the_settle_waits_for_the_takes_buffer_to_finish_writing(self):
+        # The settle relaunches cinepi-raw, which is a SIGTERM. Firing it while
+        # the finished take is still draining its RAM buffer truncates the clip
+        # that was just recorded -- start_recording() refuses on exactly this
+        # condition. The deferral must survive so the next stop still gets it.
+        controller, applied = self._stoppable()
+        controller.redis_controller.set_value(ParameterKey.FPS_USER.value, 60)
+        controller.redis_controller.set_value(ParameterKey.IS_WRITING_BUF.value, 1)
+        controller.dynamic_resolution_deferred = True
+        controller.dynamic_resolution_deferred_fps = 60.0
+
+        controller.stop_recording()
+
+        self.assertEqual(applied, [])
+        self.assertTrue(controller.dynamic_resolution_deferred)
+
+        controller.redis_controller.set_value(ParameterKey.IS_WRITING_BUF.value, 0)
+        self.assertTrue(controller._settle_deferred_dynamic_resolution())
+        self.assertEqual(applied, [60.0])
+
     def test_nothing_is_re_settled_when_nothing_was_held_back(self):
-        controller = self.controller(redis=FakeRedis(is_recording=1))
+        controller, applied = self._stoppable()
         controller.redis_controller.set_value(ParameterKey.FPS_USER.value, 24)
-        controller._cancel_timed_recording_stop = lambda: None
-        controller.stop_recording_worker = lambda: None
-        applied = []
-        controller._maybe_apply_dynamic_resolution_for_fps = applied.append
 
         controller.stop_recording()
 

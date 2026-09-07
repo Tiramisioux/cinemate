@@ -273,7 +273,12 @@ def _candidate_modes(
         return None
     desired_rank = _family_rank(desired_info)
 
-    if priority == PRIORITY_NONE:
+    if priority == PRIORITY_NONE and restrict_to_family is None:
+        # "none" pins to the desired mode's own class -- but only when the
+        # caller has not already pinned it to a different one. A caller's pin
+        # is a statement about what the hardware can do right now (the class
+        # actually running, mid-take), and no policy may override it: doing so
+        # hands back a mode in a class cinepi-raw is not launched for.
         restrict_to_family = mode_family(desired_info)
 
     candidates = []
@@ -329,11 +334,7 @@ def choose_resolution(
 
     priority = normalize_priority(priority)
     normalized_modes = _normalize_modes(sensor_modes)
-    family_lock = (
-        None
-        if priority == PRIORITY_NONE
-        else _resolve_family_lock(normalized_modes, restrict_to_family_of)
-    )
+    family_lock = _resolve_family_lock(normalized_modes, restrict_to_family_of)
     resolved = _candidate_modes(
         normalized_modes,
         desired_mode_int,
@@ -413,11 +414,7 @@ def max_fps_for_context(
         desired_mode_int = _as_int(desired_mode)
         if desired_mode_int is None:
             return None
-        family_lock = (
-            None
-            if priority == PRIORITY_NONE
-            else _resolve_family_lock(normalized_modes, restrict_to_family_of)
-        )
+        family_lock = _resolve_family_lock(normalized_modes, restrict_to_family_of)
         resolved = _candidate_modes(
             normalized_modes,
             desired_mode_int,

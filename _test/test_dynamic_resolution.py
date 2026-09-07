@@ -360,18 +360,37 @@ class DynamicResolutionTests(unittest.TestCase):
         self.assertEqual(pinned.mode, 1)
         self.assertTrue(pinned.mode_class_changed)
 
-    def test_a_pinned_class_is_ignored_when_the_policy_never_crosses_anyway(self):
-        # "none" cannot cross a class, so pinning it to one is meaningless --
-        # and must not become a way to pin it to a *different* class than the
-        # one the operator selected.
-        choice = choose_resolution(
-            sensor_modes=IMX585_TWO_CLASS_MODES,
-            desired_mode=3,
-            requested_fps=40,
-            priority=PRIORITY_NONE,
-            restrict_to_family_of=0,
+    def test_a_callers_pin_outranks_the_policy_under_every_policy(self):
+        # This asserted the opposite until a review caught it, and the
+        # inversion mattered: "none" used to DISCARD the caller's pin and fall
+        # back to the desired mode's class. Mid-take that returned a 16-bit
+        # ClearHDR mode while the sensor was running 12-bit SDR, and
+        # _resolution_change_needs_restart() returns False while recording --
+        # so it was applied with no relaunch and cinepi-raw kept writing the
+        # old format under new metadata. A pin is a statement about what the
+        # hardware can do right now; no policy may overrule it.
+        for priority in DYNAMIC_RESOLUTION_PRIORITIES:
+            with self.subTest(priority=priority):
+                choice = choose_resolution(
+                    sensor_modes=IMX585_TWO_CLASS_MODES,
+                    desired_mode=3,
+                    requested_fps=40,
+                    priority=priority,
+                    restrict_to_family_of=0,
+                )
+                self.assertEqual(choice.mode, 1)
+                self.assertFalse(IMX585_TWO_CLASS_MODES[choice.mode].get("hdr", False))
+
+        # With no pin, "none" still refuses to leave the selected class.
+        self.assertEqual(
+            choose_resolution(
+                sensor_modes=IMX585_TWO_CLASS_MODES,
+                desired_mode=3,
+                requested_fps=40,
+                priority=PRIORITY_NONE,
+            ).mode,
+            2,
         )
-        self.assertEqual(choice.mode, 2)
 
     def test_priority_is_decoded_from_whatever_the_operator_typed(self):
         for value in ("mode", "MODE", " Follow Mode ", "follow_mode", "1"):

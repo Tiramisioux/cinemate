@@ -155,6 +155,9 @@ class CinePiController:
         # arguments, so applying it means relaunching cinepi-raw, which would
         # end the take. stop_recording() re-evaluates once the camera is idle.
         self.dynamic_resolution_deferred = False
+        # The fps the operator asked for when a take-scoped cap stood in for
+        # it, so the settle can go there rather than making the cap permanent.
+        self.dynamic_resolution_deferred_fps = None
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
 
@@ -734,6 +737,17 @@ class CinePiController:
         if choice.mode == self.sensor_mode:
             return False
 
+        # A same-class substitution is a live reconfigure, as it has always
+        # been. A class change is not: bit depth and the ClearHDR flag are
+        # launch arguments, so without the relaunch cinepi-raw would keep
+        # writing the old sensor format while every Redis key said otherwise.
+        # _resolution_change_needs_restart() is the same test set_resolution()
+        # uses, and it also covers the aspect-ratio case the ladder can now
+        # reach on sensors whose classes are not all one shape. The log line
+        # reports what will actually happen, rather than choice's own
+        # class-vs-desired comparison -- with a family pin in play those two
+        # can differ, and the one that matters here is the relaunch.
+        needs_restart = self._resolution_change_needs_restart(choice.mode)
         logging.info(
             "Dynamic resolution selecting mode %s (max %.3ffps) for %.3ffps "
             "(desired mode %s max is %.3ffps)%s",
@@ -742,20 +756,12 @@ class CinePiController:
             float(requested_user_fps),
             choice.desired_mode,
             choice.desired_fps_max,
-            " -- crossing a mode class, so cinepi-raw is relaunched"
-            if choice.mode_class_changed else "",
+            " -- relaunching cinepi-raw" if needs_restart else "",
         )
-        # A same-class substitution is a live reconfigure, as it has always
-        # been. A class change is not: bit depth and the ClearHDR flag are
-        # launch arguments, so without the relaunch cinepi-raw would keep
-        # writing the old sensor format while every Redis key said otherwise.
-        # _resolution_change_needs_restart() is the same test set_resolution()
-        # uses, and it also covers the aspect-ratio case the ladder can now
-        # reach on sensors whose classes are not all one shape.
         return self._apply_resolution_mode(
             choice.mode,
             restore_user_fps=None,
-            restart_process=self._resolution_change_needs_restart(choice.mode),
+            restart_process=needs_restart,
         )
         
     # ─── step-table helpers ────────────────────────────────────────────────
@@ -1399,8 +1405,6 @@ class CinePiController:
         self.user_fps = requested_user_fps
         self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
-        self._maybe_apply_dynamic_resolution_for_fps(requested_user_fps)
-
         # No per-sensor fps correction factor: the cinepi-raw phase lock drives the
         # recorded cadence onto the nominal fps, so the hardware fps == the user fps.
         # Audit: was int(float(get_value(FPS_MAX))) -- a TypeError whenever
@@ -1429,9 +1433,29 @@ class CinePiController:
         # cannot deliver. The downward-clamp branch below reconciles fps_user
         # for the GUI.
         in_take_ceiling = self._in_take_fps_ceiling()
+        capped_by_take = in_take_ceiling is not None and safe_value > in_take_ceiling
         if in_take_ceiling is not None:
             safe_value = min(safe_value, in_take_ceiling)
             safe_user_fps = min(safe_user_fps, in_take_ceiling)
+
+        # The ladder is asked about the fps that will ACTUALLY be applied, not
+        # the one that was requested. Asking first and capping afterwards let
+        # the two disagree: a request the ladder had no answer for ("nothing
+        # in this class reaches 60") still got capped to a rate that a mode in
+        # this class DOES reach, and the switch to that mode never happened --
+        # 40fps commanded in a mode whose ceiling is 21. Snapping to a step
+        # does the same thing more quietly. The rule is one question, asked
+        # about the answer: whatever fps we are about to command, that is what
+        # the mode has to be chosen for.
+        self._maybe_apply_dynamic_resolution_for_fps(safe_value)
+
+        # A take-scoped cap is not the operator changing their mind. Remember
+        # what they actually asked for so stop_recording()'s settle can go
+        # there once the class is free to change again -- fps_user below still
+        # tracks what is really recording, which is what the GUI must show.
+        self.dynamic_resolution_deferred_fps = (
+            requested_user_fps if capped_by_take else None
+        )
 
         self.user_fps = safe_user_fps
         # Always reconcile the operator-facing fps_user when the request had to be
@@ -1988,20 +2012,48 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 
-        # A mode class change the ladder wanted mid-take was held back rather
-        # than relaunching cinepi-raw under a running take. The camera is
-        # idle now, so settle it -- otherwise the operator's selected mode
-        # only comes back the next time they happen to touch fps.
-        if self.dynamic_resolution_deferred:
-            self.dynamic_resolution_deferred = False
-            current_user_fps = self._current_user_fps_value()
-            if current_user_fps is not None:
-                try:
-                    self._maybe_apply_dynamic_resolution_for_fps(current_user_fps)
-                except Exception:
-                    logging.exception(
-                        "Failed to settle dynamic resolution after recording."
-                    )
+        self._settle_deferred_dynamic_resolution()
+
+    def _settle_deferred_dynamic_resolution(self) -> bool:
+        """Apply a mode class change that a running take held back.
+
+        Crossing a class relaunches cinepi-raw, so it cannot happen during a
+        take. Once the camera is idle it should -- otherwise the operator's
+        selected mode only comes back the next time they happen to touch fps.
+
+        Returns True when the settle ran. It does NOT run while the take that
+        just ended is still draining its RAM buffer to disk: the relaunch is a
+        SIGTERM, and firing it mid-drain truncates the clip that was just
+        recorded. start_recording() refuses on the same condition, for the
+        same reason. The deferral is left standing in that case, so the next
+        set_fps -- or the next stop -- picks it up once the write has landed.
+        """
+        if not self.dynamic_resolution_deferred:
+            return False
+        if self._buffered_frames_flushing():
+            logging.info(
+                "Dynamic resolution settle held: the take's buffered frames "
+                "are still flushing to disk."
+            )
+            return False
+
+        self.dynamic_resolution_deferred = False
+        # The operator's own target, not the take-scoped cap that stood in for
+        # it -- see set_fps(). Settling at the capped rate would quietly make
+        # the cap permanent.
+        target_fps = self.dynamic_resolution_deferred_fps
+        self.dynamic_resolution_deferred_fps = None
+        if target_fps is None:
+            target_fps = self._current_user_fps_value()
+        if target_fps is None:
+            return False
+        try:
+            self.set_fps(float(target_fps))
+        except Exception:
+            logging.exception(
+                "Failed to settle dynamic resolution after recording."
+            )
+        return True
 
     def _is_recording(self) -> bool:
         return str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
@@ -2018,15 +2070,15 @@ class CinePiController:
     def _select_resolution_mode_for_fps(self, target_fps: float):
         """The mode `set fps double` should land on to reach *target_fps*.
 
-        Same rule as dynamic resolution, and via the same function: stay in
-        the current mode's family and never go up in resolution. This used to
-        sweep the whole mode table on area alone, so doubling the frame rate
-        from a 12-bit ClearHDR mode could land on a 10-bit SDR one -- a bit
-        depth and an HDR flag the operator never asked to give up, from a
-        button that says nothing about either.
+        Same rule as dynamic resolution, and via the same function -- which
+        means the same *policy*: passing priority here is what keeps the two
+        agreeing. Without it this call took choose_resolution's default and so
+        crossed the SDR/ClearHDR and bit-depth boundary even for an operator
+        who had explicitly set "none" to forbid exactly that, from a button
+        that says nothing about either.
 
-        Falls back to the current mode when no mode in the family can serve
-        the request; the caller then holds the resolution and clamps fps.
+        Falls back to the current mode when no mode the policy allows can
+        serve the request; the caller then holds the resolution and clamps fps.
         """
         choice = choose_resolution(
             sensor_modes=self.sensor_detect.res_modes,
@@ -2036,6 +2088,10 @@ class CinePiController:
                 else self.sensor_mode
             ),
             requested_fps=target_fps,
+            priority=self.dynamic_resolution_priority,
+            # Never mid-take: the caller already refuses a mode change while
+            # recording, and pinning here keeps that true if it ever stops.
+            restrict_to_family_of=self.sensor_mode if self._is_recording() else None,
         )
         return self.sensor_mode if choice is None else choice.mode
 

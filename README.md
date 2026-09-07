@@ -123,11 +123,13 @@ GPIO buttons and switches, rotary encoders and oled display for controlling came
 The same browser page carries the rest of the camera, at `cinepi.local:5000/settings-editor`. Its panes, in the order the tab bar shows them:
 
 <p>
-<img src="docs/images/gui-config-txt.png" align="top" width="19%" alt="The config.txt pane of the Cinemate settings editor">
-<img src="docs/images/gui-i2c.png" align="top" width="19%" alt="The i2c pane of the Cinemate settings editor">
-<img src="docs/images/pane-settings-jsonc.png" align="top" width="19%" alt="The settings.jsonc pane of the Cinemate settings editor">
-<img src="docs/images/gui-playback.png" align="top" width="19%" alt="The Playback pane of the Cinemate settings editor">
-<img src="docs/images/gui-raw-files.png" align="top" width="19%" alt="The RAW files pane of the Cinemate settings editor">
+<img src="docs/images/gui-config-txt.png" width="32%" align="top" alt="The config.txt pane of the Cinemate settings editor">
+<img src="docs/images/gui-i2c.png" width="32%" align="top" alt="The i2c pane of the Cinemate settings editor">
+<img src="docs/images/pane-settings-jsonc.png" width="32%" align="top" alt="The settings.jsonc pane of the Cinemate settings editor">
+</p>
+<p>
+<img src="docs/images/gui-playback.png" width="32%" align="top" alt="The Playback pane of the Cinemate settings editor">
+<img src="docs/images/gui-raw-files.png" width="32%" align="top" alt="The RAW files pane of the Cinemate settings editor">
 </p>
 
 ## Documentation

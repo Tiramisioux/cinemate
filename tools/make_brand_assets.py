@@ -66,6 +66,10 @@ SUB_SIZE, SUB_TRACK = 10.0, 0.12
 # Leading between the two lines, chosen so the block optically balances the
 # 22-unit mark rather than copying the browser's line boxes.
 LINE_GAP = 3.0
+# The badge lockups carry their own ground, so they need room around the ink
+# that a transparent lockup does not.
+BADGE_PAD = 11.0
+BADGE_CORNER = 8.0
 
 
 def outline(text: str, font_path: Path, size: float, tracking_em: float):
@@ -166,7 +170,7 @@ def build_favicon(pad: float = 5.0) -> None:
 
 
 def build_lockup(ink: str, sub_ink: str, suffix: str, *, ground: str | None = None,
-                 pad: float = 6.0) -> None:
+                 corner: float = 0.0, pad: float = 6.0) -> None:
     bold = FONTS / "DIN2014-Bold.ttf"
     regular = FONTS / "DIN2014-Regular.ttf"
     name_path, name_w = outline("CINEMATE", bold, NAME_SIZE, NAME_TRACK)
@@ -193,7 +197,9 @@ def build_lockup(ink: str, sub_ink: str, suffix: str, *, ground: str | None = No
         '  <title>CineMate — cinepi.local</title>',
     ]
     if ground:
-        body.append(f'  <rect width="{width:g}" height="{height:g}" fill="{ground}"/>')
+        radius = f' rx="{corner:g}"' if corner else ""
+        body.append(f'  <rect width="{width:g}" height="{height:g}"{radius} '
+                    f'fill="{ground}"/>')
     body.append(mark_svg(ink, x=pad, y=pad).rstrip("\n"))
     body.append(f'  <path transform="translate({text_x:g} {name_baseline:g})" '
                 f'fill="{ink}" d="{name_path}"/>')
@@ -215,7 +221,8 @@ def _draw_text(draw, xy, text, font, fill, tracking_px):
 
 def _render_png(path: Path, width_units: float, height_units: float, target_w: int,
                 ink: str, sub_ink: str, *, ground=None, corner: float = 0.0,
-                wordmark: bool = False, supersample: int = 8) -> None:
+                wordmark: bool = False, pad: float | None = None,
+                supersample: int = 8) -> None:
     """Draw the asset directly with Pillow at *target_w* pixels wide.
 
     Not by rasterizing the SVG: the only SVG renderer on this machine is
@@ -240,7 +247,8 @@ def _render_png(path: Path, width_units: float, height_units: float, target_w: i
         else:
             draw.rectangle([0, 0, W - 1, H - 1], fill=ground)
 
-    pad = 6.0 if wordmark else (5.0 if ground else 2.0)
+    if pad is None:
+        pad = 6.0 if wordmark else (5.0 if ground else 2.0)
     cx = (pad + CENTRE) * scale
     cy = (pad + CENTRE) * scale
     outer = (RING_R + RING_STROKE / 2.0) * scale
@@ -303,6 +311,16 @@ def rasterize() -> None:
         _render_png(OUT / f"cinemate-logo-light-{w}.png", lock_w, lock_h, w,
                     INK_LIGHT, MUTED, wordmark=True)
 
+    badge_w = BADGE_PAD * 2 + MARK_SIZE + GAP + max(name_w, sub_w)
+    badge_h = MARK_SIZE + BADGE_PAD * 2
+    for w in (512, 1024, 2048):
+        _render_png(OUT / f"cinemate-logo-badge-{w}.png", badge_w, badge_h, w,
+                    INK, MUTED, ground=PANEL, corner=BADGE_CORNER,
+                    wordmark=True, pad=BADGE_PAD)
+        _render_png(OUT / f"cinemate-logo-badge-light-{w}.png", badge_w, badge_h, w,
+                    INK_LIGHT, MUTED, ground=INK, corner=BADGE_CORNER,
+                    wordmark=True, pad=BADGE_PAD)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -316,6 +334,11 @@ def main() -> int:
     build_favicon()
     build_lockup(INK, MUTED, "dark")
     build_lockup(INK_LIGHT, MUTED, "light")
+    # The same lockup carrying its own ground, for anywhere it cannot rely on
+    # what is behind it: a README header, a social card, a sticker.
+    build_lockup(INK, MUTED, "badge", ground=PANEL, corner=BADGE_CORNER, pad=BADGE_PAD)
+    build_lockup(INK_LIGHT, MUTED, "badge-light", ground=INK,
+                 corner=BADGE_CORNER, pad=BADGE_PAD)
     if not args.svg_only:
         print("PNG:")
         rasterize()

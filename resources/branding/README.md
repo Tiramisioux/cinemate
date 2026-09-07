@@ -20,6 +20,8 @@ the interface it stands for cannot drift apart. Change the CSS, re-run it.
 |---|---|
 | `cinemate-logo-dark.svg` | The full lockup, for dark backgrounds. The master. |
 | `cinemate-logo-light.svg` | The same, for light backgrounds |
+| `cinemate-logo-badge.svg` | The lockup carrying its own dark ground — README headers, social cards, stickers, anywhere you cannot rely on what is behind it |
+| `cinemate-logo-badge-light.svg` | The same on a light ground |
 | `cinemate-mark.svg` | The mark alone, light ink — favicons, avatars, watermarks |
 | `cinemate-mark-light.svg` | The mark alone, dark ink |
 | `cinemate-favicon.svg` | The mark on its own rounded ground, so it reads against any browser chrome |

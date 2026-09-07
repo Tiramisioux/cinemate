@@ -35,20 +35,6 @@ Drivers and mappings for these come preinstalled:
 ## Camera stack
 <img src="docs/images/camera-stack3.png" alt="Camera stack exploded" width="250"><br>
 
-| Layer | Responsibility |
-|---|---|
-| Camera sensor | Captures the image. One module on the Pi's CSI port, or two on a board with two ports. |
-| Raspberry Pi SoC | Receives the CSI-2 stream and lands the raw frames in memory. |
-| libcamera | Patched fork ([`Tiramisioux/libcamera`](https://github.com/Tiramisioux/libcamera), branch `cinemate`), built by the installer. Configures the sensor mode and delivers raw frames to the recorder. |
-| CinePi-RAW (C++) | One process per detected camera. Writes CinemaDNG frames to the RAW drive (`/media/RAW`), composites the HDMI preview, serves the MJPEG preview stream on port `8000` (`8001` for a second sensor), and supervises the separate `cinepi-audio-capture` helper that records the WAV sidecar. |
-| Cinemate (Python) | The user interface: the on-camera HDMI GUI, the [web GUI](https://tiramisioux.github.io/cinemate/web-gui/) and [settings editor](https://tiramisioux.github.io/cinemate/settings-editor/) on port `5000`, the [terminal commands](https://tiramisioux.github.io/cinemate/cli-commands/), the [Web API](https://tiramisioux.github.io/cinemate/web-api/) and the GPIO controls. Launches and supervises the CinePi-RAW processes. |
-
-Cinemate and CinePi-RAW are separate programs, and Redis is the whole interface between them. Each side writes a key and then publishes the key name on the `cp_controls` channel. Cinemate writes the setting you asked for; CinePi-RAW applies it and writes back the value it actually used, plus per-frame statistics on the `cp_stats` channel that Cinemate turns into the live readouts.
-
-The web GUI and the Web API post a CLI command line to `/api/v1/cmd` — the same dispatcher the terminal and the serial port use. GPIO buttons, pots and rotary encoders call the controller directly instead.
-
-More: [Redis API quick start](https://tiramisioux.github.io/cinemate/redis-guide/), [Redis key reference](https://tiramisioux.github.io/cinemate/redis-keys/) and [How Cinemate launches CinePi-raw](https://tiramisioux.github.io/cinemate/cinepi-multi/).
-
 ## Hardware
 
 For a basic Cinemate setup you need:
@@ -106,10 +92,16 @@ After boot, the HDMI monitor shows the live preview with the camera GUI. To use 
 3. Attach a drive formatted `exFAT` (or `ext4`) and labelled `RAW`.
 4. For a physical record button, wire a momentary button between **GPIO7** and **GND** — physical pins 26 and 25, right next to each other.
 
+<img src="docs/images/gui-web-overview.png" alt="The Cinemate web GUI in a browser, showing the live preview framed by the camera readouts" width="640"><br>
+<em>The live view at <code>cinepi.local:5000</code>. Frame rate, shutter, exposure, EI, white balance and the sensor mode run across the top; media space, write speed, buffer fill and Pi temperature across the bottom. Tap the picture to start and stop recording.</em>
+
 See the [Quick start](https://tiramisioux.github.io/cinemate/getting-started/) for the full walkthrough.
 
 ## Customization
 GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/settings.jsonc` file. On the Pi, type `editsettings` in the terminal to open this file, or use the settings editor at `cinepi.local:5000/settings-editor` from a browser.
+
+<img src="docs/images/gui-gpio-in.png" alt="The GPIO in pane of the Cinemate settings editor, listing each wired pin with its gesture and the command it runs" width="640"><br>
+<em>The settings editor's <strong>GPIO in</strong> pane writes the same <code>settings.jsonc</code> by hand-editing it. Each row is one wired pin: the gesture on the left (press, single/double/triple click, hold, or a switch's on and off), the command it runs on the right. Buttons, two- and three-way switches and rotary encoders are added from the buttons underneath, and an I²C quad rotary board appears as its own four encoders.</em>
 
 ## Documentation
 Full manual installation instructions, configuration guides in the [documentation](https://tiramisioux.github.io/cinemate/).

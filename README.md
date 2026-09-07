@@ -1,4 +1,4 @@
-# Cinemate
+# CineMate
 
 **Cinemate** is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw video using off-the-shelf parts, and provides a minimal starting point you can extend with your own controls and accessories.
 

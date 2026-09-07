@@ -301,7 +301,18 @@
             },
             "imx585_clear_hdr": {
               "type": "boolean",
-              "default": true
+              "default": true,
+              "description": "Legacy single ClearHDR switch. Still honoured, and used as the default for the two per-depth switches below, so a settings.jsonc that turned ClearHDR off wholesale keeps both depths off."
+            },
+            "imx585_clear_hdr_12bit": {
+              "type": "boolean",
+              "default": true,
+              "description": "Offer the 12-bit ClearHDR modes. Companded capture: cinepi-raw applies the CCMP decompand to it, and the preview needs a measured table for the mode's binning. Independent of image_capture.bit_depths, which is global and would take the 12-bit SDR modes with it."
+            },
+            "imx585_clear_hdr_16bit": {
+              "type": "boolean",
+              "default": true,
+              "description": "Offer the 16-bit ClearHDR modes. Delivered linear, with no compander in the path."
             },
             "threshold_low": {
               "type": ["integer", "null"],

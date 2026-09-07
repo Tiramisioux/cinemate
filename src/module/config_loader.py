@@ -512,7 +512,13 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # ClearHDR (imx585) whitelist. Both true exposes the plain and the HDR
         # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
         # SensorDetect._hdr_whitelist.
-        "hdr": {"sdr": True, "imx585_clear_hdr": True},
+        "hdr": {
+            "sdr": True,
+            "imx585_clear_hdr": True,
+            # Per-depth ClearHDR switches; see sensor_detect._clear_hdr_depths.
+            "imx585_clear_hdr_12bit": True,
+            "imx585_clear_hdr_16bit": True,
+        },
         # 2 (colour): the embedded thumbnail is the standard playback path
         # now, not an opt-in -- see thumbnail_startup_value()'s docstring.
         "thumbnail": 2,

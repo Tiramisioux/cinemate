@@ -1740,13 +1740,22 @@
             <button class="toggle" id="f-hdr-sdr" data-path="image_capture.hdr.sdr" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
-        <div class="card" data-search="clearhdr imx585 modes exposed">
+        <div class="card" data-search="clearhdr imx585 12 bit modes exposed companded ccmp">
           <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr">Expose imx585 ClearHDR modes</label>
-            <p class="card-help">Show the ClearHDR modes — <strong>both</strong> the 12‑bit and the 16‑bit ones, so you can pick between them on the resolution control. This switch is the SDR/ClearHDR class, not a depth: which depths appear is <a href="#resolution" data-nav>Bit depths offered</a> above. Turn it off to hide them and keep the sensor SDR‑only.</p>
+            <label class="card-label" for="f-hdr-clearhdr-12">Expose 12‑bit ClearHDR modes</label>
+            <p class="card-help">Companded capture — cinepi‑raw applies the CCMP decompand to it, and the preview needs a measured table for the mode's binning. Independent of <a href="#resolution" data-nav>Bit depths offered</a> above, which is global: switching 12 off there would take the 12‑bit SDR modes with it.</p>
           </div>
           <div class="card-control">
-            <button class="toggle" id="f-hdr-clearhdr" data-path="image_capture.hdr.imx585_clear_hdr" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
+            <button class="toggle" id="f-hdr-clearhdr-12" data-path="image_capture.hdr.imx585_clear_hdr_12bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
+          </div>
+        </div>
+        <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear">
+          <div class="card-main">
+            <label class="card-label" for="f-hdr-clearhdr">Expose 16‑bit ClearHDR modes</label>
+            <p class="card-help">Delivered linear, with no compander in the path. Turn both ClearHDR switches off to keep the sensor SDR‑only.</p>
+          </div>
+          <div class="card-control">
+            <button class="toggle" id="f-hdr-clearhdr" data-path="image_capture.hdr.imx585_clear_hdr_16bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
         <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">

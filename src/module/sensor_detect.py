@@ -119,6 +119,11 @@ class SensorDetect:
         # exposes plain and ClearHDR modes, turn a flag off to hide that class
         # of modes. Mirrors the bit_depths / k_steps whitelists above.
         self.hdr_modes = self._hdr_whitelist(res_cfg.get("hdr", {}))
+        # Which ClearHDR bit depths are offered, decided separately from the
+        # SDR/ClearHDR class above. image_capture.bit_depths cannot express
+        # this: it is global, so switching 12 off there to drop 12-bit
+        # ClearHDR would take the 12-bit SDR modes with it.
+        self.clear_hdr_depths = self._clear_hdr_depths(res_cfg.get("hdr", {}))
         sensor_cfg = self.settings.get("sensors", {})
         self.sensor_database_file = sensor_cfg.get(
             "database_file",
@@ -344,6 +349,33 @@ class SensorDetect:
         return list(hdr_cfg or [])
 
     @staticmethod
+    def _clear_hdr_depths(hdr_cfg: Any):
+        """Which ClearHDR bit depths settings.jsonc offers, or None for all.
+
+        The imx585 reports ClearHDR at 12-bit and 16-bit, and an operator
+        wants to choose between them: they are different captures, not two
+        spellings of one. image_capture.bit_depths is the wrong lever for it
+        -- it applies to every mode, so dropping 12 there would take the
+        12-bit SDR modes as well.
+
+        imx585_clear_hdr, the older single switch, is honoured as the default
+        for both: a settings.jsonc that turned ClearHDR off wholesale keeps
+        both depths off, and one that never mentioned any of these keeps both
+        on. None means "no opinion", which is also what a non-dict config
+        (the legacy list form) yields -- there is nothing per-depth to read
+        out of it.
+        """
+        if not isinstance(hdr_cfg, dict):
+            return None
+        legacy = bool(hdr_cfg.get("imx585_clear_hdr", True))
+        depths = set()
+        if bool(hdr_cfg.get("imx585_clear_hdr_12bit", legacy)):
+            depths.add(12)
+        if bool(hdr_cfg.get("imx585_clear_hdr_16bit", legacy)):
+            depths.add(16)
+        return depths
+
+    @staticmethod
     def _mode_key(mode: Dict) -> tuple:
         """Identity used to dedupe a mode across the plain and HDR runs."""
         return (
@@ -495,7 +527,19 @@ class SensorDetect:
             for m in modes:
                 if self.bit_depths and m["bit_depth"] not in self.bit_depths:
                     continue
-                # settings.jsonc → resolutions.hdr: {sdr, imx585_clear_hdr}
+                # A ClearHDR mode also has to pass its own depth switch. The
+                # two are separate questions -- "expose ClearHDR at all" and
+                # "which of its depths" -- and only the second one can tell
+                # 12-bit ClearHDR from 12-bit SDR.
+                # getattr: _finalize_modes is reachable on an instance built
+                # with __new__ (several tests do exactly that, setting only
+                # the filter attributes they care about), and a missing switch
+                # must mean "no opinion", not an exception.
+                clear_hdr_depths = getattr(self, "clear_hdr_depths", None)
+                if bool(m.get("hdr")) and clear_hdr_depths is not None:
+                    if int(m.get("bit_depth") or 0) not in clear_hdr_depths:
+                        continue
+                # settings.jsonc → image_capture.hdr: {sdr, imx585_clear_hdr}
                 # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.
                 if self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
                     continue

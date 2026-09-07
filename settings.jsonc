@@ -217,6 +217,14 @@
       // HDR modes; set "imx585_clear_hdr" false to hide the HDR modes.
       "sdr": true,
       "imx585_clear_hdr": true,
+      // The two ClearHDR captures, offered independently. 12-bit is companded
+      // and needs the CCMP decompand; 16-bit is delivered linear. They are
+      // different captures, not two spellings of one, so each gets a switch.
+      // image_capture.bit_depths is the wrong lever for this: it applies to
+      // every mode, so dropping 12 there would take the 12-bit SDR modes too.
+      // Both default to whatever "imx585_clear_hdr" above says.
+      "imx585_clear_hdr_12bit": true,
+      "imx585_clear_hdr_16bit": true,
       // Startup values for the ClearHDR live knobs (0-4095 / 0-8 / 0-5).
       // Applied when a ClearHDR mode is selected; adjust live afterwards
       // with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain

@@ -1,10 +1,10 @@
 # Storage pre-roll warm-up
 
-When starting up, or when storage media is attached, Cinemate records and discards a quick test clip to warm up the storage media.
+When starting up, or when storage media is attached, CineMate records and discards a quick test clip to warm up the storage media.
 
 To disable it, set `"auto_preroll": false` under `system.storage` in `settings.jsonc`.
 
-You can still warm up media on demand: type `storage preroll` in the Cinemate CLI.
+You can still warm up media on demand: type `storage preroll` in the CineMate CLI.
 
 
 
@@ -18,4 +18,4 @@ Each run follows a five-step snapshot/restore sequence:
 
 4. After the run, it restores the previous FPS, deletes any new pre-roll clip directories, and writes the saved `last_dng_*` and recording-timer values back to Redis. This keeps the deleted warm-up take from becoming the "latest recording" shown in the GUI or CLI.
 
-5. While pre-roll is active, Cinemate skips final frame-sync analysis and drop-frame/SYNC warnings. The Simple GUI hides clip names and recording time while showing a blue background.
+5. While pre-roll is active, CineMate skips final frame-sync analysis and drop-frame/SYNC warnings. The Simple GUI hides clip names and recording time while showing a blue background.

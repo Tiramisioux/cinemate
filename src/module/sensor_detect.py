@@ -30,6 +30,16 @@ PI4_MODEL_MARKERS = (
     "Compute Module 4",
 )
 
+# Raspberry Pi models that run the RP1 camera receiver. "Compute Module 5" is
+# the marker that matters in practice -- CineMate's own dev unit is a CM5, and
+# /proc/device-tree/model reports it as "Raspberry Pi Compute Module 5", which
+# does not contain the string "Raspberry Pi 5".
+PI5_MODEL_MARKERS = (
+    "Raspberry Pi 5",
+    "Raspberry Pi 500",
+    "Compute Module 5",
+)
+
 # DNG frame-size model, calibrated against real captures (imx585 3856x2180
 # linear/log at 10/12/16-bit -- see innomaker585/pi-2026-08-05-goodkernel/).
 # cinepi-raw packs pixel data tightly at N bits/row ((width*bits+7)//8 bytes),
@@ -69,6 +79,32 @@ def is_pi4_family() -> bool:
     return any(marker in model for marker in PI4_MODEL_MARKERS)
 
 
+def is_pi5_family() -> bool:
+    """True on any Raspberry Pi 5 / 500 / CM5 (RP1) platform."""
+    model = read_pi_model()
+    return any(marker in model for marker in PI5_MODEL_MARKERS)
+
+
+def pi_family() -> str:
+    """Coarse platform family: 'pi5', 'pi4', 'other', or 'unknown'.
+
+    Matching is by family marker, not by the exact board name, because the
+    boards CineMate actually ships on are Compute Modules: a CM5 reports
+    "Raspberry Pi Compute Module 5 Rev 1.0", which contains neither
+    "Raspberry Pi 5" nor "Raspberry Pi 4". Substring checks against the
+    consumer board names alone therefore classify every CM as 'other' and send
+    Pi-5-only code down the legacy path.
+    """
+    model = read_pi_model()
+    if not model:
+        return "unknown"
+    if any(marker in model for marker in PI5_MODEL_MARKERS):
+        return "pi5"
+    if any(marker in model for marker in PI4_MODEL_MARKERS):
+        return "pi4"
+    return "other"
+
+
 class SensorDetect:
     def __init__(self, settings=None):
         self.camera_model = None
@@ -83,6 +119,11 @@ class SensorDetect:
         # exposes plain and ClearHDR modes, turn a flag off to hide that class
         # of modes. Mirrors the bit_depths / k_steps whitelists above.
         self.hdr_modes = self._hdr_whitelist(res_cfg.get("hdr", {}))
+        # Which ClearHDR bit depths are offered, decided separately from the
+        # SDR/ClearHDR class above. image_capture.bit_depths cannot express
+        # this: it is global, so switching 12 off there to drop 12-bit
+        # ClearHDR would take the 12-bit SDR modes with it.
+        self.clear_hdr_depths = self._clear_hdr_depths(res_cfg.get("hdr", {}))
         sensor_cfg = self.settings.get("sensors", {})
         self.sensor_database_file = sensor_cfg.get(
             "database_file",
@@ -91,6 +132,8 @@ class SensorDetect:
         self.sensor_database = self._load_sensor_database()
         # Detected resolutions per camera will be stored here
         self.sensor_resolutions = {}
+        # Pre-filter counterpart of the above; see _finalize_modes().
+        self.sensor_modes_unfiltered: Dict[str, List[Dict]] = {}
 
         # Packing information per sensor (U = unpacked, P = packed).
         self.packing_info = self._packing_info_from_database()
@@ -306,6 +349,33 @@ class SensorDetect:
         return list(hdr_cfg or [])
 
     @staticmethod
+    def _clear_hdr_depths(hdr_cfg: Any):
+        """Which ClearHDR bit depths settings.jsonc offers, or None for all.
+
+        The imx585 reports ClearHDR at 12-bit and 16-bit, and an operator
+        wants to choose between them: they are different captures, not two
+        spellings of one. image_capture.bit_depths is the wrong lever for it
+        -- it applies to every mode, so dropping 12 there would take the
+        12-bit SDR modes as well.
+
+        imx585_clear_hdr, the older single switch, is honoured as the default
+        for both: a settings.jsonc that turned ClearHDR off wholesale keeps
+        both depths off, and one that never mentioned any of these keeps both
+        on. None means "no opinion", which is also what a non-dict config
+        (the legacy list form) yields -- there is nothing per-depth to read
+        out of it.
+        """
+        if not isinstance(hdr_cfg, dict):
+            return None
+        legacy = bool(hdr_cfg.get("imx585_clear_hdr", True))
+        depths = set()
+        if bool(hdr_cfg.get("imx585_clear_hdr_12bit", legacy)):
+            depths.add(12)
+        if bool(hdr_cfg.get("imx585_clear_hdr_16bit", legacy)):
+            depths.add(16)
+        return depths
+
+    @staticmethod
     def _mode_key(mode: Dict) -> tuple:
         """Identity used to dedupe a mode across the plain and HDR runs."""
         return (
@@ -377,7 +447,19 @@ class SensorDetect:
         """
         # ── add or correct user-defined custom modes ─────────────────
         for cam, extras in self.custom_modes.items():
-            sensors.setdefault(cam, [])
+            # Only ever extend or correct a camera the probe actually found.
+            # This used to be sensors.setdefault(cam, []), which invented the
+            # camera when it wasn't detected -- so a settings.jsonc entry for
+            # a sensor that isn't plugged in produced a fabricated mode table
+            # for it. custom_modes exists to add modes to a real sensor and to
+            # correct a detected fps_max (F-298), never to declare a camera.
+            if cam not in sensors:
+                logging.warning(
+                    "custom_modes has an entry for %s, which was not detected "
+                    "-- ignoring it. custom_modes extends a camera that is "
+                    "present; it cannot declare one that isn't.", cam,
+                )
+                continue
             for extra in extras:
                 w, h = int(extra["width"]), int(extra["height"])
                 bd   = int(extra["bit_depth"])
@@ -423,6 +505,21 @@ class SensorDetect:
                     )
                 )
 
+        # Every mode this camera reported, before the settings.jsonc filters
+        # take anything away. sensor_resolutions is the filtered table, so it
+        # cannot answer "does this sensor have any 3K mode?" -- switching 3K
+        # off would make the answer no, and the settings page would grey out
+        # the very switch that did it. Kept per camera, merged rather than
+        # replaced, for the same hot-plug reason sensor_resolutions is.
+        # getattr, and reassigned rather than mutated: _finalize_modes is
+        # reachable on an instance built with __new__ (several tests do
+        # exactly that, setting only the filter attributes it reads), and a
+        # class-level default dict would be shared across instances.
+        self.sensor_modes_unfiltered = dict(
+            getattr(self, "sensor_modes_unfiltered", {}),
+            **{cam: [dict(m) for m in modes] for cam, modes in sensors.items()},
+        )
+
         # ── filter & index (k-steps / bit depths / hdr) ─────────────
         pruned: Dict[str, Dict[int, Dict]] = {}
         for cam, modes in sensors.items():
@@ -430,7 +527,19 @@ class SensorDetect:
             for m in modes:
                 if self.bit_depths and m["bit_depth"] not in self.bit_depths:
                     continue
-                # settings.jsonc → resolutions.hdr: {sdr, imx585_clear_hdr}
+                # A ClearHDR mode also has to pass its own depth switch. The
+                # two are separate questions -- "expose ClearHDR at all" and
+                # "which of its depths" -- and only the second one can tell
+                # 12-bit ClearHDR from 12-bit SDR.
+                # getattr: _finalize_modes is reachable on an instance built
+                # with __new__ (several tests do exactly that, setting only
+                # the filter attributes they care about), and a missing switch
+                # must mean "no opinion", not an exception.
+                clear_hdr_depths = getattr(self, "clear_hdr_depths", None)
+                if bool(m.get("hdr")) and clear_hdr_depths is not None:
+                    if int(m.get("bit_depth") or 0) not in clear_hdr_depths:
+                        continue
+                # settings.jsonc → image_capture.hdr: {sdr, imx585_clear_hdr}
                 # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.
                 if self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
                     continue
@@ -569,6 +678,24 @@ class SensorDetect:
                         "likely because something already held the sensor "
                         "subdev when Cinemate started."
                     )
+
+            # No camera header line parsed. This is NOT the same test as the
+            # `not out.strip()` one above: cinepi-raw prints "No cameras
+            # available!" to stdout, so the output is non-empty and that
+            # guard never fires. Stop here rather than in _finalize_modes(),
+            # because the custom_modes loop there would otherwise manufacture
+            # a camera out of a settings key -- leaving res_modes non-empty
+            # and camera_model set on a boot with no sensor attached, which
+            # bypasses every `if not res_modes` degraded-boot guard in
+            # cinepi_controller.py and storage_preroll.py.
+            if not merged:
+                logging.warning(
+                    "No camera parsed from the cinepi-raw listing -- treating "
+                    "this as no camera attached."
+                )
+                self.camera_model = None
+                self.res_modes = {}
+                return
 
             # full assembly → {model → {mode_idx → mode_dict}}
             sensors = self._finalize_modes(merged)

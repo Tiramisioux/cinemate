@@ -10,7 +10,7 @@ mkdir -p "$ROOT_DIR/docs"
 # Overwrite/create coverpage
 cat > "$ROOT_DIR/docs/coverpage.md" <<EOF
 ---
-title: Cinemate Documentation
+title: CineMate Documentation
 ---
 
 **Built:** $(date -u '+%Y-%m-%d %H:%M UTC')

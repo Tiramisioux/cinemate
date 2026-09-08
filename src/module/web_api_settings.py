@@ -19,8 +19,8 @@ DEFAULT_WEB_API_SETTINGS = {
         "port": 8888,
         "hz": 5,
         "keys": [
-            "is_recording", "iso", "fps", "shutter_a_actual",
-            "recording_tc_tod", "space_left", "drop_frame_count", "is_mounted",
+            "is_recording", "iso", "fps", "shutter_angle_actual",
+            "recording_time_tod", "space_left", "drop_frame_count", "is_mounted",
         ],
     },
 }

@@ -1,38 +1,86 @@
 # CineMate Log
 
-CineMate Log log-compands the linear sensor signal down to a smaller DNG code depth on the way to disk, and writes a DNG `LinearizationTable` (tag `0xC618`) so any DNG-aware app decodes it back to linear automatically. It exists to shrink file size — a 16-bit ClearHDR frame drops ≈ 17–37 %, a 12-bit SDR frame ≈ 17 % — with no change to how the footage grades.
+CineMate Log log-compands the linear sensor signal down to a smaller DNG code depth on the way to disk, and writes a DNG `LinearizationTable` (tag `0xC618`) to each frame so any DNG-aware app decodes it back to linear automatically. It shrinks file size — a 16-bit ClearHDR frame drops ≈ 17–37 %, a 12-bit SDR frame ≈ 17 %.
 
-## LUT: none. Use no LUT at all.
+Note that there is no "CineMate Log → Rec.709" LUT. CineMate Log is a storage format and not a viewing gamma like S-Log3 or V-Log. The DNG `LinearizationTable` linearizes automatically in DNG compatible NLEs (like DaVinci Resolve).
 
-CineMate Log is **not** a viewing gamma like S-Log3 or V-Log. It is a storage format, and the DNG `LinearizationTable` undoes it **inside the raw decoder**, before the image reaches your node graph. By the time you see the clip it is already scene-linear, with BlackLevel and WhiteLevel intact.
+If you are shooting in 16 bit formats, the log storage conversion will be 16 bit → 12 bit. If you are shooting in 12 bit with log storage active, files will be stored in 10 bit format. If you shoot in 10 bit formats, log is not used. You can also set the target bit depth explicitly, and for example shoot in 16 bit → 10 bit log storage conversion.
 
-So there is no "CineMate Log → Rec.709" LUT, and there should never be one. Applying a log-to-linear LUT or CST input gamma would decode the curve a second time.
+## Supported sensors
 
-| you want | do this |
-|---|---|
-| decode the log | nothing — the raw decoder already did it |
-| input gamma, in a CST or RCM | **Linear** |
-| a viewable image | lift exposure first, then a CST **Linear → Rec.709 Gamma 2.4** |
-| settings for the log clip | whatever you'd set on a linear recording from the same camera, verbatim |
-
-**Leave `UniqueCameraModel` as `cinepi`** (the default — see [Settings file → camera name](settings-json.md#camera-name)). Resolve picks its decode pipeline from that tag; an unknown model gets a generic decode with nothing layered on, which is exactly what a log-companded, already-linearised DNG needs. Spoofing it to a Blackmagic model unlocks a fuller Camera RAW tab but layers BMD colour science and their tone curve on top of your linear data — that confounds the curve, not helps it.
-
-## Which sensors support it
-
-Support is decided by the sensor's black level, not chosen — see [Camera sensors and frame rates → CineMate Log support](sensors.md#cinemate-log-support) for the full table. Short version:
+**IMX585 and IMX283 only.** Support is decided by the sensor's black level, not chosen: the two
+shipped log DNG specs are built for BlackLevel 3200, which is what those two report and no other sensor does.
 
 | Sensor | Live mode | Target |
-|--------|-----------|--------|
+| --- | --- | --- |
 | IMX585 | ClearHDR 16-bit | 12 (default) or 10 |
 | IMX585 | 12-bit (SDR or 12-bit ClearHDR) | 10 only |
 | IMX283 | 12-bit modes | 10 only |
+| IMX283 | 10-bit modes | not supported |
 | everything else | any | not supported |
 
-The flag is per-camera and launch-only; the sensor mode is live. Cinemate re-resolves the target every time `cinepi-raw` (re)starts for **any** reason — a resolution switch, a ClearHDR toggle, or a direct `set log` — against whatever bit depth is live at that moment, so the two never drift out of sync mid-session.
+!!! note "IMX477 is not a hardware limitation"
+    Its 12-bit modes would compand the same way. What is missing is sensor-aware spec selection on the `cinepi-raw` side, which has not been built yet. Nothing about the sensor prevents it.
+
+Full breakdown per mode: [Camera sensors › CineMate Log support](sensors.md#cinemate-log-support).
 
 ## Turning it on
 
-### In `settings.jsonc`
+Two places, for two different jobs. The **LOG** button switches the running camera. The settings
+editor sets what a fresh boot starts with. A live request wins over the saved value until the next
+reboot.
+
+### On the shooting screen
+
+The quickest way. In the [Web GUI](web-gui.md) button row, press **LOG**.
+
+![The CineMate Web GUI](images/gui-web-overview.png)
+
+It toggles log on and off at the live mode's default target, and restarts the camera to apply it.
+The button doubles as the readout: it reads `LOG` when off, and `LOG10` or `LOG12` when running,
+so it shows the target that actually took effect.
+
+Press it again to go back to linear. Nothing is saved, so the camera boots back to whatever the
+settings editor holds.
+
+### In the settings editor
+
+To make it the default for every boot, set it per camera under **Cameras → Camera 0**.
+
+![Cameras section of the CineMate settings editor](images/gui-cam0.png)
+
+The **CineMate Log** dropdown:
+
+| Option | Records |
+|---|---|
+| **Off** | Linear. The default. |
+| **On (mode default)** | Log at the live mode's own target: 12 from a 16-bit source, 10 from 12-bit. |
+| **Force 10‑bit** | Log at target 10, where the live mode supports it. |
+| **Force 12‑bit** | Log at target 12, where the live mode supports it. |
+
+Forcing a target only matters on a 16-bit ClearHDR source, where both are valid. `12` is the
+default and `10` trades a little more compression for a smaller file. A 12-bit source has only one
+valid target, `10`, so forcing `12` there records plain linear DNGs instead. That is not an error,
+and the badge tells you which way it went.
+
+**Save changes** writes the file and restarts CineMate.
+
+### From the terminal
+
+```text
+set log        # toggle on/off, using the live mode's default target
+set log 10     # force target 10 (e.g. 16to10 instead of ClearHDR's 16to12 default)
+set log 12     # force target 12
+set log off    # force off
+```
+
+Restarts the camera when idle, exactly like `set resolution`. Run mid-take, the request is stored
+and applied on the **next** restart, so CineMate never splits a running recording. A target the
+live mode does not support is rejected and logged, never silently swapped for a different depth.
+
+### By hand
+
+The dropdown above writes one key:
 
 ```json
 "sensors": {
@@ -42,30 +90,5 @@ The flag is per-camera and launch-only; the sensor mode is live. Cinemate re-res
 }
 ```
 
-`false` (default, off) · `true` (on, uses the live mode's default target) · `10` / `12` (on, forces that target when the live mode supports it). See [Settings file → log_encode](settings-json.md#log_encode) for the full description. This is the boot-time value — once you run `set log` in a session, the live request takes over until the next reboot.
-
-### Live, with `set log`
-
-```text
-set log        # toggle on/off, using the live mode's default target
-set log 10     # force target 10 (e.g. 16to10 instead of ClearHDR's 16to12 default)
-set log 12     # force target 12
-set log off    # force off
-```
-
-Restarts the camera when idle, exactly like `set resolution`. If you run it mid-take, the request is stored and applied on the **next** restart — CineMate never splits a running recording. An explicit target that the live mode doesn't support (e.g. `set log 12` while in a 12-bit mode) is rejected and logged, never silently swapped for a different depth.
-
-## The LOG badge
-
-A grey `LOG10` / `LOG12` box appears in each camera's CAM section on the Simple GUI once that camera's `cinepi-raw` has actually launched with the flag. It reflects what's **running**, not what's requested — since the flag only takes effect on the next restart, the badge can lag a `set log` command by the length of that restart, on purpose. No badge means that camera is recording linear.
-
-## Grading
-
-The arithmetic is byte-identical to a reference Python encoder on real sensor pixels (both `16→10`/`16→12` and `12→10`), so a grading complaint should be diagnosed as a setup problem before a curve problem:
-
-1. **Is your decoder applying the `LinearizationTable` at all?** If a log clip renders solid black, it isn't — a decoder that skips the table subtracts a linear-domain BlackLevel from data that never reaches it.
-2. **BlackLevel / WhiteLevel** are tagged in the **linear (table-output) domain**, not the stored bit depth — 3200/65535 for a 16-bit source, 200/4095 for 12-bit. A decoder that assumes they match the stored depth will misread them.
-3. **Exposure difference between clips you're comparing.** A log take and its linear reference shot minutes apart are different photons; match exposure and white balance before judging shape, and decode both **Using → Clip** so no project-wide setting favours one.
-4. **The curve.** Last, and least likely — it's already gated byte-identical to the reference encoder.
-
-Do not compare a log take and a linear take with a per-pixel diff tool — that's only valid between two files built from the *same* captured frame; shot noise alone will blow past any sane budget between two separate takes.
+`false` (default, off) · `true` (on, mode default target) · `10` / `12` (on, forced target). Set
+`10` to force the smaller 16→10 conversion instead of the 16-bit default.

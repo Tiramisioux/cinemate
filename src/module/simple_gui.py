@@ -19,9 +19,15 @@ import re
 RECORDER_VU_REDIS_KEY    = "audio_vu"
 WAV_RECORDING_COLOR      = DESIGN_TOKENS["wav_rec"]   # bright grey while WAV is actively recording
 DROP_WARNING_COLOR = DESIGN_TOKENS["drop"]
+DROP_TEXT_COLOR = DESIGN_TOKENS["drop_text"]
 SYNC_WARNING_COLOR = DESIGN_TOKENS["sync"]
+NO_CAM_WARNING_COLOR = DESIGN_TOKENS["no_cam"]
 SYNC_FLASH_COLOR = "magenta"  # PIL named colour -- no CSS/design-token counterpart
 RESOLUTION_SWITCHING_COLOR = DESIGN_TOKENS["res_switching"]
+# GUI-loop fault logging: how long to wait before re-logging a fault that
+# keeps reproducing on the same line. The first occurrence is always logged
+# in full; see SimpleGUI._handle_frame_error().
+FRAME_ERROR_LOG_INTERVAL_S = 60.0
 PREVIEW_PADDING_X = 94
 PREVIEW_PADDING_Y = 50
 PREVIEW_GUIDE_OUTLINE_WIDTH = 2
@@ -48,6 +54,13 @@ LOG_BADGE_COLOR = DESIGN_TOKENS["log_badge"]
 def _to_int(value, default=None):
     try:
         return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_float(value, default=None):
+    try:
+        return float(value)
     except (TypeError, ValueError):
         return default
 
@@ -197,6 +210,9 @@ class SimpleGUI(threading.Thread):
         self._slow_dirty = True
         self._last_draw_ts = 0.0
         self._last_slow_refresh_ts = 0.0
+        # (exception type, "file:line") -> (times seen, last logged monotonic)
+        # for run()'s per-frame fault rate limiter. See _handle_frame_error().
+        self._frame_error_state = {}
         self._font_cache = {}
         self._cached_cams_json = None
         self._cached_cams = []
@@ -787,7 +803,13 @@ class SimpleGUI(threading.Thread):
             # smpte_frame_base, not round(): the number shown here is the base
             # the operator reads the recorded timecode against, so it has to
             # agree with the C++ side at half-integer rates (F-253).
-            "fps":            smpte_frame_base(self.redis_controller.get_value(ParameterKey.FPS_USER.value)),
+            # `or 24` is a display default, not a crash guard: on a fresh
+            # Redis this key can be absent, and "24" is a truer thing to
+            # show than the blank a None would produce. (It predates c3.11,
+            # when run() had no per-iteration except and the same read was
+            # load-bearing against a thread that could die; run() now
+            # catches per frame, so this is about what the operator sees.)
+            "fps":            smpte_frame_base(self.redis_controller.get_value(ParameterKey.FPS_USER.value) or 24),
             "wb_label":       "WB",
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
@@ -796,6 +818,12 @@ class SimpleGUI(threading.Thread):
             # value (see _draw_hdr_badge), not as a text suffix here.
             "res":            f"{display_width}×{display_height} :{display_bit_depth}b",
             "resolution_switching": resolution_switching,
+            # Dynamic resolution is holding a mode the operator did not pick.
+            # Computed here rather than only where the framebuffer GUI
+            # recolours RES, so the web GUI -- which renders this same dict --
+            # can tint its own readout instead of showing a substituted mode
+            # as though it were the chosen one.
+            "dynamic_resolution_indicator": self._dynamic_resolution_indicator_active(),
 
             # left column (CAM0)
             "sensor":         sensor_left,
@@ -816,6 +844,10 @@ class SimpleGUI(threading.Thread):
             "mic_wav_saved":  False,
             "mic_wav_recording": False,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
+            # The web GUI's mount button needs to know which way it goes.
+            # storage_type alone cannot answer that: it names the device, not
+            # whether it is mounted.
+            "is_mounted":          self.redis_controller.get_value(ParameterKey.IS_MOUNTED.value),
             "storage_type":        self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "storage_filesystem":  self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value) or "",
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
@@ -834,6 +866,18 @@ class SimpleGUI(threading.Thread):
             "missing_frame_count": int(self.redis_controller.get_value(ParameterKey.MISSING_FRAME_COUNT.value) or 0),
 
         }
+        # No camera detected: `cameras` is the shared state signal both GUI
+        # surfaces ride (start_all() writes it to "[]" before aborting).
+        # The flag drives the CAMERA NOT FOUND message in the preview area,
+        # and that message is the whole indicator -- there is deliberately
+        # no badge and no placeholder text in the CAM section. `sensor` is
+        # already "" on an empty cam_list, and the section layout skips any
+        # item whose text is empty, so the box where the sensor name
+        # normally goes simply isn't drawn (operator preference, after the
+        # 2026-09-02 hardware confirmation: a red NO CAM box next to an
+        # already-unmissable full-width message was noise). The web GUI
+        # rides the same empty `sensor` value.
+        values["camera_missing"] = not bool(cam_list)
         # CineMate Log per-cam badge text. Read from log_encode_camN -- what
         # that camera was actually LAUNCHED with, published by
         # CinePiProcess._build_args() -- never from settings or the live
@@ -853,8 +897,17 @@ class SimpleGUI(threading.Thread):
         values["shutter_a_nom_lock"] = bool(self.cinepi_controller.shutter_a_nom_lock)
         values["fps_lock"] = bool(self.cinepi_controller.fps_lock)
         # Drives the green SHUTTER/FPS tint below, and the same tint in the
-        # web GUI.
-        values["shutter_a_sync"] = self.cinepi_controller.shutter_a_sync_mode != 0
+        # web GUI. Also true while a ClearHDR self-heal shutter kick is in
+        # flight, so the brief system-driven shutter change reads the same
+        # way sync mode's system-driven exposure already does, rather than
+        # looking like an unexplained flicker. This tints FPS green too even
+        # though fps isn't touched by the kick -- an accepted, minor,
+        # purely-cosmetic side effect of reusing the existing single flag
+        # instead of adding a second one.
+        values["shutter_a_sync"] = (
+            self.cinepi_controller.shutter_a_sync_mode != 0
+            or bool(getattr(self.cinepi_controller, "clearhdr_self_heal_active", False))
+        )
         # drop_frame_latched drives the persistent UI warning overlay.
         # Option 1: live drop_frame pulse = TC hole advisory (flashes during recording).
         # Option 2: drop_frame_during_last_take = only set when files are genuinely
@@ -992,6 +1045,15 @@ class SimpleGUI(threading.Thread):
         values["hdmi_preview_source"] = str(
             self.redis_controller.get_value(ParameterKey.HDMI_PREVIEW_SOURCE.value) or "both"
         )
+        # Which axis of quality dynamic resolution gives up first. A string,
+        # not a flag, so it rides alongside hdmi_preview_source rather than in
+        # the boolean sweep below.
+        values["dynamic_resolution_priority"] = str(
+            self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_PRIORITY.value
+            )
+            or getattr(controller, "dynamic_resolution_priority", "mode")
+        )
         # From redis, not from the controller: the controller keeps no live
         # shutter_a_nom attribute -- set_shutter_a_nom() writes
         # self.shutter_angle_nom and the redis key.
@@ -1117,7 +1179,7 @@ class SimpleGUI(threading.Thread):
 
         if values["resolution_switching"]:
             self.colors["res"]["normal"] = RESOLUTION_SWITCHING_COLOR
-        elif self._dynamic_resolution_indicator_active():
+        elif values["dynamic_resolution_indicator"]:
             self.colors["res"]["normal"] = "lightgreen"
         else:
             self.colors["res"]["normal"] = (249, 249, 249)
@@ -1130,9 +1192,20 @@ class SimpleGUI(threading.Thread):
         self.colors["battery_level"]["normal"] = "lightgreen" if self.battery_monitor.charging else "white"
 
         if self.ssd_monitor.space_left and self.ssd_monitor.is_mounted:
-            mins = (self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size *
-                                                        float(self.cinepi_controller.fps) * 60)
-            values["disk_space"] = f"{round(mins)} MIN"
+            # file_size is 0.0 whenever there is no usable sensor mode table
+            # (no camera, or a sensor missing from sensor_resolutions -- see
+            # CinePiController._recompute_file_size). Minutes-remaining would
+            # then be a division by zero, and any placeholder frame size we
+            # substituted would show the operator a recording duration
+            # computed from a sensor that isn't attached. Show the free space
+            # itself instead: still true, and visibly not a duration.
+            file_size = self.cinepi_controller.file_size
+            fps = _to_float(self.cinepi_controller.fps, 0.0)
+            if file_size and fps > 0:
+                mins = (self.ssd_monitor.space_left * 1000) / (file_size * fps * 60)
+                values["disk_space"] = f"{round(mins)} MIN"
+            else:
+                values["disk_space"] = f"{self.ssd_monitor.space_left:.0f} GB"
             values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
         else:
             values["disk_space"] = "NO DISK"
@@ -1288,6 +1361,42 @@ class SimpleGUI(threading.Thread):
         if crossed:
             draw.line([(x0 + 5, y0 + 5), (x1 - 5, y1 - 5)], fill=text_color, width=3)
 
+    def _draw_no_camera_message(self, draw, rect, shrink_x, shrink_y):
+        """Centred message in the empty preview area (rect), shown only
+        while camera_missing: title, recovery hint, then the power-off
+        warning last -- hot-swapping the camera ribbon under power can
+        damage the sensor or the board, same warning as the docs' hardware
+        tip, kept in the alarm colour so it doesn't blend in as a footnote."""
+        x0, y0, x1, y1 = rect
+        max_w = max(10, (x1 - x0) - 40)
+        scale = max(0.4, min(shrink_x, shrink_y, 1))
+        lines = [
+            ("CAMERA NOT FOUND", DESIGN_TOKENS["value"], 40),
+            ("Check camera cable and cinemate settings", DESIGN_TOKENS["label"], 22),
+            ("BE SURE TO DISCONNECT POWER BEFORE CONNECTING/DISCONNECTING "
+             "CAMERA SENSOR BOARD",
+             NO_CAM_WARNING_COLOR, 26),
+        ]
+
+        rendered = []
+        for text, color, base_size in lines:
+            size = max(10, base_size * scale)
+            font = self._get_font("bold", size)
+            tw, th = draw.textbbox((0, 0), text, font=font)[2:]
+            while tw > max_w and size > 10:
+                size -= 2
+                font = self._get_font("bold", size)
+                tw, th = draw.textbbox((0, 0), text, font=font)[2:]
+            rendered.append((text, color, font, tw, th))
+
+        gap = 32 * scale
+        total_h = sum(th for *_, th in rendered) + gap * (len(rendered) - 1)
+        cx = (x0 + x1) / 2
+        y = (y0 + y1) / 2 - total_h / 2
+        for text, color, font, tw, th in rendered:
+            draw.text((cx - tw / 2, y), text, font=font, fill=color)
+            y += th + gap
+
     def draw_left_sections(self, draw, values):
         label_font = self._get_font("regular", 26)
         box_font   = self._get_font("bold", 26)
@@ -1369,7 +1478,7 @@ class SimpleGUI(threading.Thread):
                     "DROP",
                     DROP_WARNING_COLOR,
                     box_font,
-                    TEXT_COLOR,
+                    DROP_TEXT_COLOR,
                 )
                 y += BOX_H + BOX_GAP
 
@@ -1416,12 +1525,14 @@ class SimpleGUI(threading.Thread):
 
             storage = str(values.get("storage_type", "")).upper()
             if storage and storage != "NONE":
-                draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
-                               fill=BOX_COLOR)
-                tw, th = draw.textbbox((0, 0), storage, font=box_font)[2:]
-                tx = box_x + (BOX_W - tw) // 2
-                ty = y      + (BOX_H - th) // 2
-                draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
+                # Through _draw_status_box rather than drawn here, for its
+                # overflow fallback: this centred box_font directly, so NVME
+                # -- four characters where CFE and SSD are three -- drew wider
+                # than the box it sits in. That helper is what already keeps
+                # LOG10 inside its box.
+                self._draw_status_box(
+                    draw, [box_x, y, box_x + BOX_W, y + BOX_H],
+                    storage, BOX_COLOR, box_font, TEXT_COLOR)
                 y += BOX_H + BOX_GAP
                 fs_raw = str(values.get("storage_filesystem", "")).lower()
                 if fs_raw and fs_raw not in ("none", "unknown", ""):
@@ -1514,7 +1625,7 @@ class SimpleGUI(threading.Thread):
                     "DROP",
                     DROP_WARNING_COLOR,
                     box_font,
-                    TEXT_COLOR,
+                    DROP_TEXT_COLOR,
                 )
                 y += BOX_H + BOX_GAP
 
@@ -1871,9 +1982,16 @@ class SimpleGUI(threading.Thread):
         # Draw left-hand labels and boxes dynamically
         left_bottom_y = self.draw_left_sections(draw, values)
 
-        # Get sensor resolution
-        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
-        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
+        # Get sensor resolution. No camera ever having reported WIDTH/HEIGHT
+        # (fresh Redis, no camera) leaves these keys absent, so fall back to
+        # self.width/self.height -- already guarded moments earlier this
+        # frame by load_sensor_values_from_redis() inside populate_values().
+        # run() does catch per-frame since c3.11, so a throw here would be
+        # survivable; the fallback is still the right answer because the
+        # alternative is a dropped frame and a logged fault every frame for
+        # a state that is entirely expected.
+        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value) or self.width)
+        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value) or self.height)
         try:
             anamorphic_factor = float(
                 self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0
@@ -1909,6 +2027,13 @@ class SimpleGUI(threading.Thread):
                 anamorphic_factor,
             )
             draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
+            if values.get("camera_missing"):
+                # No cinepi-raw process is running to fill this area, so
+                # it's otherwise just blank background -- use it for the
+                # power-off warning. Hot-swapping the camera ribbon under
+                # power can damage the sensor or the board (same warning as
+                # the docs' "power down before changing hardware" tip).
+                self._draw_no_camera_message(draw, outline_rect, shrink_x, shrink_y)
 
         current_layout = self.layout
 
@@ -2146,6 +2271,50 @@ class SimpleGUI(threading.Thread):
         return True
 
 
+    def _handle_frame_error(self, exc):
+        """Log one bad GUI frame and let the loop carry on.
+
+        Rate-limited by (exception type, raising file:line): a fault that
+        reproduces every frame would otherwise fill the journal at the
+        refresh rate. The first occurrence of each distinct fault is logged
+        loudly with its full traceback -- that is the line an operator or a
+        future session needs -- and repeats are summarised at most once per
+        FRAME_ERROR_LOG_INTERVAL_S with a suppressed count.
+        """
+        tb = exc.__traceback__
+        while tb is not None and tb.tb_next is not None:
+            tb = tb.tb_next
+        if tb is None:
+            where = "unknown"
+        else:
+            frame = tb.tb_frame
+            where = f"{os.path.basename(frame.f_code.co_filename)}:{tb.tb_lineno}"
+        key = (type(exc).__name__, where)
+
+        now = time.monotonic()
+        seen_count, last_logged_ts = self._frame_error_state.get(key, (0, 0.0))
+        seen_count += 1
+
+        if seen_count == 1:
+            logging.error(
+                "SimpleGUI frame failed at %s -- the GUI thread is continuing; "
+                "the display will keep updating but this frame was dropped.",
+                where,
+                exc_info=exc,
+            )
+            self._frame_error_state[key] = (seen_count, now)
+            return
+
+        if (now - last_logged_ts) >= FRAME_ERROR_LOG_INTERVAL_S:
+            logging.error(
+                "SimpleGUI frame still failing at %s (%s): %s -- %s occurrences "
+                "so far, suppressing repeats.",
+                where, type(exc).__name__, exc, seen_count,
+            )
+            self._frame_error_state[key] = (seen_count, now)
+        else:
+            self._frame_error_state[key] = (seen_count, last_logged_ts)
+
     def run(self):
         try:
             self.vu_left_peak = 0
@@ -2155,38 +2324,58 @@ class SimpleGUI(threading.Thread):
             self.vu_decay_factor = 0.2
 
             while self._running:
-                now = time.monotonic()
-                if self.check_display():
-                    self._fast_dirty = True
-                self._maybe_restart_camera_for_display_attach()
+                # One bad frame must not end the session. Before this catch,
+                # run() was a single try/finally with no except: any throw
+                # anywhere in the loop body ran _teardown_display() and left
+                # the thread dead, with nothing to restart it, nothing to
+                # tell the operator, and the framebuffer frozen on whatever
+                # was last drawn -- which on a no-camera boot was the welcome
+                # message (hardware-confirmed 2026-09-02). The web GUI has no
+                # state of its own and freezes with it. Exceptions here are
+                # `Exception` only, so KeyboardInterrupt/SystemExit still
+                # unwind to the finally: below and tear the display down.
+                try:
+                    now = time.monotonic()
+                    if self.check_display():
+                        self._fast_dirty = True
+                    self._maybe_restart_camera_for_display_attach()
 
-                if (
-                    not self._slow_values
-                    or (now - self._last_slow_refresh_ts) >= self.slow_refresh_interval
-                ):
-                    self._slow_dirty = True
+                    if (
+                        not self._slow_values
+                        or (now - self._last_slow_refresh_ts) >= self.slow_refresh_interval
+                    ):
+                        self._slow_dirty = True
 
-                has_work = self._fast_dirty or self._slow_dirty or self._vu_active()
-                if not has_work:
-                    self._redraw_event.wait(timeout=0.1)
-                    self._redraw_event.clear()
-                    continue
+                    has_work = self._fast_dirty or self._slow_dirty or self._vu_active()
+                    if not has_work:
+                        self._redraw_event.wait(timeout=0.1)
+                        self._redraw_event.clear()
+                        continue
 
-                due_in = max(0.0, self.min_frame_interval - (now - self._last_draw_ts))
-                if due_in > 0:
-                    self._redraw_event.wait(timeout=due_in)
-                    self._redraw_event.clear()
-                    continue
+                    due_in = max(0.0, self.min_frame_interval - (now - self._last_draw_ts))
+                    if due_in > 0:
+                        self._redraw_event.wait(timeout=due_in)
+                        self._redraw_event.clear()
+                        continue
 
-                if self._slow_dirty:
-                    self._refresh_slow_values()
+                    if self._slow_dirty:
+                        self._refresh_slow_values()
 
-                self.update_smoothed_vu_levels()
-                values = self.populate_values()
-                self.draw_gui(values)
-                self._fast_dirty = False
-                self._slow_dirty = False
-                self._last_draw_ts = time.monotonic()
+                    self.update_smoothed_vu_levels()
+                    values = self.populate_values()
+                    self.draw_gui(values)
+                    self._fast_dirty = False
+                    self._slow_dirty = False
+                    self._last_draw_ts = time.monotonic()
+                except Exception as exc:
+                    self._handle_frame_error(exc)
+                    # Leave the loop in the same shape a completed frame
+                    # leaves it in, so a permanently failing frame retries at
+                    # the normal refresh cadence instead of spinning the CPU
+                    # at full speed on the due_in == 0 path.
+                    self._fast_dirty = False
+                    self._slow_dirty = False
+                    self._last_draw_ts = time.monotonic()
         finally:
             self._teardown_display(
                 clear_framebuffer=self._clear_framebuffer_on_exit,

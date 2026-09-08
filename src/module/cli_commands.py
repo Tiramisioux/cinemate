@@ -94,6 +94,7 @@ class CommandExecutor(threading.Thread):
             #  the live bit depth supports it; "set log off" forces off. Restarts
             #  the camera when idle, deferred while recording.
             'set log'                : (cinepi_controller.set_log_encode,    [int, str]),
+            'set thumbnail'          : (cinepi_controller.set_thumbnail,     int),
 
             # ── White balance (Kelvin or step) ────────────────────────────────────
             'set wb'                 : (cinepi_controller.set_wb,         [int, None]),
@@ -103,6 +104,10 @@ class CommandExecutor(threading.Thread):
             # ── Resolution / anamorphic / storage ────────────────────────────────
             'set resolution'         : (cinepi_controller.set_resolution, [int, None]),
             'set dynamic resolution' : (cinepi_controller.set_dynamic_resolution_enabled, [int, None]),
+            # Longest match wins in handle_received_data(), so this is
+            # reached before the toggle above rather than being read as
+            # `set dynamic resolution` with a stray word after it.
+            'set dynamic resolution priority': (cinepi_controller.set_dynamic_resolution_priority, [str, None]),
             'set anamorphic factor'  : (cinepi_controller.set_anamorphic_factor, [float, None]),
             'mount'                  : (cinepi_controller.mount,          None),
             'unmount'                : (cinepi_controller.unmount,        None),

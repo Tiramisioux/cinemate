@@ -16,6 +16,14 @@ ANSI_CYAN = "\033[1;36m"
 # it can still run when the rest of the stack cannot.
 DEFAULT_SETTINGS_PATH = "/home/pi/cinemate/settings.jsonc"
 
+# The conform frame rate used when settings.jsonc does not name one. Exported
+# because the same value was previously restated at four other call sites and
+# had already drifted from the shipped configs (F-251: schema and this loader
+# said 24, both shipped .jsonc files said 25, with no arbiter). Import it rather
+# than writing the number again; settings.schema.json carries a sixth copy that
+# cannot import, so _test/test_conform_frame_rate_default.py pins them together.
+DEFAULT_CONFORM_FRAME_RATE = 25
+
 # Public: a handful of call sites need the raw membership test (e.g. a CLI
 # parser that must reject an unrecognised value outright rather than fall
 # back to a default) instead of the as_bool() default-fallback shape below.
@@ -233,6 +241,124 @@ def storage_preroll_enabled(settings: dict) -> bool:
     return auto_storage_preroll_enabled(settings)
 
 
+def clearhdr_self_heal_enabled(settings: dict) -> bool:
+    """Return whether the ClearHDR flat-pedestal self-heal may run.
+
+    Defaults to False. The self-heal fires from ``CinePiManager.start_all()``,
+    which every cold start and every resolution switch funnels through, and
+    none of the recovery actions it can take has been shown to work on
+    hardware -- the mode bounce and an earlier analogue-gain shock were both
+    live-tested and failed. Its detector also has no way to distinguish the
+    defect from a legitimately flat or dark scene. Off unless asked for.
+    """
+
+    hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
+    return as_bool(
+        hdr_cfg.get("self_heal") if isinstance(hdr_cfg, dict) else None, False
+    )
+
+
+def clearhdr_startup_values(settings: dict) -> dict:
+    """Startup values for the ClearHDR live knobs, keyed by Redis key.
+
+    The two data-selection thresholds only come back as numbers when
+    ``image_capture.hdr`` actually configures them. Left unset they come back
+    as ``""``, which means "write nothing" rather than "write zero":
+    cinepi-raw skips the sensor write entirely while both are empty, so the
+    imx585 driver keeps the pair it boots with (EXP_TH_H 0x0FFF,
+    EXP_TH_L 0x0000).
+
+    That distinction is the point of this helper. EXP_TH_H == EXP_TH_L selects
+    the AppNote's weighted-blend fallback, which leaves the ClearHDR combiner
+    clamped near the black level on ordinary scenes; the driver carries a
+    comment saying exactly that, and defaults to the rule-based range instead.
+    Seeding 0/0 wrote that rejected configuration over the driver's own
+    default on every boot.
+
+    The empty string is written rather than skipped so a 0 persisted into
+    Redis by an earlier build is cleared on upgrade instead of surviving it.
+
+    ``blend`` is seeded at 5 (HG 1/16) rather than the driver's own 0. Seeding 0
+    is what produces the flat black-level pedestal launches described in
+    docs/clear-hdr.md; 5 is the value that was measured to avoid them. The
+    mechanism is separate from the threshold pair above, which fails a different
+    way. ``gain_adder`` keeps its previous default: 1 (+6 dB) is a deliberate
+    choice over the driver's +12 dB.
+    """
+
+    hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
+    if not isinstance(hdr_cfg, dict):
+        hdr_cfg = {}
+
+    def threshold(name):
+        value = hdr_cfg.get(name)
+        return "" if value is None else value
+
+    return {
+        "hdr_threshold_low": threshold("threshold_low"),
+        "hdr_threshold_high": threshold("threshold_high"),
+        "hdr_blend": hdr_cfg.get("blend", 5),
+        "hdr_gain_adder": hdr_cfg.get("gain_adder", 1),
+    }
+
+
+def thumbnail_startup_value(settings: dict) -> int:
+    """Validated startup value for image_capture.thumbnail, keyed by Redis key.
+
+    main.py used to pass settings.get("image_capture", {}).get("thumbnail", 0)
+    straight to redis_controller.set_value() with no validation -- unlike
+    set_thumbnail() (cinepi_controller.py), which clamps int(value) to 0..2.
+    A hand-edited settings.jsonc with "thumbnail": true crashed Cinemate at
+    startup (redis-py rejects a bool where set_thumbnail() would have
+    coerced it), a non-numeric string reached cinepi-raw's sync() and its
+    then-unguarded stoi(), and 3 passed through where the CLI path clamps
+    to 2 -- so the same raw value in the file meant "off" via one path and
+    "colour" via the other. This applies the exact same clamp as
+    set_thumbnail() so both paths agree, and so a malformed value degrades
+    to a safe default instead of reaching either process unvalidated.
+
+    Defaults to 2 (colour), not 0: the embedded thumbnail is now the
+    standard playback path, and playback.py's raw-decode fallback is
+    disabled (too demanding on the Pi, operator decision after G10/G11) --
+    so a take recorded with thumbnail=0, or a parse failure that used to
+    fall back to 0, would otherwise be unplayable in the pane.
+    """
+    raw = settings.get("image_capture", {}).get("thumbnail", 2)
+    try:
+        return max(0, min(2, int(raw)))
+    except (TypeError, ValueError):
+        return 2
+
+
+REC_TONE_DEFAULTS = {
+    "pin": [],
+    "frequency_hz": 1000,
+    "duty_cycle": 50,
+    "relay_drop_frames": False,
+}
+
+
+def rec_tone_config(gpio_cfg: dict) -> dict:
+    """Read hardware_outputs.rec_tone, tolerating the pre-c171975e flat keys.
+
+    c171975e regrouped `rec_tone_pin` / `rec_tone_frequency_hz` /
+    `rec_tone_duty_cycle` / `rec_tone_relay_drop_frames` under a nested
+    `rec_tone` object. main.py's section name was updated; its leaf reads were
+    not, so every one of them silently fell back to a hardcoded default -- the
+    configured tone pin was ignored in favour of pwm_pin, frequency and duty
+    cycle could not be changed at all, and relay_drop_frames could never be
+    true, which meant relay_drop_frame_on_rec_tone() returned at its guard on
+    every call. settings.schema.json declares rec_tone with
+    additionalProperties:false, so the flat keys cannot appear in a current
+    file; the fallback is only for a hand-written one predating the rename.
+    """
+    nested = gpio_cfg.get("rec_tone") or {}
+    return {
+        key: nested[key] if key in nested else gpio_cfg.get(f"rec_tone_{key}", default)
+        for key, default in REC_TONE_DEFAULTS.items()
+    }
+
+
 def _apply_settings_defaults(settings: dict) -> dict:
     # ── system: splash, network, storage behavior ──────────────────────────
     system_cfg = settings.setdefault("system", {})
@@ -302,7 +428,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
 
     # ── settings: frame-rate conform + flicker-free input + sync tuning ────
     settings_cfg = settings.setdefault("settings", {})
-    settings_cfg.setdefault("conform_frame_rate", 24)
+    settings_cfg.setdefault("conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     settings_cfg.setdefault("light_hz", [50, 60])
 
     tol_cfg = settings_cfg.setdefault("sync_tolerances", {})
@@ -331,7 +457,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
         },
         "shutter_a": {
             "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
-            "free": False,
+            "free": True,
             "free_increment": 1,
             # Own granularity used only while shutter-angle sync mode is on
             # (`set shutter a sync`) -- independent of free_increment, which
@@ -339,13 +465,13 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "sync_increment": 0.1,
         },
         "fps": {
-            "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 30],
+            "steps": [25, 33, 50],
             "free": False,
             "free_increment": 1,
         },
         "wb": {
             "steps": [3200, 4400, 5600],
-            "free": False,
+            "free": True,
             "free_increment": 100,
         },
         # ClearHDR live knobs -- ranges per the imx585 driver: thresholds
@@ -381,12 +507,33 @@ def _apply_settings_defaults(settings: dict) -> dict:
     # ── image_capture: resolution / bit-depth / HDR filters ────────────────
     image_capture_cfg = settings.setdefault("image_capture", {})
     image_capture_defaults = {
-        "k_steps": [1.5, 2.0, 4.0],
-        "bit_depths": [10, 12],
+        "k_steps": [1.5, 2.0, 3.0, 4.0],
+        "bit_depths": [10, 12, 16],
         # ClearHDR (imx585) whitelist. Both true exposes the plain and the HDR
         # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
         # SensorDetect._hdr_whitelist.
-        "hdr": {"sdr": True, "imx585_clear_hdr": True},
+        "hdr": {
+            "sdr": True,
+            "imx585_clear_hdr": True,
+            # Per-depth ClearHDR switches; see sensor_detect._clear_hdr_depths.
+            "imx585_clear_hdr_12bit": True,
+            "imx585_clear_hdr_16bit": True,
+        },
+        # 2 (colour): the embedded thumbnail is the standard playback path
+        # now, not an opt-in -- see thumbnail_startup_value()'s docstring.
+        "thumbnail": 2,
+        # Dynamic resolution: substitute a lesser mode when the requested fps
+        # outruns the selected one, and which axis of quality ("mode" =
+        # bit depth + ClearHDR class, "resolution" = frame size, "none" =
+        # never leave the class) to give up first. Startup defaults only --
+        # `set dynamic resolution [priority] ...` overrides both for the
+        # session and persists in Redis, which is what a later boot reads
+        # back. See dynamic_resolution.py's module docstring.
+        "dynamic_resolution": True,
+        # Literal rather than dynamic_resolution.DEFAULT_DYNAMIC_RESOLUTION_PRIORITY:
+        # that module imports as_bool from this one, so the import would
+        # be a cycle. settings.schema.json pins the same three values.
+        "dynamic_resolution_priority": "mode",
         "custom_modes": {},
     }
     for k, v in image_capture_defaults.items():
@@ -480,10 +627,8 @@ def _apply_settings_defaults(settings: dict) -> dict:
     outputs_cfg.setdefault("pwm_pin", 19)
     outputs_cfg.setdefault("rec_out_pin", [6, 21])
     rec_tone_cfg = outputs_cfg.setdefault("rec_tone", {})
-    rec_tone_cfg.setdefault("pin", [])
-    rec_tone_cfg.setdefault("frequency_hz", 1000)
-    rec_tone_cfg.setdefault("duty_cycle", 50)
-    rec_tone_cfg.setdefault("relay_drop_frames", False)
+    for _key, _default in REC_TONE_DEFAULTS.items():
+        rec_tone_cfg.setdefault(_key, _default)
     outputs_cfg["rec_tone"] = rec_tone_cfg
     settings["hardware_outputs"] = outputs_cfg
 

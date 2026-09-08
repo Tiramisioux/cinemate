@@ -20,9 +20,12 @@ from module.config_loader import (
 )
 from module.storage_profiles import recorder_profile_name_for_filesystem
 from module.dynamic_resolution import (
+    DYNAMIC_RESOLUTION_PRIORITIES,
+    PRIORITY_NONE,
     choose_resolution,
     dynamic_resolution_is_lower_substitute,
     max_fps_for_context,
+    normalize_priority,
 )
 from module import parameters
 
@@ -55,6 +58,13 @@ def _safe_int(value):
         return int(float(value))
     except (TypeError, ValueError):
         return None
+
+
+# Startup defaults for the fps/shutter keys read during __init__, seeded back
+# to Redis only when the key is missing (fresh Redis / no camera has ever
+# started) -- never overwrites a value a previous session already stored.
+STARTUP_FPS_DEFAULT = 24
+STARTUP_SHUTTER_A_DEFAULT = 180
 
 
 class CinePiController:
@@ -130,14 +140,44 @@ class CinePiController:
         # set_dynamic_resolution_enabled / redis, and read back at startup
         # (F-286 -- this was previously a hardcoded True with no toggle).
         self.dynamic_resolution_enabled = self._get_startup_dynamic_resolution_enabled()
+        # Which axis of quality the substitution gives up first once the
+        # desired mode's own class runs out of answers -- "mode" holds the
+        # bit depth / ClearHDR class and drops resolution, "resolution" holds
+        # the frame size and drops the class, "none" never leaves the class
+        # at all (what this did before the ladder existed). See
+        # dynamic_resolution.py's module docstring.
+        self.dynamic_resolution_priority = self._get_startup_dynamic_resolution_priority()
         self.dynamic_resolution_desired_mode = None
         self.dynamic_resolution_active = False
         self.dynamic_resolution_suspended = False
+        # Set when a take is running and the ladder's answer would have
+        # crossed a mode class -- bit depth and --hdr sensor are launch
+        # arguments, so applying it means relaunching cinepi-raw, which would
+        # end the take. stop_recording() re-evaluates once the camera is idle.
+        self.dynamic_resolution_deferred = False
+        # The fps the operator asked for when a take-scoped cap stood in for
+        # it, so the settle can go there rather than making the cap permanent.
+        self.dynamic_resolution_deferred_fps = None
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
-        
-        self.fps = int(round(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value))))
-        self.current_fps = float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))
+
+        # Megabytes per frame for the active mode. Assigned for real by
+        # _recompute_file_size(), which returns without assigning anything
+        # when there is no usable mode table (no camera, or a sensor that
+        # isn't in sensor_resolutions) -- so it needs a default here or the
+        # attribute never exists at all for the whole degraded session, and
+        # SimpleGUI.populate_values() dies on the first frame with
+        # AttributeError (hardware-confirmed 2026-09-02). 0.0 means "no
+        # usable frame size": readers must not divide by it -- see the
+        # disk_space branch in populate_values(), which shows free space in
+        # GB rather than a minutes-remaining figure derived from a sensor
+        # that isn't attached.
+        self.file_size = 0.0
+
+        self.fps = int(round(float(
+            self._read_or_seed(ParameterKey.FPS_LAST, STARTUP_FPS_DEFAULT))))
+        self.current_fps = float(
+            self._read_or_seed(ParameterKey.FPS_USER, STARTUP_FPS_DEFAULT))
         
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.fps)
 
@@ -180,6 +220,11 @@ class CinePiController:
         self.iso_lock = False
         self.shutter_a_nom_lock = False
         self.fps_lock = False
+        # Set true only around CinePiManager's ClearHDR self-heal shutter
+        # kick (cinepi_multi.py) -- reuses the existing shutter_a_sync green
+        # tint (see simple_gui.py) to show the operator this shutter change
+        # came from the system, not from them, without a new UI mechanism.
+        self.clearhdr_self_heal_active = False
         
         # Dictionary to store calculated values for different fps
         self.calculated_values = {}
@@ -189,7 +234,8 @@ class CinePiController:
         self.exposure_time_seconds = None
         self.exposure_time_fractions = None
         self.fps_multiplier = 1
-        self.fps_saved = float(self.redis_controller.get_value(ParameterKey.FPS.value))
+        self.fps_saved = float(
+            self._read_or_seed(ParameterKey.FPS, STARTUP_FPS_DEFAULT))
         self.fps_double = False
         self.ramp_up_speed = 0.2
         self.ramp_down_speed = 0.2
@@ -236,7 +282,9 @@ class CinePiController:
             self.dynamic_resolution_desired_mode = self.sensor_mode
         self.fps_max = self._refresh_fps_max()
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
-        self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 
+        self.exposure_time_s = float(
+            self._read_or_seed(ParameterKey.SHUTTER_A, STARTUP_SHUTTER_A_DEFAULT)
+        ) / 360 * (1 / self.fps)
         self.exposure_time_saved = self.exposure_time_s
         self._recompute_file_size()
 
@@ -292,14 +340,44 @@ class CinePiController:
         # pre-roll should stress the selected mode before dynamic resolution
         # restores the user's FPS and chooses a mode whose own fps_max
         # supports it.
+        self._apply_startup_fps()
+        logging.info(f"Initialized fps: {self.fps}")
+        
+    def _read_or_seed(self, key, default):
+        """Read a Redis value, writing `default` back only when the key is
+        absent (fresh Redis). A key that already holds a value -- including
+        one from a prior no-camera boot -- is returned untouched, so a warm
+        Redis boots byte-identical."""
+        raw = self.redis_controller.get_value(key.value)
+        if raw is None:
+            self.redis_controller.set_value(key.value, default)
+            return default
+        return raw
+
+    def _apply_startup_fps(self):
+        """Apply self.fps at startup via set_fps(), unless there is no valid
+        mode table for the detected camera. Not the same test as "no camera
+        detected": a physically attached but wrong/unconfigured sensor
+        (camera_model set to a string that isn't a key in
+        sensor_resolutions) leaves res_modes == {} exactly like no camera at
+        all does, and set_fps() would recompute fps_max from that same
+        fps-less state (_sensor_readout_fps_max() -> 1) and clamp fps/
+        fps_user to that 1, which cleanup() then persists as fps_last on
+        exit -- corrupting the stored frame rate for the next good boot.
+        Leave fps/fps_user exactly as read/seeded by _read_or_seed()."""
+        if not self.sensor_detect.res_modes:
+            logging.info(
+                "No usable camera mode table -- skipping startup set_fps() "
+                "to avoid clamping fps/fps_user to fps_max=1"
+            )
+            return
         prev_dynamic_suspended = self.dynamic_resolution_suspended
         self.dynamic_resolution_suspended = True
         try:
             self.set_fps(self.fps)
         finally:
             self.dynamic_resolution_suspended = prev_dynamic_suspended
-        logging.info(f"Initialized fps: {self.fps}")
-        
+
     def _get_startup_sensor_mode(self) -> int:
         value = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
         try:
@@ -309,6 +387,21 @@ class CinePiController:
 
         if mode is not None and mode in self.sensor_detect.res_modes:
             return mode
+
+        if not self.sensor_detect.res_modes:
+            # No mode table at all (no camera, or a sensor missing from
+            # sensor_resolutions). Every stored mode looks "unavailable"
+            # here, and the fallback below would compute 0 and persist it --
+            # silently losing the operator's mode for the next good boot
+            # (hardware-confirmed 2026-09-02: "Stored sensor mode 6 not
+            # available -- falling back to mode 0", and the camera then came
+            # back in mode 0). Read the stored value, write nothing.
+            # _recompute_file_size()'s res_modes.get() tolerates any index.
+            logging.info(
+                "No usable camera mode table -- keeping stored sensor mode "
+                "%s unvalidated rather than persisting a fallback.", mode,
+            )
+            return mode if mode is not None else 0
 
         # Stored mode is missing or no longer valid -- e.g. settings.jsonc
         # now filters resolutions (k_steps/bit_depths/hdr) down to a smaller
@@ -340,12 +433,41 @@ class CinePiController:
         return desired_mode
 
     def _get_startup_dynamic_resolution_enabled(self) -> bool:
+        """Redis first, settings.jsonc second, on by default.
+
+        Redis wins because it is the operator's most recent explicit answer:
+        `set dynamic resolution 0` is meant to survive the reboot that
+        follows it. settings.jsonc is what a camera that has never been told
+        either way boots with -- previously a hardcoded True, so a rig that
+        wanted the feature off had to be told so again after every flash.
+        """
         value = self.redis_controller.get_value(
             ParameterKey.DYNAMIC_RESOLUTION_ENABLED.value
         )
-        if value is None:
-            return True
-        return as_bool(value)
+        if value is not None:
+            return as_bool(value)
+        configured = (self.settings.get("image_capture", {}) or {}).get(
+            "dynamic_resolution", True
+        )
+        return as_bool(configured)
+
+    def _get_startup_dynamic_resolution_priority(self) -> str:
+        """Redis first, settings.jsonc second, the module default third.
+
+        Same precedence as _get_startup_dynamic_resolution_enabled() and for
+        the same reason: `set dynamic resolution priority mode` is meant to
+        survive the reboot that follows it, and settings.jsonc is what a
+        camera that has never been told either way boots with.
+        """
+        value = self.redis_controller.get_value(
+            ParameterKey.DYNAMIC_RESOLUTION_PRIORITY.value
+        )
+        if value is not None:
+            return normalize_priority(value)
+        configured = (self.settings.get("image_capture", {}) or {}).get(
+            "dynamic_resolution_priority"
+        )
+        return normalize_priority(configured)
 
     def _publish_dynamic_resolution_state(self):
         self.redis_controller.set_value(
@@ -356,13 +478,25 @@ class CinePiController:
             ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
             1 if self.dynamic_resolution_active else 0,
         )
-        if self.dynamic_resolution_desired_mode is not None:
+        self.redis_controller.set_value(
+            ParameterKey.DYNAMIC_RESOLUTION_PRIORITY.value,
+            self.dynamic_resolution_priority,
+        )
+        if (
+            self.dynamic_resolution_desired_mode is not None
+            and self.sensor_detect.res_modes
+        ):
             self.redis_controller.set_value(
                 ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value,
                 self.dynamic_resolution_desired_mode,
             )
+        # With no mode table, _get_startup_dynamic_resolution_desired_mode()
+        # can only return self.sensor_mode -- same derived-from-nothing
+        # value as the sensor_mode fallback above. Leave the stored desired
+        # mode for the next good boot.
 
     def set_dynamic_resolution_enabled(self, value=None):
+        was_enabled = self.dynamic_resolution_enabled
         if value is not None:
             if value in (0, False):
                 self.dynamic_resolution_enabled = False
@@ -373,7 +507,101 @@ class CinePiController:
         else:
             self.dynamic_resolution_enabled = not self.dynamic_resolution_enabled
         logging.info(f"Dynamic resolution enabled {self.dynamic_resolution_enabled}")
+
+        if not self.dynamic_resolution_enabled:
+            # Whatever mode is on screen is now the operator's own selection:
+            # nothing is going to substitute for it, so it is also the mode
+            # the desired-mode bookkeeping has to track. Leaving the old
+            # desired mode behind would mean re-enabling the feature later
+            # silently jumps back to a resolution the operator has since
+            # moved away from.
+            self.dynamic_resolution_desired_mode = self.sensor_mode
+            self.dynamic_resolution_active = False
+        elif not was_enabled:
+            # Off -> on, and the same argument runs the other way. While the
+            # feature was off nothing was substituting, so the mode on screen
+            # is again the operator's own selection -- and the stored desired
+            # mode is whatever was left behind before it was switched off,
+            # possibly by a previous boot entirely.
+            #
+            # Seen on an operator's camera 2026-09-07: sitting in mode 6
+            # (16-bit ClearHDR 4K) with the feature off, it still had
+            # dynamic_resolution_desired_mode = 0 in Redis from an earlier
+            # boot. Enabling would have adopted mode 0 as "what the operator
+            # asked for", and since a substitute is never larger or richer
+            # than the desired mode, the next fps change would have dropped
+            # the camera out of 4K 16-bit on its own. That consequence was
+            # never allowed to happen -- it is read off this code, not
+            # observed. The disable branch above has guarded the mirror image
+            # since F-286; this is the half that was missing.
+            self.dynamic_resolution_desired_mode = self.sensor_mode
+            self.dynamic_resolution_active = False
+
+        # The fps ceiling is context-dependent: with the feature on it is the
+        # best any mode in the desired family can do, with it off it is this
+        # one mode's own cap. Toggling used to publish the flag and stop
+        # there, so the ceiling -- and the fps step table built from it --
+        # stayed at whatever the other setting had left behind, and the dial
+        # kept offering frame rates the mode could not reach.
+        self._refresh_fps_max()
+        self._rebuild_fps_steps()
+
         self._publish_dynamic_resolution_state()
+
+    def set_dynamic_resolution_priority(self, value=None):
+        """Which axis of quality dynamic resolution gives up first.
+
+        ``mode`` holds the bit depth / ClearHDR class and drops resolution
+        first; ``resolution`` holds the frame size and drops the class first;
+        ``none`` never leaves the desired mode's own class. Bare, with no
+        argument, cycles through the three in that order -- so this can be
+        bound to a button like every other bare-call action.
+        """
+        if value is None:
+            order = list(DYNAMIC_RESOLUTION_PRIORITIES)
+            try:
+                index = order.index(self.dynamic_resolution_priority)
+            except ValueError:
+                index = -1
+            self.dynamic_resolution_priority = order[(index + 1) % len(order)]
+        else:
+            # normalize_priority() falls back to the default on anything it
+            # does not recognise, which would silently accept a typo as a
+            # policy change -- so ask it not to, and reject instead. Rejected
+            # by logging and returning, not by raising: this is reachable
+            # from the CLI with an arbitrary string, and nothing between here
+            # and CommandExecutor's read loop catches an exception (see
+            # _apply_resolution_mode's note on the dead-dispatch-thread
+            # failure mode). Same shape as set_thumbnail().
+            resolved = normalize_priority(value, default=None)
+            if resolved is None:
+                logging.error(
+                    "dynamic resolution priority expects one of %s (got %r)",
+                    ", ".join(DYNAMIC_RESOLUTION_PRIORITIES),
+                    value,
+                )
+                return
+            self.dynamic_resolution_priority = resolved
+
+        logging.info(
+            "Dynamic resolution priority %s", self.dynamic_resolution_priority
+        )
+
+        # The policy changes the candidate set, so it changes the ceiling and
+        # the step table built from it -- exactly as toggling the feature off
+        # and on does. Publishing the flag alone would leave the dial
+        # offering frame rates the new policy cannot reach (or hiding ones it
+        # now can).
+        self._refresh_fps_max()
+        self._rebuild_fps_steps()
+        self._publish_dynamic_resolution_state()
+
+        # Re-settle the live mode under the new policy. Without this the
+        # camera keeps whatever the old policy last chose until the operator
+        # happens to touch fps again.
+        current_user_fps = self._current_user_fps_value()
+        if current_user_fps is not None:
+            self._maybe_apply_dynamic_resolution_for_fps(current_user_fps)
 
     def _current_user_fps_value(self):
         value = self.redis_controller.get_value(ParameterKey.FPS_USER.value)
@@ -397,9 +625,73 @@ class CinePiController:
         return max_fps_for_context(
             sensor_modes=self.sensor_detect.res_modes,
             desired_mode=self.dynamic_resolution_desired_mode,
+            priority=self.dynamic_resolution_priority,
         )
 
+    def _in_take_fps_ceiling(self):
+        """The fps ceiling for the duration of a take, or None when there is
+        no take-specific limit.
+
+        Crossing a mode class means relaunching cinepi-raw (bit depth is part
+        of ``--mode``, ClearHDR is the ``--hdr sensor`` launch flag), and a
+        relaunch ends the take. So while recording, the ladder is pinned to
+        the class actually running -- and the ceiling has to be pinned with
+        it, or the dial offers frame rates that nothing reachable mid-take
+        can serve.
+        """
+        if not self.dynamic_resolution_enabled:
+            return None
+        if self.dynamic_resolution_priority == PRIORITY_NONE:
+            return None
+        if not self.sensor_detect.res_modes or not self._is_recording():
+            return None
+        if self.dynamic_resolution_desired_mode is None:
+            # max_fps_for_context() reads the ceiling across every mode when
+            # it has no desired mode to work from, which ignores the pin --
+            # exactly the number this is here to avoid handing back.
+            return None
+        return max_fps_for_context(
+            sensor_modes=self.sensor_detect.res_modes,
+            desired_mode=self.dynamic_resolution_desired_mode,
+            priority=self.dynamic_resolution_priority,
+            restrict_to_family_of=self.sensor_mode,
+        )
+
+    def _stored_fps_max(self):
+        """The last stored fps_max, read only -- never seeded, never written.
+
+        Falls back to the highest configured fps step rather than to
+        _sensor_readout_fps_max()'s 1, so a fresh Redis with no camera still
+        gets a usable step table instead of collapsing to [1]."""
+        raw = self.redis_controller.get_value(ParameterKey.FPS_MAX.value)
+        try:
+            stored = int(float(raw))
+        except (TypeError, ValueError):
+            stored = 0
+        if stored > 0:
+            return stored
+        steps = []
+        for step in (self.fps_steps or []):
+            try:
+                value = float(step)
+            except (TypeError, ValueError):
+                continue
+            if value > 0:
+                steps.append(value)
+        return int(max(steps)) if steps else STARTUP_FPS_DEFAULT
+
     def _refresh_fps_max(self):
+        if not self.sensor_detect.res_modes:
+            # No mode table: _sensor_readout_fps_max() returns its 1
+            # fallback and the dynamic-resolution context has no modes to
+            # pick from, so the only ceiling available here is fabricated.
+            # Persisting it is the corruption C3.1 set out to stop -- it
+            # collapses fps_steps to [1] (hardware-confirmed 2026-09-02:
+            # "Changed value: fps_max = 1", "Initialized fps_steps: [1]")
+            # and it is what the next good boot reads back. Keep the stored
+            # ceiling in memory; write nothing.
+            self.fps_max = self._stored_fps_max()
+            return self.fps_max
         sensor_max = self._sensor_readout_fps_max()
         dynamic_max = self._dynamic_context_fps_max()
         fps_max = int(dynamic_max) if dynamic_max is not None else sensor_max
@@ -418,11 +710,39 @@ class CinePiController:
         if self.dynamic_resolution_desired_mode is None:
             self.dynamic_resolution_desired_mode = self.sensor_mode
 
-        return choose_resolution(
+        recording = self._is_recording()
+        choice = choose_resolution(
             sensor_modes=self.sensor_detect.res_modes,
             desired_mode=self.dynamic_resolution_desired_mode,
             requested_fps=requested_user_fps,
+            priority=self.dynamic_resolution_priority,
+            # Mid-take the ladder cannot cross a class boundary -- see
+            # _in_take_fps_ceiling(). Pinned to the mode actually running,
+            # not to the desired one: a substitution made before the take
+            # started may already have left the desired mode's class, and
+            # climbing back into it is just as much of a relaunch.
+            restrict_to_family_of=self.sensor_mode if recording else None,
         )
+        self.dynamic_resolution_deferred = False
+        if recording:
+            unpinned = choose_resolution(
+                sensor_modes=self.sensor_detect.res_modes,
+                desired_mode=self.dynamic_resolution_desired_mode,
+                requested_fps=requested_user_fps,
+                priority=self.dynamic_resolution_priority,
+            )
+            if unpinned is not None and (
+                choice is None or unpinned.mode != choice.mode
+            ):
+                self.dynamic_resolution_deferred = True
+                logging.info(
+                    "Dynamic resolution holding mode %s for the rest of the "
+                    "take: mode %s would change the sensor format, which "
+                    "needs cinepi-raw relaunched.",
+                    self.sensor_mode,
+                    unpinned.mode,
+                )
+        return choice
 
     def _maybe_apply_dynamic_resolution_for_fps(self, requested_user_fps):
         choice = self._dynamic_resolution_choice_for_fps(requested_user_fps)
@@ -437,34 +757,72 @@ class CinePiController:
         if choice.mode == self.sensor_mode:
             return False
 
+        # A same-class substitution is a live reconfigure, as it has always
+        # been. A class change is not: bit depth and the ClearHDR flag are
+        # launch arguments, so without the relaunch cinepi-raw would keep
+        # writing the old sensor format while every Redis key said otherwise.
+        # _resolution_change_needs_restart() is the same test set_resolution()
+        # uses, and it also covers the aspect-ratio case the ladder can now
+        # reach on sensors whose classes are not all one shape. The log line
+        # reports what will actually happen, rather than choice's own
+        # class-vs-desired comparison -- with a family pin in play those two
+        # can differ, and the one that matters here is the relaunch.
+        needs_restart = self._resolution_change_needs_restart(choice.mode)
         logging.info(
             "Dynamic resolution selecting mode %s (max %.3ffps) for %.3ffps "
-            "(desired mode %s max is %.3ffps)",
+            "(desired mode %s max is %.3ffps)%s",
             choice.mode,
             choice.fps_max,
             float(requested_user_fps),
             choice.desired_mode,
             choice.desired_fps_max,
+            " -- relaunching cinepi-raw" if needs_restart else "",
         )
-        return self._apply_resolution_mode(choice.mode, restore_user_fps=None)
+        return self._apply_resolution_mode(
+            choice.mode,
+            restore_user_fps=None,
+            restart_process=needs_restart,
+        )
         
     # ─── step-table helpers ────────────────────────────────────────────────
+    def _free_bounds(self, name, fallback):
+        """Bounds of *name*'s free-stepping sweep: the ends of its steps array.
+
+        Free stepping used to sweep a range hardcoded at each call site, which
+        made the array's own ends a lie the moment an operator edited them.
+        The array is the source of truth now; *fallback* is what that call site
+        sweeps if the array has been left with nothing usable in it.
+        """
+        steps = (self.settings.get('arrays', {}) or {}).get(name, {}) or {}
+        return parameters.steps_bounds(steps.get('steps', []), fallback)
+
     def _rebuild_iso_steps(self):
-        self.iso_steps = (parameters.free_stepping_steps(100, 3200, self.iso_free_increment)
-                        if self.iso_free
-                        else list(self.settings['arrays']['iso']['steps']))
+        if self.iso_free:
+            lo, hi = self._free_bounds('iso', (100, 3200))
+            self.iso_steps = parameters.free_stepping_steps(lo, hi, self.iso_free_increment)
+        else:
+            self.iso_steps = list(self.settings['arrays']['iso']['steps'])
 
     def _rebuild_shutter_steps(self):
-        self.shutter_a_steps = (parameters.free_stepping_steps(1, 360, self.shutter_a_free_increment)
-                                if self.shutter_a_free
-                                else list(self.settings['arrays']['shutter_a']['steps']))
+        if self.shutter_a_free:
+            lo, hi = self._free_bounds('shutter_a', (1, 360))
+            self.shutter_a_steps = parameters.free_stepping_steps(
+                lo, hi, self.shutter_a_free_increment)
+        else:
+            self.shutter_a_steps = list(self.settings['arrays']['shutter_a']['steps'])
         # keep the flicker-free additions in sync
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(
             self.current_fps)
 
     def _rebuild_fps_steps(self):
         if self.fps_free:
-            self.fps_steps = parameters.free_stepping_steps(1, self.fps_max, self.fps_free_increment)
+            # Only the floor comes from the array. The ceiling stays fps_max:
+            # that is the sensor mode's real limit, not a number an array can
+            # raise, and _fps_steps_capped_at_max below would clip it back
+            # anyway. Clamped so a floor above the ceiling cannot invert.
+            lo, _ = self._free_bounds('fps', (1, self.fps_max))
+            lo = min(lo, self.fps_max)
+            self.fps_steps = parameters.free_stepping_steps(lo, self.fps_max, self.fps_free_increment)
         else:
             self.fps_steps = list(self.settings['arrays']['fps']['steps'])
         self.fps_steps_dynamic = self._fps_steps_capped_at_max(self.fps_steps)
@@ -492,33 +850,39 @@ class CinePiController:
         ]
 
     def _rebuild_wb_steps(self):
-        self.wb_steps = (parameters.free_stepping_steps(2800, 6500, self.wb_free_increment)
-                        if self.wb_free
-                        else list(self.settings['arrays']['wb']['steps']))
+        if self.wb_free:
+            lo, hi = self._free_bounds('wb', (2800, 6500))
+            self.wb_steps = parameters.free_stepping_steps(lo, hi, self.wb_free_increment)
+        else:
+            self.wb_steps = list(self.settings['arrays']['wb']['steps'])
 
     def _rebuild_hdr_threshold_low_steps(self):
-        self.hdr_threshold_low_steps = (
-            parameters.free_stepping_steps(0, 4095, self.hdr_threshold_low_free_increment)
-            if self.hdr_threshold_low_free
-            else list(self.settings['arrays']['hdr_threshold_low']['steps']))
+        if self.hdr_threshold_low_free:
+            lo, hi = self._free_bounds('hdr_threshold_low', (0, 4095))
+            self.hdr_threshold_low_steps = parameters.free_stepping_steps(lo, hi, self.hdr_threshold_low_free_increment)
+        else:
+            self.hdr_threshold_low_steps = list(self.settings['arrays']['hdr_threshold_low']['steps'])
 
     def _rebuild_hdr_threshold_high_steps(self):
-        self.hdr_threshold_high_steps = (
-            parameters.free_stepping_steps(0, 4095, self.hdr_threshold_high_free_increment)
-            if self.hdr_threshold_high_free
-            else list(self.settings['arrays']['hdr_threshold_high']['steps']))
+        if self.hdr_threshold_high_free:
+            lo, hi = self._free_bounds('hdr_threshold_high', (0, 4095))
+            self.hdr_threshold_high_steps = parameters.free_stepping_steps(lo, hi, self.hdr_threshold_high_free_increment)
+        else:
+            self.hdr_threshold_high_steps = list(self.settings['arrays']['hdr_threshold_high']['steps'])
 
     def _rebuild_hdr_blend_steps(self):
-        self.hdr_blend_steps = (
-            parameters.free_stepping_steps(0, 8, self.hdr_blend_free_increment)
-            if self.hdr_blend_free
-            else list(self.settings['arrays']['hdr_blend']['steps']))
+        if self.hdr_blend_free:
+            lo, hi = self._free_bounds('hdr_blend', (0, 8))
+            self.hdr_blend_steps = parameters.free_stepping_steps(lo, hi, self.hdr_blend_free_increment)
+        else:
+            self.hdr_blend_steps = list(self.settings['arrays']['hdr_blend']['steps'])
 
     def _rebuild_hdr_gain_adder_steps(self):
-        self.hdr_gain_adder_steps = (
-            parameters.free_stepping_steps(0, 5, self.hdr_gain_adder_free_increment)
-            if self.hdr_gain_adder_free
-            else list(self.settings['arrays']['hdr_gain_adder']['steps']))
+        if self.hdr_gain_adder_free:
+            lo, hi = self._free_bounds('hdr_gain_adder', (0, 5))
+            self.hdr_gain_adder_steps = parameters.free_stepping_steps(lo, hi, self.hdr_gain_adder_free_increment)
+        else:
+            self.hdr_gain_adder_steps = list(self.settings['arrays']['hdr_gain_adder']['steps'])
 
     # ─── main public call ──────────────────────────────────────────────────
     def update_steps(self):
@@ -584,23 +948,61 @@ class CinePiController:
         Returns True when at least one subdev took the control. The control
         changes the sensor's mode list, so callers must re-detect modes and
         restart cinepi-raw afterwards.
+
+        This races the outgoing cinepi-raw process's teardown: this call
+        fires from _publish_resolution_gui_state(), which runs before the
+        relaunch that will actually own the new mode, so the subdev is often
+        still held by the process this resolution change is about to
+        replace. Confirmed on hardware (round 6): the identical `v4l2-ctl
+        --set-ctrl wide_dynamic_range=1` on the imx585 subdev succeeds
+        silently when run standalone with no process contention, yet this
+        method logged "no subdev accepted" on effectively every resolution
+        change all session -- not a real incompatibility, a race it wasn't
+        retrying. Every attempt logging a warning also drowned out any
+        genuine failure (wrong subdev, control truly rejected) in the noise.
+        A short retry lets the common transient case actually succeed
+        instead of just failing quietly faster.
         """
         value = 1 if enable else 0
-        applied = False
-        for idx in range(16):
-            dev = f"/dev/v4l-subdev{idx}"
-            if not os.path.exists(dev):
-                continue
-            probe = subprocess.run(
-                ["v4l2-ctl", "-d", dev, "--set-ctrl", f"wide_dynamic_range={value}"],
-                capture_output=True, text=True,
+        last_errors = {}
+        saw_any_subdev = False
+        for attempt in range(5):
+            applied = False
+            last_errors = {}
+            for idx in range(16):
+                dev = f"/dev/v4l-subdev{idx}"
+                if not os.path.exists(dev):
+                    continue
+                saw_any_subdev = True
+                probe = subprocess.run(
+                    ["v4l2-ctl", "-d", dev, "--set-ctrl", f"wide_dynamic_range={value}"],
+                    capture_output=True, text=True,
+                )
+                if probe.returncode == 0:
+                    logging.info(f"wide_dynamic_range={value} set on {dev}")
+                    applied = True
+                elif "unknown control" not in probe.stderr.lower():
+                    last_errors[dev] = probe.stderr.strip()
+            if applied:
+                return True
+            if attempt < 4:
+                time.sleep(0.05)
+        if last_errors:
+            logging.warning(
+                "No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR) "
+                f"after retrying: {last_errors}"
             )
-            if probe.returncode == 0:
-                logging.info(f"wide_dynamic_range={value} set on {dev}")
-                applied = True
-        if not applied:
-            logging.warning("No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR)")
-        return applied
+        elif saw_any_subdev:
+            # F-wdr-retry-silent-no-driver: every subdev rejected the control
+            # with "unknown control" -- the one unambiguously genuine failure
+            # (no imx585 driver bound at all) -- and last_errors is reset per
+            # attempt, so this case used to fall through and return False
+            # having logged nothing. The old pre-retry code logged it.
+            logging.warning(
+                "No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR): "
+                "no subdev reported the control at all (imx585 driver not bound?)"
+            )
+        return False
 
     def set_hdr_threshold_low(self, value):
         """Set the ClearHDR data-selection threshold, low side (0–4095). Applied live."""
@@ -684,7 +1086,14 @@ class CinePiController:
         `set log` toggle) -- see _publish_resolution_gui_state() and
         set_log_encode().
         """
-        resolution_info = self.sensor_detect.res_modes[self.sensor_mode]
+        resolution_info = self.sensor_detect.res_modes.get(self.sensor_mode)
+        if resolution_info is None:
+            # No camera -- res_modes is {} for the whole degraded session.
+            # Leave self.file_size at its __init__ default of 0.0 ("no
+            # usable frame size") and write nothing to redis: the stored
+            # file_size belongs to the last real mode and is not ours to
+            # overwrite from a state with no sensor in it.
+            return
         native_bit_depth = resolution_info.get('bit_depth')
         hdr = bool(resolution_info.get('hdr', False))
         if log_requested is None:
@@ -699,6 +1108,22 @@ class CinePiController:
             return
         self.file_size = compute_frame_size_mb(width, height, effective_bit_depth)
         self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(self.file_size))
+
+    def set_thumbnail(self, value):
+        """Set the embedded DNG thumbnail mode: 0 off, 1 mono, 2 colour.
+
+        Applied live: cinepi-raw's CONTROL_KEY_THUMBNAIL handler takes
+        effect on the next frame with no camera restart, unlike
+        thumbnail_size (not exposed here yet -- its handler does restart
+        the camera). New takes only; nothing already on the card changes.
+        """
+        try:
+            v = max(0, min(2, int(value)))
+        except (TypeError, ValueError):
+            logging.error("thumbnail expects an integer 0 (off), 1 (mono), or 2 (colour)")
+            return
+        self.redis_controller.set_value(ParameterKey.THUMBNAIL.value, v)
+        logging.info(f"DNG thumbnail mode set to {v}")
 
     def set_log_encode(self, value=None):
         """Live control for CineMate Log (`set log`).
@@ -896,9 +1321,16 @@ class CinePiController:
             return []
 
     def initialize_fps_steps(self, fps_steps):
-        self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
-        
-        self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
+        # Audit: this was a bare int(get_value(...)) -- TypeError on a fresh
+        # Redis where nothing has written fps_max yet, on the boot path.
+        # _stored_fps_max() reads the same key and never writes.
+        self.fps_max = self._stored_fps_max()
+
+        if self.sensor_detect.res_modes:
+            self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
+        # else: degraded session -- _refresh_fps_max() deliberately left the
+        # stored ceiling alone, so echoing it back here would only risk
+        # re-persisting a value we did not derive from a real sensor.
 
         """Initialize fps_steps based on the provided list and capped by fps_max."""
         self.fps_steps_dynamic = self._fps_steps_capped_at_max(fps_steps)
@@ -924,7 +1356,12 @@ class CinePiController:
 
         # Update shutter angle steps immediately if changed
         if shutter_a_free:
-            self.shutter_angle_steps = parameters.free_stepping_steps(1, 360, self.shutter_a_free_increment)
+            # shutter_angle_steps is a second table alongside shutter_a_steps;
+            # the snap in update_shutter_angle_nom reads this one, so it has to
+            # follow the same bounds rule or the two disagree.
+            lo, hi = self._free_bounds('shutter_a', (1, 360))
+            self.shutter_angle_steps = parameters.free_stepping_steps(
+                lo, hi, self.shutter_a_free_increment)
         else:
             self.initialize_shutter_angle_steps()
 
@@ -988,11 +1425,14 @@ class CinePiController:
         self.user_fps = requested_user_fps
         self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
-        self._maybe_apply_dynamic_resolution_for_fps(requested_user_fps)
-
         # No per-sensor fps correction factor: the cinepi-raw phase lock drives the
         # recorded cadence onto the nominal fps, so the hardware fps == the user fps.
-        fps_max = int(float(self.redis_controller.get_value(ParameterKey.FPS_MAX.value)))
+        # Audit: was int(float(get_value(FPS_MAX))) -- a TypeError whenever
+        # that key is absent, which since c3.13 includes every degraded
+        # session on a fresh Redis (a no-camera boot deliberately never
+        # writes a fabricated ceiling). An operator typing `set fps 24` with
+        # no camera attached would have taken down the dispatch path.
+        fps_max = self._stored_fps_max()
 
         # ── choose the final fps value ──────────────────────────────────────
         if self.shutter_a_sync_mode == 1 or self.fps_free:
@@ -1005,6 +1445,37 @@ class CinePiController:
                                    key=lambda x: abs(x - requested_user_fps))
             safe_user_fps = snapped_user_fps
             safe_value = snapped_user_fps
+
+        # Mid-take, dynamic resolution cannot cross a mode class -- so
+        # neither can the frame rate. Without this the dial would still offer
+        # the whole ladder's ceiling (reached, off-take, by dropping to a
+        # cheaper class) and hand the sensor a frame rate the running mode
+        # cannot deliver. The downward-clamp branch below reconciles fps_user
+        # for the GUI.
+        in_take_ceiling = self._in_take_fps_ceiling()
+        capped_by_take = in_take_ceiling is not None and safe_value > in_take_ceiling
+        if in_take_ceiling is not None:
+            safe_value = min(safe_value, in_take_ceiling)
+            safe_user_fps = min(safe_user_fps, in_take_ceiling)
+
+        # The ladder is asked about the fps that will ACTUALLY be applied, not
+        # the one that was requested. Asking first and capping afterwards let
+        # the two disagree: a request the ladder had no answer for ("nothing
+        # in this class reaches 60") still got capped to a rate that a mode in
+        # this class DOES reach, and the switch to that mode never happened --
+        # 40fps commanded in a mode whose ceiling is 21. Snapping to a step
+        # does the same thing more quietly. The rule is one question, asked
+        # about the answer: whatever fps we are about to command, that is what
+        # the mode has to be chosen for.
+        self._maybe_apply_dynamic_resolution_for_fps(safe_value)
+
+        # A take-scoped cap is not the operator changing their mind. Remember
+        # what they actually asked for so stop_recording()'s settle can go
+        # there once the class is free to change again -- fps_user below still
+        # tracks what is really recording, which is what the GUI must show.
+        self.dynamic_resolution_deferred_fps = (
+            requested_user_fps if capped_by_take else None
+        )
 
         self.user_fps = safe_user_fps
         # Always reconcile the operator-facing fps_user when the request had to be
@@ -1509,6 +1980,22 @@ class CinePiController:
                          current or "—", merged, preview)
 
     def start_recording(self, record_override=None):
+        # No camera, no take. This gate is here rather than at any call site
+        # because every input surface reaches recording through this one
+        # method -- CLI, serial, POST /api/v1/cmd, GPIO buttons, the settings
+        # editor, and the web GUI's tap-to-record. Without it, a no-camera
+        # boot with a RAW disk mounted would write is_recording = 1, publish
+        # a record gate, fire the rec tone and broadcast, and arm the
+        # RAM-buffer watchdog -- with no cinepi-raw process in existence to
+        # ever clear any of it. A take that cannot end.
+        #
+        # Same predicate as the other degraded-boot guards (_apply_startup_fps,
+        # _get_startup_sensor_mode, _refresh_fps_max): an empty mode table
+        # covers both "no camera attached" and "a sensor that isn't in
+        # sensor_resolutions", which behave identically from here.
+        if not self.sensor_detect.res_modes:
+            logging.info("rec ignored -- no camera detected")
+            return
         # Safety: refuse to start a new take while the previous take's frames are
         # still flushing from RAM to disk (the green is_writing_buf state). Letting
         # the buffer finish means no recorded frame is lost; the operator presses
@@ -1545,6 +2032,49 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 
+        self._settle_deferred_dynamic_resolution()
+
+    def _settle_deferred_dynamic_resolution(self) -> bool:
+        """Apply a mode class change that a running take held back.
+
+        Crossing a class relaunches cinepi-raw, so it cannot happen during a
+        take. Once the camera is idle it should -- otherwise the operator's
+        selected mode only comes back the next time they happen to touch fps.
+
+        Returns True when the settle ran. It does NOT run while the take that
+        just ended is still draining its RAM buffer to disk: the relaunch is a
+        SIGTERM, and firing it mid-drain truncates the clip that was just
+        recorded. start_recording() refuses on the same condition, for the
+        same reason. The deferral is left standing in that case, so the next
+        set_fps -- or the next stop -- picks it up once the write has landed.
+        """
+        if not self.dynamic_resolution_deferred:
+            return False
+        if self._buffered_frames_flushing():
+            logging.info(
+                "Dynamic resolution settle held: the take's buffered frames "
+                "are still flushing to disk."
+            )
+            return False
+
+        self.dynamic_resolution_deferred = False
+        # The operator's own target, not the take-scoped cap that stood in for
+        # it -- see set_fps(). Settling at the capped rate would quietly make
+        # the cap permanent.
+        target_fps = self.dynamic_resolution_deferred_fps
+        self.dynamic_resolution_deferred_fps = None
+        if target_fps is None:
+            target_fps = self._current_user_fps_value()
+        if target_fps is None:
+            return False
+        try:
+            self.set_fps(float(target_fps))
+        except Exception:
+            logging.exception(
+                "Failed to settle dynamic resolution after recording."
+            )
+        return True
+
     def _is_recording(self) -> bool:
         return str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
 
@@ -1558,21 +2088,32 @@ class CinePiController:
         return f"{width}:{height}:{bit_depth}:{packing}"
 
     def _select_resolution_mode_for_fps(self, target_fps: float):
-        candidates = []
-        for mode, info in self.sensor_detect.res_modes.items():
-            try:
-                fps_max = float(info.get("fps_max") or 0)
-                area = int(info.get("width") or 0) * int(info.get("height") or 0)
-            except (TypeError, ValueError):
-                continue
-            if fps_max >= target_fps:
-                candidates.append((area, mode))
+        """The mode `set fps double` should land on to reach *target_fps*.
 
-        if not candidates:
-            return self.sensor_mode
+        Same rule as dynamic resolution, and via the same function -- which
+        means the same *policy*: passing priority here is what keeps the two
+        agreeing. Without it this call took choose_resolution's default and so
+        crossed the SDR/ClearHDR and bit-depth boundary even for an operator
+        who had explicitly set "none" to forbid exactly that, from a button
+        that says nothing about either.
 
-        candidates.sort(reverse=True)
-        return candidates[0][1]
+        Falls back to the current mode when no mode the policy allows can
+        serve the request; the caller then holds the resolution and clamps fps.
+        """
+        choice = choose_resolution(
+            sensor_modes=self.sensor_detect.res_modes,
+            desired_mode=(
+                self.dynamic_resolution_desired_mode
+                if self.dynamic_resolution_desired_mode is not None
+                else self.sensor_mode
+            ),
+            requested_fps=target_fps,
+            priority=self.dynamic_resolution_priority,
+            # Never mid-take: the caller already refuses a mode change while
+            # recording, and pinning here keeps that true if it ever stops.
+            restrict_to_family_of=self.sensor_mode if self._is_recording() else None,
+        )
+        return self.sensor_mode if choice is None else choice.mode
 
     def switch_resolution(self, step=1):
         try:
@@ -1782,7 +2323,23 @@ class CinePiController:
     def _apply_resolution_mode(self, value, restore_user_fps=None, *, restart_process=False):
         try:
             value = self._normalize_sensor_mode_value(value)
-            resolution_info = self.sensor_detect.res_modes[value]
+            # .get(), not [value]. _normalize_sensor_mode_value() maps any
+            # unknown mode to 0, so with an empty mode table (no camera, or a
+            # sensor missing from sensor_resolutions) this was a KeyError(0) --
+            # and the only handler below is `except ValueError`. Nothing in
+            # CommandExecutor.handle_received_data() or the CLI read loop
+            # catches it either, so `set resolution N` on a no-camera boot
+            # unwound out of the CommandExecutor daemon thread and killed it:
+            # every later CLI and serial command silently ignored for the rest
+            # of the session, with nothing to tell the operator why.
+            resolution_info = self.sensor_detect.res_modes.get(value)
+            if resolution_info is None:
+                logging.info(
+                    "No camera mode table -- resolution unavailable "
+                    "(requested mode %s)", value,
+                )
+                self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
+                return False
             recording = self._is_recording()
             if recording:
                 logging.warning(
@@ -1822,7 +2379,9 @@ class CinePiController:
 
             self.fps_max = self._refresh_fps_max()
             if self.fps_free:
-                self.fps_steps = parameters.free_stepping_steps(1, self.fps_max, self.fps_free_increment)
+                lo, _ = self._free_bounds('fps', (1, self.fps_max))
+                self.fps_steps = parameters.free_stepping_steps(
+                    min(lo, self.fps_max), self.fps_max, self.fps_free_increment)
 
             self.update_steps()
 
@@ -1833,7 +2392,11 @@ class CinePiController:
             self._schedule_resolution_switch_complete(value, resolution_info)
             return True
 
-        except ValueError as error:
+        except (KeyError, ValueError) as error:
+            # KeyError is caught as a second line of defence: the .get() above
+            # closes the known path, but this method indexes several
+            # sensor-mode dicts further down and a dead CommandExecutor thread
+            # is far too quiet a failure to risk on one guard.
             self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
             logging.error(f"Error setting resolution: {error}")
             return False
@@ -1988,20 +2551,47 @@ class CinePiController:
 
         # Commit the final value outside the lock
         self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
-        
+
         # also update the "actual" key so GUI reflects CLI changes
         self.redis_controller.set_value(ParameterKey.SHUTTER_A_ACTUAL.value, safe_value)
-        # keep nominal angle in sync when not using sync mode
+        # F-shutter-actual-attr-stale: set_fps()'s "keep motion-blur constant"
+        # snap and update_shutter_angle_for_fps() both read this attribute,
+        # not the Redis key -- leaving it stale here means the next fps
+        # change (every mode switch triggers one) re-derives a snapped angle
+        # from whatever this was BEFORE this call and overwrites the correct
+        # Redis value with it. The real sensor control (shutter_a) was never
+        # wrong; only this attribute, and everything reading it, went stale.
+        self.shutter_angle_actual = safe_value
 
         if self.shutter_a_sync_mode == 0:
+            # keep nominal angle in sync when not using sync mode
             self.shutter_angle_nom = safe_value
-        
+            self.redis_controller.set_value(ParameterKey.SHUTTER_A_NOM.value, safe_value)
+        else:
+            # F-shutter-sync-nominal-stale: mirror of the actual-attribute fix
+            # above. In sync mode, set_fps() derives shutter_angle_actual from
+            # exposure_time_nominal (cinepi_controller.py ~line 1056), not from
+            # whatever this call just accepted. Leaving it stale here means the
+            # next fps change -- every mode switch triggers one -- resurrects
+            # the exposure_time_nominal from BEFORE this call (often still the
+            # 180 degree startup default) even though the sensor is now at
+            # safe_value degrees: sensor at 1 degree, GUI snapping back to 180.
+            self.exposure_time_nominal = (safe_value / 360.0) / self.current_fps
+
         self.exposure_time_seconds = (safe_value / 360.0) / self.current_fps
 
         self.exposure_time_fractions = self.seconds_to_fraction_text(
             self.exposure_time_seconds
         )
         logging.info(f"Shutter angle set to {safe_value}°, exposure time: {self.exposure_time_seconds:.6f}s ({self.exposure_time_fractions})")
+
+        # F-shutter-exposure-stale: this key drives the web GUI's exposure
+        # readout; it must be republished on every shutter change, not just
+        # on an fps change, or the display goes stale while the sensor's
+        # actual exposure (shutter_a, above) keeps updating correctly.
+        self.redis_controller.set_value(
+            ParameterKey.EXPOSURE_TIME.value, self.exposure_time_seconds
+        )
 
 
     def set_shutter_a_nom(self, value):
@@ -2066,6 +2656,13 @@ class CinePiController:
                 # ensure main shutter_a value is updated for preview and web UI
                 self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
 
+                # F-shutter-exposure-stale: republish so the web GUI's
+                # exposure readout doesn't go stale on a nominal-angle-only
+                # change (see set_shutter_a() for the same fix).
+                self.redis_controller.set_value(
+                    ParameterKey.EXPOSURE_TIME.value, self.exposure_time_seconds
+                )
+
     def set_shu_fps_lock(self, value=None):
         if value is not None:
             if value in (0, False):
@@ -2117,17 +2714,65 @@ class CinePiController:
         value = self.redis_controller.get_value(redis_key)
         return value
     
-    def reboot(self):
+    def _power_command(self, verb: str, what: str) -> bool:
+        """Run `systemctl <verb>` as root, and say whether it was accepted.
+
+        os.system() was the whole defect here. It returns the shell's status
+        and both callers discarded it, so a refusal was indistinguishable from
+        a reboot that simply had not happened yet -- and a refusal is exactly
+        what a Pi gives back: cinemate-autostart.service runs as `pi`, and
+        CineMate's own sudoers drop-in never granted reboot or poweroff. Where
+        the distro's 010_<user>-nopasswd rule had been removed, every reboot
+        path (CLI, GPIO triple-click, web API, the settings editor's buttons)
+        failed in silence.
+
+        `-n` so a machine without the grant fails immediately instead of
+        waiting on a password prompt at a console nobody is watching.
+        """
         if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
             self.stop_recording()
-        logging.info("Initiating safe system shutdown.")
-        os.system("sudo reboot")
-        
-    def safe_shutdown(self):
-        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
-            self.stop_recording()
-        logging.info("Initiating safe system shutdown.")
-        os.system("sudo shutdown -h now")
+        logging.info("Initiating safe system %s.", what)
+        try:
+            result = subprocess.run(
+                ["sudo", "-n", "systemctl", verb],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            logging.error("Could not %s: %s", what, exc)
+            return False
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            if "password" in detail.lower() or "sudo:" in detail.lower():
+                detail = ("sudo refused: `systemctl %s` is not in CineMate's sudoers "
+                          "rule on this machine. Re-run cinemate-install.sh, or add it "
+                          "to /etc/sudoers.d/pi_cinemate." % verb)
+            logging.error("%s refused (exit %s): %s", what.capitalize(), result.returncode, detail)
+            return False
+        return True
+
+    def can_reboot(self) -> bool:
+        """Whether `systemctl reboot` would actually be permitted, without
+        running it.
+
+        `sudo -l <command>` asks the sudoers policy about one command and
+        answers without executing it; `-n` keeps it from prompting. This is
+        what lets the settings editor say "saved, reboot it yourself" instead
+        of animating a reboot that sudo is about to refuse.
+        """
+        try:
+            result = subprocess.run(
+                ["sudo", "-n", "-l", "/usr/bin/systemctl", "reboot"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return result.returncode == 0
+
+    def reboot(self) -> bool:
+        return self._power_command("reboot", "reboot")
+
+    def safe_shutdown(self) -> bool:
+        return self._power_command("poweroff", "shutdown")
     
     def mount(self):
         self.ssd_monitor.mount_drive()
@@ -2292,7 +2937,22 @@ class CinePiController:
 
     def initialize_wb_cg_rb_array(self):
         """Initialize the white balance cg_rb array based on the sensor model."""
-        sensor_key = self.current_sensor.replace('_mono', '')
+        # No camera (or a sensor with no tuning file): current_sensor is
+        # None, so sensor_key is "" and matches neither imx283 nor imx585 --
+        # default_ct_curve below is the generic one.
+        #
+        # C3.9 guarded this .replace() because it crashed startup outright
+        # (hardware-confirmed 2026-09-01), but its claim that None then
+        # "falls through to the generic default_ct_curve" was wrong: the
+        # second .replace() on the same None, in the tuning-file path below,
+        # threw before `ct_curve = default_ct_curve` was ever reached. The
+        # broad `except Exception` caught it and left wb_cg_rb_array as {},
+        # which is not a fallback -- set_wb()'s lookup then misses for every
+        # temperature, logs "White balance value not found", and writes
+        # neither cg_rb nor wb_user. White balance had no curve at all
+        # (hardware-confirmed 2026-09-02: "Failed to initialize
+        # wb_cg_rb_array: 'NoneType' object has no attribute 'replace'").
+        sensor_key = (self.current_sensor or "").replace('_mono', '')
 
         if sensor_key == 'imx283':
             default_ct_curve = [
@@ -2335,30 +2995,58 @@ class CinePiController:
 
         self.wb_cg_rb_array = {}  # Ensuring it is initialized as a dictionary
 
-        try:
+        # Start from the default; the tuning file, if there is one, overrides
+        # it. Reading that file has its OWN handler, deliberately, because the
+        # broad `except Exception` guarding the interpolation loop below ends
+        # with `wb_cg_rb_array = {}` -- and an empty array is not a fallback.
+        # set_wb() then misses for every temperature, logs "White balance
+        # value not found", and writes neither cg_rb nor wb_user, so the
+        # operator's WB control silently does nothing. Letting a missing file
+        # reach that handler discarded the perfectly good default curve
+        # already assigned here. Sensors without a file at this hardcoded pisp
+        # path are ordinary, not exotic: any sensor on a Pi 4, or an
+        # imx477/imx296 whose libcamera checkout lives elsewhere.
+        ct_curve = default_ct_curve
+
+        if not sensor_key:
+            logging.info(
+                "No sensor detected -- using the default ct_curve for "
+                "white balance (no tuning file to read)."
+            )
+        else:
             tuning_file_path = (
                 f"/home/pi/libcamera/src/ipa/rpi/pisp/data/"
-                f"{self.current_sensor.replace('_mono', '')}.json"
+                f"{sensor_key}.json"
             )
             logging.info(f"Loading tuning file from: {tuning_file_path}")
+            try:
+                with open(tuning_file_path, 'r') as file:
+                    data = json.load(file)
+                    logging.info("Tuning data loaded successfully.")
 
-            with open(tuning_file_path, 'r') as file:
-                data = json.load(file)
-                logging.info("Tuning data loaded successfully.")
-
-            awb_data = next((algo['rpi.awb'] for algo in data['algorithms'] if 'rpi.awb' in algo), None)
-            if not awb_data:
-                logging.warning("'rpi.awb' algorithm data not found, using default ct_curve.")
-                ct_curve = default_ct_curve
-            else:
-                logging.info(f"'rpi.awb' data found: {awb_data}")
-                ct_curve = awb_data.get('ct_curve', None)
-                if not ct_curve:
-                    logging.warning("'ct_curve' not found in 'rpi.awb' data, using default ct_curve.")
-                    ct_curve = default_ct_curve
+                awb_data = next((algo['rpi.awb'] for algo in data['algorithms'] if 'rpi.awb' in algo), None)
+                if not awb_data:
+                    logging.warning("'rpi.awb' algorithm data not found, using default ct_curve.")
                 else:
-                    logging.info(f"Retrieved ct_curve: {ct_curve}")
+                    logging.info(f"'rpi.awb' data found: {awb_data}")
+                    tuning_ct_curve = awb_data.get('ct_curve', None)
+                    if not tuning_ct_curve:
+                        logging.warning("'ct_curve' not found in 'rpi.awb' data, using default ct_curve.")
+                    else:
+                        ct_curve = tuning_ct_curve
+                        logging.info(f"Retrieved ct_curve: {ct_curve}")
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                # OSError covers FileNotFoundError and permission problems;
+                # ValueError covers json.JSONDecodeError (its base class);
+                # TypeError/KeyError cover a file whose shape isn't what
+                # data['algorithms'] expects. All of them mean the same thing:
+                # keep the default curve and say why.
+                logging.warning(
+                    "Could not read tuning file %s (%s) -- using the default "
+                    "ct_curve for white balance.", tuning_file_path, exc,
+                )
 
+        try:
             temperatures = ct_curve[0::3]
             r_values = ct_curve[1::3]
             b_values = ct_curve[2::3]
@@ -2548,7 +3236,7 @@ class CinePiController:
                     )
                     if not self.set_resolution(target_mode, restart_process=False):
                         return
-                    self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
+                    self.fps_max = self._stored_fps_max()
                 target_fps = min(target_fps, self.fps_max)
                 self.set_fps(target_fps)
         else:

@@ -11,31 +11,42 @@ import inspect
 import json
 import logging
 import os
+import re
 import tempfile
+import time
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import (
     Blueprint,
-    after_this_request,
+    Response,
     current_app,
     jsonify,
+    make_response,
     render_template,
     request,
     send_file,
+    send_from_directory,
+    stream_with_context,
 )
 
+from markupsafe import Markup
+
+from module.app import hardware_probe
+from module.app.gui_text import load_gui_text, lookup
+from module.sensor_database import resolve_database_path
 from module.config_loader import (
+    DEFAULT_CONFORM_FRAME_RATE,
     SettingsLoadError,
     _apply_settings_defaults,
     load_settings,
     strip_jsonc,
     DEFAULT_SETTINGS_PATH,
 )
-from module.app import boot_config, raw_files
+from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, smpte_frame_base
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -119,6 +130,8 @@ ACTION_METHODS = [
      "arg": {"type": "number", "min": 0, "max": 5, "placeholder": "0-5"}},
     {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "no_arg": "toggle",
      "arg": {"type": "select", "options": ["off", "10", "12"]}},
+    {"group": "Thumbnail", "value": "set_thumbnail", "label": "Set DNG thumbnail mode", "no_arg": "required",
+     "arg": {"type": "select", "options": [0, 1, 2]}},
     {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "no_arg": "cycle",
      "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
     {"group": "Zoom / anamorphic", "value": "inc_zoom", "label": "Zoom in one stop"},
@@ -128,6 +141,7 @@ ACTION_METHODS = [
     {"group": "Resolution / preview", "value": "set_resolution", "label": "Change resolution", "no_arg": "cycle",
      "arg": {"type": "number", "placeholder": "mode #"}},
     {"group": "Resolution / preview", "value": "set_dynamic_resolution_enabled", "label": "Toggle dynamic resolution", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Resolution / preview", "value": "set_dynamic_resolution_priority", "label": "Dynamic resolution priority", "no_arg": "cycle", "arg": {"type": "select", "options": ["mode", "resolution", "none"]}},
     {"group": "Resolution / preview", "value": "set_preview_source", "label": "Set HDMI preview source", "no_arg": "cycle",
      "arg": {"type": "select", "options": ["cam0", "cam1", "cam0+cam1", "pip_cam0", "pip_cam1"]}},
     {"group": "Storage", "value": "mount", "label": "Mount storage"},
@@ -142,11 +156,33 @@ ACTION_METHODS = [
     # 0 or 1 only and has no toggle branch, whatever its old label implied.
     {"group": "Sensor", "value": "set_filter", "label": "Set IR-cut filter", "no_arg": "required", "arg": {"type": "toggle01"}},
     {"group": "Locks", "value": "set_all_lock", "label": "Toggle all-parameter lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
-    {"group": "System", "value": "restart_cinemate", "label": "Restart Cinemate"},
+    {"group": "System", "value": "restart_cinemate", "label": "Restart CineMate"},
     {"group": "System", "value": "restart_camera", "label": "Restart camera process"},
     {"group": "System", "value": "reboot", "label": "Reboot the Pi"},
     {"group": "System", "value": "safe_shutdown", "label": "Safe shutdown"},
 ]
+
+
+@settings_editor_bp.record_once
+def _install_gui_text(state) -> None:
+    """Give the app serving this blueprint its `t()` template global.
+
+    The editor's copy lives in resources/gui-text/*.md, not in the template.
+    It is read once, when the blueprint is registered -- i.e. at CineMate
+    start -- so a page load costs nothing and every request sees the same
+    text. Editing a string means restarting CineMate, the same as editing
+    anything else under src/.
+
+    Registered here rather than in create_app() because the template belongs
+    to this blueprint: anything that serves the settings editor gets the text
+    with it, including a test harness that builds a bare Flask app around
+    just this blueprint.
+    """
+    gui_text = load_gui_text()
+    state.app.config["GUI_TEXT"] = gui_text
+    # Markup, not str: these strings carry their own <span class="mono"> and
+    # <strong>, and render_inline has already escaped what came from markdown.
+    state.app.jinja_env.globals["t"] = lambda key: Markup(lookup(gui_text, key))
 
 
 def _public_method_names(obj) -> set[str]:
@@ -156,10 +192,66 @@ def _public_method_names(obj) -> set[str]:
     }
 
 
+# Every state in which the card is being written at rate. is_recording alone
+# is not that set: the post-take buffer flush (is_writing_buf / is_buffering)
+# and storage pre-roll all move frames to disk, and pre-roll in particular
+# writes at full rate with is_recording still 0. These are exactly the
+# storage-contention windows the playback lockout exists for.
+_PLAYBACK_BLOCKING_KEYS = (
+    ParameterKey.IS_RECORDING,
+    ParameterKey.IS_WRITING_BUF,
+    ParameterKey.IS_BUFFERING,
+    ParameterKey.STORAGE_PREROLL_ACTIVE,
+)
+
+
+def _playback_blocked() -> tuple[bool, str]:
+    """Whether the card is too busy to serve playback, and why.
+
+    Fails CLOSED, unlike the read it replaced. RedisController.get_value()
+    returns a local cache kept fresh by one background listener thread; if
+    that thread has died every read keeps succeeding and every value is
+    frozen (the handbook's trap 1, hardware-confirmed as F-204). A frozen
+    "0" would let the pane start decoding in the middle of a take, which is
+    the one thing this gate exists to prevent -- so a dead listener, or an
+    unreadable bus, refuses rather than allows.
+    """
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is None:
+        return False, ""          # no bus wired at all: desk/test use
+    try:
+        if not redis_controller.listener_alive():
+            return True, "Camera status is stale — playback held"
+        for key in _PLAYBACK_BLOCKING_KEYS:
+            if str(redis_controller.get_value(key.value)).strip() == "1":
+                return True, f"Busy ({key.value}) — playback held"
+    except Exception:
+        logger.debug("playback: could not read the recording state", exc_info=True)
+        return True, "Camera status unavailable — playback held"
+    return False, ""
+
+
+def _is_recording() -> bool:
+    """Whether playback is currently refused. Reported in the clip index so the
+    pane can grey the stage out before it asks for a frame."""
+    return _playback_blocked()[0]
+
+
 @settings_editor_bp.route("/")
 def index():
     settings = current_app.config["SETTINGS"]
-    return render_template("settings_editor.html", api_token=web_api_settings(settings).get("token") or "")
+    # The resolved path, not the relative form settings.jsonc carries.
+    # sensors.database_file is operator-settable, and /home/pi/cinemate is a
+    # symlink on a source install (cinemate-install.sh), which Path.resolve()
+    # follows -- so the only truthful answer comes from the same helper the
+    # loader itself uses.
+    return render_template(
+        "settings_editor.html",
+        api_token=web_api_settings(settings).get("token") or "",
+        sensor_db_path=str(
+            resolve_database_path((settings.get("sensors") or {}).get("database_file"))
+        ),
+    )
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])
@@ -406,16 +498,29 @@ def put_config_txt():
 
     cinepi_controller = current_app.config.get("CINEPI_CONTROLLER")
     rebooting = False
+    message = "Saved."
     if cinepi_controller is not None and hasattr(cinepi_controller, "reboot"):
-        rebooting = True
-        # cinepi_controller.reboot() stops any active recording, then
-        # `sudo reboot`s -- give this HTTP response a moment to actually
-        # reach the client first.
-        timer = threading.Timer(0.4, cinepi_controller.reboot)
-        timer.daemon = True
-        timer.start()
+        # Ask the sudoers policy first. `rebooting` used to be True whenever
+        # the controller merely HAD a reboot method, so the page animated a
+        # reboot whether or not one was permitted -- and until this release
+        # CineMate's own sudoers drop-in never granted it, so on a Pi whose
+        # distro NOPASSWD rule had been removed the answer was always no.
+        rebooting = (not hasattr(cinepi_controller, "can_reboot")
+                     or cinepi_controller.can_reboot())
+        if rebooting:
+            # cinepi_controller.reboot() stops any active recording, then
+            # reboots -- give this HTTP response a moment to actually reach
+            # the client first.
+            timer = threading.Timer(0.4, cinepi_controller.reboot)
+            timer.daemon = True
+            timer.start()
+        else:
+            message = ("Saved, but this Pi will not let CineMate reboot itself: "
+                       "`systemctl reboot` is not in its sudoers rule. Re-run "
+                       "cinemate-install.sh, or reboot it yourself to apply the change.")
+            logger.warning("config.txt saved but reboot is not permitted by sudoers")
 
-    return jsonify({"ok": True, "message": "Saved.", "rebooting": rebooting})
+    return jsonify({"ok": True, "message": message, "rebooting": rebooting})
 
 
 @settings_editor_bp.route("/api/actions", methods=["GET"])
@@ -464,7 +569,126 @@ def get_sensor_modes():
         entries.sort(key=lambda m: ((m["width"] or 0) * (m["height"] or 0), m["bit_depth"] or 0), reverse=True)
         sensors[camera_name] = entries
 
-    return jsonify({"ok": True, "sensors": sensors})
+    return jsonify({
+        "ok": True,
+        "sensors": sensors,
+        "available": _available_mode_categories(sensor_detect),
+    })
+
+
+def _available_mode_categories(sensor_detect) -> dict:
+    """Which K categories and bit depths the attached sensors actually have.
+
+    Read from sensor_modes_unfiltered, NOT sensor_resolutions: the latter is
+    what survived the settings.jsonc filters, so asking it whether a 3K mode
+    exists would answer "no" the moment 3K was switched off -- and the
+    settings page would grey out the switch that did it.
+
+    The K category is round(width/1000*2)/2, the same expression
+    _finalize_modes filters on. Restating it is deliberate: this endpoint has
+    to answer for a mode the filter has already rejected, which is exactly the
+    case the filter itself never sees.
+    """
+    k_values, bit_depths = set(), set()
+    for modes in (getattr(sensor_detect, "sensor_modes_unfiltered", None) or {}).values():
+        for mode in modes:
+            width = mode.get("width")
+            if width:
+                k_values.add(round(width / 1000 * 2) / 2)
+            depth = mode.get("bit_depth")
+            if depth:
+                bit_depths.add(int(depth))
+    return {
+        "k_steps": sorted(k_values),
+        "bit_depths": sorted(bit_depths),
+        # No camera detected at all is not the same as a camera with no 3K
+        # mode. The page greys nothing rather than greying everything.
+        "known": bool(k_values or bit_depths),
+    }
+
+
+@settings_editor_bp.route("/api/playback/clips", methods=["GET"])
+def get_playback_clips():
+    conform = DEFAULT_CONFORM_FRAME_RATE
+    settings = current_app.config.get("SETTINGS") or {}
+    raw_conform = settings.get("settings", {}).get(
+        "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
+    try:
+        # smpte_frame_base(), not int(): the same "round to a whole frame
+        # base" rule redis_controller._format_timecode() applies to this
+        # exact setting (F-253 already records four sites with three
+        # different rounding rules -- a plain int() truncation here would
+        # have been a fifth, and 23.976 -> 23 both paced playback ~4% slow
+        # and disagreed with the redis/DNG frame base of 24). float() first
+        # so a genuinely unreadable value falls back to
+        # DEFAULT_CONFORM_FRAME_RATE below rather than smpte_frame_base()'s
+        # own internal fallback of 1 -- a 1 fps pane on a typo is a worse
+        # failure mode than the shipped default.
+        conform = smpte_frame_base(float(raw_conform))
+    except (TypeError, ValueError):
+        logger.debug("playback: unreadable conform_frame_rate, using %s", conform)
+    return jsonify({"ok": True, "clips": playback.list_clips(),
+                    "conform_frame_rate": conform,
+                    "render_token": playback.RENDER_TOKEN,
+                    "recording": _is_recording()})
+
+
+@settings_editor_bp.route("/api/playback/clips/<name>/frame/<int:index>", methods=["GET"])
+def get_playback_frame(name, index):
+    # Playback loses to recording, always. Reading a take off the card while
+    # another is being written to it is the shape of the storage contention that
+    # has cost audio sync before, so the pane is refused rather than throttled.
+    blocked, reason = _playback_blocked()
+    if blocked:
+        return jsonify({"ok": False, "message": reason}), 409
+
+    try:
+        scale = int(request.args.get("scale", 4))
+        quality = max(40, min(95, int(request.args.get("q", 80))))
+    except ValueError:
+        return jsonify({"ok": False, "message": "scale and q must be integers"}), 400
+    if scale not in (2, 4, 8, 16):
+        return jsonify({"ok": False, "message": "scale must be 2, 4, 8 or 16"}), 400
+    mono = request.args.get("mono") in ("1", "true", "yes")
+
+    try:
+        data, width, height, source = playback.frame_jpeg(
+            name, index, scale=scale, mono=mono, quality=quality)
+    except playback.Busy:
+        # Tell the client to drop this frame rather than wait for it; holding the
+        # clock is what keeps playback honest about its rate.
+        return jsonify({"ok": False, "message": "busy"}), 503
+    except playback.PlaybackError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 404
+
+    response = make_response(data)
+    response.headers["Content-Type"] = "image/jpeg"
+    response.headers["X-Frame-Size"] = f"{width}x{height}"
+    # Which path produced this frame (open decision 8). The HUD shows it, so a
+    # 720p proxy is never mistaken for a demosaiced frame or the other way.
+    response.headers["X-Frame-Source"] = source
+    # A decoded frame is a pure function of (take, index, scale, mono, q) and
+    # takes are immutable once written, so this is safe to cache hard.
+    response.headers["Cache-Control"] = "private, max-age=3600, immutable"
+    return response
+
+
+@settings_editor_bp.route("/api/playback/clips/<name>/audio", methods=["GET"])
+def get_playback_audio(name):
+    # Same lockout as get_playback_frame() -- this route had none, so a
+    # hotspot client could stream a take's WAV off the card mid-recording,
+    # exactly the storage contention the frame lockout exists to prevent.
+    # A WAV is also unfinalised mid-take by construction (its data-chunk
+    # size is only written on a clean stop), so serving it during a take
+    # was never just a performance question.
+    blocked, reason = _playback_blocked()
+    if blocked:
+        return jsonify({"ok": False, "message": reason}), 409
+
+    path = playback.wav_path(name)
+    if path is None:
+        return jsonify({"ok": False, "message": "no audio for this take"}), 404
+    return send_file(path, mimetype="audio/wav", conditional=True)
 
 
 @settings_editor_bp.route("/api/raw/storage", methods=["GET"])
@@ -477,29 +701,98 @@ def get_raw_takes():
     return jsonify({"ok": True, "takes": raw_files.list_takes()})
 
 
+def _recording_take_names() -> set[str]:
+    """Names currently being written to -- empty unless a recording is
+    actually in progress, since last_dng_cam0/cam1 are only reset to "None"
+    on start_all/stop_all, not on record stop."""
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is None:
+        return set()
+    rec = str(redis_controller.get_value(ParameterKey.IS_RECORDING.value, "0") or "0").strip()
+    if rec != "1":
+        return set()
+    return raw_files.active_take_names(redis_controller)
+
+
 @settings_editor_bp.route("/api/raw/takes/<name>", methods=["DELETE"])
 def delete_raw_take(name):
-    ok, message = raw_files.delete_take(name)
+    storage = request.args.get("storage") or None
+    if name in _recording_take_names():
+        return jsonify({"ok": False, "message": "Refusing to delete while recording"}), 409
+    ok, message = raw_files.delete_take(name, storage=storage)
     return jsonify({"ok": ok, "message": message}), (200 if ok else 404)
 
 
 @settings_editor_bp.route("/api/raw/takes/<name>/download", methods=["GET"])
 def download_raw_take(name):
-    path = raw_files.resolve_take(name)
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
     if path is None:
         return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
 
-    zip_path = raw_files.build_take_zip(path)
+    if not raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False):
+        return jsonify({"ok": False, "message": "A download is already in progress"}), 429, {"Retry-After": "5"}
 
-    @after_this_request
-    def _cleanup(response):
+    # Two release paths for one acquire: guarded_stream()'s generator-finally
+    # covers a GET whose body is iterated (to completion, or aborted mid-
+    # stream); call_on_close covers a HEAD, whose body Werkzeug never
+    # iterates -- the generator's own code, including that finally, never
+    # runs, so the acquire above would otherwise leak on every HEAD. _Permit
+    # makes it safe for whichever of the two actually fires to be the one
+    # that releases.
+    permit = raw_files._Permit(raw_files.DOWNLOAD_SEMAPHORE)
+    response = Response(
+        stream_with_context(raw_files.guarded_stream(raw_files.stream_take_zip(path), sem=permit)),
+        mimetype="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}.zip"'},
+    )
+    response.call_on_close(permit.release)
+    return response
+
+
+@settings_editor_bp.route("/api/raw/takes/<name>/files", methods=["GET"])
+def raw_take_manifest(name):
+    """Feeds the folder-picker client path (W10): the file list and sizes
+    it needs before it can start writing into a chosen directory."""
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
+    if path is None:
+        return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
+
+    files = []
+    total_bytes = 0
+    for f in sorted(path.rglob("*")):
+        if not f.is_file():
+            continue
         try:
-            zip_path.unlink(missing_ok=True)
+            stat = f.stat()
         except OSError:
-            logger.warning("Could not remove temp zip %s", zip_path)
-        return response
+            continue
+        files.append({"name": str(f.relative_to(path)), "size_bytes": stat.st_size, "mtime": stat.st_mtime})
+        total_bytes += stat.st_size
 
-    return send_file(zip_path, as_attachment=True, download_name=f"{name}.zip")
+    return jsonify({
+        "ok": True,
+        "take": name,
+        "storage": path.parent.name,
+        "file_count": len(files),
+        "total_bytes": total_bytes,
+        "recording": name in _recording_take_names(),
+        "files": files,
+    })
+
+
+@settings_editor_bp.route("/api/raw/takes/<name>/files/<path:filename>", methods=["GET"])
+def raw_take_file(name, filename):
+    """Per-file fetch for the folder-picker path. werkzeug's safe_join
+    (inside send_from_directory) is the traversal guard here, not
+    raw_files.resolve_take -- but resolve_take still confines *name* to a
+    real take dir before *path* is ever handed to it."""
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
+    if path is None:
+        return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
+    return send_from_directory(path, filename, conditional=True, max_age=0)
 
 
 @settings_editor_bp.route("/api/raw/bulk", methods=["POST"])
@@ -509,6 +802,18 @@ def bulk_raw_action():
     names = body.get("names") or []
     if action != "delete" or not isinstance(names, list):
         return jsonify({"ok": False, "message": "Expected {action: 'delete', names: [...]}"}), 400
+
+    # Whole-request refusal, not a per-name skip: a partial delete that
+    # silently dropped the recording take would be worse than a refusal the
+    # operator can see. Duplicate-name ambiguity across /media/RAW and
+    # /media/RAW1 is a separate, still-open issue -- bulk stays name-only.
+    blocked = _recording_take_names() & set(names)
+    if blocked:
+        return jsonify({
+            "ok": False,
+            "message": "Refusing to delete while recording",
+            "recording": sorted(blocked),
+        }), 409
 
     results = {}
     for name in names:
@@ -573,3 +878,175 @@ def format_raw_drive():
         "ok": False,
         "message": "Format failed — drive did not remount. Check the cinemate log.",
     }), 500
+
+
+# ── i2c pane ─────────────────────────────────────────────────────────────
+@settings_editor_bp.route("/api/hardware", methods=["GET"])
+def get_hardware():
+    """What is on the bus right now, plus both clocks.
+
+    Probed per request rather than read from the drivers' cached flags:
+    AnalogControls and SsdMonitor decide once at startup and never look again,
+    and none of those objects is reachable from a request anyway -- they are
+    locals in main(). See hardware_probe for why the drivers themselves are
+    not used to answer this.
+    """
+    settings = current_app.config.get("SETTINGS") or {}
+    oled_settings = (settings.get("output_peripherals") or {}).get("oled") or {}
+    return jsonify({
+        "ok": True,
+        "bus": f"i2c-{hardware_probe.I2C_BUS}",
+        "devices": hardware_probe.detect_devices(oled_settings),
+        "clocks": {
+            "system": hardware_probe.system_time(),
+            "rtc": hardware_probe.read_rtc_time(),
+        },
+    })
+
+
+@settings_editor_bp.route("/api/hardware/rtc/sync", methods=["POST"])
+def sync_rtc():
+    """Copy the system clock onto the RTC.
+
+    Deliberately not routed through the `set rtc time` CLI command. That runs
+    `sudo hwclock --systohc` under os.system inside the dispatcher's lock, with
+    no -n, no timeout and no exit-status check, so on a machine whose sudoers
+    lacks a NOPASSWD rule it blocks on a console password prompt and starves
+    every other CLI, serial and HTTP command -- and it reports success either
+    way. This runs it with -n, checks the status, and reads the clock back.
+    """
+    result = hardware_probe.sync_rtc_to_system()
+    status = 200 if result["ok"] else 500
+    return jsonify(result), status
+
+
+# ── live log ─────────────────────────────────────────────────────────────
+# Enough history to still hold a camera start after a busy stretch: the
+# encoder prints its configuration once, and that line is the one worth
+# reaching for when a take comes out wrong.
+LOG_TAIL_LINES = 800
+LOG_MAX_LINE = 2000
+
+
+# The console mirrors the CLI's colours. The tables are imported rather than
+# restated here: they are the CLI's, and a second copy would drift the moment
+# a module is added to one and not the other.
+_LOG_LINE = re.compile(r"^[\d\-]+ [\d:.]+: ([A-Z]+): (\S+)")
+
+
+def _line_colour(line: str) -> str:
+    """The colour ColoredFormatter would have given this line.
+
+    system.log is written by the plain file handler, so it carries no escape
+    codes to reuse -- the level and module are re-read from the text and put
+    back through the same lookup the console formatter uses: module first,
+    level as the fallback, dark_grey when neither is known.
+    """
+    from module.logger import ColoredFormatter
+
+    match = _LOG_LINE.match(line)
+    if not match:
+        return "dark_grey"
+    level, module = match.group(1), match.group(2)
+    entry = ColoredFormatter.MODULE_COLORS.get(module)
+    if entry:
+        return entry["color"]
+    return ColoredFormatter.LEVEL_COLORS.get(level, "dark_grey")
+
+
+# libcamera writes its own ANSI colour codes to stdout, cinepi-raw passes them
+# through, and cinemate logs the line verbatim -- so system.log carries escape
+# sequences that a browser renders as literal "[1;32m" rubbish mid-message.
+# The console colours a line by its module, so the embedded codes are noise
+# either way.
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def _log_event(line: str) -> str:
+    clean = _ANSI.sub("", line)
+    payload = json.dumps({"t": clean[:LOG_MAX_LINE], "c": _line_colour(clean)})
+    return f"data: {payload}\n\n"
+
+
+def _log_path() -> Path:
+    from module.logger import log_directory
+    return Path(log_directory()) / "system.log"
+
+
+def _tail_lines(path: Path, count: int) -> list[str]:
+    """The last *count* lines, read backwards so a large log stays cheap."""
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            end = handle.tell()
+            block, data, newlines = 8192, b"", 0
+            while end > 0 and newlines <= count:
+                step = min(block, end)
+                end -= step
+                handle.seek(end)
+                chunk = handle.read(step)
+                data = chunk + data
+                newlines += chunk.count(b"\n")
+        text = data.decode("utf-8", errors="replace")
+        return text.splitlines()[-count:]
+    except OSError:
+        return []
+
+
+@settings_editor_bp.route("/api/logs", methods=["GET"])
+def stream_logs():
+    """The real system.log, tailed.
+
+    The restart console used to replay a hardcoded script. This is the actual
+    file the logger writes, so it carries runtime messages too, not just what
+    happens around a restart.
+
+    The file is tailed rather than the logger's queue being shared out: that
+    queue has a single consumer, so a second reader would steal records from
+    whoever else is draining it, and every extra browser tab would compete for
+    the same lines. A file has as many readers as it likes.
+    """
+    path = _log_path()
+
+    def gen():
+        for line in _tail_lines(path, LOG_TAIL_LINES):
+            yield _log_event(line)
+        yield ": backlog-end\n\n"
+
+        handle = None
+        inode = None
+        last_beat = time.monotonic()
+        try:
+            while True:
+                try:
+                    if handle is None:
+                        handle = path.open("r", errors="replace")
+                        handle.seek(0, os.SEEK_END)
+                        inode = os.fstat(handle.fileno()).st_ino
+                    line = handle.readline()
+                    if line:
+                        yield _log_event(line.rstrip())
+                        continue
+                    # Nothing new. Has the file been rotated out from under us?
+                    try:
+                        if os.stat(path).st_ino != inode:
+                            handle.close()
+                            handle = None
+                            continue
+                    except OSError:
+                        pass
+                except OSError:
+                    if handle is not None:
+                        handle.close()
+                    handle = None
+
+                now = time.monotonic()
+                if now - last_beat >= 15.0:
+                    yield ": ping\n\n"
+                    last_beat = now
+                time.sleep(0.4)
+        finally:
+            if handle is not None:
+                handle.close()
+
+    return Response(stream_with_context(gen()), mimetype="text/event-stream")

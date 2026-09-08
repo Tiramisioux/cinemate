@@ -1,8 +1,8 @@
 # Recovery console
 
-`cinemate-recovery.service` is a small, deliberately ugly web console on `:8080` for the moment Cinemate will not start. It lets you see why, edit `settings.jsonc` and `config.txt`, and restart Cinemate — from a phone, over the camera's own hotspot, with no laptop and no SSH.
+`cinemate-recovery.service` is a small, deliberately ugly web console on `:8080` for the moment CineMate will not start. It lets you see why, edit `settings.jsonc` and `config.txt`, and restart CineMate — from a phone, over the camera's own hotspot, with no laptop and no SSH.
 
-It is not a replacement for the [Web GUI](web-gui.md) or the [Web API](web-api.md). Those need Cinemate itself to be running. This console is the thing that still works when Cinemate is not.
+It is not a replacement for the [Web GUI](web-gui.md) or the [Web API](web-api.md). Those need CineMate itself to be running. This console is the thing that still works when CineMate is not.
 
 ## Reaching it
 
@@ -14,14 +14,14 @@ http://10.42.0.1:8080
 
 That is the fixed address of the hotspot interface itself — it does not change, even when `settings.jsonc` is broken and the SSID has fallen back to a cached or default name — and it always works while connected to the hotspot. If your device reaches the Pi some other way (Ethernet, or joined to the same Wi-Fi), `http://cinepi.local:8080` works too, via mDNS.
 
-The recovery console runs as its own root systemd service with no dependency on `cinemate-autostart.service`, so it stays reachable through a Cinemate crash, a corrupted install, or Redis being down.
+The recovery console runs as its own root systemd service with no dependency on `cinemate-autostart.service`, so it stays reachable through a CineMate crash, a corrupted install, or Redis being down.
 
 ## What it can do
 
 | Page | Purpose |
 |---|---|
 | **Status** (`/`) | State of all four services, the active hotspot credential rung, disk free space, uptime |
-| **Why it failed** (`/why`) | The same startup-failure text Cinemate prints on the HDMI monitor, rendered for a phone screen |
+| **Why it failed** (`/why`) | The same startup-failure text CineMate prints on the HDMI monitor, rendered for a phone screen |
 | **Log** (`/log`) | Recent journal entries for `cinemate-autostart`, `wifi-hotspot`, or `storage-automount` |
 | **Edit settings.jsonc** (`/edit/settings`) | Edit and save `settings.jsonc`, with automatic backup and validation |
 | **Edit config.txt** (`/edit/config`) | Edit `/boot/firmware/config.txt` — off by default; see below |
@@ -32,7 +32,7 @@ Only three services can be restarted or stopped from here: `cinemate-autostart`,
 
 When you save `settings.jsonc`, the console validates it before writing, using the best check available:
 
-1. If the system Python 3 interpreter and the Cinemate source tree are both present, it runs the *exact same* loader Cinemate itself uses — so a rejected save shows you the exact error, with line and column, that you would otherwise only see on the HDMI monitor.
+1. If the system Python 3 interpreter and the CineMate source tree are both present, it runs the *exact same* loader CineMate itself uses — so a rejected save shows you the exact error, with line and column, that you would otherwise only see on the HDMI monitor.
 2. If the source tree is missing or corrupted, it falls back to a plain JSON syntax check.
 3. If neither is available, the file is written anyway and labelled **unvalidated** — refusing to save would leave you unable to fix a file that is already broken. A backup is taken first regardless, so nothing is lost either way.
 
@@ -108,4 +108,4 @@ sudo make -C /home/pi/cinemate/services disable-cinemate-recovery
 
 ## Security
 
-The console runs as root and can restart Cinemate and rewrite `config.txt`. Read-only pages (status, why, log) are always reachable without a token, so a locked-out operator can still diagnose. Any page that changes something — restarting a service, saving a file — is logged to the journal with the client's IP address, and is gated behind the `token` setting once it is non-empty.
+The console runs as root and can restart CineMate and rewrite `config.txt`. Read-only pages (status, why, log) are always reachable without a token, so a locked-out operator can still diagnose. Any page that changes something — restarting a service, saving a file — is logged to the journal with the client's IP address, and is gated behind the `token` setting once it is non-empty.

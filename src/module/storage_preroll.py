@@ -113,6 +113,21 @@ class StoragePreroll:
             )
             return False
 
+        # No usable camera mode table (no camera at all, or a physically
+        # attached sensor that isn't a configured/known model): an automatic
+        # pre-roll would be a pointless stress-write cycle against a
+        # recorder with no valid fps/mode target. Manual requests
+        # (force=True) stay available and let start_recording() log why it
+        # can't record, same as any other recording command in the degraded
+        # state.
+        if not force and not self.sensor_detect.res_modes:
+            logging.info(
+                "Skipping automatic storage pre-roll (%s): no usable camera "
+                "mode table",
+                reason,
+            )
+            return False
+
         with self._active_lock:
             if self._active:
                 return False

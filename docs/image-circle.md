@@ -22,7 +22,7 @@ The fraction is not the sensor diagonal. It is a 1950s TV-tube convention: a "1-
 
 Rule of thumb: real image circle ≈ fraction × 16 mm.
 
-| Lens marking | Image circle (mm) | Covers (Cinemate sensors) |
+| Lens marking | Image circle (mm) | Covers (CineMate sensors) |
 | --- | --- | --- |
 | `1/3"` | 6.0 | none fully — marginal on IMX296 |
 | `1/2.9"` | 6.2 | IMX296 (exact, no margin) |
@@ -106,7 +106,7 @@ The HQ and Global Shutter cameras have an adjustable back-focus ring (12.5–22.
 
 ## Other markings
 
-| Marking | Meaning | On a Cinemate rig |
+| Marking | Meaning | On a CineMate rig |
 | --- | --- | --- |
 | `8mm` | Fixed focal length | Fine |
 | `2.8-12mm` | Varifocal — refocus after zooming | Fine; not for zooming during a take |
@@ -117,7 +117,7 @@ The HQ and Global Shutter cameras have an adjustable back-focus ring (12.5–22.
 | `DC` (auto iris) | Camera-driven iris, 4-pin cable | Avoid — stays closed without drive electronics, image goes black |
 | `P-iris` | Stepper-motor iris, needs camera support | Avoid — no P-iris support |
 
-All four Cinemate camera boards sit behind an IR-cut filter by default, so IR correction is optional. The StarlightEye can switch its filter off electronically — for IR shooting there, an IR-corrected lens holds focus.
+All four CineMate camera boards sit behind an IR-cut filter by default, so IR correction is optional. The StarlightEye can switch its filter off electronically — for IR shooting there, an IR-corrected lens holds focus.
 
 ## What each sensor needs
 

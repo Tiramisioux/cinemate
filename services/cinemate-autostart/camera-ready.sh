@@ -3,15 +3,21 @@
 # camera-ready.sh - Camera Detection Verification Script
 #
 # This script waits for the camera sensor to be properly initialized before
-# allowing the Cinemate service to start. This solves the "black screen on boot"
-# issue where the GUI starts before the IMX283 (or other) sensor is ready.
+# systemd launches Cinemate. This solves the "black screen on boot" issue
+# where the GUI starts before the IMX283 (or other) sensor is ready.
+#
+# The wait is ADVISORY, not a gate. The unit runs this as
+# `ExecStartPre=-/usr/local/bin/camera-ready.sh` (note the leading `-`), so a
+# non-zero exit here does not stop Cinemate: it starts anyway and shows a
+# CAMERA NOT FOUND message. Exiting 1 only means "we waited and gave up",
+# which shortens the wait for a boot that was never going to find a camera.
 #
 # Used by: systemd cinemate-autostart.service
 # Location: /usr/local/bin/camera-ready.sh
 #
 # Exit Codes:
 #   0 - Camera detected and ready
-#   1 - Camera not detected after timeout
+#   1 - Camera not detected after timeout (advisory -- Cinemate still starts)
 #
 # Author: Cinemate Community
 # Version: 1.0.0
@@ -21,7 +27,17 @@
 set -euo pipefail
 
 # Configuration
-readonly MAX_ATTEMPTS=30           # Maximum number of detection attempts
+#
+# MAX_ATTEMPTS was 30. The gate exists to fix a real black-screen-on-boot
+# race with slow sensors, so it stays -- but since C3.4 made it advisory
+# (`ExecStartPre=-`), a missing camera is a supported state rather than a
+# startup failure, and the full 30 s was being burned on every no-camera
+# boot before main.py even started (system-review F-236). 8 s still covers
+# a slow sensor's enumeration while cutting the no-camera penalty by more
+# than two thirds. Raise it again if a sensor is ever seen needing longer;
+# the cost of being wrong here is a slower boot, not a broken one, because
+# CineMate now starts either way.
+readonly MAX_ATTEMPTS=8            # Maximum number of detection attempts
 readonly RETRY_INTERVAL=1          # Seconds between attempts
 readonly LOG_TAG="camera-ready"    # Tag for systemd journal logging
 
@@ -174,7 +190,7 @@ main() {
     # Timeout reached - camera not detected
     log_error "Camera detection timeout after ${MAX_ATTEMPTS} attempts (${MAX_ATTEMPTS}s)"
     print_error "Camera not detected after ${MAX_ATTEMPTS} seconds"
-    print_error "Cinemate may start with black screen"
+    print_error "Cinemate will start anyway, showing CAMERA NOT FOUND in the preview area of both GUIs"
 
     # Log helpful troubleshooting info
     log_error "Troubleshooting hints:"

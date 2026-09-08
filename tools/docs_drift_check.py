@@ -166,14 +166,37 @@ def check_cites(repo: Path) -> list[str]:
 
 
 def check_methods(repo: Path) -> list[str]:
-    doc = (repo / DOCS / "controller-methods.md").read_text(encoding="utf-8")
-    named = set(re.findall(r"`([a-z_][a-z0-9_]*)\(", doc))
+    """The controller methods are documented in the commands reference.
+
+    They used to live in their own controller-methods.md, written as
+    ``name()`` with parentheses. That page was folded into cli-commands.md,
+    where each row names its method in a "Method" column and without the
+    parens -- so this reads that column rather than grepping for a call shape
+    that no longer appears anywhere in the docs.
+    """
+    doc = (repo / DOCS / "cli-commands.md").read_text(encoding="utf-8")
+    named: set[str] = set()
+    method_col: int | None = None
+    for line in doc.splitlines():
+        if not line.startswith("|"):
+            method_col = None          # a table ended; wait for the next header
+            continue
+        cells = line.split("|")
+        if method_col is None:
+            headers = [c.strip().lower() for c in cells]
+            if "method" in headers:
+                method_col = headers.index("method")
+            continue
+        if set(line) <= set("|- :"):   # the header underline
+            continue
+        if method_col < len(cells):
+            named.update(re.findall(r"`([a-z_][a-z0-9_]*)`", cells[method_col]))
     real = controller_methods(repo)
     public = {m for m in real if not m.startswith("_")}
     missing = sorted(named - real)
     undocumented = sorted(public - named)
     return [
-        f"names in controller-methods.md: {len(named)} · "
+        f"method names in cli-commands.md: {len(named)} · "
         f"CinePiController methods: {len(real)} ({len(public)} public)",
         f"DOCUMENTED BUT ABSENT on the controller ({len(missing)}): "
         f"{', '.join(missing) or '-'}",
@@ -239,13 +262,35 @@ def check_settings(repo: Path) -> list[str]:
     h2 = {m.group(1) for m in re.finditer(r"^##\s+([a-z_][a-z0-9_]*)\s*$", doc, re.M)}
     h3 = {m.group(1) for m in re.finditer(r"^###\s+([a-z_][a-z0-9_]*)\s*$", doc, re.M)}
 
+    # The GUI-first rewrite renamed every heading to what the settings editor
+    # calls that section ("## Value steps", not "## arrays") and kept the raw
+    # key beneath it as an explicit anchor, so the old deep links still land.
+    # Those anchors are what names a section now, at either level.
+    anchors = {m.group(1) for m in re.finditer(r'<a id="([a-z_][a-z0-9_]*)"></a>', doc)}
+    named2 = h2 | anchors
+    named3 = h3 | anchors
+
+    # `settings` and `system` are containers, not GUI sections: the page
+    # documents their children under the headings the editor uses ("Welcome
+    # screen", "Wi-Fi hotspot", "Timing & sync") and never names the wrapper.
+    # Count such a container as covered only when every child it holds is
+    # actually written about, so a genuinely new undocumented block still fails.
+    for top in sorted(tops - named2):
+        children = live[top]
+        if isinstance(children, dict) and children and all(
+                re.search(rf"\b{re.escape(child)}\b", doc) for child in children):
+            named2.add(top)
+
     return [
-        f"top-level sections in settings.jsonc: {len(tops)} · `##` headings: {len(h2)}",
-        f"  UNDOCUMENTED top-level ({len(tops - h2)}): {', '.join(sorted(tops - h2)) or '-'}",
-        f"  HEADING WITH NO SECTION ({len(h2 - tops)}): {', '.join(sorted(h2 - tops)) or '-'}",
-        f"second-level keys: {len(seconds)} · `###` headings: {len(h3)}",
-        f"  HEADING WITH NO KEY ({len(h3 - seconds)}): "
-        f"{', '.join(sorted(h3 - seconds)) or '-'}",
+        f"top-level sections in settings.jsonc: {len(tops)} · "
+        f"headings + anchors: {len(named2)}",
+        f"  UNDOCUMENTED top-level ({len(tops - named2)}): "
+        f"{', '.join(sorted(tops - named2)) or '-'}",
+        f"  HEADING WITH NO SECTION ({len(named2 - tops - seconds)}): "
+        f"{', '.join(sorted(named2 - tops - seconds)) or '-'}",
+        f"second-level keys: {len(seconds)} · `###` headings + anchors: {len(named3)}",
+        f"  HEADING WITH NO KEY ({len(named3 - seconds - tops)}): "
+        f"{', '.join(sorted(named3 - seconds - tops)) or '-'}",
         "  (a `###` heading may legitimately document a nested block one level deeper; "
         "treat these as candidates, not verdicts)",
     ]

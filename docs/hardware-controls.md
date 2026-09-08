@@ -3,173 +3,201 @@
 !!! note ""
     All hardware on this page is optional. Add what you need, when you need it.
 
-Physical controls are mapped in [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply call the same commands that the CLI and the web GUI use. See [controller methods](controller-methods.md) for the full list of available commands.
+| Hardware                                                                          | Connects to                          | Typical use                                     |                                                                 |
+| --------------------------------------------------------------------------------- | ------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- |
+| Push buttons                                                                      | any free GPIO pin + GND              | start/stop recording, change resolution         | ![Tactile push button](images/hardware/button.jpg)              |
+| Two- and three-way switches                                                       | GPIO pins + GND                      | zoom, shutter sync mode, fps presets            | ![SPDT toggle switch](images/hardware/switch.jpg)               |
+| Rotary encoders                                                                   | two GPIO pins (+ button pin) + GND   | stepping ISO, shutter angle, fps, WB            | ![Rotary encoder](images/hardware/encoder.jpg)                  |
+| Potentiometers                                                                    | a Grove Base HAT analog port         | dials for ISO, shutter angle, fps, WB           | ![Panel-mount potentiometer](images/hardware/pot.jpg)           |
+| [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/)   | GPIO header                          | analog inputs for potentiometers                | ![Grove Base HAT](images/hardware/grovehat.jpg)                 |
+| [Adafruit quad rotary encoder](https://www.adafruit.com/product/5752)             | I²C (STEMMA QT or SDA/SCL pins)      | four dials and push buttons in one module       | ![Adafruit quad rotary encoder](images/hardware/quadrotary.jpg) |
+| [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) | PCIe (Raspberry Pi 5 only)           | fast storage (CFexpress Type B)                 | ![CFE Hat](images/hardware/cfehat.jpg)                          |
+| LEDs                                                                              | a GPIO out pin + GND, via a resistor | rec tally lamp                                  | ![5mm LED](images/hardware/led.jpg)                             |
+| Resistor                                                                          | in series with an LED                | limits the LED's current; 220 Ω is a good value | ![220 Ω resistor](images/hardware/resistor.jpg)         |
+| I²C OLED display                                                                  | I²C (SDA/SCL pins)                   | status screen: ISO, timecode, space left        | ![SSD1306 OLED display](images/hardware/oled.jpg)               |
+| Real-time clock                                                                   | I²C (SDA/SCL pins)                   | keeps the clock across a power cycle, Pi 4 only | ![DS3231 real-time clock module](images/hardware/rtc.jpg)       |
 
+Physical controls are mapped in [the settings file](settings-json.md). Type `editsettings` on the Pi to open it or use the Web UI. Changes apply at the next CineMate start. Controls call the same commands as the CLI and web GUI, listed under [commands reference](cli-commands.md).
 
-| Hardware | Connects to | Typical use | Extra parts needed |
-| --- | --- | --- | --- |
-| Push buttons | any free GPIO pin + GND | start/stop recording, change resolution | none |
-| Two- and three-way switches | GPIO pins + GND | zoom, shutter sync mode, fps presets | none |
-| Rotary encoders | two GPIO pins (+ optional button pin) | stepping through ISO, shutter angle, fps, WB | none |
-| [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/) | GPIO header | dials for ISO, shutter angle, fps, WB | Potentiometers |
-| Adafruit quad rotary encoder | I²C (STEMMA QT or SDA/SCL pins) | four dials + push buttons in one module | [Adafruit #5752](https://www.adafruit.com/product/5752) |
-| [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) | PCIe (Raspberry Pi 5 only) | for fast storage| CFexpress Type B card |
+!!! info "CineMate uses BCM pin numbering"
+    The numbers CineMate wants are the **GPIO n** labels, not the physical pin positions.
+    GPIO 7 is physical pin 26, and GPIO 21 is physical pin 40. Full interactive reference:
+    [pinout.xyz](https://pinout.xyz).
 
-!!! info ""
-    Cinemate uses [BCM pin numbering](https://pinout.xyz)
+    ![Raspberry Pi 40-pin GPIO header, BCM numbering](images/hardware/gpio-pinout.png)
 
-## Push buttons
+## GPIO controls in the settings editor
 
-Any momentary push button works. Wire one leg to a GPIO pin and the other leg to ground — no resistor needed, the Pi's internal pull-up is used.
+## Buttons
 
-One button can trigger several different actions:
+![The add-control buttons at the foot of the GPIO in section](images/gui-add-control-row.png)
 
-| Gesture | Fires when |
+1. On the **settings.jsonc** tab, click **Buttons & switches** in the left rail.
+2. Click **+ Add button**. A row appears at the bottom, GPIO **None**, one line: **Press** → **No action**.
+
+    ![A button the moment it is added: no pin, PRESS, no action](images/gui-new-button-card.png)
+
+3. Open the row's **GPIO** dropdown and pick **GPIO 26**, or any pin listed in black. The stock file holds 7, 9, 10, 11, 13, 18, 21, 22 and 24.
+4. **Remap this control?** appears, reading "Move a button to GPIO 26?". Click **Remap**.
+5. On the **Press** line, open **COMMAND** and pick **Start / stop recording**, under **Record**.
+6. Click **Save changes**.
+
+CineMate restarts and the button is live.
+
+### More gestures on the same button
+
+| Gesture | Fires |
 | --- | --- |
-| `press_action` | immediately on press |
-| `single_click_action` | one short click |
-| `double_click_action` | two quick clicks |
-| `triple_click_action` | three quick clicks |
-| `hold_action` | button held for 3 seconds |
+| **Press** | Immediately on press |
+| **Single click** | One short click, 0.5 s after release |
+| **Double click** | Two quick clicks |
+| **Triple click** | Three or more quick clicks |
+| **Hold** | Button held for 3 seconds |
 
-The prebuilt image ships with this mapping:
 
-| GPIO | Action |
-| --- | --- |
-| 7 | press: start/stop recording |
-| 10 | press: start/stop recording |
-| 13 | single click: change resolution · double click: restart Cinemate · triple click: reboot the Pi · hold: mount/unmount drive |
+![One button carrying five gestures](images/gui-gpio-multi-action.png)
 
-A minimal button entry in `settings.jsonc` looks like this:
+### The argument box
 
-```json
-"buttons": [
-  {
-    "pin": 7,
-    "pull_up": true,
-    "debounce_time": 0.1,
-    "press_action": {"method": "rec"}
-  }
-]
-```
+The box after the command is its argument. This can be used when you want the control to set a specific value.
+
+| Blank                      | Each trigger                               |
+| -------------------------- | ------------------------------------------ |
+| **Cycle through the list** | Steps to the next value in **Value steps** |
+| **Toggle on / off**        | Inverts the current flag                   |
+| **Needs a value —**        | Does nothing until you pick one            |
+
+### 2-way and 3-way switches
+
+Switches react to position. At startup CineMate reads the current position and runs its line, so the camera always matches the switch.
+
+**+ Add 2‑way switch** creates one pin and two lines:
+
+| Line    | Runs when            |
+| ------- | -------------------- |
+| **On**  | The pin reads closed |
+| **Off** | The pin reads open   |
+
+**+ Add 3‑way switch** creates three pin dropdowns, **pin 1**, **pin 2**, **pin 3**, and three lines:
+
+| Line           | Runs when                 |
+| -------------- | ------------------------- |
+| **Position 1** | pin 1 is the active input |
+| **Position 2** | pin 2 is the active input |
+| **Position 3** | pin 3 is the active input |
+
+All three pins must be set. With no input active, no line runs.
+
+Typical 2‑way pairing: **Set preview zoom** at **Set to 2×** on **On**, **Set to 1×** on **Off**.
+
+### Rotary encoders
+
+**+ Add rotary encoder** creates three pin dropdowns, **CLK**, **DT** and **BTN**.
+
+| Pin     | Required                                             |
+| ------- | ---------------------------------------------------- |
+| **CLK** | Yes                                                  |
+| **DT**  | Yes                                                  |
+| **BTN** | No; leave **None** if the encoder has no push button |
+
+The row starts with a single **Button press** line; **+ Add** offers the rest.
+
+![A single control row: pin, gesture, command](images/gui-gpio-control-row.png)
+
+| Line             | Fires                              |
+| ---------------- | ---------------------------------- |
+| **Button press** | Press of the encoder's push button |
+| **Button hold**  | Push button held                   |
+| **Rotate CW**    | One step clockwise                 |
+| **Rotate CCW**   | One step counter‑clockwise         |
+
+!!! note ""
+    Each encoder row carries an `enabled` flag in `hardware_controls.rotary_encoders`. The stock file
+    ships it `true`; set it to `false` to keep a row's wiring on file while switching it off. A row
+    with no `enabled` key at all is on.
+
+### The Adafruit Quad Rotary Encoder i²c board
+
+Sits below the GPIO in list with its own **+ Add encoder**. Its rows address the board's four encoders, not GPIO pins, so the left column offers **None** and **Encoder 0** through **Encoder 3**.
+
+![One dial of the quad rotary board](images/gui-quad-rotary-row.png)
+
+**+ Add encoder** claims the lowest free encoder index. Set the **Turn** line, what rotating the dial cycles, then add button gestures with **+ Add** as on a GPIO button.
+
+**Turn** offers **Nothing**, **ISO**, **Shutter angle**, **Frame rate**, **White balance**, **Resolution**, **Preview zoom**, **Nominal shutter angle**, **HDR threshold low**, **HDR threshold high**, **HDR blend**, **HDR gain adder**.
+
+The push button below **Turn** takes the full button grammar.
+
+With all four configured, **+ Add encoder** reports "All four encoders are already configured". The stock file configures all four encoders and ships the board on: `input_peripherals.quad_rotary_controller.enabled` is `true`, and CineMate only sets the board up when it is. Set it to `false` if you are not running the board.
+
+### GPIO out: tally and slate tone
+
+!!! warning "Put a resistor in series with an LED"
+    A GPIO pin drives 3.3 V and an LED is not current-limited on its own. Wired straight to the
+    pin it will draw more than the pin can safely give and can damage both. Put a resistor in
+    series with it, typically **220 Ω**, between the pin and the LED's long leg (anode), with the
+    short leg (cathode) to GND. Anything from about 150 Ω to 1 kΩ works; higher is dimmer and
+    safer. A relay or an opto-isolated tally box has its own driver and does not need one.
+
+
+![The GPIO out section](images/gui-gpio-out.png)
+
+1. Click **Rec tally & GPIO out** in the left rail.
+2. Click **+ Add pin**. A row appears with **Output** on **None** and a **While rec** line set to **REC tally**.
+3. Pick the pin from **Output** and confirm the remap.
+4. For a sync tone instead of a lamp, change **While rec** to **REC tone**.
+
+**REC tone** reveals an **at … Hz** field in the row, and one card below the list:
+
+| Card                                 | Sets                                                        |
+| ------------------------------------ | ----------------------------------------------------------- |
+| **Mute the tone on a dropped frame** | Cuts the tone for about one frame when the camera drops one |
+
+One frequency serves every tone pin, edited in the row next to the pin it applies to. Duty cycle is
+fixed at 50% and has no field. The card is hidden while no pin is set to **REC tone**. Add as many
+tally and tone rows as you are wired for.
 
 !!! info ""
-    Some push buttons are wired closed = 1 and open = 0. At startup Cinemate detects buttons that read as pressed and reverses them automatically, so both button types work without any configuration.
-
-One button can also act as a modifier for another (hold one, press the other) via the `combined_actions` section — see [settings.jsonc](settings-json.md#combined_actions).
-
-## Switches
-
-Latching switches work like buttons, but Cinemate reacts to the *state* instead of a click. When the switch changes position, the matching action runs. At startup, Cinemate reads the current position and applies it, so the camera always matches the physical switch.
-
-**Two-way switches** use one GPIO pin. The prebuilt image maps:
-
-| GPIO | ON | OFF |
-| --- | --- | --- |
-| 24 | digital zoom 2× | zoom 1× |
-| 22 | shutter angle sync mode on | sync mode off |
-
-```json
-"two_way_switches": [
-  {
-    "pin": 24,
-    "state_on_action":  {"method": "set_zoom", "args": [2]},
-    "state_off_action": {"method": "set_zoom", "args": [1]}
-  }
-]
-```
-
-**Three-way switches** use three GPIO pins, one per position — handy for fixed fps presets:
-
-```json
-"three_way_switches": [
-  {
-    "pins": [5, 6, 13],
-    "state_0_action": {"method": "set_fps", "args": [24]},
-    "state_1_action": {"method": "set_fps", "args": [25]},
-    "state_2_action": {"method": "set_fps", "args": [50]}
-  }
-]
-```
-
-## Rotary encoders
-
-Standard rotary encoders (for example KY-040) connect straight to the GPIO header. Each encoder uses two pins (`clk_pin` and `dt_pin`), plus an optional third pin if the encoder has a built-in push button. The push button uses the same action grammar as the [buttons](#push-buttons) section.
-
-No encoders are enabled in the stock settings file. A typical entry — turning the dial steps through ISO, pressing it locks the value:
-
-```json
-"rotary_encoders": [
-  {
-    "enabled": true,
-    "clk_pin": 9,
-    "dt_pin": 11,
-    "button_pin": 10,
-    "encoder_actions": {
-      "rotate_clockwise":        {"method": "inc_iso"},
-      "rotate_counterclockwise": {"method": "dec_iso"}
-    },
-    "button_actions": {
-      "press_action": {"method": "set_iso_lock"}
-    }
-  }
-]
-```
-
-The `inc_`/`dec_` commands step through the value tables defined in `settings.jsonc` — see [arrays](settings-json.md#arrays).
-
-## Grove Base HAT
-
-The Pi has no analog inputs, so potentiometers need an analog-to-digital converter. Cinemate supports the [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/), which stacks on the GPIO header and adds analog ports. Plug in Grove rotary angle sensors (or wire any 10 kΩ linear pot to a Grove analog port) and map the channels in `settings.jsonc`:
-
-```jsonc
-"pots": [
-  { "channel": 0, "setting": "iso" },
-  { "channel": 2, "setting": "shutter_a" },
-  { "channel": 4, "setting": "fps" }
-]
-```
-
-The HAT is detected automatically at startup; if it is not present, the section is simply ignored. Pot positions snap to the parameter's step table (or to the full range if that [parameter](settings-json.md#arrays) has `free` set), and readings are smoothed with dead zones so values don't flicker between steps.
+    Some push buttons are wired closed = 1 and open = 0. At startup CineMate detects buttons that read as pressed and reverses them, so both types work without special configuration.
 
 !!! info ""
-    Only map channels that actually have a potentiometer connected. Unconnected analog inputs pick up noise and can trigger false readings.
-
-## Adafruit quad rotary encoder
-
-The [Adafruit I2C Quad Rotary Encoder breakout](https://www.adafruit.com/product/5752) packs four rotary encoders — each with a push button and an RGB LED — into one small board. It connects over I²C: either with a STEMMA QT cable or four wires to the Pi header (3V3, GND, SDA on GPIO 2, SCL on GPIO 3).
-
-Support is built in and ships enabled in the stock settings file — safe with no board attached, because the controller is hot-plugged and simply retries. Set `"enabled": false` in the `quad_rotary_controller` section to turn it off. The stock mapping:
-
-| Dial | Turning | Push button |
-| --- | --- | --- |
-| 0 | ISO | press: toggle zoom · hold: safe shutdown |
-| 1 | shutter angle | press: toggle shutter sync mode |
-| 2 | fps | press: toggle fps double |
-| 3 | white balance | single click: change resolution · double click: restart Cinemate · triple click: reboot · hold: mount/unmount drive |
-
-Each dial steps through the same value arrays as the CLI and GPIO encoders. The buttons use the same press/click/hold grammar as the [buttons](#push-buttons) section, so every dial can be remapped freely — see [quad_rotary_controller](settings-json.md#quad_rotary_controller).
-
-The board is hot-pluggable: if it is not found (or gets disconnected), Cinemate retries every few seconds, so you can attach it while the camera is running. The LEDs light up while a button is pressed.
+    Only assign pot channels that have a potentiometer connected. Unconnected analog inputs pick up noise and can trigger false readings.
 
 ## CFE Hat
 
 The [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang adds a CFexpress Type B card slot to the Raspberry Pi 5 over PCIe.
 
-No configuration is needed. Cinemate detects the hat automatically at startup and shows **CFE** as the media type in the GUI. The card follows the same rules as any other recording drive: format it as `exFAT` and label it `RAW` (the settings editor's RAW files pane has a format button that does this for you; `format exfat` in the CLI does the same).
+No configuration needed. CineMate detects the hat at startup and shows **CFE** as the media type. Format the card `exFAT` and label it `RAW`, like any recording drive: the RAW files pane has a format button, `format exfat` does the same in the CLI.
+
+## Real-time clock
+
+Only needed on a **Raspberry Pi 4**. The Pi 5 has an RTC on board; fit its battery and it keeps time
+on its own.
+
+A Pi 4 has no clock that survives a power cycle. Left alone it boots believing it is whenever it last
+shut down, and every take is stamped with that wrong date. A DS3231 module on the I²C pins fixes it.
+
+The system clock corrects itself whenever the Pi can reach the internet — over Ethernet, or over
+Wi-Fi while joined to a network rather than serving its own hotspot. Plugging into a computer that is
+online is enough. That sets the *system* clock only. The module keeps whatever it was last given
+until you copy the corrected time across:
+
+```text
+set rtc time
+```
+
+`time` prints both clocks, so you can check they agree before going out to shoot.
+
+!!! note "The overlay is not managed for you"
+    CineMate owns its own fenced block in `config.txt` and does not put an RTC overlay in it. Add the
+    standard `dtoverlay=i2c-rtc,ds3231` line yourself on the [config.txt tab](config-txt.md), outside
+    the managed block, where it survives updates. Without it there is no `/dev/rtc` for `hwclock` to
+    talk to and both commands above will report that they cannot reach the clock.
 
 ## Outputs and displays
 
-Cinemate can also drive hardware in the other direction:
+- **Rec light (tally LED)** – `hardware_outputs.rec_out_pin` (GPIO 21 stock) goes high while recording.
+- **Rec sync tone** – `hardware_outputs.rec_tone.pin` (GPIO 18 stock) outputs a 1 kHz tone while recording.
+- **I²C OLED display** – an SSD1306 or SSD1309 status screen showing values you choose (ISO, timecode, write speed, disk space…). The SSD1309 takes the same commands and the same addresses as the SSD1306, so it needs no separate setting — it just works. Enable it in `output_peripherals.oled`.
 
-- **Rec light (tally LED)** – pins listed in `hardware_outputs.rec_out_pin` (GPIO 21 in the stock file) go high while recording. Wire an LED with a series resistor (roughly 220–330 Ω) between the pin and GND.
-- **Rec sync tone** – `hardware_outputs.rec_tone.pin` (GPIO 18 in the stock file) outputs a 1 kHz tone while recording, useful for feeding a sync signal to an external recorder.
-- **I²C OLED display** – a small SSD1306-style status screen showing values you choose (ISO, timecode, write speed, disk space…). Enable it in the `output_peripherals.oled` section.
-
-The tally LED and sync tone are configured under [hardware_outputs](settings-json.md#hardware_outputs); the OLED display is under [output_peripherals](settings-json.md#output_peripherals).
-
-## Going further
-
-- [settings.jsonc reference](settings-json.md) – every option for the sections shown above.
-- [Controller methods](controller-methods.md) – all commands you can bind to buttons, switches and dials.
-- [Cinemate terminal commands](cli-commands.md) – try a command in the CLI first, then map it to hardware.
+Reference: [hardware_outputs](settings-json.md#hardware_outputs), [output_peripherals](settings-json.md#output_peripherals), [settings.jsonc](settings-json.md), [CineMate terminal commands](cli-commands.md).

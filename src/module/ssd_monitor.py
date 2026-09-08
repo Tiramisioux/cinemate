@@ -241,7 +241,19 @@ class SSDMonitor:
     # internals
     # ------------------------------------------------------------------
     def _detect_cfe_hat(self) -> bool:
-        """Detect CFE-Hat via I²C (0x34) or PCIe node."""
+        """Detect the CFE Hat by its own I²C controller at 0x34.
+
+        There used to be a fallback here: if 0x34 did not answer, the presence
+        of /sys/bus/platform/drivers/brcm-pcie/1000110000.pcie counted as a
+        hat. That node is the Pi 5's PCIe bridge and is bound on every Pi 5,
+        so the fallback reported a hat on any Pi 5 at all -- and a plain NVMe
+        in the slot was then labelled CFE in the GUI's SYS row. It is a
+        bridge-present test, not a hat-present test.
+
+        0x34 is the hat's latch/LED microcontroller, which is on the hat
+        itself, so it answers only when one is fitted. This is the same probe
+        storage-automount uses, and it has never had the fallback.
+        """
         try:
             bus = smbus.SMBus(1)
             bus.read_byte(0x34)        # any reply ≠ exception means “present”
@@ -250,12 +262,6 @@ class SSDMonitor:
             return True
         except OSError:
             pass
-
-        # ---- PCIe bridge present? ------------------------------------
-        pcie_node = Path("/sys/bus/platform/drivers/brcm-pcie/1000110000.pcie")
-        if pcie_node.exists():
-            logging.info("CFE HAT detected via platform PCIe node")
-            return True
 
         logging.info("No CFE HAT detected")
         return False
@@ -507,9 +513,12 @@ class SSDMonitor:
                 or "driver=uas" in txt):
             return "SSD"
 
-        # CF-Express Hat: PCIe endpoint appears under 1000110000.pcie
+        # PCIe endpoint under the Pi 5's bridge. That is where a CFexpress
+        # card behind the hat shows up -- and equally where a plain NVMe in
+        # the slot shows up, so the hat's own I²C answer is what tells them
+        # apart. Without that check this returned CFE for every NVMe.
         if "1000110000.pcie" in dev_real:
-            return "CFE"
+            return "CFE" if self._cfe_hat_present else "NVMe"
 
         # Generic NVMe controller on PCIe
         if ("driver=nvme"      in txt or

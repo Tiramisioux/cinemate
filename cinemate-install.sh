@@ -101,16 +101,25 @@ LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
 # and 2.7K 16:9 (mode 2A) readout modes on top of the upstream 6.12.y base.
 IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx283-v4l2-driver.git}"
 IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-6.12.y}"
-# Tiramisioux fork of Will Whang's driver. innomaker-v1.0 = upstream main
-# (verified byte-identical to the INNO-MAKER v1.0 vendor driver package,
-# 2026-08-27): WINMODE active-area modes (1920x1080 binned, 3840x2160 12-bit,
-# 3840x2200 16-bit ClearHDR), gates the invalid binned-ClearHDR combo, and its
-# overlay carries the `ccmp` parameter that enables 12-bit CCMP ClearHDR.
-# Pairs with the rp1-cfe Y16 patch (scripts/patch-rp1-cfe.sh) for mono 16-bit.
+# Tiramisioux fork of Will Whang's driver. cinemate-7modes (switched
+# 2026-09-03, replaces innomaker-v1.0 as the default) ships seven modes —
+# three SDR (1920x1080 12-bit binned, 3840x2160 12-bit all-pixel, and a
+# 3840x2160 10-bit RAW10 all-pixel mode up to 90 fps) and four ClearHDR
+# (1920x1080 12-bit binned ClearHDR+CCMP, 3840x2160 12-bit all-pixel
+# ClearHDR+CCMP, 1920x1100 16-bit binned ClearHDR linear, and 3840x2200
+# 16-bit all-pixel ClearHDR linear). The two binned-HDR modes are restored
+# from `6.12.y` (innomaker-v1.0 had dropped them) and are colour-sensor only
+# — mono returns pure BLC pedestal at binned resolutions and stays on the
+# 4K-only 16-bit HDR entry. Also makes 12-bit CCMP ClearHDR default-on for
+# colour (mono still needs the `ccmp` overlay flag below). Gates the invalid
+# binned-ClearHDR combo on mono, and pairs with the rp1-cfe Y16 patch
+# (scripts/patch-rp1-cfe.sh) for mono 16-bit.
+# Verified on hardware.
 # The old `6.12.y` branch (readout dims 3856x2180/1928x1090, no ccmp param)
-# stays selectable via this env var but is no longer the supported default.
+# and `innomaker-v1.0` (dropped the two binned-HDR modes and the RAW10 mode)
+# stay selectable via this env var but are no longer the supported default.
 IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx585-v4l2-driver.git}"
-IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-innomaker-v1.0}"
+IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-cinemate-7modes}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
 # Pi 5 kernel baseline. 6.12.93+rpt is the oldest baseline validated for
@@ -1661,6 +1670,24 @@ $PI_USER ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 $PI_USER ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 $PI_USER ALL=(ALL) NOPASSWD: /usr/bin/systemd-run --no-block --collect --unit=cinemate-restart-trigger -- systemctl restart cinemate-autostart
 $PI_USER ALL=(ALL) NOPASSWD: $CONFIG_TXT_APPLY_HELPER
+# Reboot and power off. CineMate runs as $PI_USER (cinemate-autostart.service
+# sets User=pi), so the reboot verb from the CLI, the GPIO triple-click, the
+# web API and the settings editor's own buttons all need a grant -- there was
+# none. Whether they worked at all depended on the distro's own
+# 010_<user>-nopasswd rule still being in place, and where it had been
+# removed they failed silently, because controller.reboot() ran the command
+# through os.system() and discarded the exit status.
+#
+# The systemctl form rather than /sbin/reboot: an exact, unambiguous path
+# that cannot be reached through a /sbin -> /usr/sbin symlink under a
+# different spelling, matching the systemd-run grant above.
+#
+# NOTE: this heredoc is UNQUOTED, because it has to expand PI_USER and the
+# paths below. Backticks and dollar-paren in these comments are therefore
+# command substitution, not punctuation: a backticked word here EXECUTES, as
+# root. A comment mentioning the reboot verb in backticks was briefly shipped
+# in exactly this block, which ran it. Keep this heredoc free of both.
+$PI_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reboot, /usr/bin/systemctl poweroff
 EOF
     sudo visudo -cf /etc/sudoers.d/pi_cinemate >/dev/null
     detail "sudoers validation passed"

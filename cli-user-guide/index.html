@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli-user-guide/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>CinePi RAW terminal commands - Cinemate Docs</title>
+    <title>CinePi RAW terminal commands - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -110,20 +112,16 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">CinePi RAW terminal commands</a>
     <ul class="current">
@@ -139,7 +137,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#post-processing">Post processing</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#cinematespecific-flags">Cinemate‑specific flags</a>
+    <li class="toctree-l2"><a class="reference internal" href="#cinematespecific-flags">CineMate‑specific flags</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#example-commands">Example commands</a>
         <ul>
@@ -154,14 +152,6 @@
         </ul>
     </li>
     </ul>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -178,7 +168,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -198,11 +188,16 @@
               
 <div class="markdown-body">
   <h1 id="using-cinepi-raw-from-the-terminal">Using CinePi-RAW from the terminal<a class="headerlink" href="#using-cinepi-raw-from-the-terminal" title="Permanent link">#</a></h1>
+<p>You can run <code>cinepi-raw</code> directly — launching the binary yourself from a terminal with your own flags, instead of letting CineMate's process manager (<code>cinepi_multi.py</code>) build the command line and manage the camera lifecycle for you. See <a href="../cinepi-multi/">How CineMate launches CinePi-raw</a> for more information about how CineMate works.</p>
+<p>Running it manually is useful for isolating a problem to <code>cinepi-raw</code> itself (rather than to CineMate's layer on top of it), or for trying a flag combination before wiring it into <code>settings.jsonc</code>. Since <code>cinemate-autostart.service</code> normally holds the camera with its own <code>cinepi-raw</code> child process, stop it first so the two don't fight over the sensor:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>cinemate-autostart
+</code></pre></div>
+<p>Restart it when you're done (<code>sudo systemctl start cinemate-autostart</code>), or reboot.</p>
 <h2 id="checking-available-options">Checking available options<a class="headerlink" href="#checking-available-options" title="Permanent link">#</a></h2>
 <p>Before running the program you can view all command‑line flags with:</p>
 <div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>-h
 </code></pre></div>
-<p>This prints a long list of options supported by the application. It includes the standard parameters from <code>rpicam-apps</code> (such as resolution and exposure settings) plus additional flags specific to the Cinemate.</p>
+<p>This prints a long list of options supported by the application. It includes the standard parameters from <code>rpicam-apps</code> (such as resolution and exposure settings) plus additional flags specific to the CineMate.</p>
 <h2 id="camera-modes">Camera modes<a class="headerlink" href="#camera-modes" title="Permanent link">#</a></h2>
 <p>CinePi-Raw uses <strong>Libcamera</strong> to talk to your Raspberry Pi camera module. Each sensor supports one or more <em>modes</em>, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:</p>
 <div class="highlight"><pre><span></span><code>--mode 2028:1080:12:U
@@ -236,8 +231,8 @@
 <div class="admonition note">
 <p>If you have more than one camera connected to the Pi, and activated in <code>/boot/firmware/config.txt</code>, the camera connected to physical cam0 will use <code>/home/pi/post-processing0.json</code> and the camera connected to cam1 will use <code>/home/pi/post-processing1.json</code>.</p>
 </div>
-<h2 id="cinematespecific-flags">Cinemate‑specific flags<a class="headerlink" href="#cinematespecific-flags" title="Permanent link">#</a></h2>
-<p>The Cinemate fork introduces extra options beyond stock <code>rpicam-apps</code>: camera-port and HDMI selection (<code>--cam-port</code>, <code>--hdmi-port</code>, <code>--same-hdmi</code>), on-sensor HDR (<code>--hdr</code>), CineMate Log (<code>--log-encode</code>), encode/disk worker count, affinity and priority tuning, WAV timecode offsets, a DNG camera-model override (<code>--unique-camera-model</code>), and a pixel-rate ceiling (<code>--max-pixel-rate</code>).</p>
+<h2 id="cinematespecific-flags">CineMate‑specific flags<a class="headerlink" href="#cinematespecific-flags" title="Permanent link">#</a></h2>
+<p>The CineMate fork introduces extra options beyond stock <code>rpicam-apps</code>: camera-port and HDMI selection (<code>--cam-port</code>, <code>--hdmi-port</code>, <code>--same-hdmi</code>), on-sensor HDR (<code>--hdr</code>), CineMate Log (<code>--log-encode</code>), encode/disk worker count, affinity and priority tuning, WAV timecode offsets, a DNG camera-model override (<code>--unique-camera-model</code>), and a pixel-rate ceiling (<code>--max-pixel-rate</code>).</p>
 <p>The full flag table with defaults is the <a href="https://github.com/Tiramisioux/cinepi-raw#additional-flags">cinepi-raw README's "Additional flags" section</a> — that table is the canonical copy, so it is not duplicated here. <code>cinepi-raw -h</code> prints the same options from the binary.</p>
 <div class="admonition note">
 <p>DNGs are 12-bit, except in true 16-bit sensor modes (IMX585 ClearHDR), which write 16-bit. The <code>--keep16</code> flag was removed — the 4 bits it kept in SDR modes are padding.</p>
@@ -290,8 +285,8 @@ cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../cli-commands/" class="btn btn-neutral float-left" title="Cinemate terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../controller-methods/" class="btn btn-neutral float-right" title="Controller methods">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../cli-commands/" class="btn btn-neutral float-left" title="CineMate terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../changelog/" class="btn btn-neutral float-right" title="Changelog">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -321,7 +316,7 @@ cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">
       <span><a href="../cli-commands/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../controller-methods/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../changelog/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

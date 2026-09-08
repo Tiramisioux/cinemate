@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/getting-started/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Quick start - Cinemate Docs</title>
+    <title>Quick start - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -60,6 +60,14 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#recording">Recording</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-web-interface">The web interface</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#set-the-sensor">Set the sensor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#change-the-hotspot-password">Change the hotspot password</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                 </li>
               </ul>
@@ -69,9 +77,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -84,7 +90,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -120,30 +130,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -160,7 +158,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -181,45 +179,66 @@
   <h1 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">#</a></h1>
 <h2 id="hardware-requirements">Hardware requirements<a class="headerlink" href="#hardware-requirements" title="Permanent link">#</a></h2>
 <ul>
-<li>Raspberry Pi 4 or 5 / CM5. <strong>4 GB RAM or more.</strong> 2 GB boards run, but are not recommended for UHD/4K.</li>
-<li>Official HQ or Global Shutter camera</li>
+<li>Raspberry Pi 4 or 5 / CM5. <strong>4 GB RAM or more.</strong> 2 GB boards run, but 4 GB is recommended for UHD/4K.</li>
+<li>A supported sensor board: official HQ (IMX477) or Global Shutter (IMX296) camera, OneInchEye (IMX283) or Starlight Eye (IMX585). See <a href="../sensors/">Camera sensors and frame rates</a>.</li>
 <li>HDMI monitor or a phone/tablet for monitoring</li>
 </ul>
-<div class="admonition warning">
-<p class="admonition-title">2 GB boards and UHD/4K</p>
-<p>Cinemate buffers raw frames in RAM before they reach the disk. A watchdog
-polls total RAM use and <strong>auto-stops recording at 80 %</strong> — the HDMI GUI
-turns yellow and <code>memory_alert</code> is set.</p>
-<p>At UHD/4K a 2 GB board reaches that threshold quickly, so takes stop on
-their own. 4 GB is the practical minimum for 4K work. Compiling
-<code>cinepi-raw</code> on the Pi also wants 4 GB (the installer adds a temporary zram
-swap below 3 GB).</p>
-</div>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
-<p>Burn the latest <a href="https://github.com/Tiramisioux/cinemate/releases/latest">Cinemate image</a> to an SD card.</p>
-<p>Connect the Pi and the camera sensor board, connect power and boot the Pi. Cinemate autostarts on boot.</p>
+<p>Burn the latest <a href="https://github.com/Tiramisioux/cinemate/releases/latest">CineMate image</a> to an SD card. Connect the camera sensor board, then to power and then boot. CineMate autostarts.</p>
 <div class="admonition danger">
 <p>Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping may damage the hardware.</p>
 </div>
 <h2 id="preview">Preview<a class="headerlink" href="#preview" title="Permanent link">#</a></h2>
 <ul>
-<li>Plug in an HDMI monitor <strong>or</strong> </li>
-<li>Connect your phone/tablet to the Wi‑Fi network <code>CinePi</code> (password <code>11111111</code>).
-Open a browser and go to <code>cinepi.local:5000</code> to see the interface. A clean video feed without the GUI is available at <code>cinepi.local:8000/stream</code>.</li>
+<li>Plug in an HDMI monitor, <strong>or</strong></li>
+<li>Join the Wi‑Fi network <code>CinePi</code> (password <code>11111111</code>) and open <code>cinepi.local:5000</code>.</li>
 </ul>
+<p>Clean feed without the GUI: <code>cinepi.local:8000</code>.</p>
 <h2 id="recording">Recording<a class="headerlink" href="#recording" title="Permanent link">#</a></h2>
 <ul>
-<li>
-<p>Attach a high‑speed drive: an <strong>SSD</strong> (Samsung T7 recommended), an <strong>NVMe drive</strong>, or the <strong><a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a></strong>. Make sure storage media is formatted as <code>exFAT</code> and labeled <code>RAW</code>.</p>
-</li>
-<li>
-<p>Connect a button between <strong>GPIO7</strong> and <strong>GND</strong> — physical pins 26 and 25, right next to each other, so you can also briefly short them with a paper clip. When using the phone preview, you can also start/stop recording by tapping the preview. More buttons and dials can be added later — see <a href="../hardware-controls/">Additional hardware</a>.</p>
-</li>
+<li>Attach a high‑speed drive: an <strong>SSD</strong> (Samsung T7 recommended), an <strong>NVMe drive</strong>, or the <strong><a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a></strong>. Format it <code>exFAT</code> and label it <code>RAW</code>. <code>ext4</code> also works; <code>NTFS</code> is supported but not recommended, because it can drop frames under sustained 4K writes.</li>
+<li>Connect a button between <strong>GPIO7</strong> and <strong>GND</strong>. They are adjacent, so a paper clip can short them. Tapping the phone preview also starts and stops recording. More buttons and dials: <a href="../hardware-controls/">Additional hardware</a>.</li>
 </ul>
-<p>That's it—your bare‑bones Cinemate build is ready!</p>
 <div class="admonition danger">
 <p>Remember to power everything down before disconnecting hardware!</p>
 </div>
+<h2 id="the-web-interface">The web interface<a class="headerlink" href="#the-web-interface" title="Permanent link">#</a></h2>
+<p>The camera serves two browser pages on port 5000, <code>http://cinepi.local:5000</code> and <code>http://cinepi.local:5000/settings-editor</code>.</p>
+<p>On the hotspot <code>http://10.42.0.1:5000</code> and <code>http://10.42.0.1:5000/settings-editor</code> work too, if <code>cinepi.local</code> does not resolve. Both pages are plain HTTP unless you turn on <a href="../settings-json/#https"><code>system.https</code></a>, off by default. See also <a href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>.</p>
+<p><img alt="The CineMate Web GUI" src="../images/gui-web-overview.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Function</th>
+<th>Full documentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>:5000</code></td>
+<td>Live preview, ISO, shutter angle, FPS, white balance, resolution. Tap the preview to record</td>
+<td><a href="../web-gui/">Web GUI</a></td>
+</tr>
+<tr>
+<td><code>:5000/settings-editor</code></td>
+<td>Pick the sensor, edit every camera setting, live view, play back a take, browse and pull takes off the RAW drive</td>
+<td><a href="../settings-editor/">Settings editor</a> · <a href="../settings-json/">Camera settings</a> · <a href="../config-txt/">Boot config</a> · <a href="../hardware-controls/">Additional hardware</a></td>
+</tr>
+</tbody>
+</table>
+<p>The shooting screen has no record button. Tap the preview to roll. <strong>EXPERIMENT</strong> button extends all available controls for live testing.</p>
+<h3 id="set-the-sensor">Set the sensor<a class="headerlink" href="#set-the-sensor" title="Permanent link">#</a></h3>
+<p>CineMate is preconfigured to the standard Raspberry Pi HQ camera (IMX 477). If you are using another of the compatible sensors, in the settings editor's <strong>config.txt</strong> tab, pick your board in <strong>Camera 0 sensor</strong> and press <strong>Save changes</strong>. The Pi reboots and reads your new sensor settings. See also <a href="../config-txt/#switch-to-a-different-sensor">Switch to a different sensor</a>.</p>
+<h3 id="change-the-hotspot-password">Change the hotspot password<a class="headerlink" href="#change-the-hotspot-password" title="Permanent link">#</a></h3>
+<p><code>11111111</code> is printed in this documentation. Treat the camera as open until you change it.</p>
+<ol>
+<li>Open the settings editor's <strong>settings.jsonc</strong> tab, the default tab.</li>
+<li>Go to <strong>Wi-Fi hotspot</strong>.</li>
+<li>Set <strong>Network name</strong> and <strong>Password</strong>. Use at least 8 characters. A shorter password is silently discarded: the hotspot keeps your network name but falls back to <code>11111111</code>.</li>
+<li>Press <strong>Save changes</strong> in the top bar.</li>
+</ol>
+<p>Saving restarts CineMate. A root service reconciles the hotspot on a 60-second pass, so the change goes live within a minute. The access point restarts and drops every connected device, including yours. Rejoin with the new password.</p>
 </div>
 
             </div>

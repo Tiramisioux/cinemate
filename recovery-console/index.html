@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/recovery-console/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Recovery console - Cinemate Docs</title>
+    <title>Recovery console - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -128,30 +130,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -168,7 +158,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -188,14 +178,14 @@
               
 <div class="markdown-body">
   <h1 id="recovery-console">Recovery console<a class="headerlink" href="#recovery-console" title="Permanent link">#</a></h1>
-<p><code>cinemate-recovery.service</code> is a small, deliberately ugly web console on <code>:8080</code> for the moment Cinemate will not start. It lets you see why, edit <code>settings.jsonc</code> and <code>config.txt</code>, and restart Cinemate — from a phone, over the camera's own hotspot, with no laptop and no SSH.</p>
-<p>It is not a replacement for the <a href="../web-gui/">Web GUI</a> or the <a href="../web-api/">Web API</a>. Those need Cinemate itself to be running. This console is the thing that still works when Cinemate is not.</p>
+<p><code>cinemate-recovery.service</code> is a small, deliberately ugly web console on <code>:8080</code> for the moment CineMate will not start. It lets you see why, edit <code>settings.jsonc</code> and <code>config.txt</code>, and restart CineMate — from a phone, over the camera's own hotspot, with no laptop and no SSH.</p>
+<p>It is not a replacement for the <a href="../web-gui/">Web GUI</a> or the <a href="../web-api/">Web API</a>. Those need CineMate itself to be running. This console is the thing that still works when CineMate is not.</p>
 <h2 id="reaching-it">Reaching it<a class="headerlink" href="#reaching-it" title="Permanent link">#</a></h2>
 <p>Connect a phone or laptop to the camera's hotspot (see <a href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>), then browse to:</p>
 <div class="highlight"><pre><span></span><code>http://10.42.0.1:8080
 </code></pre></div>
 <p>That is the fixed address of the hotspot interface itself — it does not change, even when <code>settings.jsonc</code> is broken and the SSID has fallen back to a cached or default name — and it always works while connected to the hotspot. If your device reaches the Pi some other way (Ethernet, or joined to the same Wi-Fi), <code>http://cinepi.local:8080</code> works too, via mDNS.</p>
-<p>The recovery console runs as its own root systemd service with no dependency on <code>cinemate-autostart.service</code>, so it stays reachable through a Cinemate crash, a corrupted install, or Redis being down.</p>
+<p>The recovery console runs as its own root systemd service with no dependency on <code>cinemate-autostart.service</code>, so it stays reachable through a CineMate crash, a corrupted install, or Redis being down.</p>
 <h2 id="what-it-can-do">What it can do<a class="headerlink" href="#what-it-can-do" title="Permanent link">#</a></h2>
 <table>
 <thead>
@@ -211,7 +201,7 @@
 </tr>
 <tr>
 <td><strong>Why it failed</strong> (<code>/why</code>)</td>
-<td>The same startup-failure text Cinemate prints on the HDMI monitor, rendered for a phone screen</td>
+<td>The same startup-failure text CineMate prints on the HDMI monitor, rendered for a phone screen</td>
 </tr>
 <tr>
 <td><strong>Log</strong> (<code>/log</code>)</td>
@@ -231,7 +221,7 @@
 <h2 id="settings-validation">Settings validation<a class="headerlink" href="#settings-validation" title="Permanent link">#</a></h2>
 <p>When you save <code>settings.jsonc</code>, the console validates it before writing, using the best check available:</p>
 <ol>
-<li>If the system Python 3 interpreter and the Cinemate source tree are both present, it runs the <em>exact same</em> loader Cinemate itself uses — so a rejected save shows you the exact error, with line and column, that you would otherwise only see on the HDMI monitor.</li>
+<li>If the system Python 3 interpreter and the CineMate source tree are both present, it runs the <em>exact same</em> loader CineMate itself uses — so a rejected save shows you the exact error, with line and column, that you would otherwise only see on the HDMI monitor.</li>
 <li>If the source tree is missing or corrupted, it falls back to a plain JSON syntax check.</li>
 <li>If neither is available, the file is written anyway and labelled <strong>unvalidated</strong> — refusing to save would leave you unable to fix a file that is already broken. A backup is taken first regardless, so nothing is lost either way.</li>
 </ol>
@@ -286,7 +276,7 @@ sudo<span class="w"> </span>make<span class="w"> </span>-C<span class="w"> </spa
 sudo<span class="w"> </span>make<span class="w"> </span>-C<span class="w"> </span>/home/pi/cinemate/services<span class="w"> </span>disable-cinemate-recovery
 </code></pre></div>
 <h2 id="security">Security<a class="headerlink" href="#security" title="Permanent link">#</a></h2>
-<p>The console runs as root and can restart Cinemate and rewrite <code>config.txt</code>. Read-only pages (status, why, log) are always reachable without a token, so a locked-out operator can still diagnose. Any page that changes something — restarting a service, saving a file — is logged to the journal with the client's IP address, and is gated behind the <code>token</code> setting once it is non-empty.</p>
+<p>The console runs as root and can restart CineMate and rewrite <code>config.txt</code>. Read-only pages (status, why, log) are always reachable without a token, so a locked-out operator can still diagnose. Any page that changes something — restarting a service, saving a file — is logged to the journal with the client's IP address, and is gated behind the <code>token</code> setting once it is non-empty.</p>
 </div>
 
             </div>

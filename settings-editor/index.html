@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/settings-editor/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Settings editor - CineMate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Settings editor";
+        var mkdocs_page_input_path = "settings-editor.md";
+        var mkdocs_page_url = "/cinemate/settings-editor/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> CineMate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Settings editor</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#reaching-it">Reaching it</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#layout">Layout</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#settingsjsonc-tab">settings.jsonc tab</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#save-restart">Save &amp; restart</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#boot-config-configtxt-tab">Boot config (config.txt) tab</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#i2c-tab">i2c tab</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#the-clocks">The clocks</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#missing-hardware-on-the-settings-tab">Missing hardware on the settings tab</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#raw-files-tab">RAW files tab</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#playback-tab">Playback tab</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#live-view-tab">Live view tab</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">CineMate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Configuring</li>
+      <li class="breadcrumb-item active">Settings editor</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/settings-editor.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="settings-editor">Settings editor<a class="headerlink" href="#settings-editor" title="Permanent link">#</a></h1>
+<p>A browser page for configuring and operating the camera without SSH: edit <code>settings.jsonc</code> and <code>/boot/firmware/config.txt</code>, browse and pull takes off the RAW drive, review a take's frames, and see the live camera feed — all from one page over Wi‑Fi.</p>
+<p>It is a Flask blueprint (<code>src/module/app/settings_editor.py</code>) served by the same process as the <a href="../web-gui/">Web GUI</a>, so it needs CineMate itself running. For the console that stays up when CineMate won't start, see the <a href="../recovery-console/">Recovery console</a> instead.</p>
+<h2 id="reaching-it">Reaching it<a class="headerlink" href="#reaching-it" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>http://cinepi.local:5000/settings-editor
+</code></pre></div>
+<p>Over the camera's own hotspot (see <a href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>):</p>
+<div class="highlight"><pre><span></span><code>http://10.42.0.1:5000/settings-editor
+</code></pre></div>
+<h2 id="layout">Layout<a class="headerlink" href="#layout" title="Permanent link">#</a></h2>
+<p><img alt="The CineMate settings editor" src="../images/gui-overview.png" /></p>
+<p>The top bar carries a search box (filters every field/take on the current tab by name) and, on the two file-editing tabs, five more controls:</p>
+<p><img alt="The settings editor top bar" src="../images/gui-topbar.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>N unsaved</strong> pill</td>
+<td>Counts the fields that differ from what the page loaded. Set a field back to its original value and it stops counting. Settings tab only, and only while something is changed</td>
+</tr>
+<tr>
+<td><strong>View raw file</strong></td>
+<td>Opens a drawer showing what the next Save would write — <code>settings.jsonc</code> or <code>config.txt</code> — with a Copy button. The button's label follows the active tab. On the settings tab this is the form's state rendered as plain JSON, so the real file's comments are not shown there</td>
+</tr>
+<tr>
+<td><strong>Revert</strong></td>
+<td>Loads the stock shipped defaults into the on-screen form only — nothing is written until you click Save</td>
+</tr>
+<tr>
+<td><strong>Download</strong></td>
+<td>Downloads the current form state as a file, for a local backup or diffing. The settings download is plain JSON and carries no comments, so it is not a like-for-like copy of the file on the card</td>
+</tr>
+<tr>
+<td><strong>Upload</strong></td>
+<td>Parses a <code>.json</code>/<code>.jsonc</code>/<code>.txt</code> file you pick and loads it into the form — again, not written until Save</td>
+</tr>
+<tr>
+<td><strong>Save changes</strong></td>
+<td>Writes the file for the active tab and applies it (see below) — disabled until something is actually dirty</td>
+</tr>
+</tbody>
+</table>
+<p>The four file controls and <strong>Save changes</strong> are hidden on Live view, Playback and RAW files, which edit no file. The search box stays.</p>
+<p>Five tabs run across the top of the page:</p>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>Edits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>config.txt</strong></td>
+<td>The managed block CineMate owns inside <code>/boot/firmware/config.txt</code> — sensor overlays, hardware buses, RP1 overclock</td>
+</tr>
+<tr>
+<td><strong>i2c</strong></td>
+<td>What is attached to the camera's I²C bus, and the two clocks</td>
+</tr>
+<tr>
+<td><strong>settings.jsonc</strong></td>
+<td>Everything in <code>settings.jsonc</code>, grouped into sections (below)</td>
+</tr>
+<tr>
+<td><strong>Live view</strong></td>
+<td>The main Web GUI, embedded</td>
+</tr>
+<tr>
+<td><strong>Playback</strong></td>
+<td>Reviews a recorded take frame-by-frame off the card</td>
+</tr>
+<tr>
+<td><strong>RAW files</strong></td>
+<td>Browse, download, delete and format the mounted RAW storage</td>
+</tr>
+</tbody>
+</table>
+<h2 id="settingsjsonc-tab">settings.jsonc tab<a class="headerlink" href="#settingsjsonc-tab" title="Permanent link">#</a></h2>
+<p>The left rail groups the same fields <code>settings.jsonc</code> holds, unchanged in meaning from the <a href="../settings-json/">Settings file</a> reference — this page is a form over that file, not a different configuration surface:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Sections</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Look &amp; feel</td>
+<td>Welcome screen (HDMI boot splash) · Wi‑Fi hotspot</td>
+</tr>
+<tr>
+<td>Cameras</td>
+<td>Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, independent per sensor</td>
+</tr>
+<tr>
+<td>Timing</td>
+<td>Timing &amp; sync — how strictly frame timing is watched before warning or flagging a take</td>
+</tr>
+<tr>
+<td>Exposure &amp; steps</td>
+<td>Value steps (click-stops per control) · Resolution &amp; sensor (resolutions, bit depths, dynamic resolution and its priority, ClearHDR startup values) · Per-mode fps ceilings (per-sensor-mode overrides — see <code>custom_modes</code> in the settings reference)</td>
+</tr>
+<tr>
+<td>Recording</td>
+<td>Audio (input gain, timecode alignment per bit depth) · HDMI &amp; preview (monitor overlay, dual-feed framing)</td>
+</tr>
+<tr>
+<td>Physical controls</td>
+<td>Buttons &amp; switches (GPIO in) · Grove HAT potentiometers · Quad rotary encoder · Rec tally &amp; GPIO out · OLED status display</td>
+</tr>
+<tr>
+<td>System</td>
+<td>Restart CineMate</td>
+</tr>
+</tbody>
+</table>
+<p>Editing anything marks the page dirty (the header shows an "N unsaved" pill) but touches nothing on disk until you click <strong>Save changes</strong>.</p>
+<h3 id="save-restart">Save &amp; restart<a class="headerlink" href="#save-restart" title="Permanent link">#</a></h3>
+<p>Clicking <strong>Save changes</strong> on this tab:</p>
+<ol>
+<li>Backs up the current <code>settings.jsonc</code> to <code>.settings-backups/</code> next to it (timestamped, last 10 kept).</li>
+<li>
+<p>Writes your changes. If only values changed, the surgical writer keeps every comment, the key order and the file's formatting. If a key was added or removed (a structural change), it falls back to a full rewrite, which is correct but drops every comment.</p>
+<div class="admonition warning">
+<p class="admonition-title">A structural save loses comments without saying so</p>
+<p>The server composes a warning when this happens, but the page does not show it — the toast reads <code>Saved. Restarting CineMate…</code> either way. If you keep notes in <code>settings.jsonc</code>, recover them from the newest file in <code>.settings-backups/</code> after a save that added or removed a key.</p>
+</div>
+</li>
+<li>
+<p>Restarts CineMate automatically to apply the new file — the same effect as the CLI's <code>restart cinemate</code>, not a reboot. Recording stops if one is in progress.</p>
+</li>
+</ol>
+<p>You can also apply a save-in-place, or just restart with nothing pending, from <strong>System → Restart CineMate</strong>.</p>
+<p>The console under <strong>Restart CineMate</strong> is a live tail of the camera's own <code>system.log</code>, so runtime
+messages appear there as they happen — not only around a restart. It reconnects by itself, which is
+what you want across a restart: the stream drops as the service goes down and resumes when it comes
+back, so the restart appears in the log as the camera's own output.</p>
+<div class="admonition note">
+<p class="admonition-title">It used to be an animation</p>
+<p>The console previously replayed a fixed list of invented log lines with random timing. They
+contradicted the machine they appeared on — two cameras on a one-camera rig, a port the web
+server does not use, a frame rate unrelated to the camera's own. Everything shown now is either
+a line from <code>system.log</code> or something this page did.</p>
+</div>
+<h2 id="boot-config-configtxt-tab">Boot config (config.txt) tab<a class="headerlink" href="#boot-config-configtxt-tab" title="Permanent link">#</a></h2>
+<div class="admonition danger">
+<p class="admonition-title">No confirm, no revert — unlike the recovery console</p>
+<p>Clicking <strong>Save changes</strong> on this tab writes <code>/boot/firmware/config.txt</code> and reboots the Pi within under a second, with <strong>no confirm-or-revert window and no backup of the previous file</strong>.</p>
+<p>This is different from the <a href="../recovery-console/">Recovery console</a>'s config.txt editor, which backs up the previous file on every save and arms a 5‑minute confirm‑or‑revert countdown — reverting and rebooting automatically if you never confirm. The settings editor has none of that: if the change you save stops the Pi from booting cleanly, the only way back is the manual SD-card recovery procedure in <a href="../recovery-console/#the-honest-limit">The honest limit</a>.</p>
+<p>Double-check the change before saving, especially sensor overlay and link-frequency picks. Consider making config.txt edits through the recovery console instead when you want the safety net.</p>
+</div>
+<p>Everything here needs a full reboot to take effect — restarting CineMate alone never picks up a <code>config.txt</code> change. The page shows the detected sensor modes for whatever is actually attached right now, separately from the overlay picks above them (those apply only after the reboot). CineMate only manages its own fenced block; anything you add to the file outside it survives updates and is untouched by this page.</p>
+<h2 id="i2c-tab">i2c tab<a class="headerlink" href="#i2c-tab" title="Permanent link">#</a></h2>
+<p><img alt="The i2c tab" src="../images/gui-i2c.png" /></p>
+<p>Shows which optional hardware is answering on the camera's I²C bus right now. Everything listed is
+optional — the camera records without any of it.</p>
+<p>The bus is probed each time you open the tab, one byte read per address. Nothing here writes to the
+bus, so opening this tab cannot disturb an encoder someone is turning or blank a display mid-take.</p>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Address</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Grove Base HAT</td>
+<td><code>0x08</code></td>
+<td>Analog inputs for potentiometers</td>
+</tr>
+<tr>
+<td>Adafruit quad rotary encoder</td>
+<td><code>0x49</code></td>
+<td>Four dials and push buttons on one board</td>
+</tr>
+<tr>
+<td>I²C OLED display</td>
+<td><code>0x3c</code> or <code>0x3d</code></td>
+<td>SSD1306 or SSD1309 — the two share a command set and an address, and neither has an ID register, so the pane names both rather than guessing. Shows the configured pixel size</td>
+</tr>
+<tr>
+<td>Real-time clock</td>
+<td><code>0x68</code></td>
+<td>Pi 4 only — see <a href="../hardware-controls/#real-time-clock">Additional hardware</a></td>
+</tr>
+<tr>
+<td>CFE Hat</td>
+<td><code>0x34</code></td>
+<td>The card is PCIe, but <code>0x34</code> — the hat's latch controller — is what says a hat is fitted, so that is what the pane goes on</td>
+</tr>
+</tbody>
+</table>
+<p>Each row shows the address that answered. A device that is not found says which address was tried,
+so a board strapped to a different address is obvious rather than just missing.</p>
+<div class="admonition note">
+<p class="admonition-title">The display's size is configured, not detected</p>
+<p>An SSD1306 has no size register — nothing on the bus can be asked how many pixels it has. The
+dimensions shown come from <code>output_peripherals.oled</code> in <a href="../settings-json/">settings.jsonc</a>, which
+is where CineMate reads them before telling the driver. Change them there, not here.</p>
+</div>
+<h3 id="the-clocks">The clocks<a class="headerlink" href="#the-clocks" title="Permanent link">#</a></h3>
+<p>The camera's system clock sets itself whenever it can reach the internet, over Ethernet or joined
+Wi-Fi. The RTC keeps whatever it was last given, so the two only agree after you copy one across.</p>
+<p>Both tick live, in the camera's own timezone, and both are shown to the second in the same format so
+drift between them is obvious at a glance. The tick is done in the page from a timestamp the camera
+sends, and re-anchored every 30 seconds, so watching the clocks does not fork <code>hwclock</code> once a
+second.</p>
+<p><strong>Sync RTC</strong> runs <code>hwclock --systohc</code> and then reads the clock back to check it took. That readback
+matters: the CLI's <code>set rtc time</code> discards <code>hwclock</code>'s exit status, so it reports success even with
+no clock attached. This reports what actually happened, including the case where the write needs a
+sudo rule the image does not have.</p>
+<h2 id="missing-hardware-on-the-settings-tab">Missing hardware on the settings tab<a class="headerlink" href="#missing-hardware-on-the-settings-tab" title="Permanent link">#</a></h2>
+<p>Sections for a board that is not answering are dimmed on the <strong>settings.jsonc</strong> tab, with a line
+saying so — the pot channels when there is no Grove HAT, the encoder rows when there is no quad
+rotary board, the OLED section when no display answers.</p>
+<p>Dimmed does not mean disabled. The fields stay editable and their values stay in the file, so a rig
+can be configured before the hardware arrives, and unplugging a board never quietly rewrites the
+settings that describe it.</p>
+<h2 id="raw-files-tab">RAW files tab<a class="headerlink" href="#raw-files-tab" title="Permanent link">#</a></h2>
+<p><img alt="The RAW files tab" src="../images/gui-raw-files.png" /></p>
+<p><strong>Storage</strong> shows a card per mounted drive: label, device and filesystem, free/total space, take count, and — for the active drive only — a <strong>Format…</strong> control. Formatting asks for confirmation, is refused while a recording is in progress, and is verified against the drive's actual filesystem after the dispatch completes rather than trusting the command succeeded.</p>
+<p><strong>Takes</strong> lists every take across all mounted storage, newest first by default (also sortable by oldest or largest), each with a thumbnail you can scrub for a quick frame check. Per take:</p>
+<ul>
+<li><strong>Download</strong> — streams a zip of the take. Only one download runs at a time server-wide; a second attempt is told to wait. On a Chromium browser over a secure context (HTTPS, or localhost) it can write straight into a folder you pick; elsewhere it's a normal browser download.</li>
+<li><strong>Delete</strong> — asks for confirmation, and is refused while that take is actively being written to.</li>
+</ul>
+<p>Checking takes and using <strong>Download selected</strong> / <strong>Delete selected</strong> applies the same actions to the whole selection. Bulk delete refuses the entire request (not a partial delete) if any selected take is currently recording. Downloading more than one take at once needs the folder-picker path above.</p>
+<h2 id="playback-tab">Playback tab<a class="headerlink" href="#playback-tab" title="Permanent link">#</a></h2>
+<p><img alt="The Playback tab" src="../images/gui-playback.png" /></p>
+<p>Reviews a take's frames, decoded live from the CinemaDNG files, at the settings' conform frame rate. Fully covered in <a href="../playback/">Playback</a> — including the storage-contention lockout that holds playback while a take is recording or its buffer is still flushing.</p>
+<h2 id="live-view-tab">Live view tab<a class="headerlink" href="#live-view-tab" title="Permanent link">#</a></h2>
+<p>Embeds the main <a href="../web-gui/">Web GUI</a> in an iframe — the same live image, ISO/shutter/fps/WB controls and record button, without leaving the settings editor. Open it in a full tab if the controls feel cramped here.</p>
+<p>The <a href="../web-gui/">EXPERIMENT drawer</a> is open by default in this pane, where having every remaining control to hand is the point of it, and closed on the full page, which is the shooting screen.</p>
+<p>For the picture on its own with nothing drawn over it, use port 8000 instead of 5000 (<code>8001</code> for a second sensor).</p>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../settings-json/" class="btn btn-neutral float-left" title="settings.jsonc"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../sensors/" class="btn btn-neutral float-right" title="Camera sensors and frame rates">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../settings-json/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../sensors/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

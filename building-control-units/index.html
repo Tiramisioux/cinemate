@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/building-control-units/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Building control units - Cinemate Docs</title>
+    <title>Building control units - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -88,25 +90,29 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Building control units</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#what-you-need">What you need</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#before-you-write-firmware">Before you write firmware</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#esp32-record-button-and-tally-light">ESP32 — record button and tally light</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#m5stickc-button-display-tally">M5StickC — button, display, tally</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#raspberry-pi-pico-w-micropython">Raspberry Pi Pico W — MicroPython</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#another-raspberry-pi-or-any-computer">Another Raspberry Pi, or any computer</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#control-patterns">Control patterns</a>
+    <li class="toctree-l2"><a class="reference internal" href="#trying-out-the-connection-to-the-pi">Trying out the connection to the Pi</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#rate-limit-encoders-on-the-device">Rate-limit encoders on the device</a>
+    <li class="toctree-l3"><a class="reference internal" href="#over-the-wi-fi-hotspot">Over the Wi-Fi hotspot</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#handle-a-camera-that-is-not-there-yet">Handle a camera that is not there yet</a>
+    <li class="toctree-l3"><a class="reference internal" href="#over-ethernet-or-your-own-wi-fi">Over Ethernet or your own Wi-Fi</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#confirm-state-after-a-restart-command">Confirm state after a restart command</a>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example-projects">Example projects</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#esp32-record-button-and-tally-light">ESP32 — record button and tally light</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#m5stickc-button-display-tally">M5StickC — button, display, tally</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#raspberry-pi-pico-w-micropython">Raspberry Pi Pico W — MicroPython</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#another-raspberry-pi-or-any-computer">Another Raspberry Pi, or any computer</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#serial-without-wi-fi">Serial, without Wi-Fi</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#what-the-camera-sends-back">What the camera sends back</a>
     </li>
         </ul>
     </li>
@@ -140,30 +146,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -180,7 +174,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -199,51 +193,58 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="building-control-units">Building control units<a class="headerlink" href="#building-control-units" title="Permanent link">#</a></h1>
-<p>Build a wireless camera controller — a record button, a tally light, an ISO knob, a full remote — out of an ESP32, an M5Stack, a Raspberry Pi Pico W, or another Pi. The device joins the camera's Wi-Fi hotspot and sends the same commands you would type into the Cinemate CLI.</p>
-<p>You need three things on the device, and nothing else:</p>
-<ol>
-<li>Join the hotspot</li>
-<li><code>POST</code> a command string</li>
-<li>Listen for the UDP status line</li>
-</ol>
-<h2 id="what-you-need">What you need<a class="headerlink" href="#what-you-need" title="Permanent link">#</a></h2>
+  <h1 id="building-cinemate-microcontroller-control-units">Building CineMate microcontroller control units<a class="headerlink" href="#building-cinemate-microcontroller-control-units" title="Permanent link">#</a></h1>
+<p>You can use ESP32, an M5Stack, a Raspberry Pi Pico W or other type of microcontroller to build wireless camera controllers — a record button, a tally light, an ISO knob or a full handheld remote with a display. The device joins the camera's Wi-Fi hotspot and sends the same commands you would type into the <a href="../cli-commands/">CineMate CLI</a>.</p>
 <table>
 <thead>
 <tr>
-<th></th>
-<th></th>
+<th>Wi-Fi network (SSID)</th>
+<th><code>CinePi</code></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Camera</td>
-<td>Cinemate with <code>system.wifi_hotspot.enabled</code> set to <code>true</code></td>
+<td>Password</td>
+<td><code>11111111</code></td>
 </tr>
 <tr>
-<td>Controller</td>
-<td>Any Wi-Fi microcontroller — ESP32, ESP8266, M5Stack, Pico W, or a Pi</td>
+<td>Camera IP on the hotspot</td>
+<td><code>10.42.0.1</code></td>
 </tr>
 <tr>
-<td>Network</td>
-<td>The camera's own hotspot. No router, no internet.</td>
+<td>Commands</td>
+<td>port <code>5000</code>, <code>POST /api/v1/cmd</code></td>
 </tr>
 <tr>
-<td>Camera address</td>
-<td><code>10.42.0.1</code>, port <code>5000</code> for commands, <code>8888/udp</code> for status</td>
+<td>Status broadcast</td>
+<td>port <code>8888/udp</code></td>
 </tr>
 </tbody>
 </table>
-<p>No library is required beyond the board's own Wi-Fi and HTTP support. There is no SDK to install and no JSON parser to link.</p>
-<h2 id="before-you-write-firmware">Before you write firmware<a class="headerlink" href="#before-you-write-firmware" title="Permanent link">#</a></h2>
-<p>Prove the camera answers, from a laptop joined to the <code>CinePi</code> hotspot:</p>
+<p>Change the SSID and password on the settings editor's <a href="../settings-json/#wi-fi-hotspot">Wi-Fi hotspot</a> section. The IP does not change: <code>10.42.0.1</code> is NetworkManager's shared-mode gateway address, which is why the firmware examples below hard-code it rather than resolving <code>cinepi.local</code>. Resolving a <code>.local</code> name needs an mDNS resolver the device may not have. The <code>curl</code> checks in the next section run from a laptop, so those use <code>cinepi.local</code>.</p>
+<p>The transport is the <a href="../web-api/">Web API</a>. Read that page first. It covers sending a command, reading a value, and the three ways to get live updates. This page is the hardware side.</p>
+<h2 id="trying-out-the-connection-to-the-pi">Trying out the connection to the Pi<a class="headerlink" href="#trying-out-the-connection-to-the-pi" title="Permanent link">#</a></h2>
+<p>Prove the camera answers from your laptop before you write any firmware. Pick the section that
+matches how you are connected.</p>
+<h3 id="over-the-wi-fi-hotspot">Over the Wi-Fi hotspot<a class="headerlink" href="#over-the-wi-fi-hotspot" title="Permanent link">#</a></h3>
+<p>Join the <code>CinePi</code> network first. Use the numeric address, the same one your firmware will use.</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://10.42.0.1:5000/api/v1/hello
 curl<span class="w"> </span>-d<span class="w"> </span><span class="s2">"rec"</span><span class="w"> </span>http://10.42.0.1:5000/api/v1/cmd
 nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 </code></pre></div>
-<p>If those three work, every example below will work. If they do not, fix that first — see <a href="#troubleshooting">Troubleshooting</a>.</p>
-<h2 id="esp32-record-button-and-tally-light">ESP32 — record button and tally light<a class="headerlink" href="#esp32-record-button-and-tally-light" title="Permanent link">#</a></h2>
-<p>The complete controller. One momentary button to GND, one LED.</p>
+<h3 id="over-ethernet-or-your-own-wi-fi">Over Ethernet or your own Wi-Fi<a class="headerlink" href="#over-ethernet-or-your-own-wi-fi" title="Permanent link">#</a></h3>
+<p>With the camera on the same network as your computer, reach it by name.</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://cinepi.local:5000/api/v1/hello
+curl<span class="w"> </span>-d<span class="w"> </span><span class="s2">"rec"</span><span class="w"> </span>http://cinepi.local:5000/api/v1/cmd
+</code></pre></div>
+<p>The status broadcast is less dependable here. It goes to <code>255.255.255.255</code> and to <code>wlan0</code>'s own
+subnet broadcast address, always <code>wlan0</code>'s whatever you are connected over, and no router forwards
+either across a subnet. On the same network segment as the camera you will usually still see it;
+from anywhere else, check it from the hotspot or poll <code>GET /api/v1/status</code> instead.</p>
+<p>Either way: <code>hello</code> identifies the camera and <code>rec</code> starts a recording. Send <code>rec</code> again to stop.
+On the hotspot, <code>nc -ul 8888</code> also prints the status broadcast.</p>
+<h2 id="example-projects">Example projects<a class="headerlink" href="#example-projects" title="Permanent link">#</a></h2>
+<h3 id="esp32-record-button-and-tally-light">ESP32 — record button and tally light<a class="headerlink" href="#esp32-record-button-and-tally-light" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;WiFi.h&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;HTTPClient.h&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;WiFiUdp.h&gt;</span>
@@ -252,8 +253,8 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 <span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">PASS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"11111111"</span><span class="p">;</span>
 <span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">CAM</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s">"http://10.42.0.1:5000"</span><span class="p">;</span>
 
-<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_BUTTON</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">    </span><span class="c1">// momentary to GND</span>
-<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_TALLY</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">    </span><span class="c1">// LED to GND through a resistor</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_BUTTON</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w">   </span><span class="c1">// momentary to GND — not a strapping pin</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_TALLY</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">33</span><span class="p">;</span><span class="w">   </span><span class="c1">// LED to GND through a resistor</span>
 
 <span class="n">WiFiUDP</span><span class="w"> </span><span class="n">udp</span><span class="p">;</span>
 
@@ -295,15 +296,16 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 <span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">buf</span><span class="p">[</span><span class="mi">512</span><span class="p">];</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">udp</span><span class="p">.</span><span class="n">read</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 <span class="w">    </span><span class="n">buf</span><span class="p">[</span><span class="n">len</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="w">    </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"rec="</span><span class="p">);</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_TALLY</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'1'</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">HIGH</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">LOW</span><span class="p">);</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">KEY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"is_recording="</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">KEY</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_TALLY</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">KEY</span><span class="p">)]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'1'</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">HIGH</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">LOW</span><span class="p">);</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>That is the whole thing. <code>sendCmd</code> accepts any <a href="../cli-commands/">Cinemate command</a>: <code>"set iso 800"</code>, <code>"inc fps"</code>, <code>"set wb 5600"</code>, <code>"rec f 48"</code>.</p>
-<p>The tally reads the broadcast rather than polling. It costs the camera nothing extra whether you build one tally light or ten.</p>
-<h2 id="m5stickc-button-display-tally">M5StickC — button, display, tally<a class="headerlink" href="#m5stickc-button-display-tally" title="Permanent link">#</a></h2>
-<p>The M5StickC has a button, a screen and an LED already, so it makes a good handheld remote with no wiring at all.</p>
+<p><code>sendCmd</code> accepts any <a href="../cli-commands/">CineMate command</a>: <code>"set iso 800"</code>, <code>"inc fps"</code>, <code>"set wb 5600"</code>, <code>"rec f 48"</code>.</p>
+<p>The tally reads the broadcast rather than polling.</p>
+<h3 id="m5stickc-button-display-tally">M5StickC — button, display, tally<a class="headerlink" href="#m5stickc-button-display-tally" title="Permanent link">#</a></h3>
+<p>The M5StickC has a button, a screen and an LED already, so it makes a good handheld remote.</p>
 <div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;M5StickCPlus.h&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;WiFi.h&gt;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;HTTPClient.h&gt;</span>
@@ -363,16 +365,15 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 <span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">buf</span><span class="p">[</span><span class="mi">512</span><span class="p">];</span>
 <span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">udp</span><span class="p">.</span><span class="n">read</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
 <span class="w">    </span><span class="n">buf</span><span class="p">[</span><span class="n">len</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="w">    </span><span class="n">recording</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"rec="</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"1"</span><span class="p">;</span>
+<span class="w">    </span><span class="n">recording</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"is_recording="</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"1"</span><span class="p">;</span>
 <span class="w">    </span><span class="n">iso</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"iso="</span><span class="p">);</span>
 <span class="w">    </span><span class="n">fps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"fps="</span><span class="p">);</span>
-<span class="w">    </span><span class="n">tc</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"tc="</span><span class="p">);</span>
+<span class="w">    </span><span class="n">tc</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"recording_time_tod="</span><span class="p">);</span>
 <span class="w">    </span><span class="n">draw</span><span class="p">();</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
-<h2 id="raspberry-pi-pico-w-micropython">Raspberry Pi Pico W — MicroPython<a class="headerlink" href="#raspberry-pi-pico-w-micropython" title="Permanent link">#</a></h2>
-<p>No external libraries. Raw sockets only, so it works on any build.</p>
+<h3 id="raspberry-pi-pico-w-micropython">Raspberry Pi Pico W — MicroPython<a class="headerlink" href="#raspberry-pi-pico-w-micropython" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">network</span><span class="o">,</span><span class="w"> </span><span class="nn">socket</span><span class="o">,</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">machine</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pin</span>
 
@@ -415,7 +416,7 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">udp</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">512</span><span class="p">)</span>
-        <span class="n">tally</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="sa">b</span><span class="s2">"rec=1"</span> <span class="ow">in</span> <span class="n">data</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">tally</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="sa">b</span><span class="s2">"is_recording=1"</span> <span class="ow">in</span> <span class="n">data</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
         <span class="k">pass</span>
 
@@ -425,10 +426,10 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"http://10.42.0.1:5000/api/v1/cmd"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="s2">"rec"</span><span class="p">)</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </code></pre></div>
-<h2 id="another-raspberry-pi-or-any-computer">Another Raspberry Pi, or any computer<a class="headerlink" href="#another-raspberry-pi-or-any-computer" title="Permanent link">#</a></h2>
+<h3 id="another-raspberry-pi-or-any-computer">Another Raspberry Pi, or any computer<a class="headerlink" href="#another-raspberry-pi-or-any-computer" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span><span class="o">,</span><span class="w"> </span><span class="nn">socket</span>
 
-<span class="n">CAM</span> <span class="o">=</span> <span class="s2">"http://10.42.0.1:5000/api/v1"</span>
+<span class="n">CAM</span> <span class="o">=</span> <span class="s2">"http://cinepi.local:5000/api/v1"</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">cmd</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CAM</span><span class="si">}</span><span class="s2">/cmd"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">line</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
@@ -444,93 +445,69 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
     <span class="n">line</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">512</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
     <span class="nb">print</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">kv</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"="</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">kv</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
 </code></pre></div>
-<h2 id="control-patterns">Control patterns<a class="headerlink" href="#control-patterns" title="Permanent link">#</a></h2>
+<h2 id="serial-without-wi-fi">Serial, without Wi-Fi<a class="headerlink" href="#serial-without-wi-fi" title="Permanent link">#</a></h2>
+<p>Everything above goes over the hotspot. A controller can also talk to the camera down a wire, which
+needs no network at all — useful when the hotspot is off, when the rig has to survive a crowded
+2.4 GHz location, or when the controller has no Wi-Fi.</p>
+<p>CineMate opens the first of these that answers:</p>
 <table>
 <thead>
 <tr>
-<th>Control</th>
-<th>Send</th>
-<th>Note</th>
+<th>Port</th>
+<th>What it is</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Momentary REC button</td>
-<td><code>rec</code></td>
-<td>Toggles. Debounce 50 ms on the device.</td>
+<td><code>/dev/ttyACM0</code></td>
+<td>A USB serial device — an Arduino, a Pico, an ESP32 with USB CDC, plugged into the Pi</td>
 </tr>
 <tr>
-<td>Timed take button</td>
-<td><code>rec f 48</code></td>
-<td>Records exactly 48 frame slots, then stops itself</td>
+<td><code>/dev/serial0</code></td>
+<td>The GPIO header's UART — Tx on GPIO 14, Rx on GPIO 15</td>
 </tr>
 <tr>
-<td>Rotary encoder</td>
-<td><code>inc iso</code> / <code>dec iso</code></td>
-<td><strong>Rate-limit on the device.</strong> See below.</td>
-</tr>
-<tr>
-<td>Latching switch</td>
-<td><code>set fps lock 1</code> / <code>set fps lock 0</code></td>
-<td>Send the explicit <code>0</code>/<code>1</code>, not the bare toggle, so switch and camera cannot drift apart</td>
-</tr>
-<tr>
-<td>Preset button</td>
-<td><code>set iso 800</code>, then <code>set fps 24</code>, then <code>set shutter a 180</code></td>
-<td>Three requests. Leave ~20 ms between them.</td>
-</tr>
-<tr>
-<td>Menu on a display</td>
-<td><code>GET /api/v1/commands</code></td>
-<td>Build the menu from the camera's live command list instead of hardcoding it</td>
-</tr>
-<tr>
-<td>Tally light</td>
-<td>UDP <code>rec=</code></td>
-<td>Use the broadcast, not polling</td>
-</tr>
-<tr>
-<td>Storage warning</td>
-<td>UDP <code>space=</code></td>
-<td>Megabytes remaining</td>
-</tr>
-<tr>
-<td>Dropped-frame alarm</td>
-<td>UDP <code>drops=</code></td>
-<td>Non-zero means the last take dropped frames</td>
+<td><code>/dev/ttyS0</code></td>
+<td>The same UART under its other name</td>
 </tr>
 </tbody>
 </table>
-<h3 id="rate-limit-encoders-on-the-device">Rate-limit encoders on the device<a class="headerlink" href="#rate-limit-encoders-on-the-device" title="Permanent link">#</a></h3>
-<p>A rotary encoder can emit fifty steps per second. The camera rejects anything over <code>max_commands_per_sec</code> (default 20) with <code>429</code>, and you lose steps.</p>
-<p>Accumulate on the device and send at most one command every 50 ms:</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// in the encoder ISR: detents += direction;</span>
-<span class="k">static</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">lastSend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">detents</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">lastSend</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="n">sendCmd</span><span class="p">(</span><span class="n">detents</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">"inc iso"</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">"dec iso"</span><span class="p">);</span>
-<span class="w">  </span><span class="n">detents</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="p">(</span><span class="n">detents</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">-1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="w">  </span><span class="n">lastSend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">millis</span><span class="p">();</span>
-<span class="p">}</span>
+<p><strong>115200 baud, 8N1, one command per line.</strong> The line is handed to the same dispatcher the CLI and the
+Web API use, so anything in the <a href="../cli-commands/">commands reference</a> works unchanged:</p>
+<div class="highlight"><pre><span></span><code>rec
+set iso 800
+set shutter a 172.8
 </code></pre></div>
-<h3 id="handle-a-camera-that-is-not-there-yet">Handle a camera that is not there yet<a class="headerlink" href="#handle-a-camera-that-is-not-there-yet" title="Permanent link">#</a></h3>
-<p>The camera may reboot, or be switched on after the controller. Never block forever on a request.</p>
-<ul>
-<li>Set an HTTP timeout of 1–2 seconds. Do not use the default.</li>
-<li>Treat any failure as "camera absent" and show it — a dim tally, a dash on the display.</li>
-<li>Re-check with <code>GET /api/v1/hello</code> every few seconds until it answers.</li>
-<li>The UDP broadcast needs no reconnect. Packets simply resume.</li>
-</ul>
-<h3 id="confirm-state-after-a-restart-command">Confirm state after a restart command<a class="headerlink" href="#confirm-state-after-a-restart-command" title="Permanent link">#</a></h3>
-<p><code>set resolution</code> and <code>set log</code> restart the camera. The <code>200 ok</code> arrives before the restart finishes. Do not assume the value took. Read it back:</p>
-<div class="highlight"><pre><span></span><code>GET /api/v1/get/sensor_mode
-</code></pre></div>
+<p>No JSON, no framing, no handshake — write the text and a newline.</p>
+<h3 id="what-the-camera-sends-back">What the camera sends back<a class="headerlink" href="#what-the-camera-sends-back" title="Permanent link">#</a></h3>
+<p>One thing, unprompted: <code>rec</code> when a recording starts and <code>stop</code> when it ends. That is a tally for a lamp or a display on the other end of the wire, and it is driven by the camera's own recording state rather than by whatever asked for the recording — so it fires whether the take was started from the controller, a GPIO button, the web GUI or the CLI.</p>
+<p>Nothing else is echoed. A command's reply is not sent back over serial: if a controller needs to read a value, the <a href="../web-api/">Web API</a>'s <code>/get/&lt;key&gt;</code> is the way, and that needs the network.</p>
+<div class="admonition note">
+<p class="admonition-title">The SER badge means USB, specifically</p>
+<p>The <code>SER</code> badge in the GUI and on the HDMI overlay tracks <code>/dev/ttyACM0</code> alone. A controller on
+the GPIO UART works exactly the same way but does not light it — there is nothing to detect on
+those pins the way a USB device announces itself.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">The UART is not free on a stock Pi</p>
+<p><code>/dev/serial0</code> is the Linux console by default. Free it in <code>raspi-config</code> (Interface Options →
+Serial Port: login shell <strong>no</strong>, hardware serial <strong>yes</strong>) or the port is already taken and
+CineMate falls through to trying the next one.</p>
+</div>
+<p>Wiring for the GPIO UART is three connections: the controller's Tx to the Pi's Rx (GPIO 15), the
+controller's Rx to the Pi's Tx (GPIO 14), and a common ground. The Pi's UART is <strong>3.3 V</strong> — a 5 V
+controller needs a level shifter on the line into GPIO 15, or it will damage the pin.</p>
 <h2 id="design-rules">Design rules<a class="headerlink" href="#design-rules" title="Permanent link">#</a></h2>
+<p>See <a href="../cli-commands/">CineMate commands</a> for a complete list of available commands. We are using the same syntax as for the CineMate CLI.</p>
 <ul>
-<li><strong>Send the command string, not a parameter.</strong> <code>POST "set iso 800"</code> — there is no <code>/iso</code> endpoint, by design. The command vocabulary is the API, so your firmware keeps working as commands are added.</li>
-<li><strong>Prefer the UDP broadcast over polling.</strong> One packet feeds every device. Polling multiplies load by the number of controllers.</li>
-<li><strong>Use <code>/api/v1/get/&lt;key&gt;</code> when you need one value on demand.</strong> It returns bare text, so no JSON parser and no heap allocation.</li>
-<li><strong>Use <code>?keys=</code> on <code>/status</code>.</strong> A full snapshot is several kilobytes and will strain a Pico.</li>
-<li><strong>Do not hold an SSE connection unless you need every change.</strong> Each one occupies a thread on the camera, and there are only four.</li>
+<li><strong>Send the command as plain text.</strong> <code>POST "set iso 800"</code>, exactly what you would type. There is no <code>/iso</code> endpoint and there never will be. Because the commands themselves are the API, firmware
+  you write today still works when new commands are added.</li>
+<li><strong>Listen to the status broadcast instead of asking over and over.</strong> The camera sends one packet to everyone five times a second, so ten controllers cost it the same as one. Asking in a loop costs it once per device.</li>
+<li><strong>To read one value, use <code>/api/v1/get/&lt;key&gt;</code>.</strong> It replies with just the value as text, so there
+  is nothing to parse and nothing to allocate.</li>
+<li><strong>To read several, add <code>?keys=</code> to <code>/status</code>.</strong> Without it you get every value, a few kilobytes,
+  which is a lot to hand a Pico.</li>
+<li><strong>Only open an SSE stream if you need every change the instant it happens.</strong> The camera holds four at most, and each one occupies a connection for as long as it is open.</li>
 </ul>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">#</a></h2>
 <table>
@@ -544,8 +521,8 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 <tbody>
 <tr>
 <td>Device joins Wi-Fi, all requests time out</td>
-<td>Web server never started — it only starts if the interface had an IP when Cinemate booted</td>
-<td>Restart Cinemate after the hotspot is up. See <a href="../hotspot-logic/">Wi-Fi hotspot</a>.</td>
+<td>Web server never started — it only starts if the interface had an IP when CineMate booted</td>
+<td>Restart CineMate after the hotspot is up. See <a href="../hotspot-logic/">Wi-Fi hotspot</a>.</td>
 </tr>
 <tr>
 <td><code>curl</code> works from a laptop, fails from the ESP32</td>
@@ -556,6 +533,11 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 <td><code>400 err unknown command</code></td>
 <td>Typo, or a command that does not exist in this version</td>
 <td><code>GET /api/v1/commands</code> lists exactly what this camera accepts</td>
+</tr>
+<tr>
+<td><code>401 err unauthorized</code></td>
+<td>A token is set in <code>system.web_api.token</code></td>
+<td>Send it in the <code>X-Cinemate-Token</code> header</td>
 </tr>
 <tr>
 <td><code>403 err blocked</code></td>
@@ -592,7 +574,7 @@ nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">#</a></h2>
 <ul>
 <li><a href="../web-api/">Web API</a> — the full endpoint reference</li>
-<li><a href="../cli-commands/">Cinemate terminal commands</a> — every command you can send</li>
+<li><a href="../cli-commands/">CineMate terminal commands</a> — every command you can send</li>
 <li><a href="../redis-keys/">Redis Key reference</a> — every key you can read</li>
 <li><a href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a></li>
 <li><a href="../hardware-controls/">Additional hardware</a> — for wired buttons and encoders on the Pi's own GPIO</li>

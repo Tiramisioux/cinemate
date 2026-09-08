@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/installation-steps/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Manual installation - Cinemate Docs</title>
+    <title>Manual installation - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -110,8 +112,6 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation</a>
@@ -119,8 +119,6 @@
     <li class="toctree-l2"><a class="reference internal" href="#one-click-installer">One-click installer</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#dependency-files">Dependency files</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#continuous-integration">Continuous integration</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#manual-install">Manual install</a>
         <ul>
@@ -138,7 +136,7 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#imx283-and-imx585-sensor-support">IMX283 and IMX585 sensor support</a>
         <ul>
-    <li class="toctree-l4"><a class="reference internal" href="#cinemate-imx283-and-imx585-tuning-overrides">Cinemate IMX283 and IMX585 tuning overrides</a>
+    <li class="toctree-l4"><a class="reference internal" href="#cinemate-imx283-and-imx585-tuning-overrides">CineMate IMX283 and IMX585 tuning overrides</a>
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#ir-filter-switch-script">IR filter switch script</a>
     </li>
@@ -164,7 +162,7 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#trying-out-cinepi-from-the-terminal">Trying out CinePi from the terminal</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#cinemate">Cinemate</a>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate">CineMate</a>
         <ul>
     <li class="toctree-l4"><a class="reference internal" href="#system-wide-packages">System wide packages</a>
     </li>
@@ -174,11 +172,11 @@
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#alternative-gpio-back-end">Alternative GPIO back-end</a>
     </li>
-    <li class="toctree-l4"><a class="reference internal" href="#clone-the-cinemate-repo">Clone the Cinemate repo</a>
+    <li class="toctree-l4"><a class="reference internal" href="#clone-the-cinemate-repo">Clone the CineMate repo</a>
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#create-the-run-wrapper-and-the-configtxt-apply-helper">Create the run wrapper and the config.txt apply helper</a>
     </li>
-    <li class="toctree-l4"><a class="reference internal" href="#allow-cinemate-to-run-with-sudo">Allow Cinemate to run with sudo</a>
+    <li class="toctree-l4"><a class="reference internal" href="#allow-cinemate-to-run-with-sudo">Allow CineMate to run with sudo</a>
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#enable-networkmanager-and-redis">Enable NetworkManager and Redis</a>
     </li>
@@ -198,7 +196,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#cinemate-services">Cinemate services</a>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate-services">CineMate services</a>
         <ul>
     <li class="toctree-l4"><a class="reference internal" href="#storage-automount">storage-automount</a>
     </li>
@@ -220,7 +218,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#running-cinemate-manually">Running cinemate manually</a>
+    <li class="toctree-l2"><a class="reference internal" href="#running-cinemate-manually">Running CineMate manually</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#boot-time-optimization">Boot time optimization</a>
         <ul>
@@ -236,22 +234,12 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -268,7 +256,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -304,16 +292,13 @@ chmod<span class="w"> </span>+x<span class="w"> </span>cinemate-install.sh
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>./cinemate-install.sh
 </code></pre></div>
-<p>The installer defaults to an <code>imx477</code> on camera port <code>cam0</code>. To install directly for another sensor, pass <code>SENSOR_MODEL</code> and <code>CAM_PORT</code> inline:</p>
-<div class="highlight"><pre><span></span><code><span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx296<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
-<span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx283<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
-<span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
-<span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585_mono<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam1<span class="w"> </span>./cinemate-install.sh
-</code></pre></div>
+<p>The installer defaults to an <code>imx477</code> on camera port <code>cam0</code>. The IMX283 and IMX585 drivers are installed either way, so you can change to your own sensor afterwards — in the browser, on the settings editor's <a href="../config-txt/">config.txt tab</a>, which writes the overlay and reboots for you.</p>
 <div class="admonition note">
-<p>You can adjust sensor and camera port later by editing <code>/boot/firmware/config.txt</code>. See <a href="../config-txt/">Switching sensors</a>.</p>
+<p class="admonition-title">Or change it by hand</p>
+<p>The same thing over SSH: run <code>editboot</code> (or <code>sudo nano /boot/firmware/config.txt</code>), uncomment the block for your sensor, comment out the others, and reboot. See <a href="../config-txt/#hand-edits">Boot config</a>.</p>
+<p>Two cases still want the sensor named at install time: <code>SENSOR_MODEL=imx585_mono</code> also applies the <code>rp1-cfe</code> kernel patch that mono 16-bit ClearHDR needs, and <code>SENSOR_MODEL=imx585</code> also installs the IR filter helper. Neither happens when you switch sensor later.</p>
 </div>
-<p>After installing, reboot the system and Cinemate should start automatically.</p>
+<p>After installing, reboot the system and CineMate should start automatically.</p>
 <h2 id="dependency-files">Dependency files<a class="headerlink" href="#dependency-files" title="Permanent link">#</a></h2>
 <p>Python dependencies are split across four files:</p>
 <table>
@@ -351,182 +336,13 @@ chmod<span class="w"> </span>+x<span class="w"> </span>cinemate-install.sh
 clone alongside it (<code>CINEMATE_REPO_REF</code> / <code>CINEPI_RAW_REPO_REF</code>). Both are empty by default,
 which clones each repo's current default branch — set them to pin an install to a known-good
 pair of commits.</p>
-<h2 id="continuous-integration">Continuous integration<a class="headerlink" href="#continuous-integration" title="Permanent link">#</a></h2>
-<p>Both repositories run checks on every pull request — not required reading to install Cinemate,
-but this is what has to stay green if you're contributing a change:</p>
-<ul>
-<li><strong>cinemate</strong> (<code>.github/workflows/checks.yml</code>): <code>lint</code> (ruff), <code>test</code> (pytest, <code>_test/</code>),
-  <code>shell</code> (shellcheck), and <code>drift</code> — four stdlib-only checks
-  (<code>docs_drift_check.py</code>, <code>design_token_diff.py</code>, <code>gui_field_extract.py</code>, <code>redis_key_diff.py</code>),
-  none of which needs hardware.</li>
-<li><strong>cinepi-raw</strong> (<code>.github/workflows/checks.yml</code>): unit tests (the project's seven <code>meson test</code>
-  targets) and shellcheck.</li>
-</ul>
-<p>A ratchet (for example <code>redis_key_diff.py --max-unreferenced</code>) only ever tightens as the
-codebase improves — raising one to make a failing check pass is never the fix; fix what it
-caught instead.</p>
 <h2 id="manual-install">Manual install<a class="headerlink" href="#manual-install" title="Permanent link">#</a></h2>
 <p>Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing.</p>
-<details class="note">
-<summary>Installer step correspondence (F-265)</summary>
-<p><code>cinemate-install.sh</code> runs 27 numbered <code>section "..."</code> steps. This table maps each to
-where it's covered below, so a failure at <code>[NN] &lt;name&gt;</code> in the installer's own log has
-somewhere to look it up:</p>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Installer section</th>
-<th>Covered by</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>Validating environment and installer configuration</td>
-<td>not covered — OS/sudo checks, no manual equivalent</td>
-</tr>
-<tr>
-<td>2</td>
-<td>Installing bootstrap tools</td>
-<td>partial — <code>apt update</code>/<code>upgrade</code> above; <code>rsync</code> not installed here</td>
-</tr>
-<tr>
-<td>3</td>
-<td>Aligning the Pi 5 kernel baseline</td>
-<td><a href="#kernel-baseline-raspberry-pi-5-cm5">Kernel baseline</a></td>
-</tr>
-<tr>
-<td>4</td>
-<td>Locating the Cinemate source tree</td>
-<td><a href="#clone-the-cinemate-repo">Clone the Cinemate repo</a></td>
-</tr>
-<tr>
-<td>5</td>
-<td>Installing apt dependencies</td>
-<td>scattered — the <code>apt install</code> commands throughout this page</td>
-</tr>
-<tr>
-<td>6</td>
-<td>Enabling base system services</td>
-<td><a href="#enable-networkmanager-and-redis">Enable NetworkManager and Redis</a></td>
-</tr>
-<tr>
-<td>7</td>
-<td>Applying boot time optimizations</td>
-<td><a href="#disable-unnecessary-background-services">Disable unnecessary background services</a></td>
-</tr>
-<tr>
-<td>8</td>
-<td>Refreshing the libtiff linker fix</td>
-<td>inline, in <a href="#libcamera-tiramisiouxlibcamera-cinemate-branch">libcamera</a></td>
-</tr>
-<tr>
-<td>9</td>
-<td>Building redis-plus-plus</td>
-<td>inline, in the same libcamera command block</td>
-</tr>
-<tr>
-<td>10</td>
-<td>Configuring the RP1 overclock (Pi 5, optional)</td>
-<td>linked out to <a href="../overclocking/">Overclocking the Pi</a></td>
-</tr>
-<tr>
-<td>11</td>
-<td>Building libcamera</td>
-<td><a href="#libcamera-tiramisiouxlibcamera-cinemate-branch">libcamera</a></td>
-</tr>
-<tr>
-<td>12</td>
-<td>Building cpp-mjpeg-streamer</td>
-<td><a href="#cpp-mjpeg-streamer">cpp-mjpeg-streamer</a></td>
-</tr>
-<tr>
-<td>13</td>
-<td>Building cinepi-raw</td>
-<td><a href="#cinepi-raw">CinePi-RAW</a></td>
-</tr>
-<tr>
-<td>14</td>
-<td>Seeding initial cinepi-raw Redis defaults</td>
-<td><a href="#seed-redis-with-white-balance-default-keys">Seed Redis with white balance default keys</a></td>
-</tr>
-<tr>
-<td>15</td>
-<td>Installing sensor-specific support</td>
-<td><a href="#imx283-and-imx585-sensor-support">IMX283 and IMX585 sensor support</a></td>
-</tr>
-<tr>
-<td>16</td>
-<td>Installing optional GPIO backend</td>
-<td><a href="#alternative-gpio-back-end">Alternative GPIO back-end</a></td>
-</tr>
-<tr>
-<td>17</td>
-<td>Preparing the Python environment</td>
-<td><a href="#python-packages">Python packages</a></td>
-</tr>
-<tr>
-<td>18</td>
-<td>Writing runtime loader configuration</td>
-<td>not covered — <code>/etc/ld.so.conf.d/cinepi-raw.conf</code>, only shown for Pi 4 above</td>
-</tr>
-<tr>
-<td>19</td>
-<td>Configuring hostname and I2C</td>
-<td><a href="#enabling-i%C2%B2c">Enabling I²C</a>, <a href="#setting-hostname">Setting hostname</a></td>
-</tr>
-<tr>
-<td>20</td>
-<td>Writing boot configuration</td>
-<td><a href="#add-camera-modules-to-configtxt">Add camera modules to config.txt</a></td>
-</tr>
-<tr>
-<td>21</td>
-<td>Writing audio and preview helper files</td>
-<td><a href="#asoundrc-setup">.asoundrc Setup</a>, <a href="#create-post-processing-configs">Create post-processing configs</a></td>
-</tr>
-<tr>
-<td>22</td>
-<td>Applying optional UI and boot helpers</td>
-<td>console font / auto-login / PiShrink / Plymouth sections</td>
-</tr>
-<tr>
-<td>23</td>
-<td>Refreshing Pi 5 boot handoff</td>
-<td>part of <a href="#kernel-baseline-raspberry-pi-5-cm5">Kernel baseline</a></td>
-</tr>
-<tr>
-<td>24</td>
-<td>Preparing runtime wrappers and permissions</td>
-<td><a href="#create-the-run-wrapper-and-the-configtxt-apply-helper">Create the run wrapper and the config.txt apply helper</a>, sudoers, <a href="#grant-real-time-audio-priority">audio real-time priority</a></td>
-</tr>
-<tr>
-<td>25</td>
-<td>Seeding Redis defaults</td>
-<td><a href="#seed-redis-with-default-keys">Seed Redis with default keys</a></td>
-</tr>
-<tr>
-<td>26</td>
-<td>Installing Cinemate services</td>
-<td><a href="#cinemate-services">Cinemate services</a></td>
-</tr>
-<tr>
-<td>27</td>
-<td>Finishing up</td>
-<td>not consolidated — scattered reminders (e.g. <code>source ~/.bashrc</code>)</td>
-</tr>
-</tbody>
-</table>
-<p>Rows marked "not covered" have no functional consequence if skipped by hand (diagnostics,
-an <code>ld.so.conf.d</code> entry the Pi 4 path already covers) — see the B13.6 commit for why those
-were deliberately left rather than padded in.</p>
-</details>
 <div class="highlight"><pre><span></span><code>sudo apt update -y
 sudo apt upgrade -y
 </code></pre></div>
 <h3 id="kernel-baseline-raspberry-pi-5-cm5">Kernel baseline (Raspberry Pi 5 / CM5)<a class="headerlink" href="#kernel-baseline-raspberry-pi-5-cm5" title="Permanent link">#</a></h3>
-<p>Cinemate pins the Pi 5 kernel to a validated baseline: <strong>6.12.93+rpt</strong>. Install it before building <code>libcamera</code>, <code>cinepi-raw</code>, or the IMX585 driver, and make the boot files stick in <code>/boot/firmware</code>.</p>
+<p>CineMate pins the Pi 5 kernel to a validated baseline: <strong>6.12.93+rpt</strong>. Install it before building <code>libcamera</code>, <code>cinepi-raw</code>, or the IMX585 driver, and make the boot files stick in <code>/boot/firmware</code>.</p>
 <p>The baseline matters in both directions. Older kernels — including the previous 6.12.25 pin — ship an <code>rp1-cfe</code> driver that corrupts 16-bit CSI-2 capture, which breaks imx585 ClearHDR (10/12-bit recording is unaffected). The fixes landed mid-2025 (<code>cfe: Avoid unpack operation for 16-bit formats</code> plus a 16-bit hardware mismatch workaround), so any kernel from 6.12.93+rpt onward works; the pin keeps the fleet on one tested version.</p>
 <p>Skip this section on Pi 4.</p>
 <div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>~/kernel-baseline-6.12.93
@@ -575,7 +391,7 @@ sudo<span class="w"> </span>reboot
 higher imx585 ClearHDR frame rates. Do this <strong>before</strong> the libcamera build
 below so the change is compiled in. See <a href="../overclocking/">Overclocking the Pi</a>
 — it changes one line in <code>controller.cpp</code> (<code>minPixelProcessingTime</code>) and adds
-an RP1 device-tree overlay. The prebuilt Cinemate image already ships this
+an RP1 device-tree overlay. The prebuilt CineMate image already ships this
 libcamera build; only the RP1 overlay stays commented out in <code>config.txt</code>
 until you opt in.</p>
 </div>
@@ -745,17 +561,22 @@ EOF
 sudo<span class="w"> </span>dkms<span class="w"> </span>autoinstall<span class="w"> </span>-k<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>uname<span class="w"> </span>-r<span class="k">)</span><span class="s2">"</span>
 <span class="nb">cd</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/imx585-v4l2-driver.git<span class="w"> </span>--branch<span class="w"> </span>innomaker-v1.0
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/imx585-v4l2-driver.git<span class="w"> </span>--branch<span class="w"> </span>cinemate-7modes
 <span class="nb">cd</span><span class="w"> </span>imx585-v4l2-driver/
 ./setup.sh
 sudo<span class="w"> </span>dkms<span class="w"> </span>autoinstall<span class="w"> </span>-k<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>uname<span class="w"> </span>-r<span class="k">)</span><span class="s2">"</span>
 <span class="nb">cd</span>
 </code></pre></div>
 <div class="admonition note">
-<p>The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work and installed from Tiramisioux forks (<code>6.12.y</code> branch of each). The <a href="https://github.com/Tiramisioux/imx283-v4l2-driver">IMX283 fork</a> adds UHD 4K (3840×2160, 10-bit) and 2.7K 16:9 (2736×1538, 12-bit) readout modes on top of the upstream <code>6.12.y</code> base; the <a href="https://github.com/Tiramisioux/imx585-v4l2-driver">IMX585 fork</a> installs its <code>innomaker-v1.0</code> branch — upstream <code>main</code>, byte-identical to the INNO-MAKER v1.0 vendor driver: active-area modes (1920×1080 / 3840×2160 / 3840×2200 16-bit ClearHDR), the <code>ccmp</code> overlay parameter, and the invalid binned-ClearHDR combination gated out. For a mono imx585 the installer additionally applies the <code>scripts/patch-rp1-cfe.sh</code> kernel patch — without it, mono 16-bit capture records garbage (see <a href="../clear-hdr/#mono-sensor-imx585_mono">ClearHDR</a>). For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver</p>
+<p>The IMX283 and IMX585 DKMS drivers are Tiramisioux forks of Will Whang's
+(<a href="https://github.com/Tiramisioux/imx283-v4l2-driver">imx283</a> <code>6.12.y</code>, adding UHD 4K 10-bit and
+2.7K 16:9 12-bit; <a href="https://github.com/Tiramisioux/imx585-v4l2-driver">imx585</a> <code>cinemate-7modes</code>,
+three SDR and four ClearHDR modes). Both pins are verified on CineMate hardware. For
+<code>imx585_mono</code> the installer also applies <code>scripts/patch-rp1-cfe.sh</code>, without which mono 16-bit
+capture records garbage — see <a href="../clear-hdr/#mono-sensor-imx585_mono">ClearHDR</a>.</p>
 </div>
-<h4 id="cinemate-imx283-and-imx585-tuning-overrides">Cinemate IMX283 and IMX585 tuning overrides<a class="headerlink" href="#cinemate-imx283-and-imx585-tuning-overrides" title="Permanent link">#</a></h4>
-<p>These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into the <code>libcamera</code> source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults. All three override files are <code>pisp</code>-target (Pi 5 / PiSP ISP), so they are installed only into the <code>pisp</code> dirs — copying them into the <code>vc4</code> (Pi 4) dirs would apply the wrong hardware config and overwrite the stock <code>bcm2835</code>-target <code>imx283.json</code> that Pi 4 needs.</p>
+<h4 id="cinemate-imx283-and-imx585-tuning-overrides">CineMate IMX283 and IMX585 tuning overrides<a class="headerlink" href="#cinemate-imx283-and-imx585-tuning-overrides" title="Permanent link">#</a></h4>
+<p>These commands overlay CineMate's local IMX283, IMX585 and IMX585 mono tuning files into the <code>libcamera</code> source tree and the installed IPA directories so the runtime stays aligned with CineMate's defaults. All three override files are <code>pisp</code>-target (Pi 5 / PiSP ISP), so they are installed only into the <code>pisp</code> dirs — copying them into the <code>vc4</code> (Pi 4) dirs would apply the wrong hardware config and overwrite the stock <code>bcm2835</code>-target <code>imx283.json</code> that Pi 4 needs.</p>
 <div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span>dir<span class="w"> </span><span class="k">in</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data<span class="p">;</span><span class="w"> </span><span class="k">do</span>
 <span class="w">  </span>install<span class="w"> </span>-d<span class="w"> </span>-m<span class="w"> </span><span class="m">755</span><span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">"</span>
 <span class="w">  </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>/home/pi/cinemate/resources/tuning_files/imx283.json<span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">/imx283.json"</span>
@@ -770,20 +591,20 @@ sudo<span class="w"> </span>dkms<span class="w"> </span>autoinstall<span class="
 <span class="w">  </span>sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>/home/pi/cinemate/resources/tuning_files/imx585_mono.json<span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">/imx585_mono.json"</span>
 <span class="k">done</span>
 </code></pre></div>
-<p>Every mode a sensor supports is listed in <code>resources/sensors.json</code>, so all of them stay available to the system. Cinemate's stock <code>settings.jsonc</code> then exposes only the practical ones in the UI — for the IMX283 that is the ≥25 fps 2.7K and 4K crops (<code>k_steps: [3, 4]</code>). Add <code>5.5</code> to also show the IMX283 5K modes, or set <code>k_steps</code> to your sensor's sizes (for example <code>[1.5, 2, 4]</code> for IMX477). To check or edit the list, type <code>editsettings</code> in the Pi terminal, or edit <code>/home/pi/cinemate/settings.jsonc</code> directly:</p>
+<p>Every mode a sensor supports is listed in <code>resources/sensors.json</code>, so all of them stay available to the system. CineMate's stock <code>settings.jsonc</code> then exposes only the practical ones in the UI — for the IMX283 that is the ≥25 fps 2.7K and 4K crops (<code>k_steps: [3, 4]</code>). Add <code>5.5</code> to also show the IMX283 5K modes, or set <code>k_steps</code> to your sensor's sizes (for example <code>[1.5, 2, 4]</code> for IMX477). To check or edit the list, type <code>editsettings</code> in the Pi terminal, or edit <code>/home/pi/cinemate/settings.jsonc</code> directly:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">"image_capture"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nt">"k_steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span>
 <span class="w">  </span><span class="nt">"bit_depths"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">],</span>
 <span class="w">  </span><span class="nt">"custom_modes"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>Restart Cinemate after changing <code>settings.jsonc</code>.</p>
+<p>Restart CineMate after changing <code>settings.jsonc</code>.</p>
 <h4 id="ir-filter-switch-script">IR filter switch script<a class="headerlink" href="#ir-filter-switch-script" title="Permanent link">#</a></h4>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>wget<span class="w"> </span>https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter<span class="w"> </span>-O<span class="w"> </span>/usr/local/bin/IRFilter
 sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/IRFilter
 </code></pre></div>
 <div class="admonition note">
-<p>Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate</p>
+<p>CineMate has its own way of handling the IR switch but the installation above can be convenient for use outside of CineMate</p>
 </div>
 <h3 id="enabling-i2c">Enabling I²C<a class="headerlink" href="#enabling-i2c" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span class="w"> </span>do_i2c<span class="w"> </span><span class="m">0</span>
@@ -803,16 +624,16 @@ sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> <
 sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>--now<span class="w"> </span>avahi-daemon
 </code></pre></div>
 <div class="admonition note">
-<p>You will find the pi as <code>cinepi.local</code> on the local network, or at the hotspot Cinemate creates. If it still doesn't resolve from a particular device, that device's own network/mDNS resolver is the next thing to check — some guest Wi-Fi networks and VPNs block mDNS multicast entirely.</p>
+<p>You will find the pi as <code>cinepi.local</code> on the local network, or at the hotspot CineMate creates. If it still doesn't resolve from a particular device, that device's own network/mDNS resolver is the next thing to check — some guest Wi-Fi networks and VPNs block mDNS multicast entirely.</p>
 </div>
 <h3 id="add-camera-modules-to-configtxt">Add camera modules to config.txt<a class="headerlink" href="#add-camera-modules-to-configtxt" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>nano<span class="w"> </span>/boot/firmware/config.txt
 </code></pre></div>
-<p>Replace the file contents with the single managed-format Cinemate block documented on <strong><a href="../config-txt/">Modifying config.txt</a></strong> — that page is the canonical copy of the block. Uncomment the section for the sensor you are using (comment out the others) and set the physical camera port (<code>cam0</code> by default) to the connector your sensor is on. A clean install uses the IMX477 section on <code>cam0</code>.</p>
+<p>Replace the file contents with the single managed-format CineMate block documented on <strong><a href="../config-txt/">Modifying config.txt</a></strong> — that page is the canonical copy of the block. Uncomment the section for the sensor you are using (comment out the others) and set the physical camera port (<code>cam0</code> by default) to the connector your sensor is on. A clean install uses the IMX477 section on <code>cam0</code>.</p>
 <p>The one-click installer writes this same managed block automatically and backs up the previous file under <code>/home/pi/.cinemate-install-backups/</code>.</p>
 <p>Exit with Ctrl+X, press "y", then Enter to save.</p>
 <h3 id="pin-the-hdmi-boot-mode-for-headless-startup">Pin the HDMI boot mode for headless startup<a class="headerlink" href="#pin-the-hdmi-boot-mode-for-headless-startup" title="Permanent link">#</a></h3>
-<p>On Raspberry Pi Bookworm with KMS enabled, a Pi that boots without a monitor can later hotplug into a fallback mode such as <code>1024x768</code>. That makes the GUI and preview appear inside a 4:3 framebuffer even if Cinemate is configured for <code>1920x1080</code>.</p>
+<p>On Raspberry Pi Bookworm with KMS enabled, a Pi that boots without a monitor can later hotplug into a fallback mode such as <code>1024x768</code>. That makes the GUI and preview appear inside a 4:3 framebuffer even if CineMate is configured for <code>1920x1080</code>.</p>
 <p>Edit the kernel command line:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>nano<span class="w"> </span>/boot/firmware/cmdline.txt
 </code></pre></div>
@@ -826,7 +647,7 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">en
 <p><code>cmdline.txt</code> must stay on a single line. Do not add line breaks.</p>
 </div>
 <div class="admonition note">
-<p>This boot-time <code>video=</code> setting pins the framebuffer mode. Cinemate still reads the preferred HDMI canvas and runtime HDMI port from <code>settings.jsonc</code>.</p>
+<p>This boot-time <code>video=</code> setting pins the framebuffer mode. CineMate still reads the preferred HDMI canvas and runtime HDMI port from <code>settings.jsonc</code>.</p>
 </div>
 <h3 id="enable-console-auto-login">Enable console auto-login<a class="headerlink" href="#enable-console-auto-login" title="Permanent link">#</a></h3>
 <p>The one-click installer does this automatically unless <code>ENABLE_CONSOLE_AUTOLOGIN=0</code> is set. For a manual install, create a systemd drop-in for <code>getty@tty1</code> so the configured Pi user is logged in on the main console after boot:</p>
@@ -909,11 +730,11 @@ cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">
 cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">1456</span>:1088:10:P<span class="w"> </span>--width<span class="w"> </span><span class="m">1456</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1088</span><span class="w"> </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span>
 </code></pre></div>
 <p>For more details on running CinePi-raw from the command line, see <a href="../cli-user-guide/">this section</a>. </p>
-<h3 id="cinemate">Cinemate<a class="headerlink" href="#cinemate" title="Permanent link">#</a></h3>
+<h3 id="cinemate">CineMate<a class="headerlink" href="#cinemate" title="Permanent link">#</a></h3>
 <h4 id="system-wide-packages">System wide packages<a class="headerlink" href="#system-wide-packages" title="Permanent link">#</a></h4>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update
 sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>git<span class="w"> </span>build-essential<span class="w"> </span>python3-dev<span class="w"> </span>python3-pip<span class="w"> </span>python3-venv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>git<span class="w"> </span>build-essential<span class="w"> </span>python3-dev<span class="w"> </span>python3-pip<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>i2c-tools<span class="w"> </span>python3-smbus<span class="w"> </span>python3-pyudev<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>libgpiod-dev<span class="w"> </span>libgpiod2<span class="w"> </span>python3-libgpiod<span class="w"> </span>gpiod<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>portaudio19-dev<span class="w"> </span>python3-systemd<span class="w"> </span><span class="se">\</span>
@@ -921,8 +742,8 @@ sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> <
 <span class="w">    </span>console-terminus
 </code></pre></div>
 <h4 id="enable-i2c">Enable I²C<a class="headerlink" href="#enable-i2c" title="Permanent link">#</a></h4>
-<p>The <code>pi_cinemate</code> sudoers drop-in is written in <a href="#allow-cinemate-to-run-with-sudo">Allow Cinemate to run with
-sudo</a> below, after the repo is cloned — Cinemate's Python
+<p>The <code>pi_cinemate</code> sudoers drop-in is written in <a href="#allow-cinemate-to-run-with-sudo">Allow CineMate to run with
+sudo</a> below, after the repo is cloned — CineMate's Python
 packages install to the system interpreter (<code>pip install --user --break-system-packages</code>,
 see <a href="#python-packages">Python packages</a> below), so there is no virtualenv to scope an
 earlier grant to.</p>
@@ -937,7 +758,7 @@ Reboot so the group changes take effect:</p>
 <div class="admonition note">
 <p>If you previously installed the <code>board</code> Python package, remove it with <code>pip3 uninstall board</code>.</p>
 </div>
-<p>Clone the repo first if you haven't yet (see <a href="#clone-the-cinemate-repo">Clone the Cinemate repo</a>
+<p>Clone the repo first if you haven't yet (see <a href="#clone-the-cinemate-repo">Clone the CineMate repo</a>
 below), then install from its requirements files — the portable set plus the hardware-only set
 (<code>lgpio</code>, <code>gpiozero</code>, the Adafruit/Grove libraries, and everything else GPIO/I²C-specific):</p>
 <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>--break-system-packages<span class="w"> </span><span class="se">\</span>
@@ -951,7 +772,7 @@ git<span class="w"> </span>clone<span class="w"> </span>https://github.com/joan2
 sudo<span class="w"> </span>make<span class="w"> </span>install
 <span class="nb">cd</span><span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>lgpio
 </code></pre></div>
-<h4 id="clone-the-cinemate-repo">Clone the Cinemate repo<a class="headerlink" href="#clone-the-cinemate-repo" title="Permanent link">#</a></h4>
+<h4 id="clone-the-cinemate-repo">Clone the CineMate repo<a class="headerlink" href="#clone-the-cinemate-repo" title="Permanent link">#</a></h4>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>git
 git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinemate.git
 </code></pre></div>
@@ -994,7 +815,7 @@ sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">755</sp
 preserving its existing owner/mode — the settings editor's "apply config.txt" button uses it so
 a page running as <code>pi</code> can write into root-owned <code>/boot/firmware</code> (F-288) without a broad sudo
 grant.</p>
-<h4 id="allow-cinemate-to-run-with-sudo">Allow Cinemate to run with sudo<a class="headerlink" href="#allow-cinemate-to-run-with-sudo" title="Permanent link">#</a></h4>
+<h4 id="allow-cinemate-to-run-with-sudo">Allow CineMate to run with sudo<a class="headerlink" href="#allow-cinemate-to-run-with-sudo" title="Permanent link">#</a></h4>
 <p>Write the <code>pi_cinemate</code> sudoers drop-in and validate it:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/sudoers.d/pi_cinemate<span class="w"> </span><span class="s">&lt;&lt;'EOF'</span>
 <span class="s">pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh</span>
@@ -1095,15 +916,15 @@ color white start="/\*" end="\*/"
 </code></pre></div>
 <p>Use HDMI port <code>0</code> for <code>HDMI-A-1</code> and port <code>1</code> for <code>HDMI-A-2</code>.</p>
 <div class="admonition note">
-<p>Current Cinemate builds can start without HDMI attached and recover when HDMI is plugged in later, but the Pi still needs the <code>video=</code> entry in <code>cmdline.txt</code> above if you want the headless boot framebuffer to come up in <code>1920x1080</code> instead of a fallback 4:3 mode.</p>
+<p>Current CineMate builds can start without HDMI attached and recover when HDMI is plugged in later, but the Pi still needs the <code>video=</code> entry in <code>cmdline.txt</code> above if you want the headless boot framebuffer to come up in <code>1920x1080</code> instead of a fallback 4:3 mode.</p>
 </div>
 <h4 id="optional-install-plymouth-for-the-boot-spinner">Optional: install Plymouth for the boot spinner<a class="headerlink" href="#optional-install-plymouth-for-the-boot-spinner" title="Permanent link">#</a></h4>
-<p>If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling <code>cinemate-autostart.service</code>. The Cinemate theme below keeps the spinner centered on the HDMI framebuffer during Pi startup and shutdown, while Cinemate itself shows the welcome message after Plymouth hands off to the app.</p>
+<p>If you want the same boot spinner and clean spinner-to-CineMate handoff as the prebuilt image, install Plymouth before enabling <code>cinemate-autostart.service</code>. The CineMate theme below keeps the spinner centered on the HDMI framebuffer during Pi startup and shutdown, while CineMate itself shows the welcome message after Plymouth hands off to the app.</p>
 <p>Install the required packages:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update
 sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>plymouth<span class="w"> </span>plymouth-themes<span class="w"> </span>plymouth-label
 </code></pre></div>
-<p>Install the Cinemate-owned Plymouth theme from this repo and set it as the default:</p>
+<p>Install the CineMate-owned Plymouth theme from this repo and set it as the default:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>install<span class="w"> </span>-d<span class="w"> </span>-m<span class="w"> </span><span class="m">755</span><span class="w"> </span>/usr/share/plymouth/themes/cinemate
 sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>resources/plymouth/cinemate/cinemate.plymouth<span class="w"> </span>/usr/share/plymouth/themes/cinemate/cinemate.plymouth
 sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>resources/plymouth/cinemate/cinemate.script<span class="w"> </span>/usr/share/plymouth/themes/cinemate/cinemate.script
@@ -1123,7 +944,7 @@ sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>plymouth-set-default-theme<span class="w"> </span>cinemate
 sudo<span class="w"> </span>update-initramfs<span class="w"> </span>-u
 </code></pre></div>
-<p>After that, reinstall the Cinemate autostart service so the latest <code>tty1</code> handoff scripts and Plymouth ordering are installed:</p>
+<p>After that, reinstall the CineMate autostart service so the latest <code>tty1</code> handoff scripts and Plymouth ordering are installed:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate
 sudo<span class="w"> </span>make<span class="w"> </span>install
 sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
@@ -1131,8 +952,8 @@ sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable<
 <p>Reboot to test:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>reboot
 </code></pre></div>
-<p>If you skip Plymouth, Cinemate still works. You just will not get the boot spinner or the same CLI-suppressed boot handoff.</p>
-<h3 id="cinemate-services">Cinemate services<a class="headerlink" href="#cinemate-services" title="Permanent link">#</a></h3>
+<p>If you skip Plymouth, CineMate still works. You just will not get the boot spinner or the same CLI-suppressed boot handoff.</p>
+<h3 id="cinemate-services">CineMate services<a class="headerlink" href="#cinemate-services" title="Permanent link">#</a></h3>
 <p>Install and enable the support services with:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate/services
 </code></pre></div>
@@ -1152,22 +973,35 @@ sudo make enable # enables storage-automount, wifi-hotspot, and redis-log-mainte
 journalctl<span class="w"> </span>-u<span class="w"> </span>redis-log-maintenance.service
 </code></pre></div>
 <h4 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h4>
-<p>Starts Cinemate automatically on boot. After you have tested Cinemate manually in the Running cinemate manually section at the end of this guide and confirmed that it runs smoothly, enable the service with:</p>
+<p>Starts CineMate automatically on boot. After you have tested CineMate manually in the Running CineMate manually section at the end of this guide and confirmed that it runs smoothly, enable the service with:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate/
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>sudo make install   # copy service file
 sudo make enable    # start on boot
 </code></pre></div>
-<p>After enabling the service, reboot the Pi. Cinemate should autostart on the next boot. If you deliberately want to test the service immediately from SSH, run <code>sudo systemctl start cinemate-autostart</code>, but the normal install path is to reboot.</p>
+<p>After enabling the service, reboot the Pi. CineMate should autostart on the next boot. If you deliberately want to test the service immediately from SSH, run <code>sudo systemctl start cinemate-autostart</code>, but the normal install path is to reboot.</p>
 <h4 id="cinemate-recovery">cinemate-recovery<a class="headerlink" href="#cinemate-recovery" title="Permanent link">#</a></h4>
 <p>Runs as its own root systemd service, independent of <code>cinemate-autostart.service</code>, so it stays
-reachable through a Cinemate crash or a broken <code>settings.jsonc</code> — see
+reachable through a CineMate crash or a broken <code>settings.jsonc</code> — see
 <a href="../recovery-console/">Recovery console</a>.</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate/services/cinemate-recovery
 sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
 </code></pre></div>
 <h4 id="further-notes">Further notes<a class="headerlink" href="#further-notes" title="Permanent link">#</a></h4>
-<p><code>sudo make install</code> also places <code>/usr/local/bin/camera-ready.sh</code>, <code>/usr/local/bin/cinemate-startup-failure-display.sh</code>, and <code>/usr/local/bin/cinemate-console-handoff.sh</code> on the system. The camera-ready helper waits for <code>cinepi-raw</code> to report a camera before systemd launches Cinemate, the startup-failure helper preserves early crash diagnostics on <code>tty1</code>, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving <code>tty1</code> available for Plymouth during full system shutdown.</p>
+<p><code>sudo make install</code> also places <code>/usr/local/bin/camera-ready.sh</code>, <code>/usr/local/bin/cinemate-startup-failure-display.sh</code>, and <code>/usr/local/bin/cinemate-console-handoff.sh</code> on the system. The camera-ready helper waits up to 8 seconds for <code>cinepi-raw</code> to report a camera before systemd launches CineMate — but that wait is now advisory, not a startup gate: if no camera ever shows up, CineMate still starts, showing a full-width <strong>CAMERA NOT FOUND</strong> message in the preview area of both the HDMI and web GUI (see <a href="../troubleshooting/">Troubleshooting</a>) rather than failing to boot. The startup-failure helper preserves early crash diagnostics on <code>tty1</code>, and the console-handoff helper restores the CLI on a normal CineMate stop while leaving <code>tty1</code> available for Plymouth during full system shutdown.</p>
+<div class="admonition warning">
+<p class="admonition-title">Updating an existing install — <code>git pull</code> is not enough</p>
+<p><code>cinemate-autostart.service</code> and the helper scripts under <code>/usr/local/bin/</code> are <strong>copied</strong> into place by <code>sudo make install</code>, not symlinked. A <code>git pull</code> on the Pi updates the repo but leaves the installed copies exactly as they were, however long ago you installed.</p>
+<p>That matters here: the camera-ready gate was made advisory in the unit file, and <code>camera-ready.sh</code> was shortened from 30 s to 8 s. Without the copy step, a Pi keeps the <strong>strict</strong> gate — with no camera attached, systemd fails the unit before CineMate ever runs, and you get a bare terminal on <code>tty1</code> with no CineMate error to explain it.</p>
+<p>On a Pi that was set up before this change:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate/
+sudo<span class="w"> </span>make<span class="w"> </span>install<span class="w">               </span><span class="c1"># re-copies the service file and the helper scripts</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>daemon-reload
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>cinemate-autostart<span class="w">   </span><span class="c1"># or reboot</span>
+</code></pre></div>
+<p>CineMate checks this for you at startup and logs a warning naming this exact command if any installed copy is out of date with the repo. Re-running the full installer does the same thing, since it calls <code>sudo make install</code> itself.</p>
+</div>
+<p>For routine updates, run <code>cinemate-update.sh</code> from the repo root (<code>/home/pi/cinemate/cinemate-update.sh</code>) instead of a bare <code>git pull</code>. It fetches and fast-forwards both <code>cinepi-raw</code> and <code>cinemate</code>, then rebuilds/reinstalls whichever repo actually changed — including the <code>make install</code> step above — so the installed copies stay current automatically. If <code>versions.env</code> has a <code>CINEMATE_REPO_REF</code> and/or <code>CINEPI_RAW_REPO_REF</code> recorded (see <a href="#dependency-files">Dependency files</a> above), it checks out and follows that pinned ref for the corresponding repo instead of whatever branch happens to be checked out; left empty (the default), it behaves exactly as before.</p>
 <p>You now have a 12 bit RAW image capturing system on your Raspberry Pi!</p>
 <h4 id="wi-fi-hotspot-handoff">Wi-Fi hotspot handoff<a class="headerlink" href="#wi-fi-hotspot-handoff" title="Permanent link">#</a></h4>
 <p>Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.</p>
@@ -1194,17 +1028,17 @@ sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable<
 <div class="highlight"><pre><span></span><code>ssh<span class="w"> </span>pi@10.42.0.1
 </code></pre></div>
 <p>Log in with the password you chose in Raspberry Pi Imager. (The prebuilt image uses <code>pi</code> / <code>1</code> — see <a href="../ssh/">Connecting via SSH</a>.)</p>
-<h2 id="running-cinemate-manually">Running cinemate manually<a class="headerlink" href="#running-cinemate-manually" title="Permanent link">#</a></h2>
-<p>Running Cinemate manually is recommended while you are trying out the system, testing GPIO buttons, checking rotary encoder actions, changing <code>settings.jsonc</code>, or doing maintenance and development. When Cinemate is started from a terminal, that terminal also becomes the Cinemate CLI. You can type commands such as <code>get</code>, <code>rec</code>, <code>stop</code>, <code>set iso 800</code>, <code>set resolution</code>, or <code>restart camera</code>. See <a href="../cli-commands/">Cinemate terminal commands</a> for the full command list.</p>
-<p>If <code>cinemate-autostart.service</code> is already running, stop it before launching Cinemate manually:</p>
+<h2 id="running-cinemate-manually">Running CineMate manually<a class="headerlink" href="#running-cinemate-manually" title="Permanent link">#</a></h2>
+<p>Running CineMate manually is recommended while you are trying out the system, testing GPIO buttons, checking rotary encoder actions, changing <code>settings.jsonc</code>, or doing maintenance and development. When CineMate is started from a terminal, that terminal also becomes the CineMate CLI. You can type commands such as <code>get</code>, <code>rec</code>, <code>stop</code>, <code>set iso 800</code>, <code>set resolution</code>, or <code>restart camera</code>. See <a href="../cli-commands/">CineMate terminal commands</a> for the full command list.</p>
+<p>If <code>cinemate-autostart.service</code> is already running, stop it before launching CineMate manually:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>cinemate-autostart
 </code></pre></div>
-<p>Then start Cinemate manually:</p>
+<p>Then start CineMate manually:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate
 cinemate
 </code></pre></div>
-<p>Press Ctrl+C in that terminal to stop the manually started Cinemate process.</p>
-<p>During maintenance or development, stopping the service only stops it for the current boot. Disable it if you do not want Cinemate to autostart after the next reboot:</p>
+<p>Press Ctrl+C in that terminal to stop the manually started CineMate process.</p>
+<p>During maintenance or development, stopping the service only stops it for the current boot. Disable it if you do not want CineMate to autostart after the next reboot:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>disable<span class="w"> </span>cinemate-autostart
 </code></pre></div>
 <p>When you want the normal camera boot behavior again, enable it and either reboot or start it directly:</p>

@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cinepi-multi/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>How Cinemate launches CinePi-raw - Cinemate Docs</title>
+    <title>How CineMate launches CinePi-raw - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -14,7 +14,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "How Cinemate launches CinePi-raw";
+        var mkdocs_page_name = "How CineMate launches CinePi-raw";
         var mkdocs_page_input_path = "cinepi-multi.md";
         var mkdocs_page_url = "/cinemate/cinepi-multi/";
       </script>
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -110,34 +112,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
-              <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">How Cinemate launches CinePi-raw</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#building-the-cinepi-raw-command">Building the cinepi-raw command</a>
-    </li>
-    </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -154,15 +140,14 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Reference</li>
-      <li class="breadcrumb-item active">How Cinemate launches CinePi-raw</li>
+      <li class="breadcrumb-item active">How CineMate launches CinePi-raw</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cinepi-multi.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -173,9 +158,17 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="how-cinemate-launches-cinepi-raw">How Cinemate launches CinePi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
+  <h1 id="how-cinemate-launches-cinepi-raw">How CineMate launches CinePi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
 <p><code>src/module/cinepi_multi.py</code> starts one <code>cinepi-raw</code> process per detected camera. It combines camera discovery from <code>sensor_detect.py</code>, Redis state, and user settings from <code>settings.jsonc</code> to build the command line for each process.</p>
 <h2 id="building-the-cinepi-raw-command">Building the <code>cinepi-raw</code> command<a class="headerlink" href="#building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
+<p>Here is an  example of the command CineMate uses to launch cinepi-raw:</p>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--hdmi-port<span class="w"> </span><span class="m">0</span><span class="w"> </span>--rotation<span class="w"> </span><span class="m">0</span><span class="w"> </span>--hflip<span class="w"> </span><span class="m">0</span><span class="w"> </span>--vflip<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing0.json<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
+</code></pre></div>
 <p>For each detected camera, the manager creates a <code>CinePiProcess</code>. <code>_build_args()</code> assembles flags for:</p>
 <ul>
 <li>the selected sensor mode, width, height, and bit depth</li>
@@ -184,25 +177,13 @@
 <li>per-camera HDMI output mapping from the <code>output</code> section</li>
 <li>the low-resolution preview size used by CinePi-raw</li>
 </ul>
-<p>The preview size is based on <code>hdmi_display.width</code> and <code>hdmi_display.height</code>, but if a framebuffer is already active, Cinemate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped <code>1920x1080</code> preview into a smaller active mode.</p>
-<p>Here is a simplified example of the resulting command:</p>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--hdmi-port<span class="w"> </span><span class="m">0</span><span class="w"> </span>--rotation<span class="w"> </span><span class="m">0</span><span class="w"> </span>--hflip<span class="w"> </span><span class="m">0</span><span class="w"> </span>--vflip<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing0.json<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
-</code></pre></div>
-<p>On Raspberry Pi 4 / Pi 400 / CM4, Cinemate switches IMX296 and IMX477 launches to packed raw mode (<code>P</code>), for example <code>1456:1088:10:P</code> for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (<code>U</code>). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.</p>
+<p>The preview size is based on <code>hdmi_display.width</code> and <code>hdmi_display.height</code>, but if a framebuffer is already active, CineMate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped <code>1920x1080</code> preview into a smaller active mode.</p>
+<p>On Raspberry Pi 4 / Pi 400 / CM4, CineMate switches IMX296 and IMX477 launches to packed raw mode (<code>P</code>), for example <code>1456:1088:10:P</code> for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (<code>U</code>). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.</p>
 <p>In multi-camera mode, the sensors are synced. The first process is launched with <code>--sync server</code> and the rest use <code>--sync client</code>. Only the primary process gets the on-screen preview rectangle; secondary cameras run with <code>--nopreview</code>.</p>
 </div>
 
             </div>
           </div><footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../redis-keys/" class="btn btn-neutral float-left" title="Redis Key reference"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../changelog/" class="btn btn-neutral float-right" title="Changelog">Next <span class="icon icon-circle-arrow-right"></span></a>
-    </div>
 
   <hr/>
 
@@ -228,10 +209,6 @@
         </span>
     
     
-      <span><a href="../redis-keys/" style="color: #fcfcfc">&laquo; Previous</a></span>
-    
-    
-      <span><a href="../changelog/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

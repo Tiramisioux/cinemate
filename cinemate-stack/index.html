@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cinemate-stack/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>The CineMate stack explained - CineMate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "The CineMate stack explained";
+        var mkdocs_page_input_path = "cinemate-stack.md";
+        var mkdocs_page_url = "/cinemate/cinemate-stack/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> CineMate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">The CineMate stack explained</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#the-layers">The layers</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#following-a-setting-down-to-the-sensor">Following a setting down to the sensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#what-runs-as-what">What runs as what</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">CineMate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Configuring</li>
+      <li class="breadcrumb-item active">The CineMate stack explained</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cinemate-stack.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="the-cinemate-stack-explained">The CineMate stack explained<a class="headerlink" href="#the-cinemate-stack-explained" title="Permanent link">#</a></h1>
+<p>The camera is five pieces stacked bottom to top: a kernel driver on the sensor chip, libcamera
+handing finished frames up, <code>cinepi-raw</code> running the capture loop and writing the CinemaDNGs, Redis holding the live state, and CineMate owning everything you touch. CineMate and cinepi-raw are separate processes, and Redis serves as an "API"-layer between them.</p>
+<p><img alt="The CineMate camera stack, exploded" src="../images/camera-stack3.png" /></p>
+<h2 id="the-layers">The layers<a class="headerlink" href="#the-layers" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What it is</th>
+<th>Responsible for</th>
+<th>Documented in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor kernel driver</td>
+<td>A V4L2 kernel module, selected by a <code>dtoverlay=</code> line in <code>config.txt</code></td>
+<td>Register writes to the sensor, the readout modes it offers, sensor-specific controls such as ClearHDR</td>
+<td><a href="../config-txt/">Boot config</a>, <a href="../sensors/">Camera sensors and frame rates</a></td>
+</tr>
+<tr>
+<td>libcamera</td>
+<td>The libcamera camera framework, in Raspberry Pi's fork of it, built here from this project's own fork (<code>Tiramisioux/libcamera</code>, branch <code>cinemate</code>)</td>
+<td>Configuring streams, applying controls such as analogue gain and frame duration, delivering completed frame requests</td>
+<td><a href="../installation-steps/">Manual installation</a></td>
+</tr>
+<tr>
+<td>cinepi-raw</td>
+<td>A C++ fork of <code>rpicam-apps</code>, built on <a href="https://github.com/cinepi">CinePi RAW</a></td>
+<td>The capture loop, the CinemaDNG writer, the HDMI and MJPEG previews, and a separate audio-capture process</td>
+<td><a href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>, <a href="../cli-user-guide/">CinePi RAW terminal commands</a></td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>An off-the-shelf in-memory key-value store with publish/subscribe channels</td>
+<td>Holding live state (<code>iso</code>, <code>fps</code>, <code>is_recording</code>, …), carrying control changes down on the <code>cp_controls</code> channel and per-frame stats up on <code>cp_stats</code></td>
+<td><a href="../redis-guide/">Redis API</a>, <a href="../redis-keys/">Redis key reference</a></td>
+</tr>
+<tr>
+<td>CineMate</td>
+<td>A Python program, <code>src/main.py</code></td>
+<td>All operator surfaces, storage handling, settings, and launching cinepi-raw</td>
+<td><a href="../simple-gui/">Simple GUI</a>, <a href="../web-gui/">Web GUI</a>, <a href="../cli-commands/">Terminal commands</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="following-a-setting-down-to-the-sensor">Following a setting down to the sensor<a class="headerlink" href="#following-a-setting-down-to-the-sensor" title="Permanent link">#</a></h2>
+<p>Picking <strong>800</strong> from the ISO selector in the web GUI takes six hops.</p>
+<table>
+<thead>
+<tr>
+<th>Hop</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Browser</td>
+<td>Sends the CLI command line <code>set iso 800</code> as the plain-text body of <code>POST /api/v1/cmd</code>. Every web GUI control is a command string.</td>
+</tr>
+<tr>
+<td>2. Dispatcher</td>
+<td><code>CommandExecutor.handle_received_data()</code> longest-prefix matches <code>set iso</code> to <code>CinePiController.set_iso</code>, then takes a lock with a two-second timeout. On timeout the command is dropped and the API answers <code>503 err busy</code>. The CLI, the serial port and the settings editor all enter here.</td>
+</tr>
+<tr>
+<td>3. Controller</td>
+<td><code>set_iso()</code> returns early if the ISO lock is on. Otherwise it clamps 800 into the <code>iso_steps</code> range from <code>settings.jsonc</code> and writes to Redis.</td>
+</tr>
+<tr>
+<td>4. Redis</td>
+<td>The key <code>iso</code> is written and its <em>name</em> published on the <code>cp_controls</code> channel. A value that has not changed is not published, so a repeated command never reaches cinepi-raw.</td>
+</tr>
+<tr>
+<td>5. cinepi-raw</td>
+<td>Subscribed to <code>cp_controls</code>, it looks the published name up in a handler map, divides by 100 and sets <code>libcamera::controls::AnalogueGain</code>.</td>
+</tr>
+<tr>
+<td>6. libcamera</td>
+<td>Applies the gain to the following frames through the sensor driver.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-runs-as-what">What runs as what<a class="headerlink" href="#what-runs-as-what" title="Permanent link">#</a></h2>
+<p>Six systemd units, and the important thing about them is what does <em>not</em> depend on CineMate.</p>
+<table>
+<thead>
+<tr>
+<th>Unit</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cinemate-autostart.service</code></td>
+<td>CineMate itself, started at boot</td>
+</tr>
+<tr>
+<td><code>redis-server</code></td>
+<td>The key-value store both programs depend on. Enabled by the installer</td>
+</tr>
+<tr>
+<td><code>storage-automount.service</code></td>
+<td>Mounts removable drives, <code>RAW</code>-labelled ones at <code>/media/RAW</code></td>
+</tr>
+<tr>
+<td><code>wifi-hotspot.service</code></td>
+<td>The <code>CinePi</code> access point. Independent of CineMate, so it survives a crash</td>
+</tr>
+<tr>
+<td><code>cinemate-recovery.service</code></td>
+<td>A root-run console on port <code>8080</code> for a camera that will not start</td>
+</tr>
+<tr>
+<td><code>redis-log-maintenance.timer</code></td>
+<td>Keeps the Redis log from filling the root filesystem</td>
+</tr>
+</tbody>
+</table>
+<p><code>cinepi-raw</code> is not in that list. It has no unit of its own: CineMate launches it as a child
+process, one per detected sensor, and supervises it. Stop CineMate and the recorders stop with it.
+That is why a resolution or ClearHDR change can relaunch the recorder without anything at the
+systemd level noticing.</p>
+<p>The three services either side of CineMate are deliberately independent of it, because each one
+answers a question you need answered most when CineMate is the thing that broke:</p>
+<ul>
+<li><strong>The hotspot stays up.</strong> <code>wifi-hotspot.service</code> reconciles the access point on its own timer and
+  reads the credentials straight from <code>settings.jsonc</code>. NetworkManager also persists the profile
+  with autoconnect, so the network is back at boot before any Python has run. A CineMate that
+  crashes on startup is still reachable.</li>
+<li><strong>The recovery console stays up.</strong> <code>cinemate-recovery.service</code> runs as root on port <code>8080</code>, uses
+  the standard library only, and has no dependency on <code>cinemate-autostart.service</code>. It exists to
+  diagnose and repair a camera whose main program will not start, which is exactly when the
+  settings editor on port 5000 is unavailable.</li>
+<li><strong>Storage mounts itself.</strong> <code>storage-automount.service</code> reacts to udev events, so a drive
+  appearing or disappearing is handled whether or not CineMate is running.</li>
+</ul>
+<p>Restarting CineMate is therefore cheap and safe. It does not drop the hotspot, does not unmount the
+card, and does not take the recovery console with it. <code>restart cinemate</code> on the CLI, <strong>System →
+Restart CineMate</strong> in the settings editor, and a settings save all do the same thing. A reboot is
+only needed for <code>config.txt</code> changes, which the firmware reads at power-on.</p>
+<p>Full detail on each unit, including how to check and restart them: <a href="../system-services/">System
+services</a>.</p>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../storage-preroll/" class="btn btn-neutral float-left" title="Storage pre-roll warm-up"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../settings-json/" class="btn btn-neutral float-right" title="settings.jsonc">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../storage-preroll/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../settings-json/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

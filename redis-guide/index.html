@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/redis-guide/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Redis API - Cinemate Docs</title>
+    <title>Redis API quick start - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -14,7 +14,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Redis API";
+        var mkdocs_page_name = "Redis API quick start";
         var mkdocs_page_input_path = "redis-guide.md";
         var mkdocs_page_url = "/cinemate/redis-guide/";
       </script>
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -110,40 +112,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
-              <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Redis API</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#redis-cli">Redis-cli</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#cp_controls">cp_controls</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#cp_stats">cp_stats</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#controlling-the-camera-from-your-own-script">Controlling the camera from your own script</a>
-    </li>
-    </ul>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -160,15 +140,14 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Reference</li>
-      <li class="breadcrumb-item active">Redis API</li>
+      <li class="breadcrumb-item active">Redis API quick start</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/redis-guide.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -196,7 +175,7 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
 </code></pre></div>
 <p>This opens the Redis CLI.</p>
 <h2 id="cp_controls">cp_controls<a class="headerlink" href="#cp_controls" title="Permanent link">#</a></h2>
-<p>Both CinePi-raw and Cinemate write values and then publish the key name on the <code>cp_controls</code> channel. The supported control path is therefore:</p>
+<p>Both CinePi-raw and CineMate write values and then publish the key name on the <code>cp_controls</code> channel. The supported control path is therefore:</p>
 <ol>
 <li><code>SET &lt;key&gt; &lt;value&gt;</code></li>
 <li><code>PUBLISH cp_controls &lt;key&gt;</code></li>
@@ -208,9 +187,9 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
 <p>Recording uses two related keys:</p>
 <ul>
 <li><code>is_recording</code> is the requested record state. This is the key you write from scripts, and it is edge-triggered: <code>0 -&gt; 1</code> starts a take and <code>1 -&gt; 0</code> stops it.</li>
-<li><code>rec</code> is a derived runtime state generated by Cinemate from live <code>framecount</code> movement. It flips to <code>1</code> when frames actually start increasing and back to <code>0</code> when they stop rising or reset to zero. Use <code>rec</code> for "is the recorder really active right now?" indicators.</li>
+<li><code>rec</code> is a derived runtime state generated by CineMate from live <code>framecount</code> movement. It flips to <code>1</code> when frames actually start increasing and back to <code>0</code> when they stop rising or reset to zero. Use <code>rec</code> for "is the recorder really active right now?" indicators.</li>
 </ul>
-<p>During a storage warm-up, Cinemate also raises <code>storage_preroll_active=1</code> so other components can ignore the temporary clip.</p>
+<p>During a storage warm-up, CineMate also raises <code>storage_preroll_active=1</code> so other components can ignore the temporary clip.</p>
 <h2 id="cp_stats">cp_stats<a class="headerlink" href="#cp_stats" title="Permanent link">#</a></h2>
 <p>Every frame, CinePi-raw sends a small JSON object containing live statistics.</p>
 <div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
@@ -226,7 +205,7 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
 <span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"timestamp_cam1"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam1</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
 <span class="w">    </span><span class="n">redis_</span><span class="o">-&gt;</span><span class="n">publish</span><span class="p">(</span><span class="n">CHANNEL_STATS</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">toStyledString</span><span class="p">());</span>
 </code></pre></div>
-<p>Cinemate's <code>RedisListener</code> parses these messages and updates keys such as:</p>
+<p>CineMate's <code>RedisListener</code> parses these messages and updates keys such as:</p>
 <ul>
 <li><code>framecount</code>, <code>buffer</code>, <code>buffer_size</code>, and <code>fps_actual</code></li>
 <li><code>tc_cam0</code> and <code>tc_cam1</code>, derived from the nanosecond timestamps</li>
@@ -252,16 +231,12 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
 </code></pre></div>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
-<p>This is basically what Cinemate does: it keeps track of values coming from CinePi-raw, adds higher-level state of its own, and republishes control changes through Redis.</p>
+<p>This is basically what CineMate does: it keeps track of values coming from CinePi-raw, adds higher-level state of its own, and republishes control changes through Redis.</p>
 </div>
 </div>
 
             </div>
           </div><footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../controller-methods/" class="btn btn-neutral float-left" title="Controller methods"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../redis-keys/" class="btn btn-neutral float-right" title="Redis Key reference">Next <span class="icon icon-circle-arrow-right"></span></a>
-    </div>
 
   <hr/>
 
@@ -287,10 +262,6 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
         </span>
     
     
-      <span><a href="../controller-methods/" style="color: #fcfcfc">&laquo; Previous</a></span>
-    
-    
-      <span><a href="../redis-keys/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

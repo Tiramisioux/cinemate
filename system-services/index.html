@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/system-services/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>System services - Cinemate Docs</title>
+    <title>System services - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -126,30 +128,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -166,7 +156,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -186,21 +176,21 @@
               
 <div class="markdown-body">
   <h1 id="system-services">System services<a class="headerlink" href="#system-services" title="Permanent link">#</a></h1>
-<p>Cinemate uses four long-running services and one maintenance timer for its operation.</p>
+<p>CineMate owns four long-running services and one maintenance timer. It also depends on a fifth unit it does not own, <code>redis-server</code>, which the installer enables — six systemd units in all. See also <a href="../cinemate-stack/#what-runs-as-what">The CineMate stack explained</a>.</p>
 <h2 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h2>
-<p>Autostarts Cinemate on boot.</p>
+<p>Autostarts CineMate on boot.</p>
 <h3 id="single-instance-enforcement">Single-instance enforcement<a class="headerlink" href="#single-instance-enforcement" title="Permanent link">#</a></h3>
-<p>Only one instance of Cinemate can run at a time. If you start <code>cinemate</code> while the service (or a previous manual session) is already running, the new instance automatically sends a graceful stop signal to the existing one, waits up to 5 seconds for it to exit cleanly, then proceeds with its own startup. No manual intervention is needed.</p>
-<p>This means you can type <code>cinemate</code> in an SSH session at any time to restart the app — even if it is already running via the autostart service.</p>
+<p>Only one instance of CineMate can run at a time. If you start <code>cinemate</code> while the service (or a previous manual session) is already running, the new instance automatically sends a graceful stop signal to the existing one, waits up to 5 seconds for it to exit cleanly, then proceeds with its own startup.</p>
+<p>You can type <code>cinemate</code> in an SSH session at any time to restart the app — even if it is already running via the autostart service.</p>
 <h2 id="storage-automountservice">storage-automount.service<a class="headerlink" href="#storage-automountservice" title="Permanent link">#</a></h2>
-<p>Watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.</p>
-<p>It understands <code>ext4</code>, <code>ntfs</code> and <code>exfat</code> filesystems. Partitions labelled <code>RAW</code> are mounted at <code>/media/RAW</code>; any other label is mounted under <code>/media/&lt;LABEL&gt;</code> after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.</p>
+<p>Watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button.</p>
+<p>Compatible filesystems are <code>ext4</code>, <code>ntfs</code> and <code>exfat</code>. Partitions labelled <code>RAW</code> are mounted at <code>/media/RAW</code>; any other label is mounted under <code>/media/&lt;LABEL&gt;</code> after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.</p>
 <h2 id="wifi-hotspotservice">wifi-hotspot.service<a class="headerlink" href="#wifi-hotspotservice" title="Permanent link">#</a></h2>
-<p>Keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/settings.jsonc</code> under <code>system.wifi_hotspot</code>. Runs entirely independently of <code>cinemate-autostart.service</code> — it survives a Cinemate crash — and applies a credential fallback ladder if <code>settings.jsonc</code> is broken. See <a href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>.</p>
+<p>Keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/settings.jsonc</code> under <code>system.wifi_hotspot</code>. Runs independently of <code>cinemate-autostart.service</code> so the hotspot stays active even if CineMate is stopped.</p>
 <h2 id="cinemate-recoveryservice">cinemate-recovery.service<a class="headerlink" href="#cinemate-recoveryservice" title="Permanent link">#</a></h2>
-<p>A standalone, root-run, standard-library-only web console on <code>:8080</code> for diagnosing and repairing a Cinemate that will not start — from a phone on the hotspot, with no laptop or SSH. It has no dependency on <code>cinemate-autostart.service</code>, by design: that coupling is exactly what would make a recovery tool unreachable when it is needed most. See <a href="../recovery-console/">Recovery console</a>.</p>
+<p>A standalone web console on <code>cinepi.local:8080</code> for diagnosing and repairing a CineMate not starting properly.</p>
 <h2 id="redis-log-maintenancetimer">redis-log-maintenance.timer<a class="headerlink" href="#redis-log-maintenancetimer" title="Permanent link">#</a></h2>
-<p>Lightweight timer-backed helper that keeps <code>/var/log/redis/redis-server.log</code> from silently filling the Pi root filesystem over time.</p>
+<p>Helper that keeps <code>/var/log/redis/redis-server.log</code> from filling the Pi root filesystem.</p>
 </div>
 
             </div>

@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/sensors/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Camera sensors and frame rates - Cinemate Docs</title>
+    <title>Camera sensors and frame rates - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Camera sensors and frame rates</a>
     <ul class="current">
@@ -90,8 +92,6 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#frame-size-and-recording-time">Frame size and recording time</a>
-    </li>
     <li class="toctree-l2"><a class="reference internal" href="#cinemate-log-support">CineMate Log support</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#csi-2-link-frequency">CSI-2 link frequency</a>
@@ -103,6 +103,14 @@
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#dynamic-resolution">Dynamic resolution</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#priority-which-half-of-the-picture-goes-first">Priority: which half of the picture goes first</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#while-recording">While recording</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#turning-it-off">Turning it off</a>
+    </li>
+        </ul>
     </li>
     </ul>
                   </li>
@@ -138,30 +146,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -178,7 +174,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -263,36 +259,111 @@
 </tbody>
 </table>
 <h3 id="imx585-starlight-eye">IMX585 (Starlight Eye)<a class="headerlink" href="#imx585-starlight-eye" title="Permanent link">#</a></h3>
+<p>The <code>cinemate-7modes</code> driver the installer ships exposes seven modes: three SDR and four ClearHDR,
+at 10-, 12- and 16-bit.</p>
 <table>
 <thead>
 <tr>
 <th>Mode</th>
+<th>Type</th>
 <th>Resolution</th>
-<th>Aspect Ratio</th>
 <th>Bit Depth</th>
+<th>Readout</th>
 <th>Max FPS</th>
+<th>Max FPS overclocked</th>
 <th>DNG Frame File Size (MB)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>0</td>
-<td>1928 x 1090</td>
-<td>1.77</td>
-<td>12</td>
-<td>87</td>
-<td>3.15</td>
+<td>SDR</td>
+<td>3840 x 2160</td>
+<td>10</td>
+<td>all-pixel</td>
+<td>44.98</td>
+<td>68.66</td>
+<td>10.4</td>
 </tr>
 <tr>
 <td>1</td>
-<td>3856 x 2180</td>
-<td>1.77</td>
+<td>SDR</td>
+<td>1920 x 1080</td>
 <td>12</td>
-<td>40</td>
+<td>binned</td>
+<td>69.92</td>
+<td>69.92</td>
+<td>3.15</td>
+</tr>
+<tr>
+<td>2</td>
+<td>SDR</td>
+<td>3840 x 2160</td>
+<td>12</td>
+<td>all-pixel</td>
+<td>43.98</td>
+<td>67.13</td>
 <td>12.61</td>
+</tr>
+<tr>
+<td>3</td>
+<td>ClearHDR</td>
+<td>1920 x 1080</td>
+<td>12</td>
+<td>binned</td>
+<td>30.00</td>
+<td>30.00</td>
+<td>3.15</td>
+</tr>
+<tr>
+<td>4</td>
+<td>ClearHDR</td>
+<td>3840 x 2160</td>
+<td>12</td>
+<td>all-pixel</td>
+<td>21.99</td>
+<td>30.00</td>
+<td>12.61</td>
+</tr>
+<tr>
+<td>5</td>
+<td>ClearHDR</td>
+<td>1920 x 1100</td>
+<td>16</td>
+<td>binned</td>
+<td>30.00</td>
+<td>30.00</td>
+<td>4.2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>ClearHDR</td>
+<td>3840 x 2200</td>
+<td>16</td>
+<td>all-pixel</td>
+<td>21.99</td>
+<td>30.00</td>
+<td>16.9</td>
 </tr>
 </tbody>
 </table>
+<p>Both fps columns are the <a href="../changelog/#imx585-driver">changelog</a>'s measured figures for 3.4.0, taken
+at the sensor's highest link frequency, 1039.5 MHz. "Max FPS" is the stock RP1 pixel-rate ceiling
+(<code>--max-pixel-rate 380</code>); "overclocked" is the same mode with the <code>rp1-overclock</code> overlay's 580. Both
+move with the link frequency, which is set per port on the <a href="../config-txt/">config.txt tab</a>. See
+<a href="../overclocking/">Overclocking the Pi</a> for the overlay, and <a href="../clear-hdr/">ClearHDR</a> for what the HDR
+modes do and how to tune the merge.</p>
+<div class="admonition note">
+<p class="admonition-title">Mode numbers are not fixed sensor properties</p>
+<p>CineMate filters the sensor's modes by the crop-factor, bit-depth and ClearHDR whitelists in
+<a href="../settings-json/#image_capture"><code>settings.jsonc</code></a>, then numbers whatever survives. The table
+above is the stock whitelist. Narrow any of those lists and the modes renumber, so <code>set
+resolution 3</code> will not mean the same thing on a camera with a different <code>bit_depths</code> or
+<code>k_steps</code>. The same applies to every mode table on this page.</p>
+</div>
+<p>Resolutions here are the active area. <code>resources/sensors.json</code> and the GUI quote the readout size for
+the 12-bit modes, which is slightly larger — 1928 x 1090 and 3856 x 2180 — because it includes the
+optical-black rows.</p>
 <h3 id="imx283-oneincheye">IMX283 (OneInchEye)<a class="headerlink" href="#imx283-oneincheye" title="Permanent link">#</a></h3>
 <table>
 <thead>
@@ -333,225 +404,9 @@
 </tbody>
 </table>
 <div class="admonition info">
-<p>Only IMX283 modes that sustain <strong>25 fps or more</strong> are exposed by default. To bring them back, add <code>5.5</code> to <code>k_steps</code>.</p>
-</div>
-<p>Max FPS is the sensor's own reported ceiling for each mode (the same value <code>cinepi-raw --list-cameras</code> reports). Actual achievable FPS without dropped frames also depends on your storage device and filesystem -- make test recordings on your own setup and monitor the output. Purple background in the monitor/web browser indicates drop frames.</p>
-<div class="admonition note">
-<p>The bit-depth column above describes the sensor mode reported by the camera stack. The IMX296 sensor mode is 10 bit. Cinemate's CinePi-RAW DNG writer may still save captures through its 12 bit DNG output path, so a correctly saved IMX296 DNG does not mean the sensor itself has a 12 bit mode.</p>
-</div>
-<div class="admonition info">
 <p class="admonition-title">Raspberry Pi 4 raw packing</p>
-<p>Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (<code>P</code>). On Raspberry Pi 5 / CM5 they stay on unpacked mode (<code>U</code>). For IMX296 this means <code>1456:1088:10:P</code> on Raspberry Pi 4-family boards and <code>1456:1088:10:U</code> on Raspberry Pi 5 / CM5.</p>
+<p>CineMate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (<code>P</code>). On Raspberry Pi 5 / CM5 they stay on unpacked mode (<code>U</code>). For IMX296 this means <code>1456:1088:10:P</code> on Raspberry Pi 4-family boards and <code>1456:1088:10:U</code> on Raspberry Pi 5 / CM5.</p>
 </div>
-<h2 id="frame-size-and-recording-time">Frame size and recording time<a class="headerlink" href="#frame-size-and-recording-time" title="Permanent link">#</a></h2>
-<p>DNG frame size is calculated dynamically, not read from a fixed table: <code>ceil(width × effective_bit_depth / 8) × height</code>, plus a small fixed per-frame header overhead. <em>Effective bit depth</em> is the sensor mode's native bit depth, or the live <a href="../cinemate-log/"><code>--log-encode</code></a> target (10 or 12) when CineMate Log is on -- so the same mode gets smaller on disk once log encoding is enabled. <code>resources/sensors.json</code> no longer carries a static file-size number; Cinemate always computes it from the mode's resolution and the live log state (<code>module/sensor_detect.py</code>'s <code>compute_frame_size_mb()</code>).</p>
-<p>Recording time assumes a 1 TB drive (1,000,000 MB decimal, matching Cinemate's own free-space math) recording continuously at 25 fps, with no other files on the drive. Actual time left depends on your drive's free space and the FPS you're recording at -- see the <code>disk_space</code> readout in the GUI for the live estimate on your setup.</p>
-<table>
-<thead>
-<tr>
-<th>Sensor</th>
-<th>Mode</th>
-<th>Resolution</th>
-<th>Native bit depth</th>
-<th>CineMate Log</th>
-<th>Frame size (MB)</th>
-<th>Time on 1 TB @ 25 fps</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>IMX477</td>
-<td>0</td>
-<td>2028 x 1080</td>
-<td>12</td>
-<td>not supported</td>
-<td>3.29</td>
-<td>3h 23m</td>
-</tr>
-<tr>
-<td>IMX477</td>
-<td>1</td>
-<td>2028 x 1520</td>
-<td>12</td>
-<td>not supported</td>
-<td>4.62</td>
-<td>2h 24m</td>
-</tr>
-<tr>
-<td>IMX477</td>
-<td>2</td>
-<td>1332 x 990</td>
-<td>10</td>
-<td>not supported</td>
-<td>1.65</td>
-<td>6h 44m</td>
-</tr>
-<tr>
-<td>IMX296</td>
-<td>0</td>
-<td>1456 x 1088</td>
-<td>10</td>
-<td>not supported</td>
-<td>1.98</td>
-<td>5h 37m</td>
-</tr>
-<tr>
-<td>IMX585</td>
-<td>0</td>
-<td>1928 x 1090</td>
-<td>12</td>
-<td>off</td>
-<td>3.15</td>
-<td>3h 32m</td>
-</tr>
-<tr>
-<td>IMX585</td>
-<td>0</td>
-<td>1928 x 1090</td>
-<td>12</td>
-<td>on (→10)</td>
-<td>2.63</td>
-<td>4h 13m</td>
-</tr>
-<tr>
-<td>IMX585</td>
-<td>1</td>
-<td>3856 x 2180</td>
-<td>12</td>
-<td>off</td>
-<td>12.61</td>
-<td>53m</td>
-</tr>
-<tr>
-<td>IMX585</td>
-<td>1</td>
-<td>3856 x 2180</td>
-<td>12</td>
-<td>on (→10)</td>
-<td>10.51</td>
-<td>1h 03m</td>
-</tr>
-<tr>
-<td>IMX585</td>
-<td>1, ClearHDR</td>
-<td>3856 x 2180</td>
-<td>16</td>
-<td>off</td>
-<td>16.81</td>
-<td>40m</td>
-</tr>
-<tr>
-<td>IMX585</td>
-<td>1, ClearHDR</td>
-<td>3856 x 2180</td>
-<td>16</td>
-<td>on, default (→12)</td>
-<td>12.61</td>
-<td>53m</td>
-</tr>
-<tr>
-<td>IMX585</td>
-<td>1, ClearHDR</td>
-<td>3856 x 2180</td>
-<td>16</td>
-<td>on, forced (→10)</td>
-<td>10.51</td>
-<td>1h 03m</td>
-</tr>
-<tr>
-<td>IMX585</td>
-<td>1, ClearHDR + 12-bit (CCMP12)</td>
-<td>3856 x 2180</td>
-<td>12</td>
-<td>on (→10 only)*</td>
-<td>10.51</td>
-<td>1h 03m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>0</td>
-<td>5568 x 3664</td>
-<td>12</td>
-<td>off</td>
-<td>30.60</td>
-<td>22m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>0</td>
-<td>5568 x 3664</td>
-<td>12</td>
-<td>on (→10)</td>
-<td>25.50</td>
-<td>26m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>1</td>
-<td>2784 x 1828</td>
-<td>12</td>
-<td>off</td>
-<td>7.63</td>
-<td>1h 27m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>1</td>
-<td>2784 x 1828</td>
-<td>12</td>
-<td>on (→10)</td>
-<td>6.36</td>
-<td>1h 45m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>2</td>
-<td>2784 x 1542</td>
-<td>12</td>
-<td>off</td>
-<td>6.44</td>
-<td>1h 44m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>2</td>
-<td>2784 x 1542</td>
-<td>12</td>
-<td>on (→10)</td>
-<td>5.37</td>
-<td>2h 04m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>3</td>
-<td>5568 x 3664</td>
-<td>10</td>
-<td>not supported (10-bit mode)</td>
-<td>25.50</td>
-<td>26m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>4</td>
-<td>5568 x 3094</td>
-<td>10</td>
-<td>not supported (10-bit mode)</td>
-<td>21.54</td>
-<td>31m</td>
-</tr>
-<tr>
-<td>IMX283</td>
-<td>5</td>
-<td>3936 x 2176</td>
-<td>10</td>
-<td>not supported (10-bit mode)</td>
-<td>10.71</td>
-<td>1h 02m</td>
-</tr>
-</tbody>
-</table>
-<p>*12-bit ClearHDR is CCMP-companded on-sensor, so it cannot take a linear 12→10 curve. <code>set log</code> still works: cinepi-raw decompands to 16-bit linear first, then applies the 16→10 curve as one composed table. Only target 10 exists on this path — <code>set log 12</code> is refused. See <a href="#cinemate-log-support">CineMate Log support</a> below.</p>
-<p>The IMX283 rows here and in <a href="#compatible-sensors">Compatible sensors</a> above quote the same modes at different sizes. This table and <code>resources/sensors.json</code> use the full readout including the optical-black margin (2784, 3936 and 5568 wide) — those are the sizes the system works from, so they are what the mode filter and the GUI show. The Compatible sensors table quotes the cropped image sizes (2736, 3840). The two have not been reconciled; doing so needs a <code>--list-cameras</code> capture from the Pi.</p>
 <h2 id="cinemate-log-support">CineMate Log support<a class="headerlink" href="#cinemate-log-support" title="Permanent link">#</a></h2>
 <p><a href="../cinemate-log/">CineMate Log</a> is supported on <strong>IMX585 and IMX283 only</strong>. Support is decided by the sensor's black level, not chosen: the two shipped log DNG specs (12→10 and 16→10/16→12) are built for BlackLevel 3200, which is exactly what IMX585 and IMX283 report and no other sensor does.</p>
 <table>
@@ -598,12 +453,9 @@
 </table>
 <p>IMX477 is not a hardware limitation — its 12-bit modes would work the same way — it needs sensor-aware spec selection on the <code>cinepi-raw</code> side that hasn't been built yet.</p>
 <h2 id="csi-2-link-frequency">CSI-2 link frequency<a class="headerlink" href="#csi-2-link-frequency" title="Permanent link">#</a></h2>
-<p>The link frequency sets how fast the sensor pushes pixels down the MIPI lanes,
-and so what frame rate a mode can reach. Where it is selectable, Cinemate
-offers it per port in the settings editor's Boot config pane — see
-<a href="../overclocking/">Overclocking the Pi</a>, because on a Pi 5 the receiver has to
-be overclocked before the higher rates buy anything.</p>
-<p><code>resources/sensors.json</code> is the source of truth for the values below.</p>
+<p>How fast the sensor pushes pixels down the MIPI lanes, and so what frame rate a mode can reach.
+Where it is selectable, CineMate offers it per port on the settings editor's
+<a href="../config-txt/">config.txt tab</a>. <code>resources/sensors.json</code> is the source of truth for the values.</p>
 <table>
 <thead>
 <tr>
@@ -611,7 +463,6 @@ be overclocked before the higher rates buy anything.</p>
 <th>Lanes</th>
 <th>Default</th>
 <th>Selectable</th>
-<th>Values</th>
 </tr>
 </thead>
 <tbody>
@@ -619,54 +470,50 @@ be overclocked before the higher rates buy anything.</p>
 <td>IMX585</td>
 <td>4</td>
 <td>720 MHz</td>
-<td><strong>yes</strong></td>
-<td>297 / 360 / 445.5 / 594 / 720 / 891 / 1039.5 MHz</td>
+<td>yes — 297 / 360 / 445.5 / 594 / 720 / 891 / 1039.5 MHz</td>
 </tr>
 <tr>
 <td>IMX283</td>
 <td>4</td>
 <td>720 MHz</td>
-<td><strong>yes</strong></td>
-<td>360 / 720 MHz — 720 is also the ceiling</td>
+<td>yes — 360 or 720 MHz, where 720 is also the ceiling</td>
 </tr>
 <tr>
 <td>IMX477</td>
 <td>2</td>
 <td>450 MHz</td>
 <td>not yet</td>
-<td>driver computes any ~3 MHz multiple (kernel ≥ 6.12.49)</td>
 </tr>
 <tr>
 <td>IMX296</td>
 <td>1</td>
 <td>594 MHz</td>
 <td>no</td>
-<td>fixed</td>
 </tr>
 <tr>
 <td>IMX519</td>
 <td>2</td>
 <td>408 MHz</td>
 <td>no</td>
-<td>fixed</td>
 </tr>
 </tbody>
 </table>
-<p><strong>IMX585</strong> carries per-value frame rates in
-<a href="../overclocking/#imx585">Overclocking the Pi</a>. 1188 MHz exists in the driver
-and is deliberately not offered: frame drops on Pi 5, unsupported on Pi 4.</p>
-<p><strong>IMX283</strong>'s two values are the only two Sony ships register sequences for.
-720 MHz is both the default and the silicon ceiling, so the only selectable
-alternative is slower. The 4K modes' 44/41 fps are the link ceiling at those
-bit depths — more frame rate means a lower bit depth, not a faster link.
-Selecting the non-default value needs the <code>link-frequency</code> overlay parameter
-added in <code>Tiramisioux/imx283-v4l2-driver</code> <code>6.12.y</code> at <code>257c9cf</code>.</p>
-<p><strong>IMX477</strong> is not a hardware limitation. Its driver accepts any exact multiple
-of 3 MHz and RPi's own testing found ~909 MHz stable, but it vouches for no
-upper bound, so Cinemate keeps the menu hidden until the values are verified
-on this stack.</p>
-<p><strong>IMX296</strong>'s 60 fps cap is readout-limited, not link-limited; a faster link
-would buy nothing.</p>
+<p>How far a raise pays off depends on the mode: the wide all-pixel modes hit the RP1's pixel-rate
+bound before the link bound, so on a Pi 5 they also need the receiver overclocked — see
+<a href="../overclocking/">Overclocking the Pi</a>.</p>
+<details class="note">
+<summary>Why the other sensors are fixed</summary>
+<p><strong>IMX283</strong> — Sony ships register sequences for only these two values, and 720 MHz is both the
+default and the silicon ceiling, so the alternative is slower. Selecting it needs the
+<code>link-frequency</code> overlay parameter added in <code>Tiramisioux/imx283-v4l2-driver</code> <code>6.12.y</code> at
+<code>257c9cf</code>.</p>
+<p><strong>IMX477</strong> — not a hardware limit. The driver accepts any exact multiple of 3 MHz and
+Raspberry Pi's own testing found ~909 MHz stable, but no upper bound is vouched for, so
+CineMate keeps the menu hidden until the values are verified on this stack.</p>
+<p><strong>IMX296</strong> — its 60 fps cap is readout-limited, not link-limited. A faster link buys nothing.</p>
+<p><strong>IMX585</strong> — 1188 MHz exists in the driver and is deliberately not offered: frame drops on
+Pi 5, unsupported on Pi 4.</p>
+</details>
 <h2 id="sensor-size-crop-factor-and-film-format-equivalents">Sensor size, crop factor and film-format equivalents<a class="headerlink" href="#sensor-size-crop-factor-and-film-format-equivalents" title="Permanent link">#</a></h2>
 <p>Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter.</p>
 <table>
@@ -780,16 +627,73 @@ would buy nothing.</p>
 <li>8 mm on IMX296 ~ 55 mm</li>
 </ul>
 <h2 id="dynamic-resolution">Dynamic resolution<a class="headerlink" href="#dynamic-resolution" title="Permanent link">#</a></h2>
-<p>Cinemate always runs dynamic resolution: it remembers the mode you selected as the desired mode, and if you raise FPS above what that mode's own sensor-reported maximum can sustain, it switches to the highest-resolution mode that can. FPS returns to your desired mode once you dial back down. There is no setting for this and no separate performance table -- the ceiling always comes from the sensor's own reported numbers (the "Max FPS" columns above, the same values <code>cinepi-raw --list-cameras</code> reports).</p>
-<p>Storage pre-roll is intentionally different: it uses the live sensor maximum for the currently selected mode and temporarily suspends dynamic resolution so the mounted media is stress-tested before Cinemate restores the user's FPS and applies the dynamic-resolution choice.</p>
-<p>The active resolution numbers turn green in the simple GUI only while dynamic resolution is actively substituting a lower-resolution mode for the current FPS instead of your desired mode. They stay white when the active mode is your desired resolution.</p>
+<p>CineMate remembers the mode you selected as the <em>desired</em> mode. If you raise FPS above what that mode's own sensor-reported maximum can sustain, it switches to the highest-resolution mode that can, and returns to your desired mode once you dial back down. There is no separate performance table -- the ceiling always comes from the sensor's own reported numbers (the "Max FPS" columns above, the same values <code>cinepi-raw --list-cameras</code> reports).</p>
+<p><strong>A substitute is never bigger or better than what you picked.</strong> Every mode sits at a point on two axes: its frame size, and its <em>class</em> -- one bit depth and one SDR/ClearHDR setting, the three blocks the imx585 mode table is laid out in. Dynamic resolution only ever looks at modes that are no better than your selection on either axis. It never hands you a larger frame or a richer class than the one you asked for.</p>
+<p>Which of the two it gives up first is yours to choose.</p>
+<h3 id="priority-which-half-of-the-picture-goes-first">Priority: which half of the picture goes first<a class="headerlink" href="#priority-which-half-of-the-picture-goes-first" title="Permanent link">#</a></h3>
+<p>Once your mode's own class has nothing left that can sustain the frame rate, <code>image_capture.dynamic_resolution_priority</code> decides where the ladder goes next. Take an imx585 with 12-bit ClearHDR hidden, sitting in 16-bit ClearHDR 4K:</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>The ladder</th>
+<th>What it protects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode</code> (default)</td>
+<td>16-bit 4K -&gt; 16-bit HD -&gt; 4K SDR -&gt; HD SDR</td>
+<td>Your bit depth and ClearHDR for as long as the sensor can hold them, at the cost of frame size</td>
+</tr>
+<tr>
+<td><code>resolution</code></td>
+<td>16-bit 4K -&gt; 4K SDR -&gt; HD SDR</td>
+<td>Your frame size for as long as the sensor can hold it, at the cost of bit depth and ClearHDR</td>
+</tr>
+<tr>
+<td><code>none</code></td>
+<td>16-bit 4K -&gt; 16-bit HD, then nothing</td>
+<td>Both -- it never leaves your class at all, so past 16-bit HD the resolution holds and FPS is capped instead</td>
+</tr>
+</tbody>
+</table>
+<p><code>mode</code> is the default because it is the policy that changes least: it walks your own class all the way down before it crosses anything, so every frame rate <code>none</code> can serve, it serves identically. It differs only where <code>none</code> runs out of answers. <code>none</code> is how dynamic resolution behaved before this setting existed; pick it if you would rather the frame-rate dial simply stop than trade away bit depth or ClearHDR.</p>
+<p>Where two rungs tie -- 16-bit HD and 4K SDR both reach 40fps above -- the priority decides, and the rung that loses never wins at any frame rate, because the one that beat it already covers everything it could serve. That is why <code>resolution</code>'s ladder above has three rungs and not four.</p>
+<p>A class change costs more than a resolution change: bit depth is part of <code>--mode</code> and ClearHDR is the <code>--hdr sensor</code> launch flag, so cinepi-raw is relaunched for it. Mid-take it is not made at all -- see below.</p>
+<p>Change it live with <code>set dynamic resolution priority mode|resolution|none</code>, or from the settings page. Bare <code>set dynamic resolution priority</code> cycles the three, so it can be bound to a button. Like the on/off toggle, a live change persists and outranks <code>settings.jsonc</code> on the next boot.</p>
+<h3 id="while-recording">While recording<a class="headerlink" href="#while-recording" title="Permanent link">#</a></h3>
+<p>Changing mode mid-take is allowed. cinepi-raw splits the recording around the camera reconfigure, so the take continues in a new clip folder and the clip list shows where the change happened. There is a short gap in frames across the split: the sensor has to be reprogrammed for the new mode, which means stopping and restarting the stream. cinepi-raw itself is <em>not</em> restarted.</p>
+<p>Changing <em>class</em> mid-take is not, whatever priority you picked. That one needs cinepi-raw relaunched, and a relaunch would end the take rather than split it. So for the length of a take the ladder is pinned to the class actually running, and FPS is capped at what that class can reach -- 40 rather than 87 in the table above. The ladder settles the moment the take ends: if a class change was held back, it is applied then, with no further input from you.</p>
+<h3 id="turning-it-off">Turning it off<a class="headerlink" href="#turning-it-off" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>image_capture.dynamic_resolution</code> in <code>settings.jsonc</code></td>
+<td>The startup default. <code>true</code> out of the box.</td>
+</tr>
+<tr>
+<td><code>set dynamic resolution 0</code> / <code>1</code> (or the settings page switch)</td>
+<td>Overrides it for the session, and persists -- the next boot reads this back in preference to the file.</td>
+</tr>
+</tbody>
+</table>
+<p>With it off, the mode you select is the mode you get, and <code>fps_max</code> is that one mode's own limit rather than the best any mode on its ladder could do. Turning it off also adopts whatever mode is currently on screen as your selection, so turning it back on later does not jump you somewhere you have since moved away from.</p>
+<p>Storage pre-roll is intentionally different: it uses the live sensor maximum for the currently selected mode and temporarily suspends dynamic resolution so the mounted media is stress-tested before CineMate restores the user's FPS and applies the dynamic-resolution choice.</p>
+<p>The resolution readout turns green -- in the HDMI overlay and the web GUI alike -- whenever the mode on screen is one dynamic resolution chose rather than one you did. It stays white when the active mode is your desired resolution. The readout carries the bit depth, and the SDR/HDR badge sits next to it, so a class substitution is legible in the same place a resolution substitution is.</p>
 <p>Actual achievable FPS without dropped frames depends on your storage device and filesystem, which the sensor's own reported numbers don't account for -- a purple <code>DROP</code> indicator means you're above what your setup can sustain. Test your own setup and pick FPS values accordingly.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../settings-json/" class="btn btn-neutral float-left" title="Settings file"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../settings-editor/" class="btn btn-neutral float-left" title="Settings editor"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../clear-hdr/" class="btn btn-neutral float-right" title="ClearHDR (imx585)">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -817,7 +721,7 @@ would buy nothing.</p>
         </span>
     
     
-      <span><a href="../settings-json/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../settings-editor/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../clear-hdr/" style="color: #fcfcfc">Next &raquo;</a></span>

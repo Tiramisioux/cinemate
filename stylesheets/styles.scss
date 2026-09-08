@@ -14,7 +14,7 @@
     margin: 25mm;                /* symmetric printable margin */
     counter-increment: page;
   
-    @top-left   { content: 'Cinemate Docs'; }
+    @top-left   { content: 'CineMate Docs'; }
     @top-center { content: string(chapter); }
     @top-right  { content: 'Page ' counter(page); }
   }

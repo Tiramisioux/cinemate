@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli-commands/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Cinemate terminal commands - Cinemate Docs</title>
+    <title>CineMate terminal commands - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -14,7 +14,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Cinemate terminal commands";
+        var mkdocs_page_name = "CineMate terminal commands";
         var mkdocs_page_input_path = "cli-commands.md";
         var mkdocs_page_url = "/cinemate/cli-commands/";
       </script>
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -110,38 +112,58 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Cinemate terminal commands</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">CineMate terminal commands</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#recording">Recording</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#iso">ISO</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#shutter-angle">Shutter angle</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#frame-rate">Frame rate</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#white-balance">White balance</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#clearhdr">ClearHDR</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cinemate-log-and-dng-thumbnails">CineMate Log and DNG thumbnails</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#resolution-and-preview">Resolution and preview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#locks-and-sync-modes">Locks and sync modes</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#free-stepping">Free stepping</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#storage">Storage</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#sensor-tools">Sensor tools</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#system">System</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#cli-commands-without-a-controller-method">CLI commands without a controller method</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#timed-recording-shortcuts">Timed recording shortcuts</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#storage-maintenance-commands">Storage maintenance commands</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#storage-pre-roll-warm-up">Storage pre-roll warm-up</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#wiring-a-command-to-hardware">Wiring a command to hardware</a>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -158,7 +180,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -166,7 +188,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Reference</li>
-      <li class="breadcrumb-item active">Cinemate terminal commands</li>
+      <li class="breadcrumb-item active">CineMate terminal commands</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cli-commands.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -178,375 +200,552 @@
               
 <div class="markdown-body">
   <h1 id="commands-reference">Commands reference<a class="headerlink" href="#commands-reference" title="Permanent link">#</a></h1>
-<p>By typing <code>cinemate</code> in the Raspberry Pi CLI we can start Cinemate manually. This will stop any autostarted instance of Cinemate, show the camera startup sequence and provide the Cinemate "pseudo CLI" where can type commands for changing the camera controls and also to start and stop recording.</p>
-<p>These commands can also be sent to the Pi as serial via the Tx/Rx pins or via USB. This can be useful for creating external controllers.</p>
-<p>The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see the <a href="../web-api/">Web API</a> and <a href="../building-control-units/">Building control units</a>.</p>
+<p>Type <code>cinemate</code> in the Raspberry Pi CLI to start CineMate manually. This stops any autostarted instance, shows the camera startup sequence and opens the CineMate pseudo-CLI, where you type the commands below.</p>
+<p>The same strings reach the camera three other ways:</p>
+<ul>
+<li>Over serial, on the Tx/Rx pins or over USB — see <a href="../building-control-units/">Building control units</a>.</li>
+<li>Over the camera's Wi-Fi hotspot, as a POST to the <a href="../web-api/">Web API</a>.</li>
+<li>From a GPIO button, rotary encoder or potentiometer. Hardware bindings name the <strong>method</strong>, not the command string: put the method from the same row into a <code>hardware_controls</code> block in <code>settings.jsonc</code>. See <a href="../hardware-controls/">Additional hardware</a>.</li>
+</ul>
 <div class="admonition note">
 <p>Commands without an explicit argument toggle the current state when possible (e.g. <code>set fps lock</code> flips the lock; <code>set fps lock 1</code> forces it on).</p>
 </div>
 <div class="admonition note">
-<p>All of the commands below can be mapped to GPIO buttons, rotary encoders and other input devices. See <a href="../settings-json/">this section</a> for how to configure the settings file.</p>
+<p><code>inc</code> / <code>dec</code> move one place through the parameter's step table and stop at its ends — they do not wrap. The two exceptions are <code>inc wb</code> / <code>dec wb</code> and <code>inc zoom</code> / <code>dec zoom</code>, which cycle around their lists.</p>
 </div>
+<h2 id="recording">Recording<a class="headerlink" href="#recording" title="Permanent link">#</a></h2>
 <table>
 <thead>
 <tr>
 <th>Command</th>
 <th>Argument</th>
-<th>Example</th>
-<th>Function</th>
+<th>Method</th>
+<th>What it does</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>rec</code> / <code>stop</code></td>
-<td><code>[cam0\|cam1\|both] [s &lt;seconds&gt;\|f &lt;frames&gt;]</code></td>
-<td><code>rec cam1 f 48</code></td>
-<td>Toggle recording or schedule an automatic stop after a timed duration or frame count; optional leading camera token forces which sensor(s) record on a dual rig</td>
+<td><code>rec</code></td>
+<td>–</td>
+<td><code>rec</code></td>
+<td>Toggle recording. Ignored while a storage pre-roll is running. The <code>rec</code> handler also parses optional leading tokens that the argument column does not cover: a camera token (<code>cam0</code>, <code>cam1</code>, <code>both</code>) forces which sensor(s) record on a dual rig, and <code>s &lt;seconds&gt;</code> / <code>f &lt;frames&gt;</code> arm a timed stop. See <a href="#timed-recording-shortcuts">Timed recording shortcuts</a>.</td>
 </tr>
+<tr>
+<td><code>stop</code></td>
+<td>–</td>
+<td><code>rec</code></td>
+<td>Alias for the same toggle — it stops a running take and starts one when idle. It takes no arguments; the camera and timed tokens work only on <code>rec</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="iso">ISO<a class="headerlink" href="#iso" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>set iso &lt;value&gt;</code></td>
 <td>int</td>
-<td><code>set iso 800</code></td>
-<td>Set ISO to nearest allowed step</td>
+<td><code>set_iso</code></td>
+<td>Set ISO, clamped to the low and high ends of the current step table (the value is not snapped to a step). Ignored while the ISO lock is on.</td>
 </tr>
 <tr>
 <td><code>inc iso</code> / <code>dec iso</code></td>
-<td>-</td>
-<td></td>
-<td>Step ISO up or down; <code>arrays.iso.free_increment</code> in free stepping</td>
+<td>–</td>
+<td><code>inc_iso</code> / <code>dec_iso</code></td>
+<td>Step ISO up or down through <code>arrays.iso.steps</code>, or by <code>arrays.iso.free_increment</code> in free stepping.</td>
 </tr>
+</tbody>
+</table>
+<h2 id="shutter-angle">Shutter angle<a class="headerlink" href="#shutter-angle" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>set shutter a &lt;angle&gt;</code></td>
 <td>float</td>
-<td><code>set shutter a 180</code></td>
-<td>Set actual shutter angle (snaps unless free/sync)</td>
+<td><code>set_shutter_a</code></td>
+<td>Set the actual shutter angle. Snaps to the nearest valid angle unless free stepping or sync mode is on. Updates the exposure-time readout.</td>
 </tr>
 <tr>
 <td><code>inc shutter a</code> / <code>dec shutter a</code></td>
-<td>-</td>
-<td></td>
-<td>Cycle through shutter angles; <code>arrays.shutter_a.free_increment</code> in free stepping</td>
+<td>–</td>
+<td><code>inc_shutter_a</code> / <code>dec_shutter_a</code></td>
+<td>Cycle through shutter angles; <code>arrays.shutter_a.free_increment</code> in free stepping.</td>
 </tr>
 <tr>
 <td><code>set shutter a nom &lt;angle&gt;</code></td>
 <td>float</td>
-<td><code>set shutter a nom 180</code></td>
-<td>Set nominal shutter angle for motion blur</td>
+<td><code>set_shutter_a_nom</code></td>
+<td>Set the nominal shutter angle used for motion-blur calculations. Ignored while the nominal shutter lock is on.</td>
 </tr>
 <tr>
 <td><code>inc shutter a nom</code> / <code>dec shutter a nom</code></td>
-<td>-</td>
-<td></td>
-<td>Step the nominal shutter angle</td>
+<td>–</td>
+<td><code>inc_shutter_a_nom</code> / <code>dec_shutter_a_nom</code></td>
+<td>Step the nominal shutter angle.</td>
 </tr>
+</tbody>
+</table>
+<h2 id="frame-rate">Frame rate<a class="headerlink" href="#frame-rate" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>set fps &lt;value&gt;</code></td>
 <td>float</td>
-<td><code>set fps 24</code></td>
-<td>Change frame rate (snaps unless free)</td>
+<td><code>set_fps</code></td>
+<td>Apply a new frame rate, respecting <code>fps_max</code>, the FPS lock and sync mode. Snaps to the FPS list unless free stepping or sync mode is on. May pick a lower sensor mode when dynamic resolution is enabled.</td>
 </tr>
 <tr>
 <td><code>inc fps</code> / <code>dec fps</code></td>
-<td>-</td>
-<td></td>
-<td>Step through FPS list; <code>arrays.fps.free_increment</code> in free stepping</td>
+<td>–</td>
+<td><code>inc_fps</code> / <code>dec_fps</code></td>
+<td>Step through the FPS list; <code>arrays.fps.free_increment</code> in free stepping.</td>
 </tr>
+</tbody>
+</table>
+<h2 id="white-balance">White balance<a class="headerlink" href="#white-balance" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>set wb [&lt;Kelvin&gt;]</code></td>
+<td>int or none</td>
+<td><code>set_wb</code></td>
+<td>Set white balance to the nearest active WB step. Omit the value to cycle to the next step.</td>
+</tr>
+<tr>
+<td><code>inc wb</code> / <code>dec wb</code></td>
+<td>–</td>
+<td><code>inc_wb</code> / <code>dec_wb</code></td>
+<td>Move to the next or previous WB step, wrapping at the ends; <code>arrays.wb.free_increment</code> (100 K default) in free stepping.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="clearhdr">ClearHDR<a class="headerlink" href="#clearhdr" title="Permanent link">#</a></h2>
+<p>Startup values come from <code>image_capture.hdr</code> in <code>settings.jsonc</code>. All four knobs apply live to a streaming sensor — no camera restart. See <a href="../clear-hdr/">ClearHDR</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>set hdr threshold low &lt;n&gt;</code></td>
 <td>int</td>
-<td><code>set hdr threshold low 500</code></td>
-<td>ClearHDR HG→LG data-selection threshold, low side (0–4095), applied live (<a href="../clear-hdr/">ClearHDR</a>)</td>
+<td><code>set_hdr_threshold_low</code></td>
+<td>HG→LG data-selection threshold, low side. Clamped to 0–4095.</td>
 </tr>
 <tr>
 <td><code>inc hdr threshold low</code> / <code>dec hdr threshold low</code></td>
-<td>-</td>
-<td></td>
-<td>Step the low threshold; <code>arrays.hdr_threshold_low.free_increment</code> in free stepping</td>
+<td>–</td>
+<td><code>inc_hdr_threshold_low</code> / <code>dec_hdr_threshold_low</code></td>
+<td>Step the low threshold; <code>arrays.hdr_threshold_low.free_increment</code> in free stepping.</td>
 </tr>
 <tr>
 <td><code>set hdr threshold high &lt;n&gt;</code></td>
 <td>int</td>
-<td><code>set hdr threshold high 3000</code></td>
-<td>ClearHDR HG→LG data-selection threshold, high side (0–4095), applied live</td>
+<td><code>set_hdr_threshold_high</code></td>
+<td>HG→LG data-selection threshold, high side. Clamped to 0–4095.</td>
 </tr>
 <tr>
 <td><code>inc hdr threshold high</code> / <code>dec hdr threshold high</code></td>
-<td>-</td>
-<td></td>
-<td>Step the high threshold; <code>arrays.hdr_threshold_high.free_increment</code> in free stepping</td>
+<td>–</td>
+<td><code>inc_hdr_threshold_high</code> / <code>dec_hdr_threshold_high</code></td>
+<td>Step the high threshold; <code>arrays.hdr_threshold_high.free_increment</code> in free stepping.</td>
 </tr>
 <tr>
 <td><code>set hdr blend &lt;n&gt;</code></td>
 <td>int</td>
-<td><code>set hdr blend 2</code></td>
-<td>ClearHDR blending mode 0–8, applied live</td>
+<td><code>set_hdr_blend</code></td>
+<td>Blending mode, driver menu index. Clamped to 0–8.</td>
 </tr>
 <tr>
 <td><code>inc hdr blend</code> / <code>dec hdr blend</code></td>
-<td>-</td>
-<td></td>
-<td>Step blending mode; <code>arrays.hdr_blend.free_increment</code> in free stepping</td>
+<td>–</td>
+<td><code>inc_hdr_blend</code> / <code>dec_hdr_blend</code></td>
+<td>Step the blending mode; <code>arrays.hdr_blend.free_increment</code> in free stepping.</td>
 </tr>
 <tr>
 <td><code>set hdr gain adder &lt;n&gt;</code></td>
 <td>int</td>
-<td><code>set hdr gain adder 2</code></td>
-<td>ClearHDR low-gain gain adder 0–5 (2 = +12 dB), applied live</td>
+<td><code>set_hdr_gain_adder</code></td>
+<td>Low-gain gain adder, driver menu index. Clamped to 0–5 (2 = +12 dB).</td>
 </tr>
 <tr>
 <td><code>inc hdr gain adder</code> / <code>dec hdr gain adder</code></td>
-<td>-</td>
-<td></td>
-<td>Step gain adder; <code>arrays.hdr_gain_adder.free_increment</code> in free stepping</td>
+<td>–</td>
+<td><code>inc_hdr_gain_adder</code> / <code>dec_hdr_gain_adder</code></td>
+<td>Step the gain adder; <code>arrays.hdr_gain_adder.free_increment</code> in free stepping.</td>
 </tr>
+</tbody>
+</table>
+<h2 id="cinemate-log-and-dng-thumbnails">CineMate Log and DNG thumbnails<a class="headerlink" href="#cinemate-log-and-dng-thumbnails" title="Permanent link">#</a></h2>
+<table>
+<thead>
 <tr>
-<td><code>set log [&lt;10\|12\|off&gt;]</code></td>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>set log [&lt;10\|12\|on\|off&gt;]</code></td>
 <td>int, string or none</td>
-<td><code>set log</code> / <code>set log 10</code> / <code>set log off</code></td>
-<td>Toggle <a href="../cinemate-log/">CineMate Log</a> on/off using the live mode's default target, or force <code>10</code>/<code>12</code> explicitly where the live mode supports it; restarts the camera when idle, deferred while recording</td>
+<td><code>set_log_encode</code></td>
+<td>Toggle <a href="../cinemate-log/">CineMate Log</a> using each camera's default target for its live bit depth (16-bit → 12, 12-bit → 10). <code>set log 10</code> / <code>set log 12</code> force a target where the live bit depth supports it; <code>set log on</code> / <code>set log off</code> force a state (<code>yes</code>/<code>no</code>, <code>true</code>/<code>false</code> work too). A number other than 10 or 12 is rejected, so <code>set log 1</code> is not a synonym for <code>on</code>. Restarts the camera when idle; while recording the request is stored and applied on the next launch.</td>
 </tr>
 <tr>
-<td><code>set wb [&lt;Kelvin&gt;]</code></td>
-<td>int or none</td>
-<td><code>set wb 5600</code></td>
-<td>Set white balance or cycle active WB steps</td>
+<td><code>set thumbnail &lt;n&gt;</code></td>
+<td>int</td>
+<td><code>set_thumbnail</code></td>
+<td>Embedded DNG thumbnail mode: <code>0</code> off, <code>1</code> mono, <code>2</code> colour. Applied live on the next frame, no camera restart. Affects new takes only. <code>thumbnail_size</code> is not exposed here — its handler restarts the camera.</td>
 </tr>
+</tbody>
+</table>
+<h2 id="resolution-and-preview">Resolution and preview<a class="headerlink" href="#resolution-and-preview" title="Permanent link">#</a></h2>
+<table>
+<thead>
 <tr>
-<td><code>inc wb</code> / <code>dec wb</code></td>
-<td>-</td>
-<td></td>
-<td>Step white balance; <code>arrays.wb.free_increment</code> (100 K default) in free stepping</td>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
 </tr>
+</thead>
+<tbody>
 <tr>
 <td><code>set resolution [&lt;mode&gt;]</code></td>
 <td>int or none</td>
-<td><code>set resolution 2</code></td>
-<td>Apply or cycle sensor mode</td>
+<td><code>set_resolution</code></td>
+<td>Apply a sensor mode; omit the value to cycle. An aspect-ratio change relaunches cinepi-raw so the preview window is rebuilt; same-aspect changes stay seamless. With dynamic resolution on, the value becomes the desired mode.</td>
 </tr>
 <tr>
 <td><code>set dynamic resolution [0/1]</code></td>
 <td>0/1 or none</td>
-<td><code>set dynamic resolution 0</code></td>
-<td>Enable/disable/toggle dynamic resolution substitution</td>
+<td><code>set_dynamic_resolution_enabled</code></td>
+<td>Allow or block substituting a lesser mode when the requested fps exceeds the desired mode's own <code>fps_max</code>. Omit the value to toggle. Off also drops <code>fps_max</code> back to the selected mode's own limit. Persists across a reboot, outranking <code>image_capture.dynamic_resolution</code>.</td>
+</tr>
+<tr>
+<td><code>set dynamic resolution priority [&lt;policy&gt;]</code></td>
+<td><code>mode</code>/<code>resolution</code>/<code>none</code> or none</td>
+<td><code>set_dynamic_resolution_priority</code></td>
+<td>Which axis of quality the substitution gives up first once the desired mode's own class (bit depth + SDR/ClearHDR) runs out: <code>mode</code> holds the class and drops resolution, <code>resolution</code> holds the frame size and drops the class, <code>none</code> never leaves the class. Omit the value to cycle the three. Moves <code>fps_max</code> with it and re-settles the live mode. Persists across a reboot, outranking <code>image_capture.dynamic_resolution_priority</code>.</td>
 </tr>
 <tr>
 <td><code>set anamorphic factor [&lt;float&gt;]</code></td>
 <td>float or none</td>
-<td><code>set anamorphic factor 1.33</code></td>
-<td>Set or toggle anamorphic stretch</td>
+<td><code>set_anamorphic_factor</code></td>
+<td>Set the preview's anamorphic stretch, or omit the value to step to the next preset. The value must be one of <code>hdmi_display.preview.anamorphic.steps</code>; anything else is rejected. Restarts the camera.</td>
 </tr>
 <tr>
 <td><code>set zoom [&lt;float&gt;]</code></td>
 <td>float or none</td>
-<td><code>set zoom 2</code></td>
-<td>Change digital zoom; omit to cycle</td>
+<td><code>set_zoom</code></td>
+<td>Set the live-view digital zoom factor, clamped to <code>hdmi_display.preview.zoom_steps</code>. Omit the value to step through those steps. See <a href="../digital-zoom/">Digital zoom</a>.</td>
 </tr>
 <tr>
 <td><code>inc zoom</code> / <code>dec zoom</code></td>
-<td>-</td>
-<td></td>
-<td>Step preview zoom factor</td>
+<td>–</td>
+<td><code>inc_zoom</code> / <code>dec_zoom</code></td>
+<td>Step the preview zoom factor forwards or backwards, wrapping at the ends.</td>
 </tr>
 <tr>
 <td><code>set preview [cam0\|cam1\|both\|pip_cam0\|pip_cam1]</code></td>
 <td>text or none</td>
-<td><code>set preview pip_cam0</code></td>
-<td>Dual-sensor HDMI source: full-screen, side-by-side, or picture-in-picture (one sensor with the other as a corner inset); omit to cycle</td>
+<td><code>set_preview_source</code></td>
+<td>Dual-sensor HDMI source: full screen, side-by-side, or picture-in-picture with the other sensor as a corner inset. Omit the value to cycle all five. Applied live. Mid-take it can only add sensors to the record gate, never drop one. No visible effect with a single sensor.</td>
 </tr>
+</tbody>
+</table>
+<h2 id="locks-and-sync-modes">Locks and sync modes<a class="headerlink" href="#locks-and-sync-modes" title="Permanent link">#</a></h2>
+<table>
+<thead>
 <tr>
-<td><code>mount</code> / <code>unmount</code></td>
-<td>-</td>
-<td></td>
-<td>Mount or unmount external storage</td>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
 </tr>
-<tr>
-<td><code>toggle mount</code></td>
-<td>-</td>
-<td></td>
-<td>Mount if not mounted, otherwise unmount</td>
-</tr>
-<tr>
-<td><code>erase</code></td>
-<td>-</td>
-<td><code>erase</code></td>
-<td>Delete every clip on the mounted RAW volume without reformatting</td>
-</tr>
-<tr>
-<td><code>format</code></td>
-<td><code>[ext4\|exfat\|ntfs]</code></td>
-<td><code>format exfat</code></td>
-<td>Reformat the RAW drive (defaults to exfat) and remount it</td>
-</tr>
-<tr>
-<td><code>storage preroll</code></td>
-<td>-</td>
-<td><code>storage preroll</code></td>
-<td>Run the storage warm-up recording that prepares the media</td>
-</tr>
-<tr>
-<td><code>time</code></td>
-<td>-</td>
-<td></td>
-<td>Show system and RTC time</td>
-</tr>
-<tr>
-<td><code>set rtc time</code></td>
-<td>-</td>
-<td></td>
-<td>Copy system time to the RTC</td>
-</tr>
-<tr>
-<td><code>space</code></td>
-<td>-</td>
-<td></td>
-<td>Report remaining SSD space</td>
-</tr>
-<tr>
-<td><code>get</code></td>
-<td>-</td>
-<td></td>
-<td>Print all current settings (Redis keys in cp_controls channel)</td>
-</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>set shutter a sync [0/1]</code></td>
 <td>0/1 or none</td>
-<td><code>set shutter a sync 1</code></td>
-<td>Enable exposure sync mode; pots/encoders then step in <code>arrays.shutter_a.sync_increment</code> (0.1° default), independent of <code>free_increment</code></td>
+<td><code>set_shutter_a_sync_mode</code></td>
+<td>Enable exposure-sync mode, keeping exposure time constant across fps changes. Pots and encoders then step in <code>arrays.shutter_a.sync_increment</code> (0.1° default), independent of <code>free_increment</code>.</td>
 </tr>
 <tr>
 <td><code>set iso lock [0/1]</code></td>
 <td>0/1 or none</td>
-<td></td>
-<td>Lock or unlock ISO setting</td>
+<td><code>set_iso_lock</code></td>
+<td>Lock or unlock ISO.</td>
 </tr>
 <tr>
 <td><code>set shutter a nom lock [0/1]</code></td>
 <td>0/1 or none</td>
-<td><code>set shutter a nom lock</code></td>
-<td>Lock or unlock nominal shutter</td>
+<td><code>set_shutter_a_nom_lock</code></td>
+<td>Lock or unlock the nominal shutter angle.</td>
 </tr>
 <tr>
 <td><code>set shutter a nom fps lock [0/1]</code></td>
 <td>0/1 or none</td>
-<td><code>set shutter a nom fps lock 1</code></td>
-<td>Lock nominal shutter and FPS together</td>
+<td><code>set_shu_fps_lock</code></td>
+<td>Lock nominal shutter and FPS together.</td>
 </tr>
 <tr>
 <td><code>set fps lock [0/1]</code></td>
 <td>0/1 or none</td>
-<td><code>set fps lock 1</code></td>
-<td>Lock or unlock the frame rate</td>
+<td><code>set_fps_lock</code></td>
+<td>Lock or unlock the frame rate.</td>
 </tr>
 <tr>
 <td><code>set all lock [0/1]</code></td>
 <td>0/1 or none</td>
-<td><code>set all lock 0</code></td>
-<td>Toggle all exposure locks at once</td>
+<td><code>set_all_lock</code></td>
+<td>Set ISO, nominal shutter and FPS locks at once.</td>
 </tr>
 <tr>
 <td><code>set fps double [0/1]</code></td>
 <td>0/1 or none</td>
-<td></td>
-<td>Instant or toggled 2× FPS mode</td>
-</tr>
-<tr>
-<td><code>reboot</code> / <code>shutdown</code></td>
-<td>-</td>
-<td></td>
-<td>Safely reboot or halt the Pi</td>
-</tr>
-<tr>
-<td><code>restart camera</code></td>
-<td>-</td>
-<td></td>
-<td>Restart the libcamera pipeline</td>
-</tr>
-<tr>
-<td><code>restart cinemate</code></td>
-<td>-</td>
-<td></td>
-<td>Restart the Cinemate process</td>
-</tr>
-<tr>
-<td><code>set iso free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set iso free 1</code></td>
-<td>Allow any ISO in 100-unit steps (100–3200), instead of presets</td>
-</tr>
-<tr>
-<td><code>set shutter a free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set shutter a free 0</code></td>
-<td>Allow any shutter angle in 1° steps (1–360°)</td>
-</tr>
-<tr>
-<td><code>set fps free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set fps free 1</code></td>
-<td>Allow any FPS in 1 fps steps (1–<code>fps_max</code>)</td>
-</tr>
-<tr>
-<td><code>set wb free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set wb free</code></td>
-<td>Use 100 K WB steps from 2800 K to 6500 K</td>
-</tr>
-<tr>
-<td><code>set hdr threshold low free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set hdr threshold low free 1</code></td>
-<td>Use 16-unit steps across the full 0–4095 range</td>
-</tr>
-<tr>
-<td><code>set hdr threshold high free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set hdr threshold high free 1</code></td>
-<td>Use 16-unit steps across the full 0–4095 range</td>
-</tr>
-<tr>
-<td><code>set hdr blend free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set hdr blend free 1</code></td>
-<td>Use 1-unit steps across the full 0–8 range</td>
-</tr>
-<tr>
-<td><code>set hdr gain adder free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set hdr gain adder free 1</code></td>
-<td>Use 1-unit steps across the full 0–5 range</td>
-</tr>
-<tr>
-<td><code>set filter &lt;0/1&gt;</code></td>
-<td>0/1</td>
-<td><code>set filter 1</code></td>
-<td>Toggle IR-cut filter (IMX585)</td>
+<td><code>set_fps_double</code></td>
+<td>Double the frame rate and restore it again. Refused while recording if the doubled fps needs a different sensor mode.</td>
 </tr>
 </tbody>
 </table>
+<h2 id="free-stepping">Free stepping<a class="headerlink" href="#free-stepping" title="Permanent link">#</a></h2>
+<p>Free stepping stops landing on the preset stops in <code>settings.jsonc</code> and sweeps between the lowest and highest entry of the parameter's own array instead, in <code>free_increment</code> steps. Frame rate is the exception: its ceiling is the sensor mode's <code>fps_max</code>, which the array cannot raise. Each command toggles when the argument is omitted.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>set iso free [0/1]</code></td>
+<td>0/1, text or none</td>
+<td><code>set_iso_free</code></td>
+<td>Any ISO in 100-unit steps (100–3200) instead of the presets.</td>
+</tr>
+<tr>
+<td><code>set shutter a free [0/1]</code></td>
+<td>0/1, text or none</td>
+<td><code>set_shutter_a_free</code></td>
+<td>Any shutter angle in 1° steps (1–360°); values are no longer snapped.</td>
+</tr>
+<tr>
+<td><code>set fps free [0/1]</code></td>
+<td>0/1, text or none</td>
+<td><code>set_fps_free</code></td>
+<td>Any FPS in 1 fps steps (1–<code>fps_max</code>).</td>
+</tr>
+<tr>
+<td><code>set wb free [0/1]</code></td>
+<td>0/1, text or none</td>
+<td><code>set_wb_free</code></td>
+<td>100 K WB steps from 2800 K to 6500 K.</td>
+</tr>
+<tr>
+<td><code>set hdr threshold low free [0/1]</code></td>
+<td>0/1, text or none</td>
+<td><code>set_hdr_threshold_low_free</code></td>
+<td>16-unit steps across the full 0–4095 range.</td>
+</tr>
+<tr>
+<td><code>set hdr threshold high free [0/1]</code></td>
+<td>0/1, text or none</td>
+<td><code>set_hdr_threshold_high_free</code></td>
+<td>16-unit steps across the full 0–4095 range.</td>
+</tr>
+<tr>
+<td><code>set hdr blend free [0/1]</code></td>
+<td>0/1, text or none</td>
+<td><code>set_hdr_blend_free</code></td>
+<td>1-unit steps across the full 0–8 range.</td>
+</tr>
+<tr>
+<td><code>set hdr gain adder free [0/1]</code></td>
+<td>0/1, text or none</td>
+<td><code>set_hdr_gain_adder_free</code></td>
+<td>1-unit steps across the full 0–5 range.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p>These eight commands also accept a text argument, but the handler stores whatever it is given and any non-empty string is truthy — <code>set iso free off</code> switches free stepping <strong>on</strong>. Use <code>0</code>, <code>1</code>, or no argument at all.</p>
+</div>
 <p>All step sizes above are the shipped defaults and are configurable per parameter via <code>arrays.&lt;name&gt;.free_increment</code> in <a href="../settings-json/#arrays">settings.jsonc</a>.</p>
+<h2 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mount</code></td>
+<td>–</td>
+<td><code>mount</code></td>
+<td>Mount the external RAW drive.</td>
+</tr>
+<tr>
+<td><code>unmount</code></td>
+<td>–</td>
+<td><code>unmount</code></td>
+<td>Unmount the external RAW drive.</td>
+</tr>
+<tr>
+<td><code>toggle mount</code></td>
+<td>–</td>
+<td><code>toggle_mount</code></td>
+<td>Mount when no drive is present, unmount otherwise.</td>
+</tr>
+<tr>
+<td><code>erase</code></td>
+<td>–</td>
+<td><code>erase_drive</code></td>
+<td>Delete every clip on the mounted RAW volume without reformatting.</td>
+</tr>
+<tr>
+<td><code>format [ext4\|exfat\|ntfs]</code></td>
+<td>text or none</td>
+<td><code>format_drive</code></td>
+<td>Reformat the RAW drive and remount it. Defaults to <code>exfat</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="sensor-tools">Sensor tools<a class="headerlink" href="#sensor-tools" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>set filter &lt;0/1&gt;</code></td>
+<td>0/1</td>
+<td><code>set_filter</code></td>
+<td>Enable (<code>1</code>) or disable (<code>0</code>) the StarlightEye IR-cut filter. IMX585 only; on any other sensor the command returns immediately and changes nothing. The parser lets the argument be omitted, but the handler rejects a bare <code>set filter</code>, so always pass <code>0</code> or <code>1</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="system">System<a class="headerlink" href="#system" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Method</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get</code></td>
+<td>–</td>
+<td><code>print_settings</code></td>
+<td>Print every Redis parameter with its current value.</td>
+</tr>
+<tr>
+<td><code>reboot</code></td>
+<td>–</td>
+<td><code>reboot</code></td>
+<td>Stop any running recording, then reboot the Pi.</td>
+</tr>
+<tr>
+<td><code>shutdown</code></td>
+<td>–</td>
+<td><code>safe_shutdown</code></td>
+<td>Stop any running recording, then halt the Pi.</td>
+</tr>
+<tr>
+<td><code>restart cinemate</code></td>
+<td>–</td>
+<td><code>restart_cinemate</code></td>
+<td>Restart the CineMate process through systemd, without rebooting.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cli-commands-without-a-controller-method">CLI commands without a controller method<a class="headerlink" href="#cli-commands-without-a-controller-method" title="Permanent link">#</a></h3>
+<p>These are handled by the CLI and other components rather than by <code>CinePiController</code>, so there is no method name to bind in <code>settings.jsonc</code>:</p>
+<ul>
+<li><code>time</code> — show system and RTC time.</li>
+<li><code>set rtc time</code> — copy system time to the RTC.</li>
+<li><code>space</code> — report remaining space on the mounted drive.</li>
+<li><code>restart camera</code> — restart the libcamera/cinepi-raw pipeline.</li>
+<li><code>storage preroll</code> — run the storage warm-up recording (see below).</li>
+</ul>
 <h2 id="timed-recording-shortcuts">Timed recording shortcuts<a class="headerlink" href="#timed-recording-shortcuts" title="Permanent link">#</a></h2>
-<p>Use the timed modes to walk away from the camera while it captures a precisely bounded take.</p>
+<p>Use the timed modes to walk away from the camera while it captures a precisely bounded take. They are parsed by the <code>rec</code> handler only — <code>stop</code> takes no arguments.</p>
 <ul>
 <li><code>rec s &lt;seconds&gt;</code> stops after the requested duration. Short forms such as <code>sec</code>, <code>secs</code> and <code>seconds</code> also work.</li>
-<li><code>rec f &lt;frames&gt;</code> stops after the requested number of frame slots at the locked record-start FPS. Dropped frames still count toward that limit, so the take ends when that many frames should have been recorded, not when that many DNGs were successfully written. You can type <code>frame</code> or <code>frames</code> instead of <code>f</code>.</li>
+<li><code>rec f &lt;frames&gt;</code> stops after the requested number of frame slots. Dropped frames still count toward that limit, so the take ends when that many frames should have been recorded, not when that many DNGs were successfully written. You can type <code>frame</code> or <code>frames</code> instead of <code>f</code>.</li>
 </ul>
 <p>If recording is not already running, the CLI starts it before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.</p>
 <p>On a dual-sensor rig you can prepend a camera token — <code>cam0</code>, <code>cam1</code>, or <code>both</code> (<code>dual</code> is an alias) — to force which sensor(s) capture the take, overriding the <a href="../dual-sensors/#recording">record policy</a> for that one clip. It combines with the timed modes: <code>rec cam1</code>, <code>rec cam0 s 10</code>, <code>rec both f 48</code>. With a single sensor the token has no effect.</p>
 <h2 id="storage-maintenance-commands">Storage maintenance commands<a class="headerlink" href="#storage-maintenance-commands" title="Permanent link">#</a></h2>
-<p><code>erase</code> and <code>format</code> prepare removable media directly from the CLI. Both require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.</p>
+<p><code>erase</code> and <code>format</code> prepare removable media directly from the CLI. Both require the RAW drive to be mounted; otherwise CineMate logs an error and leaves the media untouched.</p>
 <ul>
-<li><code>erase</code> empties the mounted RAW volume without touching the filesystem structure, so you can clear cards quickly between takes.</li>
+<li><code>erase</code> empties the mounted RAW volume without touching the filesystem structure, so you can clear cards quickly between takes. It is also refused while a take is recording or while buffered frames are still flushing.</li>
 <li><code>format [ext4|exfat|ntfs]</code> reformats the drive with the chosen filesystem (<code>exfat</code> by default), remounts it and refreshes the free-space monitor.</li>
 </ul>
 <h2 id="storage-pre-roll-warm-up">Storage pre-roll warm-up<a class="headerlink" href="#storage-pre-roll-warm-up" title="Permanent link">#</a></h2>
-<p><code>storage preroll</code> triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when <code>system.storage.auto_preroll</code> is set to <code>false</code> in <code>settings.jsonc</code>.</p>
+<p><code>storage preroll</code> triggers the same warm-up clip that CineMate runs automatically on startup or when you mount new storage. During the pre-roll, CineMate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when <code>system.storage.auto_preroll</code> is set to <code>false</code> in <code>settings.jsonc</code>.</p>
 <p>See <a href="../storage-preroll/">Storage pre-roll warm-up</a> for a detailed walkthrough of the workflow and tips on when to run it manually.</p>
+<h2 id="wiring-a-command-to-hardware">Wiring a command to hardware<a class="headerlink" href="#wiring-a-command-to-hardware" title="Permanent link">#</a></h2>
+<p>Any method in the Method column can be named in a <code>hardware_controls</code> block in <code>settings.jsonc</code> — buttons, rotary encoders, switches and potentiometers all dispatch to these same methods, so anything you can type you can also bind to a control. Methods that take no argument suit buttons and encoder detents; the <code>set_*</code> methods that accept a value suit pots and analog inputs. See <a href="../hardware-controls/">Additional hardware</a> for the block format and pin wiring, and <a href="../settings-json/">settings.jsonc</a> for the full settings file.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../overclocking/" class="btn btn-neutral float-left" title="Overclocking the Pi"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../compiling-cinepi-raw/" class="btn btn-neutral float-left" title="Compiling cinepi-raw"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../cli-user-guide/" class="btn btn-neutral float-right" title="CinePi RAW terminal commands">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -574,7 +773,7 @@
         </span>
     
     
-      <span><a href="../overclocking/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../compiling-cinepi-raw/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../cli-user-guide/" style="color: #fcfcfc">Next &raquo;</a></span>

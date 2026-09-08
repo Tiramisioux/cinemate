@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/audio-recording/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Audio recording - Cinemate Docs</title>
+    <title>Audio recording - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Audio recording</a>
     <ul class="current">
@@ -69,7 +67,9 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#using-the-microphone">Using the microphone</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#settingsjsonc-audio_capture-section">settings.jsonc audio_capture section</a>
+    <li class="toctree-l2"><a class="reference internal" href="#settings">Settings</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#timecode-offset">Timecode offset</a>
     </li>
     </ul>
                   </li>
@@ -82,7 +82,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -118,30 +122,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -158,7 +150,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -178,39 +170,65 @@
               
 <div class="markdown-body">
   <h1 id="audio-recording">Audio recording<a class="headerlink" href="#audio-recording" title="Permanent link">#</a></h1>
+<p>CineMate records a <code>.wav</code> alongside the DNG frames, with timecode DaVinci Resolve reads as one clip with the image and audio combined.</p>
 <h2 id="supported-microphones">Supported microphones<a class="headerlink" href="#supported-microphones" title="Permanent link">#</a></h2>
-<p>Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones.</p>
+<p>Tested with the RODE VideoMic NTG (24-bit) and simple 16-bit USB microphones.</p>
 <h2 id="using-the-microphone">Using the microphone<a class="headerlink" href="#using-the-microphone" title="Permanent link">#</a></h2>
 <ol>
 <li>Plug a USB microphone into the Pi.</li>
-<li>Check for mic, bit depth and sample rate indicator on the left side of the gui. On the right side VU meters should show.</li>
-<li>When recording <code>.wav</code> is written next to the <code>.dng</code> frames in the same take folder and a white "wav" label shows up next to the clip name below the preview.</li>
+<li>Check the mic, bit depth and sample rate indicator on the left of the GUI. VU meters appear on
+   the right.</li>
+<li>Record. A <code>.wav</code> is written next to the <code>.dng</code> frames in the same take folder, and a white
+   <code>WAV</code> label appears next to the clip name below the preview.</li>
 </ol>
-<p>Timecode is readable by DaVinci Resolve, which treats the <code>.dng</code> sequence and <code>.wav</code> as one clip.</p>
-<h2 id="settingsjsonc-audio_capture-section"><code>settings.jsonc</code> audio_capture section<a class="headerlink" href="#settingsjsonc-audio_capture-section" title="Permanent link">#</a></h2>
+<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">"audio_capture"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nt">"24bit"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"capture_gain_db"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"timecode_offset_frames"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">    </span><span class="nt">"capture_gain_db"</span><span class="p">:</span><span class="w"> </span><span class="mf">6.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timecode_offset_frames"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">"16bit"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"capture_gain_db"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"timecode_offset_frames"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">    </span><span class="nt">"capture_gain_db"</span><span class="p">:</span><span class="w"> </span><span class="mf">6.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timecode_offset_frames"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
-<ul>
-<li><strong><code>24bit</code></strong> — settings for the 24-bit USB dsnoop path (<code>mic_24bit</code> alias, e.g. RØDE VideoMic NTG).</li>
-<li><strong><code>16bit</code></strong> — settings for 16-bit mono capture (<code>mic_16bit</code> alias, generic USB PnP mics). Both mic types go through the same capture helper; this block overrides the <code>24bit</code> values for 16-bit mics.</li>
-</ul>
-<p><code>capture_gain_db</code> is applied after Cinemate probes which path is active and knows the bit depth. <code>0.0</code> = unity gain; positive values boost, negative attenuate. </p>
-<p><code>timecode_offset_frames</code> enables manual offset of the embedded timecode. This can be useful if you see a constant offset in the sound. See also <a href="../audio-sync/">Audio sync &amp; drift</a>.</p>
+<p>The block is split by the bit depth negotiated with the mic: <code>24bit</code> for 24-bit USB microphones,
+<code>16bit</code> for generic 16-bit mono USB PnP mics. CineMate probes which path is active and applies
+that block.</p>
+<p><code>capture_gain_db</code> is capture gain in decibels. <code>0.0</code> is unity, positive boosts, negative
+attenuates. Some USB mics expose no writable ALSA control and run at fixed hardware gain; on those
+the value is skipped and the log says so.</p>
+<h2 id="timecode-offset">Timecode offset<a class="headerlink" href="#timecode-offset" title="Permanent link">#</a></h2>
+<p>A USB mic can sit a fixed couple of frames early or late against the picture, from analogue and
+buffering latency. <code>timecode_offset_frames</code> corrects that constant offset.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sound arrives <strong>early</strong>, before the visual</td>
+<td>A positive value moves the audio timecode later</td>
+</tr>
+<tr>
+<td>Sound arrives <strong>late</strong>, after the visual</td>
+<td>A negative value moves it earlier</td>
+</tr>
+</tbody>
+</table>
+<p>Only the embedded BWF/iXML timecode metadata is shifted. The PCM samples are never moved, so
+nothing is added or lost at the head of the file.</p>
+<p>Use this for a fixed, repeatable offset. It does not correct an error that grows over a long take.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../image-circle/" class="btn btn-neutral float-left" title="Lenses and image circles"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../playback/" class="btn btn-neutral float-left" title="Playback"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../digital-zoom/" class="btn btn-neutral float-right" title="Digital zoom">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -238,7 +256,7 @@
         </span>
     
     
-      <span><a href="../image-circle/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../playback/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../digital-zoom/" style="color: #fcfcfc">Next &raquo;</a></span>

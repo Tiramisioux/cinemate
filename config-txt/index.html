@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/config-txt/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Bookworm config.txt - Cinemate Docs</title>
+    <title>Bookworm config.txt - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -90,7 +92,17 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Bookworm config.txt</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#example-configtxt">Example config.txt</a>
+    <li class="toctree-l2"><a class="reference internal" href="#link-frequency-for-rp1-overclock">Link frequency for RP1 overclock</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#switch-to-a-different-sensor">Switch to a different sensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-danger">The danger</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#hand-edits">Hand edits</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example-of-the-stock-configtxt-created-by-the-installer-script">Example of the stock config.txt created by the installer script</a>
+    </li>
+        </ul>
     </li>
     </ul>
                   </li>
@@ -114,30 +126,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -154,7 +154,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -173,15 +173,75 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="modifying-configtxt">Modifying config.txt<a class="headerlink" href="#modifying-configtxt" title="Permanent link">#</a></h1>
-<div class="admonition tip">
-<p>For easy editing of <code>config.txt</code> on the preinstalled image file, type <code>editboot</code> anywhere in Raspberry Pi terminal.</p>
+  <h1 id="boot-config-configtxt">Boot config (config.txt)<a class="headerlink" href="#boot-config-configtxt" title="Permanent link">#</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">This file can stop the Pi booting</p>
+<p>A bad <code>config.txt</code> can leave the camera unbootable, with no way to fix it from the Pi itself.
+Read <a href="#the-danger">The danger</a> before you save.</p>
 </div>
-<p>If using a manual install without the above alias, type:</p>
-<div class="highlight"><pre><span></span><code>sudo nano /boot/firmware/config.txt
+<p><code>/boot/firmware/config.txt</code> declares the camera sensor and switches on the hardware buses and the
+RP1 overclock. Edit it from the settings editor's <strong>config.txt</strong> tab (<code>boot &amp; sensors</code>):</p>
+<div class="highlight"><pre><span></span><code>http://cinepi.local:5000/settings-editor/
 </code></pre></div>
-<p>Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is <code>imx477</code> on <code>cam0</code>. For IMX296, IMX283, or IMX585, uncomment that sensor section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.</p>
-<h3 id="example-configtxt">Example config.txt<a class="headerlink" href="#example-configtxt" title="Permanent link">#</a></h3>
+<p>The tab edits only the block CineMate owns, fenced by two marker lines:</p>
+<div class="highlight"><pre><span></span><code># &gt;&gt;&gt; cinemate-install &gt;&gt;&gt;
+...
+# &lt;&lt;&lt; cinemate-install &lt;&lt;&lt;
+</code></pre></div>
+<p>A save rewrites the camera section (between <code># ---- Camera section ----</code> and
+<code># ---- End camera section ----</code>) and the <code>dtparam=i2c_arm=on</code> / <code>dtparam=i2s=on</code> /
+<code>dtparam=spi=on</code> / <code>dtparam=audio=on</code> / <code>dtoverlay=rp1-overclock</code> lines. Every other line, in the fence or outside it, is untouched. The camera section is replaced wholesale: the installer's five commented example blocks, one per sensor, collapse on the first save to <code>camera_auto_detect=</code> plus your overlay lines.</p>
+<p>Hand edits outside the fence survive this page and <code>cinemate-update.sh</code>, which never touches
+<code>config.txt</code>. They do not survive a re-run of <code>cinemate-install.sh</code>: <code>configure_boot_config()</code> rewrites the whole file as the managed block alone, copying the old one to the installer's backup directory.</p>
+<p><img alt="The config.txt tab of the CineMate settings editor" src="../images/gui-config-txt.png" /></p>
+<h3 id="link-frequency-for-rp1-overclock">Link frequency for RP1 overclock<a class="headerlink" href="#link-frequency-for-rp1-overclock" title="Permanent link">#</a></h3>
+<p>Entries read as MHz, Mbps per lane, then the published 4K frame rate where <code>sensors.json</code> records one, today IMX585 only: <code>720 MHz · 1440 Mbps/lane · up to 50 fps at 4K (default)</code>. IMX283's two entries stop at the Mbps figure. Entries the RP1 is not specified for are suffixed <code>— over RP1 spec</code>.</p>
+<h3 id="switch-to-a-different-sensor">Switch to a different sensor<a class="headerlink" href="#switch-to-a-different-sensor" title="Permanent link">#</a></h3>
+<ol>
+<li>Connect the sensor to cam0 or cam1 with the Pi powered off.</li>
+<li>Power up and browse to <code>http://cinepi.local:5000/settings-editor</code>.</li>
+<li>Click the <strong>config.txt</strong> tab.</li>
+<li>Pick your sensor in <strong>Camera 0 sensor</strong>.</li>
+<li>Pick a second sensor in <strong>Camera 1 sensor</strong>, or leave it on <strong>None connected</strong>.</li>
+<li>Click the <strong>config.txt</strong> button in the top bar to read the reconstructed file.</li>
+<li>Read the danger note below.</li>
+<li>Click <strong>Save changes</strong>. The Pi writes <code>config.txt</code> and reboots.</li>
+<li>Wait about 25 seconds for the Pi to come back, camera included.</li>
+<li>Reload and check <strong>Detected modes</strong> lists the sensor you fitted.</li>
+</ol>
+<h3 id="the-danger">The danger<a class="headerlink" href="#the-danger" title="Permanent link">#</a></h3>
+<div class="admonition danger">
+<p class="admonition-title">Saving here reboots immediately: no confirm, no revert, no backup</p>
+<p><strong>Save changes</strong> on this tab writes <code>/boot/firmware/config.txt</code> and reboots the Pi about 0.4
+seconds later, stopping any recording first. There is no confirmation dialog, no countdown, and
+no copy of the previous file.</p>
+<p>The <a href="../recovery-console/">recovery console</a> behaves differently. Its <code>config.txt</code> editor backs
+up the previous file on every save and arms a confirm-or-revert countdown, restoring the old
+file and rebooting by itself if you never confirm. That editor is <strong>disabled by default</strong>: set
+<code>system.recovery.allow_config_txt</code> to <code>true</code> first, or there is nothing to fall back on.</p>
+<p>A <code>config.txt</code> that stops the Pi booting cannot be fixed from anything running on the Pi. See
+<a href="../recovery-console/#the-honest-limit">The honest limit</a>. Recovery then means pulling the SD
+card and editing the file on another machine.</p>
+</div>
+<p>Check the reconstructed file before saving. Sensor overlay and link-frequency picks are the ones
+that cost you a boot.</p>
+<h2 id="hand-edits">Hand edits<a class="headerlink" href="#hand-edits" title="Permanent link">#</a></h2>
+<p>In the Raspberry Pi terminal:</p>
+<div class="highlight"><pre><span></span><code>editboot
+</code></pre></div>
+<p>opens <code>/boot/firmware/config.txt</code> in nano</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>nano<span class="w"> </span>/boot/firmware/config.txt
+</code></pre></div>
+<p>Uncomment the block for your sensor, comment out the others, then run <code>sudo reboot</code>. The
+clean-install default is <code>imx477</code> on <code>cam0</code>. Nothing validates what you type and nothing reboots for
+you.</p>
+<div class="admonition note">
+<p>For a dual-sensor setup, attach both sensors and give each port its own overlay line:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">dtoverlay</span><span class="o">=</span>imx296,cam0
+<span class="nv">dtoverlay</span><span class="o">=</span>imx296,mono,cam1
+</code></pre></div>
+</div>
+<h3 id="example-of-the-stock-configtxt-created-by-the-installer-script">Example of the stock config.txt created by the installer script<a class="headerlink" href="#example-of-the-stock-configtxt-created-by-the-installer-script" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># &gt;&gt;&gt; cinemate-install &gt;&gt;&gt;</span>
 <span class="c1"># Managed by cinemate-install.sh</span>
 <span class="c1"># For more options and information see</span>
@@ -270,14 +330,6 @@
 <span class="nv">dtoverlay</span><span class="o">=</span>disable-bt
 <span class="c1"># &lt;&lt;&lt; cinemate-install &lt;&lt;&lt;</span>
 </code></pre></div>
-<p>Exit the editor by pressing Ctrl+X.</p>
-<div class="admonition note">
-<p>For a dual sensor setup, attach to cam0 and cam1 and add overlays for both camera ports.</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Example</span>
-<span class="nv">dtoverlay</span><span class="o">=</span>imx296,cam0
-<span class="nv">dtoverlay</span><span class="o">=</span>imx296,mono,cam1
-</code></pre></div>
-</div>
 </div>
 
             </div>

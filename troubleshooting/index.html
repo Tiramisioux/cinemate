@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/troubleshooting/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Troubleshooting - Cinemate Docs</title>
+    <title>Troubleshooting - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -112,30 +114,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -152,7 +142,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -184,12 +174,22 @@
 <tr>
 <td><strong>No preview on the monitor</strong></td>
 <td>No HDMI signal, or the browser UI never started</td>
-<td>Plug in an HDMI monitor, <strong>or</strong> join the <code>CinePi</code> Wi-Fi and open <code>cinepi.local:5000</code>. The browser UI only starts if the Pi has a network address at boot — if you connect later, restart Cinemate. See <a href="../web-gui/">Web GUI</a>.</td>
+<td>Plug in an HDMI monitor, <strong>or</strong> join the <code>CinePi</code> Wi-Fi and open <code>cinepi.local:5000</code>. The browser UI only starts if the Pi has a network address at boot — if you connect later, restart CineMate. See <a href="../web-gui/">Web GUI</a>.</td>
 </tr>
 <tr>
 <td><strong>Camera not detected</strong></td>
 <td>Ribbon connected with power on, or wrong sensor overlay</td>
 <td>Power off, reseat the ribbon, power on. Confirm the right sensor line is enabled in <a href="../config-txt/">config.txt</a>.</td>
+</tr>
+<tr>
+<td><strong>CineMate boots showing <code>CAMERA NOT FOUND</code>, no preview</strong></td>
+<td>No camera was found at boot (<code>camera-ready.sh</code> waits up to 8 s before giving up, so this isn't a slow-sensor false alarm)</td>
+<td>Expected, not a crash. Both the HDMI GUI and the web GUI show a full-width <strong>CAMERA NOT FOUND</strong> message, with the power-off warning, in the preview area, and stay usable — hotspot, web UI, and the settings editor at <code>http://cinepi.local:5000/settings-editor</code> are all still reachable, so you can fix <code>config.txt</code> or reseat the ribbon without SSH. To recover: <strong>power off, connect the camera, power on.</strong> That is the whole procedure — CineMate re-probes for the sensor every time it starts, so no command is needed afterwards. Recording and preview stay unavailable until then; <code>restart camera</code> alone does not re-detect a newly attached sensor. (<code>restart cinemate</code> is for picking up a <code>settings.jsonc</code> change without a power cycle — see <a href="../cli-commands/">CLI commands</a>. It restarts the <strong><code>cinemate-autostart</code> service</strong>, so it does nothing for a CineMate you started by hand.)</td>
+</tr>
+<tr>
+<td><strong>Bare terminal after boot, no CineMate error</strong></td>
+<td>CineMate never started. The systemd unit failed <em>before</em> <code>main.py</code> ran — almost always because <code>/etc/systemd/system/cinemate-autostart.service</code> is an old copy with the strict camera-ready gate, and a <code>git pull</code> does not update it</td>
+<td>The unit and the <code>/usr/local/bin/</code> helpers are <strong>copied</strong> by <code>sudo make install</code>, not symlinked. Run <code>cd /home/pi/cinemate &amp;&amp; sudo make install &amp;&amp; sudo systemctl daemon-reload</code>, then reboot. Confirm with <code>grep ExecStartPre /etc/systemd/system/cinemate-autostart.service</code> — it must read <code>ExecStartPre=-/usr/local/bin/camera-ready.sh</code>, with the leading <code>-</code>. Distinguish this from a Python startup crash: a crash prints a red <code>CineMate crashed during startup</code> block on <code>tty1</code> first; this failure prints nothing at all. See <a href="../installation-steps/">Installation</a>.</td>
 </tr>
 <tr>
 <td><strong>Recording won't start / no storage</strong></td>
@@ -209,7 +209,7 @@
 <tr>
 <td><strong>Audio drifts out of sync on long takes</strong></td>
 <td>Microphone clock drift</td>
-<td>See <a href="../audio-sync/">Audio sync &amp; drift</a> for correction.</td>
+<td>See <a href="../audio-recording/#timecode-offset">Audio recording</a>.</td>
 </tr>
 <tr>
 <td><strong>Can't reach the Pi over SSH</strong></td>
@@ -228,7 +228,7 @@
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../backing-up-sd-card/" class="btn btn-neutral float-left" title="Backing up the SD card"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../audio-sync/" class="btn btn-neutral float-right" title="Audio sync & drift">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../simple-gui-refresh-tuning/" class="btn btn-neutral float-right" title="Simple GUI refresh tuning">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -258,7 +258,7 @@
       <span><a href="../backing-up-sd-card/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../audio-sync/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../simple-gui-refresh-tuning/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

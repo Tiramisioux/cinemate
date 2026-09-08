@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/playback/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Playback - CineMate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Playback";
+        var mkdocs_page_input_path = "playback.md";
+        var mkdocs_page_url = "/cinemate/playback/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> CineMate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Playback</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#reaching-it">Reaching it</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#choosing-a-take">Choosing a take</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#playing">Playing</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#playback-speed-and-the-conform-frame-rate">Playback speed and the conform frame rate</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#take-metadata">Take metadata</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">CineMate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Using the camera</li>
+      <li class="breadcrumb-item active">Playback</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/playback.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="playback">Playback<a class="headerlink" href="#playback" title="Permanent link">#</a></h1>
+<p>Play a recorded take back in the browser, without taking the card out. Frames are decoded from the CinemaDNG files on the card as you play — nothing is transcoded, and nothing is written back to the take.</p>
+<p>Playback runs at the <strong>conform frame rate</strong>, so a take shot faster than the conform rate plays as slow motion, at the speed it will run on the timeline.</p>
+<p><img alt="The Playback tab of the CineMate settings editor" src="../images/gui-playback.png" /></p>
+<h2 id="reaching-it">Reaching it<a class="headerlink" href="#reaching-it" title="Permanent link">#</a></h2>
+<p>The pane is a tab in the settings editor:</p>
+<div class="highlight"><pre><span></span><code>http://cinepi.local:5000/settings-editor/
+</code></pre></div>
+<p>Choose <strong>Playback · review takes</strong>. Over the camera's own hotspot the settings editor is at <code>http://10.42.0.1:5000/settings-editor/</code> (see <a href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>).</p>
+<h2 id="choosing-a-take">Choosing a take<a class="headerlink" href="#choosing-a-take" title="Permanent link">#</a></h2>
+<p>The take strip heads the pane, listing every take across mounted storage with a thumbnail from its first frame. Picking one loads it into the player below and scrolls you down to it. Each card shows the take name, its frame count and its recorded frame rate, plus badges:</p>
+<table>
+<thead>
+<tr>
+<th>Badge</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RAW</code>, <code>RAW1</code>, <code>RAW2</code></td>
+<td>Which mounted drive the take is on — <code>RAW</code> is the active one</td>
+</tr>
+<tr>
+<td><code>HDR</code></td>
+<td>The take holds HDR-range data (see <a href="#take-metadata">Take metadata</a>)</td>
+</tr>
+<tr>
+<td><code>WAV</code></td>
+<td>The take has an audio sidecar</td>
+</tr>
+<tr>
+<td><code>0.50× SLOMO</code>, <code>2.00× FAST</code></td>
+<td>The take's playback speed against the conform rate. Absent when the take plays at 1.00×</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Sort</strong> orders the strip: <em>oldest first</em> (the default — shooting order, so the first take is leftmost and each later one to its right), <em>newest first</em>, or <em>largest first</em>. The same three orders are offered on the RAW files pane.</p>
+<p><strong>View</strong> picks the shape: <em>one row</em>, which scrolls sideways and keeps the player in sight on a card with a lot of takes, or <em>grid</em>, which wraps every take onto the screen at once for picking one out visually.</p>
+<p>Neither disturbs what is on the player. The selected take keeps playing and simply moves.</p>
+<h2 id="playing">Playing<a class="headerlink" href="#playing" title="Permanent link">#</a></h2>
+<p>Transport controls sit under the picture: first frame, previous frame, <strong>PLAY</strong>, next frame, last frame, and a loop toggle. Drag anywhere on the filmstrip to scrub — it holds sixteen frames sampled evenly across the take, with the playhead marking the current position. The take's name and the elapsed position show over the top of the picture.</p>
+<p>Playing again from the last frame restarts from the beginning unless loop is on.</p>
+<h2 id="playback-speed-and-the-conform-frame-rate">Playback speed and the conform frame rate<a class="headerlink" href="#playback-speed-and-the-conform-frame-rate" title="Permanent link">#</a></h2>
+<p>Playback is paced by <code>settings.conform_frame_rate</code> (see <a href="../settings-json/">Settings file</a>), not by the rate the take was shot at. That is the point: what you see is what the take will do once it is conformed in post.</p>
+<ul>
+<li>A take shot <strong>above</strong> the conform rate plays as slow motion. 50 fps on a 25 fps conform plays at 0.50×.</li>
+<li>A take shot <strong>below</strong> it plays fast.</li>
+<li>A take shot <strong>at</strong> it plays at 1.00×.</li>
+</ul>
+<p>Turn <strong>Use conform frame rate</strong> off to play each take at the rate it was shot instead.</p>
+<div class="admonition note">
+<p>Speed ramps replay correctly with no extra setting. Every DNG carries its own frame rate, and in conform mode playback simply steps one frame per conform tick — so a take whose frame rate changed mid-shot plays back with the ramp intact.</p>
+</div>
+<h2 id="take-metadata">Take metadata<a class="headerlink" href="#take-metadata" title="Permanent link">#</a></h2>
+<p>Everything in this row is read from the take's own DNG files, not from what the camera is set to now — so an old take reads correctly even if the camera has been reconfigured since.</p>
+<p><code>FPS</code>, <code>Resolution</code>, <code>Depth</code> and <code>Sensor</code> come straight from the frame's tags. <code>Depth</code> is the take's <em>original/source</em> depth, not necessarily the literal <code>BitsPerSample</code> stored in the file — a log-encoded take compresses to 10-bit for storage, and showing that number instead of what the take was actually shot at (12-bit SDR or 16-bit ClearHDR) was more confusing than useful. Look for <code>LOG10</code> if you want to know whether that compression happened. The grey boxes to the right are:</p>
+<table>
+<thead>
+<tr>
+<th>Box</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>12b</code>, <code>16b</code></td>
+<td>Bits per sample the take was shot at</td>
+</tr>
+<tr>
+<td><code>SDR</code></td>
+<td>Standard-range capture</td>
+</tr>
+<tr>
+<td><code>HDR</code></td>
+<td>The take holds more range than a 12-bit sensor mode can carry — ClearHDR, in either its 16-bit linear or 12-bit companded form</td>
+</tr>
+<tr>
+<td><code>LIN</code></td>
+<td>The samples are linear</td>
+</tr>
+<tr>
+<td><code>CRV</code></td>
+<td>A curve is baked into the file and a reader must apply it before the levels mean anything</td>
+</tr>
+<tr>
+<td><code>LOG10</code></td>
+<td>The take was log-encoded and stored as 10-bit — <code>Depth</code> already shows the original depth it was shot at, this just says the compression happened</td>
+</tr>
+<tr>
+<td><code>WAV</code></td>
+<td>The take has audio; <code>—</code> means it does not</td>
+</tr>
+<tr>
+<td><code>CNF</code></td>
+<td>The take is playing at something other than 1.00× because of the conform rate</td>
+</tr>
+<tr>
+<td><code>DROP N</code></td>
+<td>The <em>recording</em> is missing <code>N</code> frames — a gap in cinepi-raw's own frame-numbering, read from the filenames on disk. Nothing to do with this playback session's own speed; no badge means either zero drops or the frame numbering couldn't be read, not necessarily a clean take</td>
+</tr>
+<tr>
+<td>Playback stops on its own</td>
+<td>The browser tab was moved to the background. Browsers throttle background tabs to about one tick a second, so playback stops rather than reporting a skip count that means nothing</td>
+</tr>
+<tr>
+<td>Picture greys out mid-playback</td>
+<td>A recording started</td>
+</tr>
+<tr>
+<td>A take listed with no metadata</td>
+<td>Its first frame could not be read — the take is still listed rather than hidden</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../web-gui/" class="btn btn-neutral float-left" title="Web GUI"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../audio-recording/" class="btn btn-neutral float-right" title="Audio recording">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../web-gui/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../audio-recording/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

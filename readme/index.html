@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/readme/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Overview - Cinemate Docs</title>
+    <title>Overview - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -75,9 +75,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -90,7 +88,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -126,30 +128,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -166,7 +156,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -185,11 +175,11 @@
               
 <div class="markdown-body">
   <h1 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h1>
-<p><strong>Cinemate</strong> is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw files (10/12-bit, plus 16-bit <a href="../clear-hdr/">ClearHDR</a> on the IMX585) using off-the-shelf parts.</p>
+<p><strong>CineMate</strong> is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw files (10/12-bit, plus 16-bit <a href="../clear-hdr/">ClearHDR</a> on the IMX585) using off-the-shelf parts.</p>
 <p>It pairs a lightweight Python interface with a custom fork of <a href="https://github.com/Tiramisioux/cinepi-raw">cinepi-raw</a>, built on the <a href="https://github.com/cinepi">CinePi-RAW recorder by Csaba Nagy</a>.</p>
 <div style="text-align: center;">
-  <img src="/cinemate/images/camera-stack3.png" alt="Camera stack exploded" width="60%" />
-  <p><em>Figure 1: The Cinemate camera stack — Cinemate (the user interface) running on top of CinePi-RAW (the recorder).</em></p>
+  <img src="../images/camera-stack3.png" alt="Camera stack exploded" width="60%" />
+  <p><em>Figure 1: The CineMate camera stack — CineMate (the user interface) running on top of CinePi-RAW (the recorder).</em></p>
 </div>
 
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
@@ -197,12 +187,20 @@
 <p>To build the stack yourself on Raspberry Pi OS Lite (Bookworm), or to use the one-click installer, see <a href="../installation-steps/">Manual installation</a>.</p>
 <details class="note">
 <summary>Installing for a non-default sensor</summary>
-<p>The one-click installer defaults to IMX477 on <code>cam0</code>. Override it inline for other sensors:</p>
+<p>The installer sets up IMX477 on <code>cam0</code> by default, but it installs the IMX283 and IMX585
+drivers regardless of which sensor you name. So for most sensors you can install with the
+defaults and then pick your sensor in the browser, on the settings editor's
+<a href="../config-txt/">config.txt tab</a> — no reinstall needed.</p>
+<p>You can still name the sensor up front, which also writes the matching <code>config.txt</code> overlay:</p>
 <div class="highlight"><pre><span></span><code><span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx296<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
 <span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx283<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
 <span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
 <span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585_mono<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam1<span class="w"> </span>./cinemate-install.sh
 </code></pre></div>
+<p>Two cases where naming it up front still matters: <code>imx585_mono</code> also applies the
+<code>rp1-cfe</code> kernel patch that mono 16-bit ClearHDR needs, and <code>imx585</code> also installs the
+IR filter helper. Neither can be done from the browser later — rerun the installer, or run
+<code>scripts/patch-rp1-cfe.sh</code> by hand.</p>
 </details>
 <h2 id="customisation">Customisation<a class="headerlink" href="#customisation" title="Permanent link">#</a></h2>
 <p>GPIO buttons and switches, rotary encoders, potentiometers and the OLED display are optional — see <a href="../hardware-controls/">Additional hardware</a> for an overview. They are configured via <a href="../settings-json/">the settings file</a>. On the Pi, type <code>editsettings</code> in the terminal to open it.</p>

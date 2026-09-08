@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/changelog/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Changelog - Cinemate Docs</title>
+    <title>Changelog - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -110,54 +112,60 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
-                  </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Changelog</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#version-340">Version 3.4.0</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#imx585-driver">imx585 driver</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#rp1-overclock">RP1 overclock</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate-log">CineMate Log</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate">CineMate</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#dual-sensors">Dual sensors</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dynamic-resolution">Dynamic resolution</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#web-gui">Web GUI</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#cinemate-start-also-without-attached-camera">CineMate start also without attached camera</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#web-api">Web API</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#raspberry-pi-bookworm">Raspberry Pi / Bookworm</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#version-332">Version 3.3.2</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#dual-sensors-improved">Dual sensors improved</a>
-    </li>
     <li class="toctree-l3"><a class="reference internal" href="#libcamera">libcamera</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#imx283-driver">imx283 driver</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#imx585-driver">imx585 driver</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#clearhdr-imx585">ClearHDR (imx585)</a>
+    <li class="toctree-l3"><a class="reference internal" href="#imx585-driver_1">imx585 driver</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#cinepi-raw-recorder">CinePi-RAW recorder</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#cinemate-log">CineMate Log</a>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate_1">CineMate</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#cinemate">Cinemate</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#web-api">Web API</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#raspberry-pi-bookworm">Raspberry Pi / Bookworm</a>
+    <li class="toctree-l3"><a class="reference internal" href="#raspberry-pi-bookworm_1">Raspberry Pi / Bookworm**</a>
     </li>
         </ul>
     </li>
@@ -165,7 +173,7 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#cinepi-raw-recorder_1">CinePi-RAW recorder</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#cinemate-workflow">Cinemate workflow</a>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate-workflow">CineMate workflow</a>
     </li>
         </ul>
     </li>
@@ -184,7 +192,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -204,40 +212,107 @@
               
 <div class="markdown-body">
   <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
-<p>Release notes for Cinemate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
-<h2 id="version-332">Version 3.3.2<a class="headerlink" href="#version-332" title="Permanent link">#</a></h2>
-<h3 id="dual-sensors-improved">Dual sensors improved<a class="headerlink" href="#dual-sensors-improved" title="Permanent link">#</a></h3>
-<ul>
-<li><strong>Automatic dual-camera</strong> — two connected sensors are each detected and driven by their own <code>cinepi-raw</code> process, with frame capture synchronised by libcamera (cam0 server, cam1 client).</li>
-<li><strong>HDMI preview switching</strong> — new command <code>set preview</code> cycles side-by-side → cam0 → cam1 → pip_cam0 → pip_cam1 (picture-in-picture).</li>
-<li><strong>Per-sensor recording</strong> — record both sensors or just the previewed one (<code>sensors.record_policy</code> can be set in settings.jsonc), or target sensors with <code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>. Each sensor writes its own <code>..._cam0</code> / <code>..._cam1</code> clip folder.</li>
-</ul>
-<h3 id="libcamera">libcamera<a class="headerlink" href="#libcamera" title="Permanent link">#</a></h3>
-<ul>
-<li>Cinemate now uses its own fork of libcamera.</li>
-</ul>
-<h3 id="imx283-driver">imx283 driver<a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h3>
-<ul>
-<li>Cinemate now uses its own fork of the imx283 driver.</li>
-<li>2 additional modes: 3840 x 2160 (4K UHD, native crop) and 2736 x 1538 (2.7K 16:9, binned).</li>
-</ul>
+<p>Release notes for CineMate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
+<h2 id="version-340">Version 3.4.0<a class="headerlink" href="#version-340" title="Permanent link">#</a></h2>
 <h3 id="imx585-driver">imx585 driver<a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h3>
 <ul>
-<li>Cinemate now uses its own fork of the imx585 driver.</li>
+<li><strong>Default branch moves to <code>cinemate-7modes</code></strong>.</li>
 </ul>
-<h3 id="clearhdr-imx585">ClearHDR (imx585)<a class="headerlink" href="#clearhdr-imx585" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>CineMate mode</th>
+<th>Type</th>
+<th>Resolution</th>
+<th>Bit depth</th>
+<th>Readout</th>
+<th>Max fps (normal)</th>
+<th>Max fps (overclocked)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>SDR</td>
+<td>3840×2160</td>
+<td>10-bit</td>
+<td>all-pixel</td>
+<td>44.98</td>
+<td>68.66</td>
+<td>RAW10, up to 90 fps</td>
+</tr>
+<tr>
+<td>1</td>
+<td>SDR</td>
+<td>1920×1080</td>
+<td>12-bit</td>
+<td>binned</td>
+<td>69.92</td>
+<td>69.92</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td>SDR</td>
+<td>3840×2160</td>
+<td>12-bit</td>
+<td>all-pixel</td>
+<td>43.98</td>
+<td>67.13</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>ClearHDR</td>
+<td>1920×1080</td>
+<td>12-bit</td>
+<td>binned</td>
+<td>30.00</td>
+<td>30.00</td>
+<td>ClearHDR+CCMP</td>
+</tr>
+<tr>
+<td>4</td>
+<td>ClearHDR</td>
+<td>3840×2160</td>
+<td>12-bit</td>
+<td>all-pixel</td>
+<td>21.99</td>
+<td>30.00</td>
+<td>ClearHDR+CCMP</td>
+</tr>
+<tr>
+<td>5</td>
+<td>ClearHDR</td>
+<td>1920×1100</td>
+<td>16-bit</td>
+<td>binned</td>
+<td>30.00</td>
+<td>30.00</td>
+<td>ClearHDR linear</td>
+</tr>
+<tr>
+<td>6</td>
+<td>ClearHDR</td>
+<td>3840×2200</td>
+<td>16-bit</td>
+<td>all-pixel</td>
+<td>21.99</td>
+<td>30.00</td>
+<td>ClearHDR linear</td>
+</tr>
+</tbody>
+</table>
+<p>Max fps figures are measured at the sensor's highest supported link frequency, <strong>1039.5 MHz (2079 Mbps/lane, 39% over the RP1 D-PHY spec ceiling)</strong> — "normal" is the RP1 stock pixel-rate ceiling (<code>--max-pixel-rate 380</code>), "overclocked" is with the <code>rp1-overclock</code> dtoverlay's pixel-rate ceiling (<code>--max-pixel-rate 580</code>). See <a href="../overclocking/">Overclocking the Pi</a>.</p>
 <ul>
-<li><strong>16-bit ClearHDR recording</strong> — the imx585's on-sensor single-frame HDR is now a first-class mode: Cinemate probes the sensor with and without <code>--hdr sensor</code> and lists the plain and ClearHDR modes (12-bit and 16-bit) in one mode table. Selecting an HDR mode relaunches cinepi-raw with the flag; <code>HDR</code> labels mark the modes in both GUIs. See <a href="../clear-hdr/">ClearHDR</a>.</li>
-<li><strong>Live merge knobs</strong> — <code>set hdr threshold low/high</code>, <code>set hdr blend</code>, <code>set hdr gain adder</code> tune the sensor's HG/LG merge while streaming; startup defaults live in <code>image_capture.hdr</code> and the knobs can be mapped to pots and encoders.</li>
-<li><strong>RP1 overclock, automated</strong> — the installer compiles the <code>rp1-overclock</code> overlay, ships it disabled (<code>#dtoverlay=rp1-overclock</code> in config.txt), and the settings editor's Boot config pane toggles it for higher ClearHDR frame rates on Pi 5 / CM5. See <a href="../overclocking/">Overclocking the Pi</a>.</li>
+<li><strong>12/16-bit ClearHDR recording</strong> — See <a href="../clear-hdr/">ClearHDR</a>.</li>
 </ul>
-<h3 id="cinepi-raw-recorder">CinePi-RAW recorder<a class="headerlink" href="#cinepi-raw-recorder" title="Permanent link">#</a></h3>
+<h3 id="rp1-overclock">RP1 overclock<a class="headerlink" href="#rp1-overclock" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Frame-rate phase lock</strong> — DNG timecode and frame capture is locked to the Pi's wall clock, making audio sync more accurate.</li>
-<li><strong>More reliable audio sync on 4K / exFAT</strong> — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.</li>
-<li><strong>Correct Pi 4 RAW</strong> — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.</li>
-<li><strong>Camera model</strong> — set the camera model manually for each attached sensor.</li>
-<li><strong><code>--keep16</code> removed</strong> — SDR sensor modes always write 12-bit DNGs. The flag only preserved 4 padding bits, so files are ~33% smaller with no loss of information. True 16-bit modes (IMX585 ClearHDR) are unaffected.</li>
+<li><strong>Pixel-rate ceiling is now computed, not hardcoded</strong> — CineMate derives it from the RP1 overclock toggle's state and passes it to cinepi-raw as <code>--max-pixel-rate</code>. See <a href="../overclocking/">Overclocking the Pi</a>.</li>
+<li><strong>Automated overlay</strong> — the installer compiles the <code>rp1-overclock</code> overlay, ships it disabled by default; the settings editor's Boot config pane toggles it for higher ClearHDR frame rates on Pi 5 / CM5.</li>
+<li><strong>libcamera tuning fix</strong> — <code>minPixelProcessingTime</code> adjusted so the overclock toggle actually raises the achievable frame rate.</li>
 </ul>
 <h3 id="cinemate-log">CineMate Log<a class="headerlink" href="#cinemate-log" title="Permanent link">#</a></h3>
 <ul>
@@ -245,28 +320,77 @@
 <li><strong>Per-camera <code>log_encode</code> setting</strong> (<code>false</code> / <code>true</code> / <code>10</code> / <code>12</code>) and the live <code>set log</code> command, both resolved against each camera's own live sensor mode — never a standing choice that can silently drift out of sync with a resolution or ClearHDR switch.</li>
 <li><strong><code>LOG10</code>/<code>LOG12</code> badge</strong> on the Simple GUI, per camera, reflecting what's actually running rather than what was requested.</li>
 </ul>
-<h3 id="cinemate">Cinemate<a class="headerlink" href="#cinemate" title="Permanent link">#</a></h3>
+<h3 id="cinemate">CineMate<a class="headerlink" href="#cinemate" title="Permanent link">#</a></h3>
+<h4 id="dual-sensors">Dual sensors<a class="headerlink" href="#dual-sensors" title="Permanent link">#</a></h4>
 <ul>
-<li><strong>Storage / media</strong> — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.</li>
-<li><strong>Settings editor</strong> — a browser settings page at <code>cinepi.local:5000/settings-editor</code>: edit <code>settings.jsonc</code> panel by panel, stage <code>/boot/firmware/config.txt</code> changes (RP1 overclock toggle, link frequency), and browse, download or format the RAW drive from the RAW files pane.</li>
-<li><strong>Recovery console</strong> — a new, independent <code>cinemate-recovery.service</code> on <code>:8080</code> lets you diagnose a Cinemate that will not start, edit <code>settings.jsonc</code> and <code>/boot/firmware/config.txt</code>, and restart Cinemate — from a phone on the hotspot, with no laptop or SSH. Standard library only, runs as root, and has no dependency on <code>cinemate-autostart.service</code> so it survives a crash that takes Cinemate down. The hotspot's Wi-Fi profile now also autoconnects at boot and self-heals a broken <code>settings.jsonc</code> by falling back to the last-known-good SSID rather than the compiled-in <code>CinePi</code> default. See <a href="../recovery-console/">Recovery console</a>.</li>
+<li><strong>Automatic dual-camera</strong> — two connected sensors are each detected and driven by their own <code>cinepi-raw</code> process, with frame capture synchronised by libcamera (cam0 server, cam1 client).</li>
+<li><strong>HDMI preview switching</strong> — new command <code>set preview</code> cycles side-by-side → cam0 → cam1 → pip_cam0 → pip_cam1 (picture-in-picture).</li>
+<li><strong>Per-sensor recording</strong> — record both sensors or just the previewed one (<code>sensors.record_policy</code> can be set in settings.jsonc), or target sensors with <code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>. Each sensor writes its own <code>..._cam0</code> / <code>..._cam1</code> clip folder.</li>
 </ul>
-<h3 id="web-api">Web API<a class="headerlink" href="#web-api" title="Permanent link">#</a></h3>
+<h4 id="dynamic-resolution">Dynamic resolution<a class="headerlink" href="#dynamic-resolution" title="Permanent link">#</a></h4>
+<ul>
+<li><strong>Substitution can now cross the SDR/ClearHDR and bit-depth boundary</strong> — when the requested frame rate outruns everything in the selected mode's own class, the ladder continues into the next class down instead of stopping. On an imx585 with 12-bit ClearHDR hidden, 16-bit ClearHDR 4K now reaches 87fps by walking down to HD SDR, where it used to cap at 40.</li>
+<li><strong>New <code>image_capture.dynamic_resolution_priority</code></strong> — <code>mode</code> (default) holds bit depth and ClearHDR and drops resolution first; <code>resolution</code> holds the frame size and drops the class first; <code>none</code> is the previous behaviour, never leaving the class. Live via <code>set dynamic resolution priority mode|resolution|none</code> (bare cycles), from the settings page, or from the live drawer's DYN RES select. <code>mode</code> answers identically to <code>none</code> for every frame rate <code>none</code> could serve, so the default only adds reach. A substitute is never larger or richer than the mode you selected under any policy.</li>
+<li><strong>Mid-take the class is held</strong> — bit depth and <code>--hdr sensor</code> are launch arguments, so crossing a class relaunches cinepi-raw, which would end a running take. For the length of a take the ladder and the fps ceiling are pinned to the class actually running; a held-back change is applied the moment the take ends.</li>
+</ul>
+<h4 id="web-gui">Web GUI<a class="headerlink" href="#web-gui" title="Permanent link">#</a></h4>
+<ul>
+<li><strong>Settings editor config.txt write fix, <code>cinepi.local</code> mDNS</strong> — saving <code>config.txt</code> used to fail silently (<code>EACCES</code>, runs as <code>pi</code>); now goes through a scoped helper (<code>cinemate-apply-config-txt</code>) that preserves owner/mode. Installer also enables mDNS for <code>cinepi.local</code> and fixes a stale <code>/etc/hosts</code> entry.</li>
+<li><strong>Settings editor</strong> — browser page at <code>cinepi.local:5000/settings-editor</code>: edit <code>settings.jsonc</code>, stage <code>config.txt</code>, watch the live feed, review a take, manage the RAW drive. <code>config.txt</code> saves write and reboot immediately with no confirm/revert net — use the recovery console for that. See <a href="../settings-editor/">Settings editor</a>.</li>
+<li><strong>Playback</strong> — new tab plays a take back in-browser at its conform rate, using the DNG thumbnails. See <a href="../playback/">Playback</a>.</li>
+<li><strong>Recovery console</strong> — independent <code>cinemate-recovery.service</code> on <code>:8080</code>: diagnose, edit <code>settings.jsonc</code>/<code>config.txt</code>, and restart CineMate from a phone on the hotspot, no <code>cinemate-autostart.service</code> dependency. Hotspot Wi-Fi now self-heals a broken <code>settings.jsonc</code> via the last-known-good SSID. See <a href="../recovery-console/">Recovery console</a>.</li>
+<li><strong>Storage</strong> — new <code>hw_write_failures</code> counter warns live on slow storage; NTFS flagged supported but not recommended (can drop frames under sustained 4K writes).</li>
+</ul>
+<h4 id="cinemate-start-also-without-attached-camera">CineMate start also without attached camera<a class="headerlink" href="#cinemate-start-also-without-attached-camera" title="Permanent link">#</a></h4>
+<ul>
+<li>Web UI and settings editor stay reachable so user settings can be changed also with no camera attached. CineMate re-probes for the sensor on every start.</li>
+</ul>
+<h4 id="web-api">Web API<a class="headerlink" href="#web-api" title="Permanent link">#</a></h4>
 <ul>
 <li><strong>New wireless control API</strong> over the Wi-Fi hotspot — ESP32, Pico W, other Pis and phones can now send the same commands as the CLI/serial over HTTP (<code>POST /api/v1/cmd</code>), read live status (<code>/api/v1/get/&lt;key&gt;</code>, <code>/api/v1/status</code>), and receive push updates via a UDP status broadcast (<code>8888/udp</code>) or SSE (<code>/api/v1/events</code>). One dispatcher (<code>CommandExecutor.handle_received_data</code>) now serves the CLI, serial and web paths identically. <code>allow_destructive</code> defaults to <code>false</code>, so <code>reboot</code>/<code>shutdown</code>/<code>erase</code>/<code>format</code> are blocked out of the box on a stock unit. See <a href="../web-api/">Web API</a> and <a href="../building-control-units/">Building control units</a>.</li>
 </ul>
 <h3 id="raspberry-pi-bookworm">Raspberry Pi / Bookworm<a class="headerlink" href="#raspberry-pi-bookworm" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Boot / install</strong> — faster boot-to-preview on Pi 4/5 (about 10-15 seconds).</li>
+<li><strong>Installer</strong> — no longer creates a Python virtualenv; packages install straight into system Python (<code>cinemate-autostart.service</code> now launches <code>python3</code> directly), fixing several install blockers that only appeared in the venv path.</li>
+</ul>
+<h2 id="version-332">Version 3.3.2<a class="headerlink" href="#version-332" title="Permanent link">#</a></h2>
+<h3 id="libcamera">libcamera<a class="headerlink" href="#libcamera" title="Permanent link">#</a></h3>
+<ul>
+<li>CineMate now uses its own fork of libcamera.</li>
+</ul>
+<h3 id="imx283-driver">imx283 driver<a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h3>
+<ul>
+<li>CineMate now uses its own fork of imx283 driver.</li>
+<li>2 additional modes: 3840 x 2160 (4K UHD, native crop) and 2736 x 1538 (2.7K 16:9, binned) </li>
+</ul>
+<h3 id="imx585-driver_1">imx585 driver<a class="headerlink" href="#imx585-driver_1" title="Permanent link">#</a></h3>
+<ul>
+<li>CineMate now uses its own fork of imx283 driver.</li>
+</ul>
+<h3 id="cinepi-raw-recorder">CinePi-RAW recorder<a class="headerlink" href="#cinepi-raw-recorder" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Frame-rate phase lock</strong> — closed-loop control (sigma-delta VBLANK dither) keeps long takes locked to the Pi's wall clock and pre-converges during preview. On by default.</li>
+<li><strong>More reliable audio sync on 4K / exFAT</strong> — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.</li>
+<li><strong>Wall clock embedded timecode</strong> — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock.</li>
+<li><strong>Correct Pi 4 RAW</strong> — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.</li>
+<li><strong>Camera model</strong> — set the camera model manually for each attached sensor.</li>
+</ul>
+<h3 id="cinemate_1">CineMate<a class="headerlink" href="#cinemate_1" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Storage / media</strong> — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.</li>
+</ul>
+<h3 id="raspberry-pi-bookworm_1">Raspberry Pi / Bookworm**<a class="headerlink" href="#raspberry-pi-bookworm_1" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Boot / install</strong> — faster boot-to-preview on Pi 4/5 (about 10-15 seconds)</li>
 </ul>
 <h2 id="version-331">Version 3.3.1<a class="headerlink" href="#version-331" title="Permanent link">#</a></h2>
 <h3 id="cinepi-raw-recorder_1">CinePi-RAW recorder<a class="headerlink" href="#cinepi-raw-recorder_1" title="Permanent link">#</a></h3>
 <ul>
-<li>New Cinemate fork, reducing CPU load and temperature dramatically and reducing dropped frames.</li>
+<li>New CineMate fork, reducing CPU load and temperature dramatically and reducing dropped frames.</li>
 <li>Resolution can now be changed without restarting the recorder process, enabling faster mode changes and dynamic resolution switching.</li>
 <li>Better USB microphone sync.</li>
 </ul>
-<h3 id="cinemate-workflow">Cinemate workflow<a class="headerlink" href="#cinemate-workflow" title="Permanent link">#</a></h3>
+<h3 id="cinemate-workflow">CineMate workflow<a class="headerlink" href="#cinemate-workflow" title="Permanent link">#</a></h3>
 <ul>
 <li>exFAT support and filesystem-aware storage profiles for efficient media writes, including IMX585 25 fps at 4K to SSD without frame drops.</li>
 <li>Dynamic resolution switching to match the observed sustainable frame rate for the attached sensor and storage media — for example, IMX585 automatically switches to HD above 25 fps when an SSD is used.</li>
@@ -279,7 +403,7 @@
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../cinepi-multi/" class="btn btn-neutral float-left" title="How Cinemate launches CinePi-raw"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../cli-user-guide/" class="btn btn-neutral float-left" title="CinePi RAW terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../acknowledgments/" class="btn btn-neutral float-right" title="Acknowledgements">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -307,7 +431,7 @@
         </span>
     
     
-      <span><a href="../cinepi-multi/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../cli-user-guide/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../acknowledgments/" style="color: #fcfcfc">Next &raquo;</a></span>

@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/hardware-controls/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Additional hardware - Cinemate Docs</title>
+    <title>Additional hardware - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -86,21 +88,29 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Additional hardware</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#push-buttons">Push buttons</a>
+    <li class="toctree-l2"><a class="reference internal" href="#gpio-controls-in-the-settings-editor">GPIO controls in the settings editor</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#switches">Switches</a>
+    <li class="toctree-l2"><a class="reference internal" href="#buttons">Buttons</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#more-gestures-on-the-same-button">More gestures on the same button</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#rotary-encoders">Rotary encoders</a>
+    <li class="toctree-l3"><a class="reference internal" href="#the-argument-box">The argument box</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#grove-base-hat">Grove Base HAT</a>
+    <li class="toctree-l3"><a class="reference internal" href="#2-way-and-3-way-switches">2-way and 3-way switches</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#adafruit-quad-rotary-encoder">Adafruit quad rotary encoder</a>
+    <li class="toctree-l3"><a class="reference internal" href="#rotary-encoders">Rotary encoders</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#the-adafruit-quad-rotary-encoder-i2c-board">The Adafruit Quad Rotary Encoder i²c board</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#gpio-out-tally-and-slate-tone">GPIO out: tally and slate tone</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#cfe-hat">CFE Hat</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#outputs-and-displays">Outputs and displays</a>
+    <li class="toctree-l2"><a class="reference internal" href="#real-time-clock">Real-time clock</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#going-further">Going further</a>
+    <li class="toctree-l2"><a class="reference internal" href="#outputs-and-displays">Outputs and displays</a>
     </li>
     </ul>
                   </li>
@@ -128,30 +138,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -168,7 +166,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
@@ -191,14 +189,13 @@
 <div class="admonition note">
 <p>All hardware on this page is optional. Add what you need, when you need it.</p>
 </div>
-<p>Physical controls are mapped in <a href="../settings-json/">the settings file</a>. On the Pi, type <code>editsettings</code> in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply call the same commands that the CLI and the web GUI use. See <a href="../controller-methods/">controller methods</a> for the full list of available commands.</p>
 <table>
 <thead>
 <tr>
 <th>Hardware</th>
 <th>Connects to</th>
 <th>Typical use</th>
-<th>Extra parts needed</th>
+<th></th>
 </tr>
 </thead>
 <tbody>
@@ -206,240 +203,330 @@
 <td>Push buttons</td>
 <td>any free GPIO pin + GND</td>
 <td>start/stop recording, change resolution</td>
-<td>none</td>
+<td><img alt="Tactile push button" src="../images/hardware/button.jpg" /></td>
 </tr>
 <tr>
 <td>Two- and three-way switches</td>
 <td>GPIO pins + GND</td>
 <td>zoom, shutter sync mode, fps presets</td>
-<td>none</td>
+<td><img alt="SPDT toggle switch" src="../images/hardware/switch.jpg" /></td>
 </tr>
 <tr>
 <td>Rotary encoders</td>
-<td>two GPIO pins (+ optional button pin)</td>
-<td>stepping through ISO, shutter angle, fps, WB</td>
-<td>none</td>
+<td>two GPIO pins (+ button pin) + GND</td>
+<td>stepping ISO, shutter angle, fps, WB</td>
+<td><img alt="Rotary encoder" src="../images/hardware/encoder.jpg" /></td>
+</tr>
+<tr>
+<td>Potentiometers</td>
+<td>a Grove Base HAT analog port</td>
+<td>dials for ISO, shutter angle, fps, WB</td>
+<td><img alt="Panel-mount potentiometer" src="../images/hardware/pot.jpg" /></td>
 </tr>
 <tr>
 <td><a href="https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/">Grove Base HAT</a></td>
 <td>GPIO header</td>
-<td>dials for ISO, shutter angle, fps, WB</td>
-<td>Potentiometers</td>
+<td>analog inputs for potentiometers</td>
+<td><img alt="Grove Base HAT" src="../images/hardware/grovehat.jpg" /></td>
 </tr>
 <tr>
-<td>Adafruit quad rotary encoder</td>
+<td><a href="https://www.adafruit.com/product/5752">Adafruit quad rotary encoder</a></td>
 <td>I²C (STEMMA QT or SDA/SCL pins)</td>
-<td>four dials + push buttons in one module</td>
-<td><a href="https://www.adafruit.com/product/5752">Adafruit #5752</a></td>
+<td>four dials and push buttons in one module</td>
+<td><img alt="Adafruit quad rotary encoder" src="../images/hardware/quadrotary.jpg" /></td>
 </tr>
 <tr>
 <td><a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a></td>
 <td>PCIe (Raspberry Pi 5 only)</td>
-<td>for fast storage</td>
-<td>CFexpress Type B card</td>
+<td>fast storage (CFexpress Type B)</td>
+<td><img alt="CFE Hat" src="../images/hardware/cfehat.jpg" /></td>
+</tr>
+<tr>
+<td>LEDs</td>
+<td>a GPIO out pin + GND, via a resistor</td>
+<td>rec tally lamp</td>
+<td><img alt="5mm LED" src="../images/hardware/led.jpg" /></td>
+</tr>
+<tr>
+<td>Resistor</td>
+<td>in series with an LED</td>
+<td>limits the LED's current; 220 Ω is a good value</td>
+<td><img alt="220 Ω resistor" src="../images/hardware/resistor.jpg" /></td>
+</tr>
+<tr>
+<td>I²C OLED display</td>
+<td>I²C (SDA/SCL pins)</td>
+<td>status screen: ISO, timecode, space left</td>
+<td><img alt="SSD1306 OLED display" src="../images/hardware/oled.jpg" /></td>
+</tr>
+<tr>
+<td>Real-time clock</td>
+<td>I²C (SDA/SCL pins)</td>
+<td>keeps the clock across a power cycle, Pi 4 only</td>
+<td><img alt="DS3231 real-time clock module" src="../images/hardware/rtc.jpg" /></td>
 </tr>
 </tbody>
 </table>
+<p>Physical controls are mapped in <a href="../settings-json/">the settings file</a>. Type <code>editsettings</code> on the Pi to open it or use the Web UI. Changes apply at the next CineMate start. Controls call the same commands as the CLI and web GUI, listed under <a href="../cli-commands/">commands reference</a>.</p>
 <div class="admonition info">
-<p>Cinemate uses <a href="https://pinout.xyz">BCM pin numbering</a></p>
+<p class="admonition-title">CineMate uses BCM pin numbering</p>
+<p>The numbers CineMate wants are the <strong>GPIO n</strong> labels, not the physical pin positions.
+GPIO 7 is physical pin 26, and GPIO 21 is physical pin 40. Full interactive reference:
+<a href="https://pinout.xyz">pinout.xyz</a>.</p>
+<p><img alt="Raspberry Pi 40-pin GPIO header, BCM numbering" src="../images/hardware/gpio-pinout.png" /></p>
 </div>
-<h2 id="push-buttons">Push buttons<a class="headerlink" href="#push-buttons" title="Permanent link">#</a></h2>
-<p>Any momentary push button works. Wire one leg to a GPIO pin and the other leg to ground — no resistor needed, the Pi's internal pull-up is used.</p>
-<p>One button can trigger several different actions:</p>
+<h2 id="gpio-controls-in-the-settings-editor">GPIO controls in the settings editor<a class="headerlink" href="#gpio-controls-in-the-settings-editor" title="Permanent link">#</a></h2>
+<h2 id="buttons">Buttons<a class="headerlink" href="#buttons" title="Permanent link">#</a></h2>
+<p><img alt="The add-control buttons at the foot of the GPIO in section" src="../images/gui-add-control-row.png" /></p>
+<ol>
+<li>On the <strong>settings.jsonc</strong> tab, click <strong>Buttons &amp; switches</strong> in the left rail.</li>
+<li>
+<p>Click <strong>+ Add button</strong>. A row appears at the bottom, GPIO <strong>None</strong>, one line: <strong>Press</strong> → <strong>No action</strong>.</p>
+<p><img alt="A button the moment it is added: no pin, PRESS, no action" src="../images/gui-new-button-card.png" /></p>
+</li>
+<li>
+<p>Open the row's <strong>GPIO</strong> dropdown and pick <strong>GPIO 26</strong>, or any pin listed in black. The stock file holds 7, 9, 10, 11, 13, 18, 21, 22 and 24.</p>
+</li>
+<li><strong>Remap this control?</strong> appears, reading "Move a button to GPIO 26?". Click <strong>Remap</strong>.</li>
+<li>On the <strong>Press</strong> line, open <strong>COMMAND</strong> and pick <strong>Start / stop recording</strong>, under <strong>Record</strong>.</li>
+<li>Click <strong>Save changes</strong>.</li>
+</ol>
+<p>CineMate restarts and the button is live.</p>
+<h3 id="more-gestures-on-the-same-button">More gestures on the same button<a class="headerlink" href="#more-gestures-on-the-same-button" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
 <th>Gesture</th>
-<th>Fires when</th>
+<th>Fires</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>press_action</code></td>
-<td>immediately on press</td>
+<td><strong>Press</strong></td>
+<td>Immediately on press</td>
 </tr>
 <tr>
-<td><code>single_click_action</code></td>
-<td>one short click</td>
+<td><strong>Single click</strong></td>
+<td>One short click, 0.5 s after release</td>
 </tr>
 <tr>
-<td><code>double_click_action</code></td>
-<td>two quick clicks</td>
+<td><strong>Double click</strong></td>
+<td>Two quick clicks</td>
 </tr>
 <tr>
-<td><code>triple_click_action</code></td>
-<td>three quick clicks</td>
+<td><strong>Triple click</strong></td>
+<td>Three or more quick clicks</td>
 </tr>
 <tr>
-<td><code>hold_action</code></td>
-<td>button held for 3 seconds</td>
+<td><strong>Hold</strong></td>
+<td>Button held for 3 seconds</td>
 </tr>
 </tbody>
 </table>
-<p>The prebuilt image ships with this mapping:</p>
+<p><img alt="One button carrying five gestures" src="../images/gui-gpio-multi-action.png" /></p>
+<h3 id="the-argument-box">The argument box<a class="headerlink" href="#the-argument-box" title="Permanent link">#</a></h3>
+<p>The box after the command is its argument. This can be used when you want the control to set a specific value.</p>
 <table>
 <thead>
 <tr>
-<th>GPIO</th>
-<th>Action</th>
+<th>Blank</th>
+<th>Each trigger</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>7</td>
-<td>press: start/stop recording</td>
+<td><strong>Cycle through the list</strong></td>
+<td>Steps to the next value in <strong>Value steps</strong></td>
 </tr>
 <tr>
-<td>10</td>
-<td>press: start/stop recording</td>
+<td><strong>Toggle on / off</strong></td>
+<td>Inverts the current flag</td>
 </tr>
 <tr>
-<td>13</td>
-<td>single click: change resolution · double click: restart Cinemate · triple click: reboot the Pi · hold: mount/unmount drive</td>
+<td><strong>Needs a value —</strong></td>
+<td>Does nothing until you pick one</td>
 </tr>
 </tbody>
 </table>
-<p>A minimal button entry in <code>settings.jsonc</code> looks like this:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">"buttons"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"pull_up"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"debounce_time"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"press_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rec"</span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">]</span>
-</code></pre></div>
-<div class="admonition info">
-<p>Some push buttons are wired closed = 1 and open = 0. At startup Cinemate detects buttons that read as pressed and reverses them automatically, so both button types work without any configuration.</p>
+<h3 id="2-way-and-3-way-switches">2-way and 3-way switches<a class="headerlink" href="#2-way-and-3-way-switches" title="Permanent link">#</a></h3>
+<p>Switches react to position. At startup CineMate reads the current position and runs its line, so the camera always matches the switch.</p>
+<p><strong>+ Add 2‑way switch</strong> creates one pin and two lines:</p>
+<table>
+<thead>
+<tr>
+<th>Line</th>
+<th>Runs when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>On</strong></td>
+<td>The pin reads closed</td>
+</tr>
+<tr>
+<td><strong>Off</strong></td>
+<td>The pin reads open</td>
+</tr>
+</tbody>
+</table>
+<p><strong>+ Add 3‑way switch</strong> creates three pin dropdowns, <strong>pin 1</strong>, <strong>pin 2</strong>, <strong>pin 3</strong>, and three lines:</p>
+<table>
+<thead>
+<tr>
+<th>Line</th>
+<th>Runs when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Position 1</strong></td>
+<td>pin 1 is the active input</td>
+</tr>
+<tr>
+<td><strong>Position 2</strong></td>
+<td>pin 2 is the active input</td>
+</tr>
+<tr>
+<td><strong>Position 3</strong></td>
+<td>pin 3 is the active input</td>
+</tr>
+</tbody>
+</table>
+<p>All three pins must be set. With no input active, no line runs.</p>
+<p>Typical 2‑way pairing: <strong>Set preview zoom</strong> at <strong>Set to 2×</strong> on <strong>On</strong>, <strong>Set to 1×</strong> on <strong>Off</strong>.</p>
+<h3 id="rotary-encoders">Rotary encoders<a class="headerlink" href="#rotary-encoders" title="Permanent link">#</a></h3>
+<p><strong>+ Add rotary encoder</strong> creates three pin dropdowns, <strong>CLK</strong>, <strong>DT</strong> and <strong>BTN</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Pin</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CLK</strong></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>DT</strong></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>BTN</strong></td>
+<td>No; leave <strong>None</strong> if the encoder has no push button</td>
+</tr>
+</tbody>
+</table>
+<p>The row starts with a single <strong>Button press</strong> line; <strong>+ Add</strong> offers the rest.</p>
+<p><img alt="A single control row: pin, gesture, command" src="../images/gui-gpio-control-row.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Line</th>
+<th>Fires</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Button press</strong></td>
+<td>Press of the encoder's push button</td>
+</tr>
+<tr>
+<td><strong>Button hold</strong></td>
+<td>Push button held</td>
+</tr>
+<tr>
+<td><strong>Rotate CW</strong></td>
+<td>One step clockwise</td>
+</tr>
+<tr>
+<td><strong>Rotate CCW</strong></td>
+<td>One step counter‑clockwise</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p>Each encoder row carries an <code>enabled</code> flag in <code>hardware_controls.rotary_encoders</code>. The stock file
+ships it <code>true</code>; set it to <code>false</code> to keep a row's wiring on file while switching it off. A row
+with no <code>enabled</code> key at all is on.</p>
 </div>
-<p>One button can also act as a modifier for another (hold one, press the other) via the <code>combined_actions</code> section — see <a href="../settings-json/#combined_actions">settings.jsonc</a>.</p>
-<h2 id="switches">Switches<a class="headerlink" href="#switches" title="Permanent link">#</a></h2>
-<p>Latching switches work like buttons, but Cinemate reacts to the <em>state</em> instead of a click. When the switch changes position, the matching action runs. At startup, Cinemate reads the current position and applies it, so the camera always matches the physical switch.</p>
-<p><strong>Two-way switches</strong> use one GPIO pin. The prebuilt image maps:</p>
-<table>
-<thead>
-<tr>
-<th>GPIO</th>
-<th>ON</th>
-<th>OFF</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>24</td>
-<td>digital zoom 2×</td>
-<td>zoom 1×</td>
-</tr>
-<tr>
-<td>22</td>
-<td>shutter angle sync mode on</td>
-<td>sync mode off</td>
-</tr>
-</tbody>
-</table>
-<div class="highlight"><pre><span></span><code><span class="nt">"two_way_switches"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"state_on_action"</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set_zoom"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]},</span>
-<span class="w">    </span><span class="nt">"state_off_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set_zoom"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">]}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">]</span>
-</code></pre></div>
-<p><strong>Three-way switches</strong> use three GPIO pins, one per position — handy for fixed fps presets:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">"three_way_switches"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"pins"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">13</span><span class="p">],</span>
-<span class="w">    </span><span class="nt">"state_0_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set_fps"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">24</span><span class="p">]},</span>
-<span class="w">    </span><span class="nt">"state_1_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set_fps"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">25</span><span class="p">]},</span>
-<span class="w">    </span><span class="nt">"state_2_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set_fps"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">]}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">]</span>
-</code></pre></div>
-<h2 id="rotary-encoders">Rotary encoders<a class="headerlink" href="#rotary-encoders" title="Permanent link">#</a></h2>
-<p>Standard rotary encoders (for example KY-040) connect straight to the GPIO header. Each encoder uses two pins (<code>clk_pin</code> and <code>dt_pin</code>), plus an optional third pin if the encoder has a built-in push button. The push button uses the same action grammar as the <a href="#push-buttons">buttons</a> section.</p>
-<p>No encoders are enabled in the stock settings file. A typical entry — turning the dial steps through ISO, pressing it locks the value:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">"rotary_encoders"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"clk_pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"dt_pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"button_pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"encoder_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">"rotate_clockwise"</span><span class="p">:</span><span class="w">        </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"inc_iso"</span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"rotate_counterclockwise"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dec_iso"</span><span class="p">}</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">"button_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">"press_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set_iso_lock"</span><span class="p">}</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">]</span>
-</code></pre></div>
-<p>The <code>inc_</code>/<code>dec_</code> commands step through the value tables defined in <code>settings.jsonc</code> — see <a href="../settings-json/#arrays">arrays</a>.</p>
-<h2 id="grove-base-hat">Grove Base HAT<a class="headerlink" href="#grove-base-hat" title="Permanent link">#</a></h2>
-<p>The Pi has no analog inputs, so potentiometers need an analog-to-digital converter. Cinemate supports the <a href="https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/">Grove Base HAT</a>, which stacks on the GPIO header and adds analog ports. Plug in Grove rotary angle sensors (or wire any 10 kΩ linear pot to a Grove analog port) and map the channels in <code>settings.jsonc</code>:</p>
-<div class="highlight"><pre><span></span><code>"pots": [
-  { "channel": 0, "setting": "iso" },
-  { "channel": 2, "setting": "shutter_a" },
-  { "channel": 4, "setting": "fps" }
-]
-</code></pre></div>
-<p>The HAT is detected automatically at startup; if it is not present, the section is simply ignored. Pot positions snap to the parameter's step table (or to the full range if that <a href="../settings-json/#arrays">parameter</a> has <code>free</code> set), and readings are smoothed with dead zones so values don't flicker between steps.</p>
-<div class="admonition info">
-<p>Only map channels that actually have a potentiometer connected. Unconnected analog inputs pick up noise and can trigger false readings.</p>
+<h3 id="the-adafruit-quad-rotary-encoder-i2c-board">The Adafruit Quad Rotary Encoder i²c board<a class="headerlink" href="#the-adafruit-quad-rotary-encoder-i2c-board" title="Permanent link">#</a></h3>
+<p>Sits below the GPIO in list with its own <strong>+ Add encoder</strong>. Its rows address the board's four encoders, not GPIO pins, so the left column offers <strong>None</strong> and <strong>Encoder 0</strong> through <strong>Encoder 3</strong>.</p>
+<p><img alt="One dial of the quad rotary board" src="../images/gui-quad-rotary-row.png" /></p>
+<p><strong>+ Add encoder</strong> claims the lowest free encoder index. Set the <strong>Turn</strong> line, what rotating the dial cycles, then add button gestures with <strong>+ Add</strong> as on a GPIO button.</p>
+<p><strong>Turn</strong> offers <strong>Nothing</strong>, <strong>ISO</strong>, <strong>Shutter angle</strong>, <strong>Frame rate</strong>, <strong>White balance</strong>, <strong>Resolution</strong>, <strong>Preview zoom</strong>, <strong>Nominal shutter angle</strong>, <strong>HDR threshold low</strong>, <strong>HDR threshold high</strong>, <strong>HDR blend</strong>, <strong>HDR gain adder</strong>.</p>
+<p>The push button below <strong>Turn</strong> takes the full button grammar.</p>
+<p>With all four configured, <strong>+ Add encoder</strong> reports "All four encoders are already configured". The stock file configures all four encoders and ships the board on: <code>input_peripherals.quad_rotary_controller.enabled</code> is <code>true</code>, and CineMate only sets the board up when it is. Set it to <code>false</code> if you are not running the board.</p>
+<h3 id="gpio-out-tally-and-slate-tone">GPIO out: tally and slate tone<a class="headerlink" href="#gpio-out-tally-and-slate-tone" title="Permanent link">#</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Put a resistor in series with an LED</p>
+<p>A GPIO pin drives 3.3 V and an LED is not current-limited on its own. Wired straight to the
+pin it will draw more than the pin can safely give and can damage both. Put a resistor in
+series with it, typically <strong>220 Ω</strong>, between the pin and the LED's long leg (anode), with the
+short leg (cathode) to GND. Anything from about 150 Ω to 1 kΩ works; higher is dimmer and
+safer. A relay or an opto-isolated tally box has its own driver and does not need one.</p>
 </div>
-<h2 id="adafruit-quad-rotary-encoder">Adafruit quad rotary encoder<a class="headerlink" href="#adafruit-quad-rotary-encoder" title="Permanent link">#</a></h2>
-<p>The <a href="https://www.adafruit.com/product/5752">Adafruit I2C Quad Rotary Encoder breakout</a> packs four rotary encoders — each with a push button and an RGB LED — into one small board. It connects over I²C: either with a STEMMA QT cable or four wires to the Pi header (3V3, GND, SDA on GPIO 2, SCL on GPIO 3).</p>
-<p>Support is built in and ships enabled in the stock settings file — safe with no board attached, because the controller is hot-plugged and simply retries. Set <code>"enabled": false</code> in the <code>quad_rotary_controller</code> section to turn it off. The stock mapping:</p>
+<p><img alt="The GPIO out section" src="../images/gui-gpio-out.png" /></p>
+<ol>
+<li>Click <strong>Rec tally &amp; GPIO out</strong> in the left rail.</li>
+<li>Click <strong>+ Add pin</strong>. A row appears with <strong>Output</strong> on <strong>None</strong> and a <strong>While rec</strong> line set to <strong>REC tally</strong>.</li>
+<li>Pick the pin from <strong>Output</strong> and confirm the remap.</li>
+<li>For a sync tone instead of a lamp, change <strong>While rec</strong> to <strong>REC tone</strong>.</li>
+</ol>
+<p><strong>REC tone</strong> reveals an <strong>at … Hz</strong> field in the row, and one card below the list:</p>
 <table>
 <thead>
 <tr>
-<th>Dial</th>
-<th>Turning</th>
-<th>Push button</th>
+<th>Card</th>
+<th>Sets</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>0</td>
-<td>ISO</td>
-<td>press: toggle zoom · hold: safe shutdown</td>
-</tr>
-<tr>
-<td>1</td>
-<td>shutter angle</td>
-<td>press: toggle shutter sync mode</td>
-</tr>
-<tr>
-<td>2</td>
-<td>fps</td>
-<td>press: toggle fps double</td>
-</tr>
-<tr>
-<td>3</td>
-<td>white balance</td>
-<td>single click: change resolution · double click: restart Cinemate · triple click: reboot · hold: mount/unmount drive</td>
+<td><strong>Mute the tone on a dropped frame</strong></td>
+<td>Cuts the tone for about one frame when the camera drops one</td>
 </tr>
 </tbody>
 </table>
-<p>Each dial steps through the same value arrays as the CLI and GPIO encoders. The buttons use the same press/click/hold grammar as the <a href="#push-buttons">buttons</a> section, so every dial can be remapped freely — see <a href="../settings-json/#quad_rotary_controller">quad_rotary_controller</a>.</p>
-<p>The board is hot-pluggable: if it is not found (or gets disconnected), Cinemate retries every few seconds, so you can attach it while the camera is running. The LEDs light up while a button is pressed.</p>
+<p>One frequency serves every tone pin, edited in the row next to the pin it applies to. Duty cycle is
+fixed at 50% and has no field. The card is hidden while no pin is set to <strong>REC tone</strong>. Add as many
+tally and tone rows as you are wired for.</p>
+<div class="admonition info">
+<p>Some push buttons are wired closed = 1 and open = 0. At startup CineMate detects buttons that read as pressed and reverses them, so both types work without special configuration.</p>
+</div>
+<div class="admonition info">
+<p>Only assign pot channels that have a potentiometer connected. Unconnected analog inputs pick up noise and can trigger false readings.</p>
+</div>
 <h2 id="cfe-hat">CFE Hat<a class="headerlink" href="#cfe-hat" title="Permanent link">#</a></h2>
 <p>The <a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a> by Will Whang adds a CFexpress Type B card slot to the Raspberry Pi 5 over PCIe.</p>
-<p>No configuration is needed. Cinemate detects the hat automatically at startup and shows <strong>CFE</strong> as the media type in the GUI. The card follows the same rules as any other recording drive: format it as <code>exFAT</code> and label it <code>RAW</code> (the settings editor's RAW files pane has a format button that does this for you; <code>format exfat</code> in the CLI does the same).</p>
+<p>No configuration needed. CineMate detects the hat at startup and shows <strong>CFE</strong> as the media type. Format the card <code>exFAT</code> and label it <code>RAW</code>, like any recording drive: the RAW files pane has a format button, <code>format exfat</code> does the same in the CLI.</p>
+<h2 id="real-time-clock">Real-time clock<a class="headerlink" href="#real-time-clock" title="Permanent link">#</a></h2>
+<p>Only needed on a <strong>Raspberry Pi 4</strong>. The Pi 5 has an RTC on board; fit its battery and it keeps time
+on its own.</p>
+<p>A Pi 4 has no clock that survives a power cycle. Left alone it boots believing it is whenever it last
+shut down, and every take is stamped with that wrong date. A DS3231 module on the I²C pins fixes it.</p>
+<p>The system clock corrects itself whenever the Pi can reach the internet — over Ethernet, or over
+Wi-Fi while joined to a network rather than serving its own hotspot. Plugging into a computer that is
+online is enough. That sets the <em>system</em> clock only. The module keeps whatever it was last given
+until you copy the corrected time across:</p>
+<div class="highlight"><pre><span></span><code>set rtc time
+</code></pre></div>
+<p><code>time</code> prints both clocks, so you can check they agree before going out to shoot.</p>
+<div class="admonition note">
+<p class="admonition-title">The overlay is not managed for you</p>
+<p>CineMate owns its own fenced block in <code>config.txt</code> and does not put an RTC overlay in it. Add the
+standard <code>dtoverlay=i2c-rtc,ds3231</code> line yourself on the <a href="../config-txt/">config.txt tab</a>, outside
+the managed block, where it survives updates. Without it there is no <code>/dev/rtc</code> for <code>hwclock</code> to
+talk to and both commands above will report that they cannot reach the clock.</p>
+</div>
 <h2 id="outputs-and-displays">Outputs and displays<a class="headerlink" href="#outputs-and-displays" title="Permanent link">#</a></h2>
-<p>Cinemate can also drive hardware in the other direction:</p>
 <ul>
-<li><strong>Rec light (tally LED)</strong> – pins listed in <code>hardware_outputs.rec_out_pin</code> (GPIO 21 in the stock file) go high while recording. Wire an LED with a series resistor (roughly 220–330 Ω) between the pin and GND.</li>
-<li><strong>Rec sync tone</strong> – <code>hardware_outputs.rec_tone.pin</code> (GPIO 18 in the stock file) outputs a 1 kHz tone while recording, useful for feeding a sync signal to an external recorder.</li>
-<li><strong>I²C OLED display</strong> – a small SSD1306-style status screen showing values you choose (ISO, timecode, write speed, disk space…). Enable it in the <code>output_peripherals.oled</code> section.</li>
+<li><strong>Rec light (tally LED)</strong> – <code>hardware_outputs.rec_out_pin</code> (GPIO 21 stock) goes high while recording.</li>
+<li><strong>Rec sync tone</strong> – <code>hardware_outputs.rec_tone.pin</code> (GPIO 18 stock) outputs a 1 kHz tone while recording.</li>
+<li><strong>I²C OLED display</strong> – an SSD1306 or SSD1309 status screen showing values you choose (ISO, timecode, write speed, disk space…). The SSD1309 takes the same commands and the same addresses as the SSD1306, so it needs no separate setting — it just works. Enable it in <code>output_peripherals.oled</code>.</li>
 </ul>
-<p>The tally LED and sync tone are configured under <a href="../settings-json/#hardware_outputs">hardware_outputs</a>; the OLED display is under <a href="../settings-json/#output_peripherals">output_peripherals</a>.</p>
-<h2 id="going-further">Going further<a class="headerlink" href="#going-further" title="Permanent link">#</a></h2>
-<ul>
-<li><a href="../settings-json/">settings.jsonc reference</a> – every option for the sections shown above.</li>
-<li><a href="../controller-methods/">Controller methods</a> – all commands you can bind to buttons, switches and dials.</li>
-<li><a href="../cli-commands/">Cinemate terminal commands</a> – try a command in the CLI first, then map it to hardware.</li>
-</ul>
+<p>Reference: <a href="../settings-json/#hardware_outputs">hardware_outputs</a>, <a href="../settings-json/#output_peripherals">output_peripherals</a>, <a href="../settings-json/">settings.jsonc</a>, <a href="../cli-commands/">CineMate terminal commands</a>.</p>
 </div>
 
             </div>

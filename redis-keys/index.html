@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/redis-keys/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Redis Key reference - Cinemate Docs</title>
+    <title>Redis key reference - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -14,7 +14,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Redis Key reference";
+        var mkdocs_page_name = "Redis key reference";
         var mkdocs_page_input_path = "redis-keys.md";
         var mkdocs_page_url = "/cinemate/redis-keys/";
       </script>
@@ -32,7 +32,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
-          <a href=".." class="icon icon-home"> Cinemate Docs
+          <a href=".." class="icon icon-home"> CineMate Docs
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
       <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
@@ -59,9 +59,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../playback/">Playback</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -74,7 +72,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -110,34 +112,18 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
-              <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Redis Key reference</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#resolution-switching">Resolution switching</a>
-    </li>
-    </ul>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -154,15 +140,14 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
       <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="..">Cinemate Docs</a>
+          <a href="..">CineMate Docs</a>
         
       </nav>
       <div class="wy-nav-content">
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Reference</li>
-      <li class="breadcrumb-item active">Redis Key reference</li>
+      <li class="breadcrumb-item active">Redis key reference</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/redis-keys.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -174,7 +159,7 @@
               
 <div class="markdown-body">
   <h1 id="redis-key-reference">Redis key reference<a class="headerlink" href="#redis-key-reference" title="Permanent link">#</a></h1>
-<p>This page lists the Redis keys used by Cinemate and CinePi-raw. Values are simple strings, so you can inspect them with <code>redis-cli</code>.</p>
+<p>This page lists the Redis keys used by CineMate and CinePi-raw. Values are simple strings, so you can inspect them with <code>redis-cli</code>.</p>
 <p>Each entry explains which component normally writes the key and whether it makes sense to change it manually.</p>
 <table>
 <thead>
@@ -188,127 +173,127 @@
 <tbody>
 <tr>
 <td>anamorphic_factor</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Preview squeeze factor for anamorphic lenses</td>
 <td>Yes (publish key to apply)</td>
 </tr>
 <tr>
 <td>iso</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>Sensor gain in ISO</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>shutter_a</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>Active shutter angle in degrees</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>shutter_angle_nom</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Nominal shutter angle before sync/free-stepping adjustments</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>shutter_a_sync_mode</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Keep exposure constant when changing FPS</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>shutter_angle_actual</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Calculated shutter angle actually applied after clamping/sync</td>
 <td>No</td>
 </tr>
 <tr>
 <td>shutter_angle_transient</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Temporary value used during ramps</td>
 <td>No</td>
 </tr>
 <tr>
 <td>exposure_time</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Current exposure time in seconds</td>
 <td>No</td>
 </tr>
 <tr>
 <td>fps</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>Target frames per second</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>fps_user</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>User-selected FPS value stored by the UI/controller</td>
 <td>No</td>
 </tr>
 <tr>
 <td>fps_actual</td>
-<td>CinePi-raw -&gt; Cinemate</td>
-<td>Measured FPS from the running pipeline</td>
+<td>CineMate (RedisListener)</td>
+<td>Measured frame rate: the mean of the last 100 inter-frame intervals CinePi-raw reports on <code>cp_stats</code>. Reports cam0 on dual-sensor rigs</td>
 <td>No</td>
 </tr>
 <tr>
 <td>user_changing_fps</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td><code>1</code> while an fps change is debouncing; cleared once <code>fps</code> has been stable for a while</td>
 <td>No</td>
 </tr>
 <tr>
 <td>fps_last</td>
-<td>Cinemate</td>
-<td>Previous stable FPS value from stats</td>
+<td>CineMate</td>
+<td>FPS at the previous shutdown, restored as the startup FPS</td>
 <td>No</td>
 </tr>
 <tr>
 <td>fps_max</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Maximum FPS supported by the current sensor mode</td>
 <td>No</td>
 </tr>
 <tr>
 <td>fps_phase_lock</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Runtime enable for CinePi-raw's closed-loop frame-rate phase lock, from <code>sensors.&lt;cam&gt;.phase_lock</code> in settings.jsonc (default on); read once at CinePi-raw startup, not live</td>
 <td>No</td>
 </tr>
 <tr>
 <td>sensor_mode</td>
-<td>Cinemate -&gt; CinePi-raw startup</td>
+<td>CineMate -&gt; CinePi-raw startup</td>
 <td>Active sensor resolution/mode index</td>
 <td>Yes (causes pipeline restart)</td>
 </tr>
 <tr>
 <td>bit_depth</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Sensor bit depth (10, 12 or 16) for the selected mode</td>
 <td>No</td>
 </tr>
 <tr>
 <td>width / height</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Active sensor resolution</td>
 <td>No</td>
 </tr>
 <tr>
 <td>mode</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Composite <code>width:height:bit_depth:packing</code> string for the active sensor mode</td>
 <td>No</td>
 </tr>
 <tr>
 <td>packing</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Sensor packing token for the active mode/platform: <code>P</code> (packed) or <code>U</code> (unpacked)</td>
 <td>No</td>
 </tr>
 <tr>
 <td>lores_width / lores_height</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Preview stream resolution passed to CinePi-raw</td>
 <td>No</td>
 </tr>
@@ -330,115 +315,133 @@ transition instead of a stale value.</p>
 <tbody>
 <tr>
 <td>dynamic_resolution_enabled</td>
-<td>Cinemate</td>
-<td>Toggle for automatic FPS-driven resolution downgrade/upgrade (<code>set dynamic resolution</code>); persisted and read back at startup, defaulting to on when unset</td>
+<td>CineMate</td>
+<td>Toggle for automatic FPS-driven resolution downgrade/upgrade (<code>set dynamic resolution</code>); persisted and read back at startup. When unset, the startup value comes from <code>image_capture.dynamic_resolution</code> in <code>settings.jsonc</code> (on by default)</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>dynamic_resolution_active</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td><code>1</code> while a lower resolution mode is currently substituted in to sustain the requested FPS</td>
 <td>No</td>
 </tr>
 <tr>
 <td>dynamic_resolution_desired_mode</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>The sensor mode the user actually asked for; dynamic resolution switches away from and back to this mode as FPS allows</td>
 <td>No</td>
 </tr>
 <tr>
+<td>dynamic_resolution_priority</td>
+<td>CineMate</td>
+<td>Which axis of quality the substitution gives up first once the desired mode's own class runs out: <code>mode</code> (hold bit depth + ClearHDR, drop resolution), <code>resolution</code> (hold frame size, drop class), <code>none</code> (never leave the class). Set with <code>set dynamic resolution priority</code>; persisted and read back at startup. When unset, the startup value comes from <code>image_capture.dynamic_resolution_priority</code> in <code>settings.jsonc</code> (<code>mode</code> by default)</td>
+<td>Yes</td>
+</tr>
+<tr>
 <td>resolution_switching</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td><code>1</code> while a resolution change (manual or dynamic) is in flight; cleared when CinePi-raw's raw-stream-ready log line reports the new stream at the target size, or after a 2.5 s hold timer</td>
 <td>No</td>
 </tr>
 <tr>
 <td>resolution_target_mode</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Sensor mode index CinePi-raw is being switched to</td>
 <td>No</td>
 </tr>
 <tr>
 <td>resolution_target_width / resolution_target_height</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Target resolution CinePi-raw's raw-stream-ready log line is matched against to clear <code>resolution_switching</code></td>
 <td>No</td>
 </tr>
 <tr>
 <td>resolution_target_bit_depth</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Target bit depth for the in-flight resolution switch</td>
 <td>No</td>
 </tr>
 <tr>
 <td>wb</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>White-balance temperature in Kelvin</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>wb_user</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Kelvin value stored before conversion to <code>cg_rb</code></td>
 <td>No</td>
 </tr>
 <tr>
 <td>cg_rb</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>White-balance gain pair <code>1/R,1/B</code></td>
 <td>Yes (advanced)</td>
 </tr>
 <tr>
 <td>zoom</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Digital zoom factor for preview streams</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>hdmi_preview_source</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>Dual-sensor HDMI preview source: <code>both</code>, <code>cam0</code>, <code>cam1</code>, <code>pip_cam0</code>, or <code>pip_cam1</code>. Read live by the compositor; no restart</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>ir_filter</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>Toggle IR-cut filter (IMX585 only)</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>hdr</td>
-<td>Cinemate -&gt; CinePi-raw startup</td>
+<td>CineMate -&gt; CinePi-raw startup</td>
 <td>ClearHDR state (imx585): <code>1</code> makes CinePi-raw launch with <code>--hdr sensor</code>. Set automatically when a ClearHDR sensor mode is selected; changing it requires a camera restart</td>
 <td>No (select an HDR mode via <code>set resolution</code>)</td>
 </tr>
 <tr>
 <td>hdr_threshold_low</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>ClearHDR data-selection threshold, low side (0–4095). Applied live to the sensor (as a pair with <code>hdr_threshold_high</code>), and re-applied at every CinePi-raw start</td>
 <td>Yes (publish key to apply)</td>
 </tr>
 <tr>
 <td>hdr_threshold_high</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>ClearHDR data-selection threshold, high side (0–4095). Applied live to the sensor (as a pair with <code>hdr_threshold_low</code>), and re-applied at every CinePi-raw start</td>
 <td>Yes (publish key to apply)</td>
 </tr>
 <tr>
 <td>hdr_blend</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>ClearHDR HG/LG blending mode, driver menu 0–8 (0 = HG 1/2 + LG 1/2). Applied live</td>
 <td>Yes (publish key to apply)</td>
 </tr>
 <tr>
 <td>hdr_gain_adder</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>ClearHDR low-gain path gain adder, driver menu 0–5 (2 = +12 dB). Applied live</td>
 <td>Yes (publish key to apply)</td>
 </tr>
 <tr>
+<td>thumbnail</td>
+<td>CineMate -&gt; CinePi-raw</td>
+<td>Embedded DNG thumbnail mode: <code>0</code> off, <code>1</code> mono, <code>2</code> colour. Applied live (no camera restart), written per frame into new takes only</td>
+<td>Yes (publish key to apply)</td>
+</tr>
+<tr>
+<td>thumbnail_size</td>
+<td>CineMate -&gt; CinePi-raw</td>
+<td>Right-shift downscale of the thumbnail plane; <code>0</code> is the full lores size. Changing it restarts the camera. Seeded at launch only — no CLI verb or settings-editor field yet</td>
+<td>No (seeded to avoid a stale pre-Phase-0 resident value collapsing the thumbnail; change by hand only if you understand the restart)</td>
+</tr>
+<tr>
 <td>log_encode_request</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td><a href="../cinemate-log/">CineMate Log</a> request, shared across every launched camera like <code>hdr</code>: <code>0</code> off, <code>1</code> on (use the live mode's default target), <code>10</code> / <code>12</code> force that target. Set by <code>set log</code>; each camera resolves it independently against its own sensor at the next restart</td>
 <td>No (use <code>set log</code>)</td>
 </tr>
@@ -450,193 +453,193 @@ transition instead of a stale value.</p>
 </tr>
 <tr>
 <td>is_recording</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>Requested record state. Edge-triggered: <code>0 -&gt; 1</code> starts, <code>1 -&gt; 0</code> stops</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>record_cams</td>
-<td>Cinemate -&gt; CinePi-raw</td>
+<td>CineMate -&gt; CinePi-raw</td>
 <td>Dual-sensor record gate: which sensor(s) capture this take (<code>cam0+cam1</code>, <code>cam0</code>, or <code>cam1</code>). Published before <code>is_recording</code> flips; each <code>cinepi-raw</code> records only if its <code>--cam-port</code> is selected. Absent/empty = both</td>
 <td>No</td>
 </tr>
 <tr>
 <td>rec</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td>Derived runtime record flag based on <code>framecount</code> rising/going flat</td>
 <td>No</td>
 </tr>
 <tr>
 <td>framecount</td>
-<td>CinePi-raw -&gt; Cinemate</td>
+<td>CinePi-raw -&gt; CineMate</td>
 <td>Total frames counted for the active take</td>
 <td>No</td>
 </tr>
 <tr>
 <td>buffer</td>
-<td>CinePi-raw -&gt; Cinemate</td>
+<td>CinePi-raw -&gt; CineMate</td>
 <td>Raw frames currently buffered in RAM</td>
 <td>No</td>
 </tr>
 <tr>
 <td>buffer_size</td>
-<td>CinePi-raw -&gt; Cinemate</td>
+<td>CinePi-raw -&gt; CineMate</td>
 <td>Total RAM buffer capacity in frames</td>
 <td>No</td>
 </tr>
 <tr>
 <td>is_buffering</td>
-<td>CinePi-raw -&gt; Cinemate</td>
+<td>CinePi-raw -&gt; CineMate</td>
 <td><code>1</code> while the RAM buffer is pre-filling</td>
 <td>No</td>
 </tr>
 <tr>
 <td>is_writing</td>
-<td>CinePi-raw -&gt; Cinemate</td>
+<td>CinePi-raw -&gt; CineMate</td>
 <td><code>1</code> while at least one camera is actively writing frames to disk</td>
 <td>No</td>
 </tr>
 <tr>
 <td>is_writing_buf</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td><code>1</code> while buffered frames are still flushing after stop</td>
 <td>No</td>
 </tr>
 <tr>
 <td>storage_preroll_active</td>
-<td>Cinemate (StoragePreroll)</td>
+<td>CineMate (StoragePreroll)</td>
 <td><code>1</code> during a storage warm-up clip</td>
 <td>No</td>
 </tr>
 <tr>
 <td>drop_frame</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td>Live pulse while a TC-gap event is active (advisory — frame may still be on disk)</td>
 <td>No</td>
 </tr>
 <tr>
 <td>drop_frame_count</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td>TC hole count in the current/last take (alias of <code>tc_hole_count</code>; kept for backward compatibility)</td>
 <td>No</td>
 </tr>
 <tr>
 <td>drop_frame_relay</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td>Short pulse used to mute REC tone for one frame on drop-frame events</td>
 <td>No</td>
 </tr>
 <tr>
 <td>drop_frame_during_last_take</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td><code>1</code> only if the previous non-preroll take had frames genuinely absent from disk (<code>missing_frame_count &gt; 0</code>)</td>
 <td>No</td>
 </tr>
 <tr>
 <td>tc_hole_count</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td>Number of TC gap events this take — frames that arrived late enough to create a timecode hole (inter-frame gap ≥ 1.5× frame period); file may still be present</td>
 <td>No</td>
 </tr>
 <tr>
 <td>missing_frame_count</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td>Frames confirmed absent from disk: <code>max(0, expected − recorded)</code> at end of take; authoritative signal for genuine data loss</td>
 <td>No</td>
 </tr>
 <tr>
 <td>frames_in_sync</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td><code>1</code> if live/final expected vs recorded frame counts are within configured sync tolerance; defaults are +/- 2 frames live and +/- 1 frame after buffered writes flush</td>
 <td>No</td>
 </tr>
 <tr>
 <td>recording_time</td>
-<td>Cinemate (RedisController timer)</td>
+<td>CineMate (RedisController timer)</td>
 <td>Elapsed record time in seconds</td>
 <td>No</td>
 </tr>
 <tr>
 <td>recording_tc_rec</td>
-<td>Cinemate (RedisController timer)</td>
+<td>CineMate (RedisController timer)</td>
 <td>Elapsed record timecode</td>
 <td>No</td>
 </tr>
 <tr>
 <td>recording_time_tod</td>
-<td>Cinemate (RedisController timer)</td>
+<td>CineMate (RedisController timer)</td>
 <td>Time-of-day timecode updated during recording</td>
 <td>No</td>
 </tr>
 <tr>
 <td>tc_cam0 / tc_cam1</td>
-<td>Cinemate (RedisListener)</td>
+<td>CineMate (RedisListener)</td>
 <td>SMPTE timecode per camera derived from <code>timestamp*</code> stats fields</td>
 <td>No</td>
 </tr>
 <tr>
 <td>last_dng_cam0 / last_dng_cam1</td>
-<td>Cinemate (cinepi_multi log watcher)</td>
+<td>CineMate (cinepi_multi log watcher)</td>
 <td>Full path to the most recently written DNG for each camera</td>
 <td>No</td>
 </tr>
 <tr>
 <td>is_mounted</td>
-<td>Cinemate (SSD monitor)</td>
+<td>CineMate (SSD monitor)</td>
 <td><code>1</code> when storage is mounted</td>
 <td>No</td>
 </tr>
 <tr>
 <td>storage_type</td>
-<td>Cinemate (SSD monitor)</td>
+<td>CineMate (SSD monitor)</td>
 <td>Drive type such as NVME, USB, or SD</td>
 <td>No</td>
 </tr>
 <tr>
 <td>storage_filesystem</td>
-<td>Cinemate (SSD monitor)</td>
+<td>CineMate (SSD monitor)</td>
 <td>Current filesystem type such as <code>ext4</code>, <code>exfat</code>, or <code>ntfs</code></td>
 <td>No</td>
 </tr>
 <tr>
 <td>storage_mount_options</td>
-<td>Cinemate (SSD monitor)</td>
+<td>CineMate (SSD monitor)</td>
 <td>Actual mount options reported by the kernel for <code>/media/RAW</code></td>
 <td>No</td>
 </tr>
 <tr>
 <td>storage_recorder_profile</td>
-<td>Cinemate (SSD monitor)</td>
+<td>CineMate (SSD monitor)</td>
 <td>Recorder worker profile selected from the current filesystem</td>
 <td>No</td>
 </tr>
 <tr>
 <td>space_left</td>
-<td>Cinemate (SSD monitor)</td>
+<td>CineMate (SSD monitor)</td>
 <td>Remaining free space in GB</td>
 <td>No</td>
 </tr>
 <tr>
 <td>write_speed_to_drive</td>
-<td>Cinemate (SSD monitor)</td>
+<td>CineMate (SSD monitor)</td>
 <td>Current write speed in MB/s</td>
 <td>No</td>
 </tr>
 <tr>
 <td>FSCK_STATUS</td>
-<td>Cinemate (SSD monitor)</td>
+<td>CineMate (SSD monitor)</td>
 <td>Result of the periodic filesystem check run after mount, e.g. <code>OK ...</code> / <code>FAIL ...</code>; cinemate-internal, cinepi-raw never reads it</td>
 <td>No</td>
 </tr>
 <tr>
 <td>file_size</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Bytes per frame for the current mode</td>
 <td>No</td>
 </tr>
 <tr>
 <td>memory_alert</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>RAM percentage at which the watchdog auto-stopped recording (integer, set at the 80 % trip point); <code>0</code> when clear</td>
 <td>No</td>
 </tr>
@@ -648,37 +651,37 @@ transition instead of a stale value.</p>
 </tr>
 <tr>
 <td>cameras</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>JSON list of detected cameras and port assignments</td>
 <td>No</td>
 </tr>
 <tr>
 <td>audio_capture_gain_db</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Capture gain in dB applied to the active USB mic, from <code>audio_capture</code> in settings.jsonc (per-mic-type block, e.g. <code>16bit.capture_gain_db</code>); read back by the USB hotswap monitor on mic reconnect</td>
 <td>No</td>
 </tr>
 <tr>
 <td>trigger_mode</td>
 <td>--</td>
-<td>Defined in <code>ParameterKey</code> but not currently written or read anywhere in Cinemate or CinePi-raw</td>
+<td>Defined in <code>ParameterKey</code> but not currently written or read anywhere in CineMate or CinePi-raw</td>
 <td>--</td>
 </tr>
 <tr>
 <td>gui_layout</td>
-<td>Cinemate</td>
+<td>CineMate</td>
 <td>Path to the active GUI layout preset</td>
 <td>No</td>
 </tr>
 <tr>
 <td>pi_model</td>
-<td>Cinemate</td>
-<td>Raspberry Pi model string</td>
+<td>CineMate startup</td>
+<td>Platform family, not the full board name: <code>pi5</code> (Pi 5 / 500 / CM5), <code>pi4</code> (Pi 4 / 400 / CM4), <code>other</code>, or <code>unknown</code></td>
 <td>No</td>
 </tr>
 <tr>
 <td>sensor</td>
-<td>Cinemate startup</td>
+<td>CineMate startup</td>
 <td>Active camera model key</td>
 <td>No</td>
 </tr>
@@ -688,10 +691,6 @@ transition instead of a stale value.</p>
 
             </div>
           </div><footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../redis-guide/" class="btn btn-neutral float-left" title="Redis API"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../cinepi-multi/" class="btn btn-neutral float-right" title="How Cinemate launches CinePi-raw">Next <span class="icon icon-circle-arrow-right"></span></a>
-    </div>
 
   <hr/>
 
@@ -717,10 +716,6 @@ transition instead of a stale value.</p>
         </span>
     
     
-      <span><a href="../redis-guide/" style="color: #fcfcfc">&laquo; Previous</a></span>
-    
-    
-      <span><a href="../cinepi-multi/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

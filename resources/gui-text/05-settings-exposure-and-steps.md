@@ -11,7 +11,7 @@ they are what the GUI looks each string up by when CineMate starts.
 
 The click‑stops each control cycles through, and — for the four with a pot channel assigned in Pots below — the free‑running range between the lowest and highest stop.
 
-### ISO stops
+### ISO steps
 <!-- key: card.arrays.iso.free -->
 
 Values the ISO control steps through, in order. Free stepping lets an assigned pot sweep ISO continuously between the lowest and highest stop here instead of snapping to one — Increment sets how finely it quantizes while sweeping.
@@ -19,7 +19,7 @@ Values the ISO control steps through, in order. Free stepping lets an assigned p
 <!-- key: caption.arrays.iso.free · one per control, separated by ' · ' -->
 *Free stepping · Increment*
 
-### Shutter angle stops
+### Shutter angle steps
 <!-- key: card.arrays.shutter_a.free -->
 
 Values the shutter angle control steps through, in degrees. Free stepping sweeps continuously between the lowest and highest stop here — Increment sets the degree step while sweeping.
@@ -27,7 +27,7 @@ Values the shutter angle control steps through, in degrees. Free stepping sweeps
 <!-- key: caption.arrays.shutter_a.free · one per control, separated by ' · ' -->
 *Free stepping · Increment*
 
-### Frame‑rate stops
+### Frame‑rate steps
 <!-- key: card.arrays.fps.free -->
 
 Values the FPS control steps through. Free stepping sweeps continuously between the lowest and highest stop here — Increment sets the fps step while sweeping.
@@ -35,7 +35,7 @@ Values the FPS control steps through. Free stepping sweeps continuously between 
 <!-- key: caption.arrays.fps.free · one per control, separated by ' · ' -->
 *Free stepping · Increment*
 
-### White balance stops
+### White balance steps
 <!-- key: card.arrays.wb.free -->
 
 Values the WB control steps through, in Kelvin. Free stepping (on by default) sweeps continuously between the lowest and highest stop here — Increment sets the Kelvin step while sweeping.
@@ -43,7 +43,7 @@ Values the WB control steps through, in Kelvin. Free stepping (on by default) sw
 <!-- key: caption.arrays.wb.free · one per control, separated by ' · ' -->
 *Free stepping · Increment*
 
-### Anamorphic desqueeze stops
+### Anamorphic desqueeze steps
 <!-- key: card.steps.4 -->
 
 Preview desqueeze factors available on the anamorphic control. No pot or free stepping — this one's step‑only.

@@ -1,11 +1,6 @@
 # Boot config (config.txt)
 
-!!! warning "This file can stop the Pi booting"
-    A bad `config.txt` can leave the camera unbootable, with no way to fix it from the Pi itself.
-    Read [The danger](#the-danger) before you save.
-
-`/boot/firmware/config.txt` declares the camera sensor and switches on the hardware buses and the
-RP1 overclock. Edit it from the settings editor's **config.txt** tab (`boot & sensors`):
+`/boot/firmware/config.txt` declares the camera sensor and switches on the hardware buses and the RP1 overclock. Edit it from the settings editor's **config.txt** tab (`boot & sensors`):
 
 ```
 http://cinepi.local:5000/settings-editor/
@@ -20,11 +15,9 @@ The tab edits only the block CineMate owns, fenced by two marker lines:
 ```
 
 A save rewrites the camera section (between `# ---- Camera section ----` and
-`# ---- End camera section ----`) and the `dtparam=i2c_arm=on` / `dtparam=i2s=on` /
-`dtparam=spi=on` / `dtparam=audio=on` / `dtoverlay=rp1-overclock` lines. Every other line, in the fence or outside it, is untouched. The camera section is replaced wholesale: the installer's five commented example blocks, one per sensor, collapse on the first save to `camera_auto_detect=` plus your overlay lines.
+`# ---- End camera section ----`) and the `dtparam=i2c_arm=on` / `dtparam=i2s=on` / `dtparam=spi=on` / `dtparam=audio=on` / `dtoverlay=rp1-overclock` lines. Every other line, in the fence or outside it, is untouched. The camera section is replaced wholesale: the installer's five commented example blocks, one per sensor, collapse on the first save to `camera_auto_detect=` plus your overlay lines.
 
-Hand edits outside the fence survive this page and `cinemate-update.sh`, which never touches
-`config.txt`. They do not survive a re-run of `cinemate-install.sh`: `configure_boot_config()` rewrites the whole file as the managed block alone, copying the old one to the installer's backup directory.
+Hand edits outside the fence survive this page and `cinemate-update.sh`, which never touches `config.txt`. They do not survive a re-run of `cinemate-install.sh`: `configure_boot_config()` rewrites the whole file as the managed block alone, copying the old one to the installer's backup directory.
 
 ![The config.txt tab of the CineMate settings editor](images/gui-config-txt.png)
 
@@ -44,26 +37,6 @@ Entries read as MHz, Mbps per lane, then the published 4K frame rate where `sens
 8. Click **Save changes**. The Pi writes `config.txt` and reboots.
 9. Wait about 25 seconds for the Pi to come back, camera included.
 10. Reload and check **Detected modes** lists the sensor you fitted.
-
-### The danger
-
-!!! danger "Saving here reboots immediately: no confirm, no revert, no backup"
-    **Save changes** on this tab writes `/boot/firmware/config.txt` and reboots the Pi about 0.4
-    seconds later, stopping any recording first. There is no confirmation dialog, no countdown, and
-    no copy of the previous file.
-
-    The [recovery console](recovery-console.md) behaves differently. Its `config.txt` editor backs
-    up the previous file on every save and arms a confirm-or-revert countdown, restoring the old
-    file and rebooting by itself if you never confirm. That editor is **disabled by default**: set
-    `system.recovery.allow_config_txt` to `true` first, or there is nothing to fall back on.
-
-    A `config.txt` that stops the Pi booting cannot be fixed from anything running on the Pi. See
-    [The honest limit](recovery-console.md#the-honest-limit). Recovery then means pulling the SD
-    card and editing the file on another machine.
-
-Check the reconstructed file before saving. Sensor overlay and link-frequency picks are the ones
-that cost you a boot.
-
 ## Hand edits
 
 In the Raspberry Pi terminal:

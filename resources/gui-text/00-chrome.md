@@ -40,7 +40,7 @@ browse & download
 ### Boot config
 <!-- key: rail.boot-config -->
 
-Sensor overlays, hardware buses and the RP1 overclock — everything Cinemate writes into `config.txt`. Every change here needs a reboot.
+Sensor overlays, hardware buses and the RP1 overclock —  Cinemate settings using  `boot/firmware/config.txt`. Changes to file needs a reboot.
 
 ### Look & feel
 <!-- key: rail.look-and-feel -->
@@ -128,19 +128,19 @@ _(no blurb — this group is just a heading over links)_
 ### i2c hardware
 <!-- key: rail.i2c-hardware -->
 
-What is attached to the camera's I²C bus, probed each time you open this tab. Everything here is optional — the camera shoots without any of it.
+What is attached to the camera's I²C bus.
 
 ### RAW files
 <!-- key: rail.raw-files -->
 
-Everything on the active storage device — browse, sort and pull takes off over Wi‑Fi.
+Files on active storage device — browse, sort and download takes.
 
 ### Playback
 <!-- key: rail.playback -->
 
-Review takes off the card at the conform frame rate.
+Review takes off the card.
 
 ### Live view
 <!-- key: rail.live-view -->
 
-The shooting screen — image, ISO/shutter/fps/WB, and everything `simple_gui.py` already draws on the HDMI overlay, mirrored to the browser. It is the camera's own page on port `5000`, embedded here. For the picture on its own with nothing drawn over it, use port `8000` instead — `8001` for a second sensor.
+The shooting screen — mimicking the HDMI display.

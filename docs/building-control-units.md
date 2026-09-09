@@ -9,18 +9,9 @@ You can use ESP32, an M5Stack, a Raspberry Pi Pico W or other type of microcontr
 | Commands                 | port `5000`, `POST /api/v1/cmd` |
 | Status broadcast         | port `8888/udp`                 |
 
-Change the SSID and password on the settings editor's [Wi-Fi hotspot](settings-json.md#wi-fi-hotspot) section. The IP does not change: `10.42.0.1` is NetworkManager's shared-mode gateway address, which is why the firmware examples below hard-code it rather than resolving `cinepi.local`. Resolving a `.local` name needs an mDNS resolver the device may not have. The `curl` checks in the next section run from a laptop, so those use `cinepi.local`.
+### Simple test:
 
-The transport is the [Web API](web-api.md). Read that page first. It covers sending a command, reading a value, and the three ways to get live updates. This page is the hardware side.
-
-## Trying out the connection to the Pi
-
-Prove the camera answers from your laptop before you write any firmware. Pick the section that
-matches how you are connected.
-
-### Over the Wi-Fi hotspot
-
-Join the `CinePi` network first. Use the numeric address, the same one your firmware will use.
+For using numeric address, try:
 
 ```bash
 curl http://10.42.0.1:5000/api/v1/hello
@@ -28,22 +19,12 @@ curl -d "rec" http://10.42.0.1:5000/api/v1/cmd
 nc -ul 8888
 ```
 
-### Over Ethernet or your own Wi-Fi
-
-With the camera on the same network as your computer, reach it by name.
+You can also try the `cinepi.local`address
 
 ```bash
 curl http://cinepi.local:5000/api/v1/hello
 curl -d "rec" http://cinepi.local:5000/api/v1/cmd
 ```
-
-The status broadcast is less dependable here. It goes to `255.255.255.255` and to `wlan0`'s own
-subnet broadcast address, always `wlan0`'s whatever you are connected over, and no router forwards
-either across a subnet. On the same network segment as the camera you will usually still see it;
-from anywhere else, check it from the hotspot or poll `GET /api/v1/status` instead.
-
-Either way: `hello` identifies the camera and `rec` starts a recording. Send `rec` again to stop.
-On the hotspot, `nc -ul 8888` also prints the status broadcast.
 
 ## Example projects
 
@@ -109,8 +90,6 @@ void loop() {
 ```
 
 `sendCmd` accepts any [CineMate command](cli-commands.md): `"set iso 800"`, `"inc fps"`, `"set wb 5600"`, `"rec f 48"`.
-
-The tally reads the broadcast rather than polling.
 
 ### M5StickC — button, display, tally
 
@@ -266,22 +245,9 @@ while True:
     print(dict(kv.split("=", 1) for kv in line.split()))
 ```
 
-## Serial, without Wi-Fi
+## Serial control
 
-Everything above goes over the hotspot. A controller can also talk to the camera down a wire, which
-needs no network at all — useful when the hotspot is off, when the rig has to survive a crowded
-2.4 GHz location, or when the controller has no Wi-Fi.
-
-CineMate opens the first of these that answers:
-
-| Port | What it is |
-| --- | --- |
-| `/dev/ttyACM0` | A USB serial device — an Arduino, a Pico, an ESP32 with USB CDC, plugged into the Pi |
-| `/dev/serial0` | The GPIO header's UART — Tx on GPIO 14, Rx on GPIO 15 |
-| `/dev/ttyS0` | The same UART under its other name |
-
-**115200 baud, 8N1, one command per line.** The line is handed to the same dispatcher the CLI and the
-Web API use, so anything in the [commands reference](cli-commands.md) works unchanged:
+A controller can also talk to the camera down a wire. Use **115200 baud, 8N1, one command per line.** The line is handed to the CineMate CLI , so comamnds are the same as in the [commands reference](cli-commands.md):
 
 ```text
 rec
@@ -289,28 +255,9 @@ set iso 800
 set shutter a 172.8
 ```
 
-No JSON, no framing, no handshake — write the text and a newline.
+CineMate sends back `rec` when a recording starts and `stop` when it ends. This can be useful for controlling a tally light on the serial device. 
 
-### What the camera sends back
-
-One thing, unprompted: `rec` when a recording starts and `stop` when it ends. That is a tally for a lamp or a display on the other end of the wire, and it is driven by the camera's own recording state rather than by whatever asked for the recording — so it fires whether the take was started from the controller, a GPIO button, the web GUI or the CLI.
-
-Nothing else is echoed. A command's reply is not sent back over serial: if a controller needs to read a value, the [Web API](web-api.md)'s `/get/<key>` is the way, and that needs the network.
-
-!!! note "The SER badge means USB, specifically"
-    The `SER` badge in the GUI and on the HDMI overlay tracks `/dev/ttyACM0` alone. A controller on
-    the GPIO UART works exactly the same way but does not light it — there is nothing to detect on
-    those pins the way a USB device announces itself.
-
-!!! warning "The UART is not free on a stock Pi"
-    `/dev/serial0` is the Linux console by default. Free it in `raspi-config` (Interface Options →
-    Serial Port: login shell **no**, hardware serial **yes**) or the port is already taken and
-    CineMate falls through to trying the next one.
-
-Wiring for the GPIO UART is three connections: the controller's Tx to the Pi's Rx (GPIO 15), the
-controller's Rx to the Pi's Tx (GPIO 14), and a common ground. The Pi's UART is **3.3 V** — a 5 V
-controller needs a level shifter on the line into GPIO 15, or it will damage the pin.
-
+For serial input you can use USB or Rx/Tx pins (14/15) on the Pi
 ## Design rules
 
 See [CineMate commands](cli-commands.md) for a complete list of available commands. We are using the same syntax as for the CineMate CLI.

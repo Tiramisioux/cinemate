@@ -27,16 +27,16 @@ nav:
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Storage pre-roll warm-up: storage-preroll.md
   - Configuring:
-      - The CineMate stack explained: cinemate-stack.md
+      - config.txt: config-txt.md
+      # - The CineMate stack explained: cinemate-stack.md   # hidden from the menu, page still builds
       - settings.jsonc: settings-json.md
-      - Settings editor: settings-editor.md
+      # - Settings editor: settings-editor.md   # hidden from the menu, page still builds
       - Camera sensors and frame rates: sensors.md
       - ClearHDR (imx585): clear-hdr.md
       - CineMate Log (imx585 / imx283): cinemate-log.md
       - Dual sensors: dual-sensors.md
       - Additional hardware: hardware-controls.md
       - Building control units: building-control-units.md
-      - Bookworm config.txt: config-txt.md
       - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - System maintenance:
       - Connecting via SSH: ssh.md
@@ -45,13 +45,13 @@ nav:
       - Backing up the SD card: backing-up-sd-card.md
   - Troubleshooting: troubleshooting.md
   - Advanced:
-      - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
+      # - Simple GUI refresh tuning: simple-gui-refresh-tuning.md   # hidden from the menu, page still builds
       - Manual installation: installation-steps.md
-      - Compiling cinepi-raw: compiling-cinepi-raw.md
+      # - Compiling cinepi-raw: compiling-cinepi-raw.md   # hidden from the menu, page still builds
       # - Overclocking the Pi: overclocking.md   # shipped on by the installer; pending fact-check - hidden from the menu, page still builds
   - Reference:
       - CineMate terminal commands: cli-commands.md
-      - CinePi RAW terminal commands: cli-user-guide.md
+      # - CinePi RAW terminal commands: cli-user-guide.md   # hidden from the menu, page still builds
       # - Redis API: redis-guide.md   # hidden from the menu, page still builds
       # - Redis Key reference: redis-keys.md   # hidden from the menu, page still builds
       # - How CineMate launches CinePi-raw: cinepi-multi.md   # hidden from the menu, page still builds

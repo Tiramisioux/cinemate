@@ -72,20 +72,14 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">ClearHDR (imx585)</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#the-clear-hdr-stack">The Clear HDR stack</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#clearhdr-features">ClearHDR features</a>
-    </li>
     <li class="toctree-l2"><a class="reference internal" href="#live-knobs">Live knobs</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#default-knob-values">Default knob values</a>
@@ -96,11 +90,7 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#flat-black-pedestal-frames">Flat black-pedestal frames</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#symptom-knob">Symptom → knob</a>
-    </li>
         </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#mono-sensor-imx585_mono">Mono sensor (imx585_mono)</a>
     </li>
     </ul>
                   </li>
@@ -111,8 +101,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
@@ -134,18 +122,12 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -183,50 +165,6 @@
 <div class="markdown-body">
   <h1 id="clearhdr-imx585">ClearHDR (imx585)<a class="headerlink" href="#clearhdr-imx585" title="Permanent link">#</a></h1>
 <p>ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-gain (HG) and a low-gain (LG) readout internally and outputs one 16-bit linear Bayer frame. CineMate records it as true 16-bit CinemaDNGs — BlackLevel 3200, WhiteLevel 65535.</p>
-<h2 id="the-clear-hdr-stack">The Clear HDR stack<a class="headerlink" href="#the-clear-hdr-stack" title="Permanent link">#</a></h2>
-<p>CineMate image and install script ships with the following stack:</p>
-<table>
-<thead>
-<tr>
-<th>Piece</th>
-<th>Needed</th>
-<th>Why</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Kernel</td>
-<td>≥ 6.12.93+rpt (the CineMate baseline)</td>
-<td>older <code>rp1-cfe</code> corrupts 16-bit CSI-2 capture; 10/12-bit is unaffected</td>
-</tr>
-<tr>
-<td>Sensor driver</td>
-<td>Tiramisioux <code>imx585-v4l2-driver</code>, branch <code>cinemate-7modes</code></td>
-<td>exposes <code>wide_dynamic_range</code>, the 3840×2200 16-bit mode, and the <code>ccmp</code> overlay parameter; gates the invalid binned-ClearHDR combo</td>
-</tr>
-<tr>
-<td>Overlay</td>
-<td><code>dtoverlay=imx585,...,ccmp</code> in config.txt</td>
-<td>without <code>ccmp</code> the 12-bit CCMP ClearHDR mode does not exist on this driver (the installer writes it)</td>
-</tr>
-<tr>
-<td>libcamera</td>
-<td>Tiramisioux <code>libcamera</code>, branch <code>cinemate</code></td>
-<td>16-bit endian swap handling</td>
-</tr>
-<tr>
-<td>Kernel patch (mono only)</td>
-<td><code>scripts/patch-rp1-cfe.sh</code></td>
-<td>the stock kernel's Y16 format entry misses the 16-bit workaround — see <a href="#mono-sensor-imx585_mono">Mono sensor</a></td>
-</tr>
-<tr>
-<td>Exposure</td>
-<td>manual</td>
-<td>ISP statistics are invalid at 16-bit, so auto exposure and auto white balance cannot run</td>
-</tr>
-</tbody>
-</table>
-<h2 id="clearhdr-features">ClearHDR features<a class="headerlink" href="#clearhdr-features" title="Permanent link">#</a></h2>
 <ul>
 <li>Frame rates are lower than the plain modes. Per-mode figures are on the <a href="../sensors/#imx585-starlight-eye">sensors page</a>, measured at 1039.5 MHz with the stock and overclocked pixel-rate ceilings side by side; the <a href="../changelog/#imx585-driver">changelog</a> is where those measurements were first recorded.</li>
 <li>Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).</li>
@@ -292,71 +230,7 @@
 </code></pre></div>
 <h2 id="known-issues">Known issues<a class="headerlink" href="#known-issues" title="Permanent link">#</a></h2>
 <h3 id="flat-black-pedestal-frames">Flat black-pedestal frames<a class="headerlink" href="#flat-black-pedestal-frames" title="Permanent link">#</a></h3>
-<p>A ClearHDR launch can come up recording a flat black-level pedestal instead of image data. The cause is known: the sensor's own <code>blend</code> default is 0, and that merge setting is broken. CineMate seeds <code>blend</code> 5 (HG 1/16) into Redis at launch instead, so a stock settings file never starts in that state.</p>
-<p>The manual shutter kick is only a fallback — for a settings file that overrides <code>blend</code>, or an older one written before 5 became the default. Underexpose briefly to kick the merge back into operation: cover the lens, or <code>set shutter a 1</code> and then back.</p>
-<p><code>image_capture.hdr.self_heal</code> automates that kick. It is off by default, because a stock <code>blend</code> of 5
-means there is nothing to heal; turn it on only if you are running an overridden <code>blend</code> and would
-rather the camera recover on its own.</p>
-<h3 id="symptom-knob">Symptom → knob<a class="headerlink" href="#symptom-knob" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>You see</th>
-<th>Try</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Magenta in bright flat areas</td>
-<td>try <code>set hdr threshold low 500</code>, <code>set hdr threshold high 3000</code>, <code>set hdr blend 2</code>, <code>set hdr gain adder 2</code></td>
-</tr>
-<tr>
-<td>Grainy mids or faces</td>
-<td>higher thresholds, HG-heavier blend (3, 4), or a lower gain adder</td>
-</tr>
-<tr>
-<td>A band or step where tones change character</td>
-<td>widen the gap between the two threshold values</td>
-</tr>
-<tr>
-<td>Highlights too dark and flat out of camera</td>
-<td>higher gain adder — costs highlight grain</td>
-</tr>
-<tr>
-<td>Grainy highlights</td>
-<td>lower gain adder; lift in the grade instead</td>
-</tr>
-<tr>
-<td>Flat black-level pedestal, no image data</td>
-<td>check <code>blend</code> is 5; if you have overridden it, kick with <code>set shutter a 1</code> then back — see <a href="#flat-black-pedestal-frames">Flat black-pedestal frames</a></td>
-</tr>
-</tbody>
-</table>
-<h2 id="mono-sensor-imx585_mono">Mono sensor (imx585_mono)<a class="headerlink" href="#mono-sensor-imx585_mono" title="Permanent link">#</a></h2>
-<p>Verified working 2026-08-27 — all ClearHDR modes record real data on the mono
-variant. Three mono-specific facts:</p>
-<table>
-<thead>
-<tr>
-<th>Fact</th>
-<th>Detail</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Kernel patch required for 16-bit</td>
-<td>The stock rpi-6.12.y kernel gives every Bayer 16-bit format the "RP1 HW mismatch" workaround (<code>csi_dt = 0</code>) but missed the mono <code>Y16</code> entry. Unpatched, mono 16-bit records PiSP-COMP1-structured garbage (stripes on flat scenes, noise on detailed ones). The installer applies <code>scripts/patch-rp1-cfe.sh</code> automatically for <code>SENSOR_MODEL=imx585_mono</code>; rerun it after any kernel package upgrade (the upgrade silently restores the stock module).</td>
-</tr>
-<tr>
-<td>16-bit frames are 3840×2200</td>
-<td>The sensor prepends ~20 optical-black rows to its RAW16 output; the top rows of every 16-bit DNG sit at the 3200 pedestal. Expected geometry, not a defect.</td>
-</tr>
-<tr>
-<td>No binned ClearHDR</td>
-<td>Binned (2K) ClearHDR is an invalid sensor configuration on mono — the sensor emits pure black-level regardless of exposure (AppNote §2 p.6). The <code>cinemate-7modes</code> driver removes the combination from the mode table; only full-res 12-bit CCMP and 16-bit ClearHDR are offered.</td>
-</tr>
-</tbody>
-</table>
+<p>A ClearHDR launch can come up with a flat black frame instead exposed image. For the time being, the solution I have found to work is to briefly underexpose the sensor to "kick" it back to normal operation. This can be done by quickly covering the lens with your hand/lens cap or <code>set shutter a 1</code> and then back.</p>
 </div>
 
             </div>

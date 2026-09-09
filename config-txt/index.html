@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/config-txt/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Bookworm config.txt - CineMate Docs</title>
+    <title>config.txt - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -14,7 +14,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Bookworm config.txt";
+        var mkdocs_page_name = "config.txt";
         var mkdocs_page_input_path = "config-txt.md";
         var mkdocs_page_url = "/cinemate/config-txt/";
       </script>
@@ -72,11 +72,21 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">config.txt</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#link-frequency-for-rp1-overclock">Link frequency for RP1 overclock</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#switch-to-a-different-sensor">Switch to a different sensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#hand-edits">Hand edits</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example-of-the-stock-configtxt-created-by-the-installer-script">Example of the stock config.txt created by the installer script</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -89,22 +99,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
-                  </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Bookworm config.txt</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#link-frequency-for-rp1-overclock">Link frequency for RP1 overclock</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#switch-to-a-different-sensor">Switch to a different sensor</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#the-danger">The danger</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#hand-edits">Hand edits</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example-of-the-stock-configtxt-created-by-the-installer-script">Example of the stock config.txt created by the installer script</a>
-    </li>
-        </ul>
-    </li>
-    </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
@@ -126,18 +120,12 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -162,7 +150,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Configuring</li>
-      <li class="breadcrumb-item active">Bookworm config.txt</li>
+      <li class="breadcrumb-item active">config.txt</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/config-txt.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -174,13 +162,7 @@
               
 <div class="markdown-body">
   <h1 id="boot-config-configtxt">Boot config (config.txt)<a class="headerlink" href="#boot-config-configtxt" title="Permanent link">#</a></h1>
-<div class="admonition warning">
-<p class="admonition-title">This file can stop the Pi booting</p>
-<p>A bad <code>config.txt</code> can leave the camera unbootable, with no way to fix it from the Pi itself.
-Read <a href="#the-danger">The danger</a> before you save.</p>
-</div>
-<p><code>/boot/firmware/config.txt</code> declares the camera sensor and switches on the hardware buses and the
-RP1 overclock. Edit it from the settings editor's <strong>config.txt</strong> tab (<code>boot &amp; sensors</code>):</p>
+<p><code>/boot/firmware/config.txt</code> declares the camera sensor and switches on the hardware buses and the RP1 overclock. Edit it from the settings editor's <strong>config.txt</strong> tab (<code>boot &amp; sensors</code>):</p>
 <div class="highlight"><pre><span></span><code>http://cinepi.local:5000/settings-editor/
 </code></pre></div>
 <p>The tab edits only the block CineMate owns, fenced by two marker lines:</p>
@@ -189,10 +171,8 @@ RP1 overclock. Edit it from the settings editor's <strong>config.txt</strong> ta
 # &lt;&lt;&lt; cinemate-install &lt;&lt;&lt;
 </code></pre></div>
 <p>A save rewrites the camera section (between <code># ---- Camera section ----</code> and
-<code># ---- End camera section ----</code>) and the <code>dtparam=i2c_arm=on</code> / <code>dtparam=i2s=on</code> /
-<code>dtparam=spi=on</code> / <code>dtparam=audio=on</code> / <code>dtoverlay=rp1-overclock</code> lines. Every other line, in the fence or outside it, is untouched. The camera section is replaced wholesale: the installer's five commented example blocks, one per sensor, collapse on the first save to <code>camera_auto_detect=</code> plus your overlay lines.</p>
-<p>Hand edits outside the fence survive this page and <code>cinemate-update.sh</code>, which never touches
-<code>config.txt</code>. They do not survive a re-run of <code>cinemate-install.sh</code>: <code>configure_boot_config()</code> rewrites the whole file as the managed block alone, copying the old one to the installer's backup directory.</p>
+<code># ---- End camera section ----</code>) and the <code>dtparam=i2c_arm=on</code> / <code>dtparam=i2s=on</code> / <code>dtparam=spi=on</code> / <code>dtparam=audio=on</code> / <code>dtoverlay=rp1-overclock</code> lines. Every other line, in the fence or outside it, is untouched. The camera section is replaced wholesale: the installer's five commented example blocks, one per sensor, collapse on the first save to <code>camera_auto_detect=</code> plus your overlay lines.</p>
+<p>Hand edits outside the fence survive this page and <code>cinemate-update.sh</code>, which never touches <code>config.txt</code>. They do not survive a re-run of <code>cinemate-install.sh</code>: <code>configure_boot_config()</code> rewrites the whole file as the managed block alone, copying the old one to the installer's backup directory.</p>
 <p><img alt="The config.txt tab of the CineMate settings editor" src="../images/gui-config-txt.png" /></p>
 <h3 id="link-frequency-for-rp1-overclock">Link frequency for RP1 overclock<a class="headerlink" href="#link-frequency-for-rp1-overclock" title="Permanent link">#</a></h3>
 <p>Entries read as MHz, Mbps per lane, then the published 4K frame rate where <code>sensors.json</code> records one, today IMX585 only: <code>720 MHz · 1440 Mbps/lane · up to 50 fps at 4K (default)</code>. IMX283's two entries stop at the Mbps figure. Entries the RP1 is not specified for are suffixed <code>— over RP1 spec</code>.</p>
@@ -209,22 +189,6 @@ RP1 overclock. Edit it from the settings editor's <strong>config.txt</strong> ta
 <li>Wait about 25 seconds for the Pi to come back, camera included.</li>
 <li>Reload and check <strong>Detected modes</strong> lists the sensor you fitted.</li>
 </ol>
-<h3 id="the-danger">The danger<a class="headerlink" href="#the-danger" title="Permanent link">#</a></h3>
-<div class="admonition danger">
-<p class="admonition-title">Saving here reboots immediately: no confirm, no revert, no backup</p>
-<p><strong>Save changes</strong> on this tab writes <code>/boot/firmware/config.txt</code> and reboots the Pi about 0.4
-seconds later, stopping any recording first. There is no confirmation dialog, no countdown, and
-no copy of the previous file.</p>
-<p>The <a href="../recovery-console/">recovery console</a> behaves differently. Its <code>config.txt</code> editor backs
-up the previous file on every save and arms a confirm-or-revert countdown, restoring the old
-file and rebooting by itself if you never confirm. That editor is <strong>disabled by default</strong>: set
-<code>system.recovery.allow_config_txt</code> to <code>true</code> first, or there is nothing to fall back on.</p>
-<p>A <code>config.txt</code> that stops the Pi booting cannot be fixed from anything running on the Pi. See
-<a href="../recovery-console/#the-honest-limit">The honest limit</a>. Recovery then means pulling the SD
-card and editing the file on another machine.</p>
-</div>
-<p>Check the reconstructed file before saving. Sensor overlay and link-frequency picks are the ones
-that cost you a boot.</p>
 <h2 id="hand-edits">Hand edits<a class="headerlink" href="#hand-edits" title="Permanent link">#</a></h2>
 <p>In the Raspberry Pi terminal:</p>
 <div class="highlight"><pre><span></span><code>editboot
@@ -335,8 +299,8 @@ you.</p>
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../building-control-units/" class="btn btn-neutral float-left" title="Building control units"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../hotspot-logic/" class="btn btn-neutral float-right" title="Configuring the Wi-Fi hotspot">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../storage-preroll/" class="btn btn-neutral float-left" title="Storage pre-roll warm-up"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../settings-json/" class="btn btn-neutral float-right" title="settings.jsonc">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -363,10 +327,10 @@ you.</p>
         </span>
     
     
-      <span><a href="../building-control-units/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../storage-preroll/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../hotspot-logic/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../settings-json/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

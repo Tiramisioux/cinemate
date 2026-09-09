@@ -72,11 +72,9 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -90,13 +88,7 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Building control units</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#trying-out-the-connection-to-the-pi">Trying out the connection to the Pi</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#over-the-wi-fi-hotspot">Over the Wi-Fi hotspot</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#over-ethernet-or-your-own-wi-fi">Over Ethernet or your own Wi-Fi</a>
-    </li>
-        </ul>
+    <li class="toctree-l2"><a class="reference internal" href="#simple-test">Simple test:</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#example-projects">Example projects</a>
         <ul>
@@ -110,11 +102,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#serial-without-wi-fi">Serial, without Wi-Fi</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#what-the-camera-sends-back">What the camera sends back</a>
-    </li>
-        </ul>
+    <li class="toctree-l2"><a class="reference internal" href="#serial-control">Serial control</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#design-rules">Design rules</a>
     </li>
@@ -123,8 +111,6 @@
     <li class="toctree-l2"><a class="reference internal" href="#see-also">See also</a>
     </li>
     </ul>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
@@ -146,18 +132,12 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -221,28 +201,16 @@
 </tr>
 </tbody>
 </table>
-<p>Change the SSID and password on the settings editor's <a href="../settings-json/#wi-fi-hotspot">Wi-Fi hotspot</a> section. The IP does not change: <code>10.42.0.1</code> is NetworkManager's shared-mode gateway address, which is why the firmware examples below hard-code it rather than resolving <code>cinepi.local</code>. Resolving a <code>.local</code> name needs an mDNS resolver the device may not have. The <code>curl</code> checks in the next section run from a laptop, so those use <code>cinepi.local</code>.</p>
-<p>The transport is the <a href="../web-api/">Web API</a>. Read that page first. It covers sending a command, reading a value, and the three ways to get live updates. This page is the hardware side.</p>
-<h2 id="trying-out-the-connection-to-the-pi">Trying out the connection to the Pi<a class="headerlink" href="#trying-out-the-connection-to-the-pi" title="Permanent link">#</a></h2>
-<p>Prove the camera answers from your laptop before you write any firmware. Pick the section that
-matches how you are connected.</p>
-<h3 id="over-the-wi-fi-hotspot">Over the Wi-Fi hotspot<a class="headerlink" href="#over-the-wi-fi-hotspot" title="Permanent link">#</a></h3>
-<p>Join the <code>CinePi</code> network first. Use the numeric address, the same one your firmware will use.</p>
+<h3 id="simple-test">Simple test:<a class="headerlink" href="#simple-test" title="Permanent link">#</a></h3>
+<p>For using numeric address, try:</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://10.42.0.1:5000/api/v1/hello
 curl<span class="w"> </span>-d<span class="w"> </span><span class="s2">"rec"</span><span class="w"> </span>http://10.42.0.1:5000/api/v1/cmd
 nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
 </code></pre></div>
-<h3 id="over-ethernet-or-your-own-wi-fi">Over Ethernet or your own Wi-Fi<a class="headerlink" href="#over-ethernet-or-your-own-wi-fi" title="Permanent link">#</a></h3>
-<p>With the camera on the same network as your computer, reach it by name.</p>
+<p>You can also try the <code>cinepi.local</code>address</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://cinepi.local:5000/api/v1/hello
 curl<span class="w"> </span>-d<span class="w"> </span><span class="s2">"rec"</span><span class="w"> </span>http://cinepi.local:5000/api/v1/cmd
 </code></pre></div>
-<p>The status broadcast is less dependable here. It goes to <code>255.255.255.255</code> and to <code>wlan0</code>'s own
-subnet broadcast address, always <code>wlan0</code>'s whatever you are connected over, and no router forwards
-either across a subnet. On the same network segment as the camera you will usually still see it;
-from anywhere else, check it from the hotspot or poll <code>GET /api/v1/status</code> instead.</p>
-<p>Either way: <code>hello</code> identifies the camera and <code>rec</code> starts a recording. Send <code>rec</code> again to stop.
-On the hotspot, <code>nc -ul 8888</code> also prints the status broadcast.</p>
 <h2 id="example-projects">Example projects<a class="headerlink" href="#example-projects" title="Permanent link">#</a></h2>
 <h3 id="esp32-record-button-and-tally-light">ESP32 — record button and tally light<a class="headerlink" href="#esp32-record-button-and-tally-light" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;WiFi.h&gt;</span>
@@ -303,7 +271,6 @@ On the hotspot, <code>nc -ul 8888</code> also prints the status broadcast.</p>
 <span class="p">}</span>
 </code></pre></div>
 <p><code>sendCmd</code> accepts any <a href="../cli-commands/">CineMate command</a>: <code>"set iso 800"</code>, <code>"inc fps"</code>, <code>"set wb 5600"</code>, <code>"rec f 48"</code>.</p>
-<p>The tally reads the broadcast rather than polling.</p>
 <h3 id="m5stickc-button-display-tally">M5StickC — button, display, tally<a class="headerlink" href="#m5stickc-button-display-tally" title="Permanent link">#</a></h3>
 <p>The M5StickC has a button, a screen and an LED already, so it makes a good handheld remote.</p>
 <div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;M5StickCPlus.h&gt;</span>
@@ -445,58 +412,14 @@ On the hotspot, <code>nc -ul 8888</code> also prints the status broadcast.</p>
     <span class="n">line</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">512</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
     <span class="nb">print</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">kv</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"="</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">kv</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
 </code></pre></div>
-<h2 id="serial-without-wi-fi">Serial, without Wi-Fi<a class="headerlink" href="#serial-without-wi-fi" title="Permanent link">#</a></h2>
-<p>Everything above goes over the hotspot. A controller can also talk to the camera down a wire, which
-needs no network at all — useful when the hotspot is off, when the rig has to survive a crowded
-2.4 GHz location, or when the controller has no Wi-Fi.</p>
-<p>CineMate opens the first of these that answers:</p>
-<table>
-<thead>
-<tr>
-<th>Port</th>
-<th>What it is</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>/dev/ttyACM0</code></td>
-<td>A USB serial device — an Arduino, a Pico, an ESP32 with USB CDC, plugged into the Pi</td>
-</tr>
-<tr>
-<td><code>/dev/serial0</code></td>
-<td>The GPIO header's UART — Tx on GPIO 14, Rx on GPIO 15</td>
-</tr>
-<tr>
-<td><code>/dev/ttyS0</code></td>
-<td>The same UART under its other name</td>
-</tr>
-</tbody>
-</table>
-<p><strong>115200 baud, 8N1, one command per line.</strong> The line is handed to the same dispatcher the CLI and the
-Web API use, so anything in the <a href="../cli-commands/">commands reference</a> works unchanged:</p>
+<h2 id="serial-control">Serial control<a class="headerlink" href="#serial-control" title="Permanent link">#</a></h2>
+<p>A controller can also talk to the camera down a wire. Use <strong>115200 baud, 8N1, one command per line.</strong> The line is handed to the CineMate CLI , so comamnds are the same as in the <a href="../cli-commands/">commands reference</a>:</p>
 <div class="highlight"><pre><span></span><code>rec
 set iso 800
 set shutter a 172.8
 </code></pre></div>
-<p>No JSON, no framing, no handshake — write the text and a newline.</p>
-<h3 id="what-the-camera-sends-back">What the camera sends back<a class="headerlink" href="#what-the-camera-sends-back" title="Permanent link">#</a></h3>
-<p>One thing, unprompted: <code>rec</code> when a recording starts and <code>stop</code> when it ends. That is a tally for a lamp or a display on the other end of the wire, and it is driven by the camera's own recording state rather than by whatever asked for the recording — so it fires whether the take was started from the controller, a GPIO button, the web GUI or the CLI.</p>
-<p>Nothing else is echoed. A command's reply is not sent back over serial: if a controller needs to read a value, the <a href="../web-api/">Web API</a>'s <code>/get/&lt;key&gt;</code> is the way, and that needs the network.</p>
-<div class="admonition note">
-<p class="admonition-title">The SER badge means USB, specifically</p>
-<p>The <code>SER</code> badge in the GUI and on the HDMI overlay tracks <code>/dev/ttyACM0</code> alone. A controller on
-the GPIO UART works exactly the same way but does not light it — there is nothing to detect on
-those pins the way a USB device announces itself.</p>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">The UART is not free on a stock Pi</p>
-<p><code>/dev/serial0</code> is the Linux console by default. Free it in <code>raspi-config</code> (Interface Options →
-Serial Port: login shell <strong>no</strong>, hardware serial <strong>yes</strong>) or the port is already taken and
-CineMate falls through to trying the next one.</p>
-</div>
-<p>Wiring for the GPIO UART is three connections: the controller's Tx to the Pi's Rx (GPIO 15), the
-controller's Rx to the Pi's Tx (GPIO 14), and a common ground. The Pi's UART is <strong>3.3 V</strong> — a 5 V
-controller needs a level shifter on the line into GPIO 15, or it will damage the pin.</p>
+<p>CineMate sends back <code>rec</code> when a recording starts and <code>stop</code> when it ends. This can be useful for controlling a tally light on the serial device. </p>
+<p>For serial input you can use USB or Rx/Tx pins (14/15) on the Pi</p>
 <h2 id="design-rules">Design rules<a class="headerlink" href="#design-rules" title="Permanent link">#</a></h2>
 <p>See <a href="../cli-commands/">CineMate commands</a> for a complete list of available commands. We are using the same syntax as for the CineMate CLI.</p>
 <ul>
@@ -585,7 +508,7 @@ controller needs a level shifter on the line into GPIO 15, or it will damage the
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../hardware-controls/" class="btn btn-neutral float-left" title="Additional hardware"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../config-txt/" class="btn btn-neutral float-right" title="Bookworm config.txt">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../hotspot-logic/" class="btn btn-neutral float-right" title="Configuring the Wi-Fi hotspot">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -615,7 +538,7 @@ controller needs a level shifter on the line into GPIO 15, or it will damage the
       <span><a href="../hardware-controls/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../config-txt/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../hotspot-logic/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

@@ -72,11 +72,9 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-stack/">The CineMate stack explained</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-editor/">Settings editor</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
@@ -85,16 +83,12 @@
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">CineMate Log (imx585 / imx283)</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#supported-sensors">Supported sensors</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#turning-it-on">Turning it on</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#on-the-shooting-screen">On the shooting screen</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#in-the-settings-editor">In the settings editor</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#from-the-terminal">From the terminal</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#by-hand">By hand</a>
+    <li class="toctree-l3"><a class="reference internal" href="#from-the-terminal-cinemate-cli">From the terminal (CineMate CLI)</a>
     </li>
         </ul>
     </li>
@@ -105,8 +99,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
@@ -128,18 +120,12 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -180,8 +166,7 @@
 <p>Note that there is no "CineMate Log → Rec.709" LUT. CineMate Log is a storage format and not a viewing gamma like S-Log3 or V-Log. The DNG <code>LinearizationTable</code> linearizes automatically in DNG compatible NLEs (like DaVinci Resolve).</p>
 <p>If you are shooting in 16 bit formats, the log storage conversion will be 16 bit → 12 bit. If you are shooting in 12 bit with log storage active, files will be stored in 10 bit format. If you shoot in 10 bit formats, log is not used. You can also set the target bit depth explicitly, and for example shoot in 16 bit → 10 bit log storage conversion.</p>
 <h2 id="supported-sensors">Supported sensors<a class="headerlink" href="#supported-sensors" title="Permanent link">#</a></h2>
-<p><strong>IMX585 and IMX283 only.</strong> Support is decided by the sensor's black level, not chosen: the two
-shipped log DNG specs are built for BlackLevel 3200, which is what those two report and no other sensor does.</p>
+<p><strong>IMX585 and IMX283 only.</strong> Support is decided by the sensor's black level, not chosen: the two shipped log DNG specs are built for BlackLevel 3200, which is what those two report and no other sensor does.</p>
 <table>
 <thead>
 <tr>
@@ -223,18 +208,10 @@ shipped log DNG specs are built for BlackLevel 3200, which is what those two rep
 <p>Its 12-bit modes would compand the same way. What is missing is sensor-aware spec selection on the <code>cinepi-raw</code> side, which has not been built yet. Nothing about the sensor prevents it.</p>
 </div>
 <p>Full breakdown per mode: <a href="../sensors/#cinemate-log-support">Camera sensors › CineMate Log support</a>.</p>
-<h2 id="turning-it-on">Turning it on<a class="headerlink" href="#turning-it-on" title="Permanent link">#</a></h2>
-<p>Two places, for two different jobs. The <strong>LOG</strong> button switches the running camera. The settings
-editor sets what a fresh boot starts with. A live request wins over the saved value until the next
-reboot.</p>
 <h3 id="on-the-shooting-screen">On the shooting screen<a class="headerlink" href="#on-the-shooting-screen" title="Permanent link">#</a></h3>
 <p>The quickest way. In the <a href="../web-gui/">Web GUI</a> button row, press <strong>LOG</strong>.</p>
 <p><img alt="The CineMate Web GUI" src="../images/gui-web-overview.png" /></p>
-<p>It toggles log on and off at the live mode's default target, and restarts the camera to apply it.
-The button doubles as the readout: it reads <code>LOG</code> when off, and <code>LOG10</code> or <code>LOG12</code> when running,
-so it shows the target that actually took effect.</p>
-<p>Press it again to go back to linear. Nothing is saved, so the camera boots back to whatever the
-settings editor holds.</p>
+<p>It toggles log on and off at the live mode's default target, and restarts the camera to apply it. Press it again to go back to linear.</p>
 <h3 id="in-the-settings-editor">In the settings editor<a class="headerlink" href="#in-the-settings-editor" title="Permanent link">#</a></h3>
 <p>To make it the default for every boot, set it per camera under <strong>Cameras → Camera 0</strong>.</p>
 <p><img alt="Cameras section of the CineMate settings editor" src="../images/gui-cam0.png" /></p>
@@ -265,30 +242,14 @@ settings editor holds.</p>
 </tr>
 </tbody>
 </table>
-<p>Forcing a target only matters on a 16-bit ClearHDR source, where both are valid. <code>12</code> is the
-default and <code>10</code> trades a little more compression for a smaller file. A 12-bit source has only one
-valid target, <code>10</code>, so forcing <code>12</code> there records plain linear DNGs instead. That is not an error,
-and the badge tells you which way it went.</p>
+<p>Forcing a target only matters on a 16-bit ClearHDR source, where both are valid. <code>12</code> is the default and <code>10</code> trades a little more compression for a smaller file. A 12-bit source has only one valid target, <code>10</code>, so forcing <code>12</code> there records plain linear DNGs instead. That is not an error, and the badge tells you which way it went.</p>
 <p><strong>Save changes</strong> writes the file and restarts CineMate.</p>
-<h3 id="from-the-terminal">From the terminal<a class="headerlink" href="#from-the-terminal" title="Permanent link">#</a></h3>
+<h3 id="from-the-terminal-cinemate-cli">From the terminal (CineMate CLI)<a class="headerlink" href="#from-the-terminal-cinemate-cli" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>set log        # toggle on/off, using the live mode's default target
 set log 10     # force target 10 (e.g. 16to10 instead of ClearHDR's 16to12 default)
 set log 12     # force target 12
 set log off    # force off
 </code></pre></div>
-<p>Restarts the camera when idle, exactly like <code>set resolution</code>. Run mid-take, the request is stored
-and applied on the <strong>next</strong> restart, so CineMate never splits a running recording. A target the
-live mode does not support is rejected and logged, never silently swapped for a different depth.</p>
-<h3 id="by-hand">By hand<a class="headerlink" href="#by-hand" title="Permanent link">#</a></h3>
-<p>The dropdown above writes one key:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">"sensors"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"cam0"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"log_encode"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><code>false</code> (default, off) · <code>true</code> (on, mode default target) · <code>10</code> / <code>12</code> (on, forced target). Set
-<code>10</code> to force the smaller 16→10 conversion instead of the 16-bit default.</p>
 </div>
 
             </div>

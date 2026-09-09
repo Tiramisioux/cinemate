@@ -9,7 +9,7 @@ they are what the GUI looks each string up by when CineMate starts.
 ## Boot config
 <!-- key: pane.bootconfig -->
 
-What loads at power‑on — sensor overlays, hardware buses, the RP1 overclock. Lives in `/boot/firmware/config.txt`, a different file from Cinemate's own settings.
+What loads at power‑on — sensor overlays, hardware buses, the RP1 overclock. Lives in `/boot/firmware/config.txt`.
 
 ### (note box)
 <!-- key: note.bootconfig.0 -->

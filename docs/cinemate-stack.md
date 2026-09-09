@@ -1,7 +1,6 @@
 # The CineMate stack explained
 
-The camera is five pieces stacked bottom to top: a kernel driver on the sensor chip, libcamera
-handing finished frames up, `cinepi-raw` running the capture loop and writing the CinemaDNGs, Redis holding the live state, and CineMate owning everything you touch. CineMate and cinepi-raw are separate processes, and Redis serves as an "API"-layer between them.
+The camera is five pieces stacked bottom to top: a kernel driver on the sensor chip, libcamera handing finished frames up, `cinepi-raw` running the capture loop and writing the CinemaDNGs, Redis holding the live state, and CineMate owning everything you touch. CineMate and cinepi-raw are separate processes, and Redis serves as an "API"-layer between them.
 
 ![The CineMate camera stack, exploded](images/camera-stack3.png)
 

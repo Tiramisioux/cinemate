@@ -2,21 +2,6 @@
 
 ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-gain (HG) and a low-gain (LG) readout internally and outputs one 16-bit linear Bayer frame. CineMate records it as true 16-bit CinemaDNGs — BlackLevel 3200, WhiteLevel 65535.
 
-## The Clear HDR stack
-
-CineMate image and install script ships with the following stack:
-
-| Piece                    | Needed                                                     | Why                                                                                                                                |
-| ------------------------ | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Kernel                   | ≥ 6.12.93+rpt (the CineMate baseline)                      | older `rp1-cfe` corrupts 16-bit CSI-2 capture; 10/12-bit is unaffected                                                             |
-| Sensor driver            | Tiramisioux `imx585-v4l2-driver`, branch `cinemate-7modes` | exposes `wide_dynamic_range`, the 3840×2200 16-bit mode, and the `ccmp` overlay parameter; gates the invalid binned-ClearHDR combo |
-| Overlay                  | `dtoverlay=imx585,...,ccmp` in config.txt                  | without `ccmp` the 12-bit CCMP ClearHDR mode does not exist on this driver (the installer writes it)                               |
-| libcamera                | Tiramisioux `libcamera`, branch `cinemate`                 | 16-bit endian swap handling                                                                                                        |
-| Kernel patch (mono only) | `scripts/patch-rp1-cfe.sh`                                 | the stock kernel's Y16 format entry misses the 16-bit workaround — see [Mono sensor](#mono-sensor-imx585_mono)                     |
-| Exposure                 | manual                                                     | ISP statistics are invalid at 16-bit, so auto exposure and auto white balance cannot run                                           |
-
-## ClearHDR features
-
 - Frame rates are lower than the plain modes. Per-mode figures are on the [sensors page](sensors.md#imx585-starlight-eye), measured at 1039.5 MHz with the stock and overclocked pixel-rate ceilings side by side; the [changelog](changelog.md#imx585-driver) is where those measurements were first recorded.
 - Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).
 - Each 3840×2200 16-bit DNG is ≈ 16.9 MB.
@@ -55,32 +40,4 @@ The merge behaviour is tunable while streaming. Each command writes a Redis key 
 
 ### Flat black-pedestal frames
 
-A ClearHDR launch can come up recording a flat black-level pedestal instead of image data. The cause is known: the sensor's own `blend` default is 0, and that merge setting is broken. CineMate seeds `blend` 5 (HG 1/16) into Redis at launch instead, so a stock settings file never starts in that state.
-
-The manual shutter kick is only a fallback — for a settings file that overrides `blend`, or an older one written before 5 became the default. Underexpose briefly to kick the merge back into operation: cover the lens, or `set shutter a 1` and then back.
-
-`image_capture.hdr.self_heal` automates that kick. It is off by default, because a stock `blend` of 5
-means there is nothing to heal; turn it on only if you are running an overridden `blend` and would
-rather the camera recover on its own.
-
-### Symptom → knob
-
-| You see                                     | Try                                                                                                               |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Magenta in bright flat areas                | try `set hdr threshold low 500`, `set hdr threshold high 3000`, `set hdr blend 2`, `set hdr gain adder 2`         |
-| Grainy mids or faces                        | higher thresholds, HG-heavier blend (3, 4), or a lower gain adder                                                 |
-| A band or step where tones change character | widen the gap between the two threshold values                                                                    |
-| Highlights too dark and flat out of camera  | higher gain adder — costs highlight grain                                                                         |
-| Grainy highlights                           | lower gain adder; lift in the grade instead                                                                       |
-| Flat black-level pedestal, no image data    | check `blend` is 5; if you have overridden it, kick with `set shutter a 1` then back — see [Flat black-pedestal frames](#flat-black-pedestal-frames) |
-
-## Mono sensor (imx585_mono)
-
-Verified working 2026-08-27 — all ClearHDR modes record real data on the mono
-variant. Three mono-specific facts:
-
-| Fact                             | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Kernel patch required for 16-bit | The stock rpi-6.12.y kernel gives every Bayer 16-bit format the "RP1 HW mismatch" workaround (`csi_dt = 0`) but missed the mono `Y16` entry. Unpatched, mono 16-bit records PiSP-COMP1-structured garbage (stripes on flat scenes, noise on detailed ones). The installer applies `scripts/patch-rp1-cfe.sh` automatically for `SENSOR_MODEL=imx585_mono`; rerun it after any kernel package upgrade (the upgrade silently restores the stock module). |
-| 16-bit frames are 3840×2200      | The sensor prepends ~20 optical-black rows to its RAW16 output; the top rows of every 16-bit DNG sit at the 3200 pedestal. Expected geometry, not a defect.                                                                                                                                                                                                                                                                                            |
-| No binned ClearHDR               | Binned (2K) ClearHDR is an invalid sensor configuration on mono — the sensor emits pure black-level regardless of exposure (AppNote §2 p.6). The `cinemate-7modes` driver removes the combination from the mode table; only full-res 12-bit CCMP and 16-bit ClearHDR are offered.                                                                                                                                                                      |
+A ClearHDR launch can come up with a flat black frame instead exposed image. For the time being, the solution I have found to work is to briefly underexpose the sensor to "kick" it back to normal operation. This can be done by quickly covering the lens with your hand/lens cap or `set shutter a 1` and then back.

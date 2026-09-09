@@ -14,12 +14,12 @@ Sensor mounted on connector `cam0`. Geometry, HDMI routing, and the name it repo
 ### Rotate 180°
 <!-- key: card.sensors.cam0.geometry.rotate_180 -->
 
-For rigs where the sensor is mounted upside‑down.
+Turns the image upside down.
 
 ### Flip horizontal
 <!-- key: card.sensors.cam0.geometry.horizontal_flip -->
 
-Mirrors the image left–right, e.g. for a periscope or mirror‑rig build.
+Mirrors the image left–right.
 
 ### Flip vertical
 <!-- key: card.sensors.cam0.geometry.vertical_flip -->
@@ -34,12 +34,12 @@ Which physical HDMI port shows this sensor's image on the monitor.
 ### Phase lock
 <!-- key: card.sensors.cam0.phase_lock -->
 
-Keeps the sensor's frame timing locked to the Pi's clock instead of free‑running — the fix for slow, cumulative frame‑rate drift.
+Keeps the sensor's frame timing locked to the Pi's clock instead of using the sensors clock.
 
-### Report a different USB name
+### Report a different camera name
 <!-- key: card.sensors.cam0.override_camera_name -->
 
-Some NLEs and capture tools behave better when they see a known camera name over USB, instead of the raw sensor name.
+Some NLEs and capture tools will expose more options depending on camera name.
 
 ### Reported name
 <!-- key: card.sensors.cam0.camera_name -->
@@ -49,7 +49,7 @@ Only used while the override above is on.
 ### Custom tuning file
 <!-- key: card.sensors.cam0.tuning_file_override.enabled -->
 
-Overrides the auto‑detected colour tuning with a file from `resources/tuning_files/` — pick one already on the card, or upload a new one if yours isn't listed.
+Overrides the auto‑detected colour tuning with a file from `resources/tuning_files/` — pick one already on the SD card, or upload a new one if yours isn't listed.
 
 ### CineMate Log
 <!-- key: card.sensors.cam0.log_encode -->

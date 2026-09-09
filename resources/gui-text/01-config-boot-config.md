@@ -14,27 +14,27 @@ What loads at power‑on — sensor overlays, hardware buses, the RP1 overclock.
 ### (note box)
 <!-- key: note.bootconfig.0 -->
 
-Every change here needs a full **reboot** to take effect — restarting Cinemate alone won't pick it up. Cinemate only manages the block fenced between its install markers; anything you add outside it survives updates.
+Every change here needs a full **reboot** to take effect. CineMate only manages the block fenced between its install markers; anything you add outside it survives updates.
 
 ### Camera 0 sensor
 <!-- key: card.bootconfig.0 -->
 
-Which driver loads on the cam0 connector. Only one overlay per port — Cinemate comments out the others for you.
+Which driver loads on the cam0 connector.
 
 ### Camera 1 sensor
 <!-- key: card.bootconfig.1 -->
 
-Same idea for cam1, if you're running dual sensors.
+Which driver loads on the cam1 connector.
 
 ### RP1 overclock
 <!-- key: card.bootconfig.2 -->
 
-Raises the RP1 I/O die clock so higher sensor frame rates are reachable. Needs the overlay built first and a stable supply. The clock is set by the device tree at boot, so this only takes effect after a reboot — and it's what unlocks the link-frequency picks below.
+Raises the RP1 I/O die clock so higher sensor frame rates are reachable.
 
 ### Camera 0 link frequency
 <!-- key: card.bootconfig.3 -->
 
-CSI-2 lane rate for the IMX585 on cam0 — this is what sets the frame-rate ceiling.
+CSI-2 lane rate on cam0 — sets the frame-rate ceiling.
 
 #### (inline warning, shown only when it applies)
 <!-- key: warn.bootconfig.0 -->
@@ -44,7 +44,7 @@ Anything above the default needs the RP1 overclock; without it the RP1 caps out 
 ### Camera 1 link frequency
 <!-- key: card.bootconfig.4 -->
 
-Same for the IMX585 on cam1. Each port carries its own rate.
+CSI-2 lane rate on cam1 — sets the frame-rate ceiling.
 
 #### (inline warning, shown only when it applies)
 <!-- key: warn.bootconfig.1 -->
@@ -54,12 +54,11 @@ Anything above the default needs the RP1 overclock; without it the RP1 caps out 
 ### Detected modes
 <!-- key: card.bootconfig.5 -->
 
-What `cinepi-raw --list-cameras` reports for the sensor that is actually attached right now — not what the selections above will produce after a reboot. Frame rates are the ceiling for each mode.
-
+What `cinepi-raw --list-cameras` reports for the sensor attached
 ### I²C bus
 <!-- key: card.bootconfig.6 -->
 
-Needed by the quad rotary controller and the OLED status display.
+Needed by the Grove Base HAT, Adafruit quad rotary controller, CFE HAT and the OLED status display.
 
 ### I²S bus
 <!-- key: card.bootconfig.7 -->
@@ -79,7 +78,7 @@ The Pi's own audio output. Leave off if you're only ever using USB mic input.
 ### (help text not attached to a card)
 <!-- key: help.bootconfig.0 -->
 
-Writes these choices into the managed block of `config.txt` and reboots — about 25 seconds, camera included.
+Writes these choices into the managed block of `config.txt` and reboots.
 
 ### (note box)
 <!-- key: note.bootconfig.1 -->

@@ -19,12 +19,12 @@ Displays a greeting over the image for a few seconds after boot, before the live
 ### Message text
 <!-- key: card.system.welcome.message -->
 
-The exact words shown on screen. Keep it short — it sits over the image, not on black.
+The words shown on screen. 
 
 ### Welcome image
 <!-- key: card.system.welcome.image -->
 
-Optional logo or splash image shown over the message, for a moment after boot. PNG only.
+Optional logo or splash image (PNG format). Overrrides text.
 
 ---
 
@@ -46,4 +46,4 @@ The SSID that shows up in Wi‑Fi lists. Useful to rename once you're running mo
 ### Password
 <!-- key: card.system.wifi_hotspot.password -->
 
-At least 8 characters. Anyone with this can join the hotspot and open this settings page.
+At least 8 characters.

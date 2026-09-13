@@ -103,7 +103,7 @@ Applied when a ClearHDR mode is selected. Adjust live afterwards with `set hdr �
 ### DNG thumbnails
 <!-- key: card.image_capture.thumbnail -->
 
-Each recorded frame carries a small second image, so the Playback pane can show a take without decoding the raw frame — which it cannot do, so a take recorded with this off is not playable there. On writes a compressed colour thumbnail at half the preview size; off writes nothing at all.
+By default DNGs carry a small preview image, used by the Playback pane for gapless playback. Disable to slightly increase write speed and reduce CPU load during recording (disables web GUI playback).
 
 What it costs, measured on a 4K 16-bit ClearHDR take with CineMate Log 12 at 25 fps: the figure below is the per-frame size and the extra encode time for this camera's current mode. In whole-take terms that is well under a megabyte a second of extra write rate, about six seconds of recording time per terabyte of card, and around a fifth more encode time per frame — against a frame budget the encode already sits comfortably inside, with no dropped frames at any setting.
 

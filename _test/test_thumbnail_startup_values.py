@@ -120,7 +120,7 @@ class ThumbnailStartupValueTests(unittest.TestCase):
 class ThumbnailSizeStartupValueTests(unittest.TestCase):
     # (raw settings.jsonc value, expected validated value)
     CASES = [
-        (_ABSENT, 2),          # no key at all -> shipped default (shift 2, 320x180)
+        (_ABSENT, 1),          # no key at all -> shipped default (shift 1, 640x360)
         (0, 0),
         (1, 1),
         (4, 4),
@@ -129,9 +129,9 @@ class ThumbnailSizeStartupValueTests(unittest.TestCase):
         (5, 4),                # one past the ceiling
         (True, 1),             # int(True) == 1, a valid shift -- does not crash
         ("2", 2),              # numeric string
-        ("nonsense", 2),       # ValueError -> default
-        (None, 2),             # TypeError -> default
-        ([], 2),               # TypeError -> default
+        ("nonsense", 1),       # ValueError -> default
+        (None, 1),             # TypeError -> default
+        ([], 1),               # TypeError -> default
     ]
 
     def test_decision_table(self):
@@ -142,10 +142,10 @@ class ThumbnailSizeStartupValueTests(unittest.TestCase):
                 )
 
     def test_empty_settings_dict_is_the_default(self):
-        self.assertEqual(thumbnail_size_startup_value({}), 2)
+        self.assertEqual(thumbnail_size_startup_value({}), 1)
 
     def test_missing_image_capture_section_is_the_default(self):
-        self.assertEqual(thumbnail_size_startup_value({"some_other_key": {}}), 2)
+        self.assertEqual(thumbnail_size_startup_value({"some_other_key": {}}), 1)
 
 
 if __name__ == "__main__":

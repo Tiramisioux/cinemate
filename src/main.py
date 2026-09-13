@@ -832,7 +832,7 @@ def run_application(args, log_queue):
         thumbnail_startup_value(settings)
     )
     # thumbnail_size (0 = full lores plane size) now has a settings owner:
-    # image_capture.thumbnail_size, default 2 (320x180, 172,800 B/frame at
+    # image_capture.thumbnail_size, default 1 (640x360, 691,200 B/frame at
     # the colour default above -- see thumbnail_size_startup_value()'s
     # docstring for the measured cost at shift 0 and the clamp). Still seeded unconditionally
     # rather than left absent, for the same reason as before: a stale

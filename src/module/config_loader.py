@@ -411,15 +411,24 @@ def thumbnail_size_startup_value(settings: dict) -> int:
     clamp so a malformed value degrades to the shipped default instead of
     reaching cinepi-raw unvalidated.
 
-    Defaults to 2 (320x180, quarter the lores plane) rather than 0 or 1:
-    paired with the colour default above (thumbnail_startup_value()), that
-    is 172,800 B/frame from a 1280-wide lores plane -- fewer bytes than a
-    640x360 MONO thumbnail (shift 1) would have cost (230,400 B), and far
-    below the 2,764,800 B/frame that colour at shift 0 measured as the DNG
-    growth between releases (development/dng-thumbnail-cost/FINDINGS.md;
-    the cinemate-handbook 2026-09-13 hardware-log entry) -- what CineMate
-    3.4 actually shipped with, before this fix. The shift and the mode are
-    independent knobs; the byte count scales with both.
+    Defaults to 1 (half the lores plane, 640x360 from a 1280-wide one).
+    Paired with the colour default above (thumbnail_startup_value()) that
+    is 691,200 B/frame: +5.6% on a 4K 12-bit frame, +4.0% on 4K 16-bit
+    ClearHDR, +22.2% on HD 12-bit. Operator decision 2026-09-13, taken
+    after a quarter-size default (shift 2, 172,800 B) had shipped and been
+    measured -- 320x180 is small for judging a take in the playback pane,
+    which is the only thing the embedded thumbnail exists for, and the
+    pane has no other path to a picture. Still far below the 2,764,800
+    B/frame that colour at shift 0 cost, which is what CineMate 3.4
+    actually shipped with and what measured as the DNG growth between
+    releases (development/dng-thumbnail-cost/FINDINGS.md; the
+    cinemate-handbook 2026-09-13 hardware-log entries).
+
+    The shift and the mode are independent knobs and the byte count scales
+    with both -- so at THIS default, unlike the quarter-size one it
+    replaced, mono genuinely is the cheaper choice (230,400 B against
+    691,200 B at the same size), and mode 3 (colour JPEG) is cheaper than
+    either by an order of magnitude, at a CPU cost.
 
     Clamped to 0..4, not cinepi-raw's 0..12: cinepi-raw's own clamp exists
     so a raw redis value cannot collapse the thumbnail below usefulness,
@@ -429,11 +438,11 @@ def thumbnail_size_startup_value(settings: dict) -> int:
     for the playback pane to show anything, so there is no reason to offer
     it here even though cinepi-raw would still accept it.
     """
-    raw = settings.get("image_capture", {}).get("thumbnail_size", 2)
+    raw = settings.get("image_capture", {}).get("thumbnail_size", 1)
     try:
         return max(0, min(4, int(raw)))
     except (TypeError, ValueError):
-        return 2
+        return 1
 
 
 REC_TONE_DEFAULTS = {
@@ -634,12 +643,14 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # THUMBNAIL_MODE_NAMES above. "jpeg" is the smallest file of the
         # four but the most CPU, so it is the opt-in, not this default.
         "thumbnail": "colour",
-        # 2 (320x180): at the colour default above, 172,800 B/frame -- less
-        # than 640x360 mono (shift 1) would have cost. Shift 0 (full lores
-        # plane) in colour is 2,764,800 B/frame, the growth FINDINGS.md
-        # measured between releases -- see
+        # 1 (half the lores plane, 640x360): at the colour default above,
+        # 691,200 B/frame, +5.6% on a 4K 12-bit frame. Operator decision
+        # 2026-09-13, after a quarter-size default shipped and proved too
+        # small to judge a take by in the playback pane. Shift 0 (full
+        # lores plane) in colour is 2,764,800 B/frame, the growth
+        # FINDINGS.md measured between releases -- see
         # thumbnail_size_startup_value()'s docstring.
-        "thumbnail_size": 2,
+        "thumbnail_size": 1,
         # Dynamic resolution: substitute a lesser mode when the requested fps
         # outruns the selected one, and which axis of quality ("mode" =
         # bit depth + ClearHDR class, "resolution" = frame size, "none" =

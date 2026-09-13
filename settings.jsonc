@@ -298,12 +298,14 @@
     // 0 = 1280x720 = 2,764,800 B/frame (+22.2% on a 4K 12-bit frame,
     // +88.9% on HD 12-bit -- what CineMate 3.4 actually shipped with
     // before this fix), 1 = 640x360 = 691,200 B/frame (+5.6% / +22.2%),
-    // 2 = 320x180 = 172,800 B/frame (the default, +1.4% / +5.6%). Mono is
+    // 2 = 320x180 = 172,800 B/frame (+1.4% / +5.6%). 1 is the default:
+    // 320x180 proved too small to judge a take by in the Playback pane,
+    // which is the only thing the thumbnail exists for. Mono is
     // a third of each figure; jpeg is a stated range, not this formula --
     // see thumbnail's own comment above. See
     // development/dng-thumbnail-cost/FINDINGS.md and the 2026-09-13
     // hardware-log entry.
-    "thumbnail_size": 2,
+    "thumbnail_size": 1,
     "custom_modes": {}
   },
 

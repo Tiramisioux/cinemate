@@ -198,16 +198,16 @@ class SettingsEditorRouteRendersFourOptionsTests(unittest.TestCase):
         # CINEPI_CONTROLLER/SENSOR_DETECT absent from app.config entirely --
         # the degraded-boot case _current_thumbnail_editor_context() must
         # fall back from, at the fallback 1280x720 lores plane and the
-        # shipped thumbnail_size default (2, quarter).
+        # shipped thumbnail_size default (1, half).
         html = self._client().get("/settings-editor/").get_data(as_text=True)
         self.assertIn('data-path="image_capture.thumbnail"', html)
         self.assertIn('data-path="image_capture.thumbnail_size"', html)
         for value in ("off", "mono", "colour", "jpeg"):
             self.assertIn(f'<option value="{value}"', html)
-        # Fallback size (no camera) is still the shipped default, shift 2:
-        # 320x180 -- present in both the mode select's labels and the size
-        # select's own "Quarter" option text.
-        self.assertIn("320×180", html)
+        # Fallback size (no camera) is still the shipped default, shift 1:
+        # 640x360 -- present in both the mode select's labels and the size
+        # select's own "Half" option text.
+        self.assertIn("640×360", html)
         self.assertIn("Quarter 320×180", html)
         self.assertIn("Full lores 1280×720", html)
         self.assertIn("Half 640×360", html)
@@ -230,7 +230,7 @@ class SettingsEditorRouteRendersFourOptionsTests(unittest.TestCase):
     def test_labels_follow_the_live_redis_thumbnail_size_over_the_settings_default(self):
         # "Redis first, settings.jsonc second" (_current_thumbnail_editor_context()'s
         # own docstring): a live thumbnail_size=0 must show the full-lores
-        # dimensions in the mode labels, not the shipped shift-2 default,
+        # dimensions in the mode labels, not the shipped shift-1 default,
         # even though settings.jsonc here says nothing at all.
         controller = _RouteFakeController(
             sensor_mode=0,

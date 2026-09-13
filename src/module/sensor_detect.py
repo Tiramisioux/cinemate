@@ -139,7 +139,7 @@ def _format_thumbnail_kb(n_bytes: int) -> str:
 _THUMBNAIL_JPEG_LABEL_RANGE_KB = {
     0: (64, 76),    # full lores (~1280x720), FINDINGS.md §1 / §2b
     1: (10, 25),    # half (~640x360)
-    2: (3, 8),      # quarter (~320x180) -- the shipped default size
+    2: (3, 8),      # quarter (~320x180)
 }
 
 

@@ -205,9 +205,9 @@ class RecomputeFileSizeThumbnailTests(unittest.TestCase):
         # thumbnail as absent or as some other value.
         controller = self.controller(redis_values={})
         controller._recompute_file_size(log_requested=False)
-        # 12,441,600 + colour 320x180 thumbnail (172,800) + 1,024
-        # = 12,615,424 B -> 12.62 MB.
-        self.assertEqual(controller.file_size, 12.62)
+        # 12,441,600 + colour 640x360 thumbnail (691,200) + 1,024
+        # = 13,133,824 B -> 13.13 MB.
+        self.assertEqual(controller.file_size, 13.13)
 
     def test_recompute_honors_a_non_default_settings_choice_when_redis_is_absent(self):
         # settings.jsonc explicitly chose mono/shift-1 -- different from

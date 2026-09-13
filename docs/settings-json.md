@@ -279,16 +279,16 @@ imx585 ClearHDR.
 
 Every DNG can carry a second image (IFD1) alongside the raw frame, so the settings editor's [Playback pane](playback.md#the-embedded-thumbnail) can show a take without decoding the much heavier raw frame. Every frame in a take pays for whichever choice is made — the bytes and the CPU cost below apply to every single frame recorded, not once per take.
 
-| Value | What is written | Bytes/frame at 320×180 (default size) | Bytes/frame at 1280×720 (full size) | CPU cost | Playback result |
+| Value | What is written | Bytes/frame at 640×360 (default size) | Bytes/frame at 1280×720 (full size) | CPU cost | Playback result |
 | --- | --- | --- | --- | --- | --- |
 | `off` | Nothing — IFD0 only | 0 B | 0 B | None | Not playable in the pane (`NO EMBEDDED THUMBNAIL`) |
-| `mono` | 8-bit greyscale, uncompressed | 57,600 B | 921,600 B | Lightest — one range-expanded byte per pixel | Greyscale |
-| `colour` (default; `color` also accepted) | 8-bit RGB, uncompressed | 172,800 B | 2,764,800 B | Moderate — YUV→RGB per pixel | Colour |
-| `jpeg` | Baseline JPEG, YCbCr 4:2:0, quality 85 | ~3–8 KB, scene-dependent | ~64–76 KB, scene-dependent | Highest — YUV→RGB plus the JPEG encode | Colour, served without re-encoding |
+| `mono` | 8-bit greyscale, uncompressed | 230,400 B | 921,600 B | Lightest — one range-expanded byte per pixel | Greyscale |
+| `colour` (default; `color` also accepted) | 8-bit RGB, uncompressed | 691,200 B | 2,764,800 B | Moderate — YUV→RGB per pixel | Colour |
+| `jpeg` | Baseline JPEG, YCbCr 4:2:0, quality 85 | ~9–16 KB, scene-dependent | ~64–76 KB, scene-dependent | Highest — YUV→RGB plus the JPEG encode | Colour, served without re-encoding |
 
-Sizes scale with `image_capture.thumbnail_size` (`0` full lores plane, `1` half, `2` quarter — the default) exactly the same way for all four choices; the JPEG figures are measured ranges, not a formula, because a JPEG's size depends on the scene (a detailed or noisy frame compresses two to three times worse than these figures).
+Sizes scale with `image_capture.thumbnail_size` (`0` full lores plane, `1` half — the default, `2` quarter) exactly the same way for all four choices; the JPEG figures are measured ranges, not a formula, because a JPEG's size depends on the scene (a detailed or noisy frame compresses two to three times worse than these figures).
 
-Colour is the default: paired with the quarter-size default above, it costs fewer bytes than mono did at half size, so there is no size/colour trade-off left to make, and the pane gets a real colour picture for free. Choose `mono` when CPU headroom matters more than colour — it is the lightest of the four. Choose `jpeg` when storage or card space is the binding constraint and the CPU has the headroom to spend (4K at 25 fps on a Pi 5 — to be confirmed on hardware): it is by far the smallest file, at the highest per-frame CPU cost. Choose `colour` (uncompressed) when CPU is tight and a colour preview still matters more than the extra bytes. Choose `off` when neither the pane nor the bytes matter at all. `image_capture.thumbnail_size` (below) scales whichever mode is chosen.
+Colour at half the lores plane is the default: 640×360 is large enough to judge a take by on a phone or a laptop, which is the only thing the embedded thumbnail exists for, and 691,200 B is 5.6% of a 4K 12-bit frame. That is a real trade-off rather than a free one — mono at the same size costs a third as much — so the three alternatives are all worth considering. Choose `mono` when CPU headroom or bytes matter more than colour: it is the lightest of the four. Choose `jpeg` when storage or card space is the binding constraint and the CPU has the headroom to spend (4K at 25 fps on a Pi 5 — to be confirmed on hardware): it is by far the smallest file, at the highest per-frame CPU cost. Choose `colour` (uncompressed) when CPU is tight and a colour preview still matters more than the extra bytes. Choose `off` when neither the pane nor the bytes matter at all. `image_capture.thumbnail_size` (below) scales whichever mode is chosen.
 
 ## Per-mode fps ceilings
 <a id="custom_modes"></a>

@@ -119,7 +119,7 @@
     "thumbnail": "colour",
     // Right-shift of the lores plane before the thumbnail is written --
     // see settings.jsonc's comment.
-    "thumbnail_size": 2,
+    "thumbnail_size": 1,
     "custom_modes": {}
   },
   "audio_capture": {

@@ -49,6 +49,7 @@ from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
 from module.redis_controller import ParameterKey, smpte_frame_base
 from module.sensor_detect import thumbnail_choice_labels
+from module.tuning_files import tuning_json_problem
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,15 @@ SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 # (b) the source for the "revert to defaults" action. Resolved relative to
 # the repo root, same pattern as sensor_detect.py's _resolve_repo_path.
 STOCK_SETTINGS_FILE = Path(__file__).resolve().parents[3] / "resources/settings/settings_default.jsonc"
+
+# Backs both tuning-file pickers and the upload route (FINDINGS.md S3.3, S1;
+# PLAN.md S1.2). Same parents[3]-to-repo-root pattern as STOCK_SETTINGS_FILE.
+TUNING_FILES_DIR = Path(__file__).resolve().parents[3] / "resources/tuning_files"
+TUNING_FILES_REL = "resources/tuning_files"
+# The largest shipped file is ~90 KB; a full pisp tuning with LSC tables
+# stays well under this.
+TUNING_FILE_MAX_BYTES = 4 * 1024 * 1024
+TUNING_FILE_NAME_RX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.json$")
 
 # Corrected copy of the mockup's original ACTION_METHODS catalog. Fixes the
 # 3 entries that don't resolve via getattr() on cinepi_controller -- the
@@ -309,6 +319,37 @@ def _current_thumbnail_editor_context(settings: dict) -> dict:
     }
 
 
+def _list_tuning_files() -> list[dict]:
+    """Directory listing behind both tuning-file pickers and
+    GET /api/tuning-files (FINDINGS.md S3.3: the picker used to be two
+    hardcoded <option> lists, so a file copied into resources/tuning_files/
+    over SSH -- the documented procedure -- never appeared in it).
+
+    A missing directory means a broken checkout, not "no files" -- warn
+    rather than let an empty picker pass as normal.
+    """
+    try:
+        names = sorted(p.name for p in TUNING_FILES_DIR.glob("*.json") if p.is_file())
+    except OSError as exc:
+        logger.warning("Tuning files directory unavailable (%s): %s", TUNING_FILES_DIR, exc)
+        return []
+    return [{"name": name, "path": f"{TUNING_FILES_REL}/{name}"} for name in names]
+
+
+def _validate_tuning_json(raw: bytes) -> str | None:
+    """An uploaded tuning file must satisfy the same JSON-shape rule the
+    launch guard enforces (module.tuning_files.tuning_json_problem), so the
+    editor and the launch-time fallback can never disagree about what counts
+    as usable (PLAN.md S1.2). Returns an error message, or None if *raw* is
+    fine.
+    """
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        return f"Not valid JSON: {exc}"
+    return tuning_json_problem(data)
+
+
 @settings_editor_bp.route("/")
 def index():
     settings = current_app.config["SETTINGS"]
@@ -323,8 +364,68 @@ def index():
         sensor_db_path=str(
             resolve_database_path((settings.get("sensors") or {}).get("database_file"))
         ),
+        tuning_files=_list_tuning_files(),
         **_current_thumbnail_editor_context(settings),
     )
+
+
+@settings_editor_bp.route("/api/tuning-files", methods=["GET"])
+def list_tuning_files():
+    return jsonify({"ok": True, "dir": TUNING_FILES_REL, "files": _list_tuning_files()})
+
+
+@settings_editor_bp.route("/api/tuning-files", methods=["POST"])
+def upload_tuning_file():
+    """Write an uploaded tuning file into resources/tuning_files/ for real --
+    the control this replaces only fabricated an <option> and a toast
+    claiming the same thing (FINDINGS.md S1, S3.5). Validated the same way
+    the launch guard validates a configured path, so nothing accepted here
+    can later black the camera at launch.
+    """
+    upload = request.files.get("file")
+    if upload is None or not upload.filename:
+        return jsonify({"ok": False, "message": "No file uploaded"}), 400
+
+    name = Path(upload.filename).name
+    if not TUNING_FILE_NAME_RX.match(name):
+        return jsonify({"ok": False, "message": f'"{name}" is not a valid .json filename'}), 400
+
+    raw = upload.read()
+    if len(raw) > TUNING_FILE_MAX_BYTES:
+        return jsonify({
+            "ok": False,
+            "message": f"{name} is larger than {TUNING_FILE_MAX_BYTES} bytes",
+        }), 400
+
+    problem = _validate_tuning_json(raw)
+    if problem:
+        return jsonify({"ok": False, "message": problem}), 400
+
+    dest = TUNING_FILES_DIR / name
+    if dest.exists():
+        return jsonify({
+            "ok": False,
+            "message": f"{name} already exists in {TUNING_FILES_REL}/; choose another name or remove it over SSH",
+        }), 409
+
+    try:
+        fd, tmp_path = tempfile.mkstemp(dir=str(TUNING_FILES_DIR), prefix=".tuning-upload-", suffix=".json.tmp")
+        try:
+            with os.fdopen(fd, "wb") as fp:
+                fp.write(raw)
+            os.chmod(tmp_path, 0o644)
+            os.replace(tmp_path, dest)
+        except Exception:
+            os.unlink(tmp_path)
+            raise
+    except OSError as exc:
+        logger.exception("Failed to write %s", dest)
+        return jsonify({"ok": False, "message": f"Could not write {dest}: {exc}"}), 500
+
+    path = f"{TUNING_FILES_REL}/{name}"
+    message = f"Uploaded {name} to {TUNING_FILES_REL}/"
+    logger.info("tuning file uploaded via settings editor: %s (%d bytes)", path, len(raw))
+    return jsonify({"ok": True, "name": name, "path": path, "message": message})
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])

@@ -1384,7 +1384,7 @@
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <button class="toggle" id="f-c0-tune" data-path="sensors.cam0.tuning_file_override.enabled" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
             <div class="upload-control" id="f-c0-tunefile-row" style="justify-content:flex-end; opacity:.45; pointer-events:none">
-              <select class="field-input" id="f-c0-tunefile" data-path="sensors.cam0.tuning_file_override.path" data-type="string" data-original="resources/tuning_files/imx477.json" style="min-width:190px"><option value="resources/tuning_files/imx219.json">imx219.json</option><option value="resources/tuning_files/imx219_noir.json">imx219_noir.json</option><option value="resources/tuning_files/imx283.json">imx283.json</option><option value="resources/tuning_files/imx294.json">imx294.json</option><option value="resources/tuning_files/imx296.json">imx296.json</option><option value="resources/tuning_files/imx296_16mm.json">imx296_16mm.json</option><option value="resources/tuning_files/imx296_6mm.json">imx296_6mm.json</option><option value="resources/tuning_files/imx296_mono.json">imx296_mono.json</option><option value="resources/tuning_files/imx477.json" selected>imx477.json</option><option value="resources/tuning_files/imx477_16mm.json">imx477_16mm.json</option><option value="resources/tuning_files/imx477_6mm.json">imx477_6mm.json</option><option value="resources/tuning_files/imx477_noir.json">imx477_noir.json</option><option value="resources/tuning_files/imx477_scientific.json">imx477_scientific.json</option><option value="resources/tuning_files/imx585.json">imx585.json</option><option value="resources/tuning_files/imx585_mono.json">imx585_mono.json</option><option value="resources/tuning_files/imx708.json">imx708.json</option><option value="resources/tuning_files/imx708_noir.json">imx708_noir.json</option><option value="resources/tuning_files/imx708_wide.json">imx708_wide.json</option><option value="resources/tuning_files/imx708_wide_noir.json">imx708_wide_noir.json</option><option value="resources/tuning_files/ov5647.json">ov5647.json</option><option value="resources/tuning_files/ov5647_noir.json">ov5647_noir.json</option><option value="resources/tuning_files/uncalibrated.json">uncalibrated.json</option></select>
+              <select class="field-input" id="f-c0-tunefile" data-path="sensors.cam0.tuning_file_override.path" data-type="string" data-original="" data-accept-unlisted="1" style="min-width:190px">{% for f in tuning_files %}<option value="{{ f.path }}">{{ f.name }}</option>{% endfor %}</select>
               <label class="btn btn-ghost" for="f-c0-tunefile-input" style="cursor:pointer">Upload .json</label>
               <input type="file" accept="application/json" id="f-c0-tunefile-input" class="visually-hidden">
             </div>
@@ -1450,7 +1450,7 @@
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <button class="toggle" id="f-c1-tune" data-path="sensors.cam1.tuning_file_override.enabled" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
             <div class="upload-control" id="f-c1-tunefile-row" style="justify-content:flex-end; opacity:.45; pointer-events:none">
-              <select class="field-input" id="f-c1-tunefile" data-path="sensors.cam1.tuning_file_override.path" data-type="string" data-original="resources/tuning_files/imx477.json" style="min-width:190px"><option value="resources/tuning_files/imx219.json">imx219.json</option><option value="resources/tuning_files/imx219_noir.json">imx219_noir.json</option><option value="resources/tuning_files/imx283.json">imx283.json</option><option value="resources/tuning_files/imx294.json">imx294.json</option><option value="resources/tuning_files/imx296.json">imx296.json</option><option value="resources/tuning_files/imx296_16mm.json">imx296_16mm.json</option><option value="resources/tuning_files/imx296_6mm.json">imx296_6mm.json</option><option value="resources/tuning_files/imx296_mono.json">imx296_mono.json</option><option value="resources/tuning_files/imx477.json" selected>imx477.json</option><option value="resources/tuning_files/imx477_16mm.json">imx477_16mm.json</option><option value="resources/tuning_files/imx477_6mm.json">imx477_6mm.json</option><option value="resources/tuning_files/imx477_noir.json">imx477_noir.json</option><option value="resources/tuning_files/imx477_scientific.json">imx477_scientific.json</option><option value="resources/tuning_files/imx585.json">imx585.json</option><option value="resources/tuning_files/imx585_mono.json">imx585_mono.json</option><option value="resources/tuning_files/imx708.json">imx708.json</option><option value="resources/tuning_files/imx708_noir.json">imx708_noir.json</option><option value="resources/tuning_files/imx708_wide.json">imx708_wide.json</option><option value="resources/tuning_files/imx708_wide_noir.json">imx708_wide_noir.json</option><option value="resources/tuning_files/ov5647.json">ov5647.json</option><option value="resources/tuning_files/ov5647_noir.json">ov5647_noir.json</option><option value="resources/tuning_files/uncalibrated.json">uncalibrated.json</option></select>
+              <select class="field-input" id="f-c1-tunefile" data-path="sensors.cam1.tuning_file_override.path" data-type="string" data-original="" data-accept-unlisted="1" style="min-width:190px">{% for f in tuning_files %}<option value="{{ f.path }}">{{ f.name }}</option>{% endfor %}</select>
               <label class="btn btn-ghost" for="f-c1-tunefile-input" style="cursor:pointer">Upload .json</label>
               <input type="file" accept="application/json" id="f-c1-tunefile-input" class="visually-hidden">
             </div>
@@ -3804,13 +3804,28 @@
         fileInput.value = '';
         return;
       }
-      var opt = document.createElement('option');
-      opt.value = 'resources/tuning_files/' + file.name;
-      opt.textContent = file.name + ' (uploaded)';
-      select.appendChild(opt);
-      select.value = opt.value;
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-      showToast('Uploaded ' + file.name + ' to resources/tuning_files/');
+      var body = new FormData();
+      body.append('file', file);
+      fetch('/settings-editor/api/tuning-files', { method: 'POST', body: body })
+        .then(function(res){ return res.json(); })
+        .then(function(data){
+          fileInput.value = '';
+          if (data && data.ok){
+            var opt = document.createElement('option');
+            opt.value = data.path;
+            opt.textContent = data.name;
+            select.appendChild(opt);
+            select.value = opt.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            showToast(data.message);
+          } else {
+            showToast((data && data.message) || 'Upload failed');
+          }
+        })
+        .catch(function(){
+          fileInput.value = '';
+          showToast('Upload failed: could not reach the server');
+        });
     });
   });
 
@@ -4025,6 +4040,22 @@
     var type = el.getAttribute('data-type');
     if (type === 'bool'){
       el.setAttribute('aria-checked', value ? 'true' : 'false');
+    } else if (el.tagName === 'SELECT' && el.hasAttribute('data-accept-unlisted') && value){
+      // A configured path the picker doesn't list (the shipped absolute
+      // path, a hand-edited one) gets its own option instead of the browser
+      // silently landing on selectedIndex -1 / value "" -- which is what
+      // used to make Save rewrite the override to "" (FINDINGS.md S3.2).
+      // Scoped to data-accept-unlisted on purpose: the json-typed selects
+      // (log_encode) must keep failing loudly on an unknown value.
+      var hasOption = Array.prototype.some.call(el.options, function(opt){ return opt.value === String(value); });
+      if (!hasOption){
+        var opt = document.createElement('option');
+        opt.value = value;
+        var segs = String(value).split('/');
+        opt.textContent = segs[segs.length - 1] + ' (configured)';
+        el.appendChild(opt);
+      }
+      el.value = value;
     } else {
       el.value = value == null ? '' : value;
     }

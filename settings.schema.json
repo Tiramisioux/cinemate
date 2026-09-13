@@ -348,7 +348,7 @@
         "thumbnail": {
           "type": ["string", "integer"],
           "enum": ["off", "mono", "colour", "jpeg", 0, 1, 2, 3],
-          "default": "colour",
+          "default": "jpeg",
           "description": "Embedded DNG thumbnail mode written by cinepi-raw's DNG encoder: off (no IFD1, no bytes, no CPU -- not playable in the Playback pane), mono (greyscale, lightest CPU), colour (RGB, moderate CPU), or jpeg (quality-85 colour JPEG, highest CPU, by far the fewest bytes -- scene-dependent). Accepts the words (case-insensitively; \"color\" also accepted) or the legacy ints 0-3. `set thumbnail <word>` changes this live, for the next take. Colour by default -- operator decision 2026-09-13 (final): paired with thumbnail_size defaulting to 2, colour at quarter size costs fewer bytes than mono did at half size, so there is no size/colour trade-off left to make. See docs/settings-json.md's \"DNG thumbnails\" section for the measured bytes-per-frame and CPU cost of each choice."
         },
         "thumbnail_size": {

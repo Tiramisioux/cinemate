@@ -8,7 +8,6 @@ set_thumbnail() accepting "jpeg", and the settings-editor route actually
 rendering four options with the current camera's size baked into their text.
 """
 
-import json
 import re
 import sys
 import types
@@ -21,12 +20,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 sys.modules.setdefault("smbus", types.SimpleNamespace(SMBus=object))
 
-from module.sensor_detect import (
-    SensorDetect,
-    _format_thumbnail_kb,
-    thumbnail_choice_labels,
-    thumbnail_plane_bytes,
-)
+from module.sensor_detect import SensorDetect, thumbnail_choice_labels
 from module.cinepi_controller import CinePiController
 from module.redis_controller import ParameterKey
 
@@ -66,12 +60,29 @@ class ThumbnailChoiceLabelsTests(unittest.TestCase):
         choices = dict(thumbnail_choice_labels(1256, 720, 0))
         self.assertIn("1256×720", choices["mono"])
 
-    def test_cpu_words_rise_left_to_right(self):
+    def test_encode_cost_is_the_measured_figure_and_rises_left_to_right(self):
+        # The labels quote the 2026-09-13 benchmark, not adjectives: an
+        # operator trading CPU for bytes needs the number. Parsed back out of
+        # the prose so a formatting change cannot quietly drop it.
         choices = dict(thumbnail_choice_labels(1280, 720, 1))
-        self.assertIn("no CPU", choices["off"])
-        self.assertIn("lightest CPU", choices["mono"])
-        self.assertIn("moderate CPU", choices["colour"])
-        self.assertIn("highest CPU", choices["jpeg"])
+        self.assertIn("no extra encode time", choices["off"])
+        ms = {}
+        for mode in ("mono", "colour", "jpeg"):
+            found = re.search(r"\+(\d+\.\d) ms per frame \(\+(\d+)%\)", choices[mode])
+            self.assertIsNotNone(found, f"{mode} label carries no measured cost: {choices[mode]}")
+            ms[mode] = float(found.group(1))
+        self.assertLess(ms["mono"], ms["colour"])
+        self.assertLess(ms["colour"], ms["jpeg"])
+
+    def test_a_size_with_no_measurement_says_so_rather_than_inventing_one(self):
+        # Shift 0 was never benchmarked. The label may fall back to the
+        # nearest measured size, but it must not present that number as if it
+        # had been observed at this one.
+        choices = dict(thumbnail_choice_labels(1280, 720, 0))
+        self.assertIn("nearest measured size", choices["jpeg"])
+        # ...while a measured size states it flatly, with no hedge.
+        self.assertNotIn("nearest measured size",
+                         dict(thumbnail_choice_labels(1280, 720, 1))["jpeg"])
 
 
 class FakeRedis:
@@ -176,12 +187,17 @@ class _RouteFakeController:
         self.sensor_detect = _RouteFakeSensorDetect(res_modes)
 
 
-class SettingsEditorRouteRendersFourOptionsTests(unittest.TestCase):
-    """The settings-editor "/" route must actually render thumbnail_choice_labels()'s
-    four options, sized for the given camera -- not just that the function
-    itself works (ThumbnailChoiceLabelsTests, above) or that the static
-    template has the right data-path (a template-body assertion could not
-    tell a Jinja-loop typo from a working one)."""
+class SettingsEditorThumbnailToggleTests(unittest.TestCase):
+    """The settings-editor "/" route renders ONE on/off toggle over
+    image_capture.thumbnail (operator decision 2026-09-13), plus the hidden
+    inputs that actually carry both thumbnail keys into a save.
+
+    What these cover that a template-body assertion could not: that the cost
+    line really comes from thumbnail_choice_labels() sized for THIS camera
+    (a Jinja typo or a hardcoded string would pass a static check), and that
+    thumbnail_size is still carried -- a key the form drops is a key deleted
+    from settings.jsonc on the next save, taking every comment in the file
+    with it (B-2)."""
 
     def _client(self, *, controller=None, redis_controller=None):
         # Same minimal-app pattern as test_settings_editor_sensor_db.py.
@@ -201,44 +217,36 @@ class SettingsEditorRouteRendersFourOptionsTests(unittest.TestCase):
         app.register_blueprint(settings_editor_bp)
         return app.test_client()
 
-    def test_four_options_render_with_no_camera_attached(self):
-        # CINEPI_CONTROLLER/SENSOR_DETECT absent from app.config entirely --
-        # the degraded-boot case _current_thumbnail_editor_context() must
-        # fall back from, at the fallback 1280x720 lores plane and the
-        # shipped thumbnail_size default (1, half).
+    def test_the_card_is_a_toggle_and_both_keys_are_still_carried(self):
         html = self._client().get("/settings-editor/").get_data(as_text=True)
+        # The toggle itself carries no data-path -- buildState() must not see
+        # it, or a boolean would land in settings.jsonc where a word belongs.
+        self.assertIn('id="f-thumb-toggle"', html)
+        self.assertNotIn('class="toggle" id="f-thumb-toggle" role="switch" data-path', html)
+        # Both keys reach a save through hidden inputs.
         self.assertIn('data-path="image_capture.thumbnail"', html)
         self.assertIn('data-path="image_capture.thumbnail_size"', html)
-        for value in ("off", "mono", "colour", "jpeg"):
-            self.assertIn(f'<option value="{value}"', html)
-        # Fallback size (no camera) is still the shipped default, shift 1:
-        # 640x360 -- present in both the mode select's labels and the size
-        # select's own "Half" option text.
-        self.assertIn("640×360", html)
-        self.assertIn("Quarter 320×180", html)
-        self.assertIn("Full lores 1280×720", html)
-        self.assertIn("Half 640×360", html)
+        # And the mode picker is gone: no per-mode <option> anywhere.
+        for value in ("mono", "colour", "jpeg"):
+            self.assertNotIn(f'<option value="{value}"', html)
         self.assertNotIn("[missing text:", html)
 
-    def test_labels_follow_a_real_cameras_clearhdr_lores_size(self):
-        # A ClearHDR-mode camera (3840x2200) has a 1256-wide lores plane,
-        # not the 16:9 1280 the no-camera fallback uses -- if the route
-        # were still hardcoding 1280x720, this is the case that would
-        # catch it (test_four_options_render_with_no_camera_attached alone
-        # could not, since 1280 is also the correct answer there).
+    def test_the_cost_line_is_this_cameras_own_number(self):
+        # A ClearHDR camera (3840x2200) has a 1256-wide lores plane, so at the
+        # shipped half size the thumbnail is 628x360 -- not the 640x360 the
+        # no-camera fallback would produce. A hardcoded cost string, or a route
+        # still using the fallback plane, fails exactly here.
         controller = _RouteFakeController(
             sensor_mode=0,
             res_modes={0: {"width": 3840, "height": 2200, "bit_depth": 16, "hdr": True}},
         )
         html = self._client(controller=controller).get("/settings-editor/").get_data(as_text=True)
-        self.assertIn("1256×720", html)
-        self.assertNotIn("1280×720", html)
+        self.assertIn("628×360", html)
+        self.assertNotIn("640×360", html)
 
-    def test_labels_follow_the_live_redis_thumbnail_size_over_the_settings_default(self):
-        # "Redis first, settings.jsonc second" (_current_thumbnail_editor_context()'s
-        # own docstring): a live thumbnail_size=0 must show the full-lores
-        # dimensions in the mode labels, not the shipped shift-1 default,
-        # even though settings.jsonc here says nothing at all.
+    def test_the_cost_line_follows_the_live_thumbnail_size(self):
+        # "Redis first, settings.jsonc second": a live thumbnail_size=0 must
+        # show the full-lores cost, even though the shipped default is 1.
         controller = _RouteFakeController(
             sensor_mode=0,
             res_modes={0: {"width": 3840, "height": 2160, "bit_depth": 12, "hdr": False}},
@@ -247,71 +255,8 @@ class SettingsEditorRouteRendersFourOptionsTests(unittest.TestCase):
         html = self._client(controller=controller, redis_controller=redis_controller).get(
             "/settings-editor/"
         ).get_data(as_text=True)
-        self.assertIn("Greyscale 1280×720", html)
-        self.assertNotIn("Greyscale 320×180", html)
-
-    def test_every_offered_size_ships_its_own_label_set(self):
-        # The whole point of the JSON blob: the mode labels must be able to
-        # follow the size <select> without a reload, and without the byte
-        # formula existing anywhere in JavaScript. The page therefore has to
-        # carry a COMPLETE label set for every size it offers -- if the route
-        # sent only the current one, the page script would silently leave
-        # stale byte counts on screen the moment the size changed.
-        controller = _RouteFakeController(
-            sensor_mode=0,
-            res_modes={0: {"width": 3840, "height": 2160, "bit_depth": 12, "hdr": False}},
-        )
-        html = self._client(controller=controller).get("/settings-editor/").get_data(as_text=True)
-        blob = re.search(
-            r'<script type="application/json" id="thumb-labels-by-size">(.*?)</script>',
-            html, re.S)
-        self.assertIsNotNone(blob, "the per-size label blob is missing from the page")
-        by_size = json.loads(blob.group(1))
-        self.assertEqual(sorted(by_size), ["0", "1", "2"])
-        for shift, expected_dims in (("0", "1280×720"), ("1", "640×360"), ("2", "320×180")):
-            with self.subTest(shift=shift):
-                labels = by_size[shift]
-                self.assertEqual([value for value, _ in labels],
-                                 ["off", "mono", "colour", "jpeg"])
-                # Every non-off label names that size's own dimensions, so a
-                # set can never be mistaken for another size's.
-                for value, label in labels:
-                    if value != "off":
-                        self.assertIn(expected_dims, label)
-
-    def test_the_blobs_byte_figures_match_the_shipped_formula(self):
-        # The labels an operator reads must come from the same function
-        # file_size uses, not from anything restated in the page. Checked
-        # against thumbnail_plane_bytes() directly rather than against a
-        # hardcoded number, so this stays true if the formula ever changes.
-        controller = _RouteFakeController(
-            sensor_mode=0,
-            res_modes={0: {"width": 3840, "height": 2160, "bit_depth": 12, "hdr": False}},
-        )
-        html = self._client(controller=controller).get("/settings-editor/").get_data(as_text=True)
-        blob = re.search(
-            r'<script type="application/json" id="thumb-labels-by-size">(.*?)</script>',
-            html, re.S)
-        by_size = json.loads(blob.group(1))
-        for shift in (0, 1, 2):
-            for mode_name, mode in (("mono", 1), ("colour", 2)):
-                expected = thumbnail_plane_bytes(1280, 720, mode, shift)
-                label = dict(by_size[str(shift)])[mode_name]
-                with self.subTest(shift=shift, mode=mode_name):
-                    # The label formats bytes as KB/MB; the formatter is the
-                    # one sensor_detect uses, so compare through it.
-                    self.assertIn(_format_thumbnail_kb(expected), label)
-
-    def test_the_initial_options_are_the_default_sizes_set(self):
-        # The rendered options and the blob must agree on load, or the first
-        # size change would appear to alter labels that were already right.
-        html = self._client().get("/settings-editor/").get_data(as_text=True)
-        blob = re.search(
-            r'<script type="application/json" id="thumb-labels-by-size">(.*?)</script>',
-            html, re.S)
-        by_size = json.loads(blob.group(1))
-        for _, label in by_size["1"]:          # shift 1 == the shipped default
-            self.assertIn(label, html)
+        self.assertIn("1280×720", html)
+        self.assertNotIn("640×360", html)
 
 
 if __name__ == "__main__":

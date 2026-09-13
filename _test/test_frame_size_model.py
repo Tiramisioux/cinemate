@@ -197,7 +197,7 @@ class RecomputeFileSizeThumbnailTests(unittest.TestCase):
         # = 15,207,424 B -> 15.21 MB.
         self.assertEqual(controller.file_size, 15.21)
 
-    def test_recompute_uses_the_shipped_colour_default_when_keys_and_settings_are_absent(self):
+    def test_recompute_uses_the_shipped_jpeg_default_when_keys_and_settings_are_absent(self):
         # No live redis keys AND no image_capture settings at all -- the
         # true fresh-boot path. Must fall back to thumbnail_startup_value()/
         # thumbnail_size_startup_value()'s own shipped default (colour,
@@ -205,9 +205,13 @@ class RecomputeFileSizeThumbnailTests(unittest.TestCase):
         # thumbnail as absent or as some other value.
         controller = self.controller(redis_values={})
         controller._recompute_file_size(log_requested=False)
-        # 12,441,600 + colour 640x360 thumbnail (691,200) + 1,024
-        # = 13,133,824 B -> 13.13 MB.
-        self.assertEqual(controller.file_size, 13.13)
+        # 12,441,600 + the JPEG BUDGET for 640x360 (0.15 B/px * 230,400 px
+        # = 34,560) + 1,024 = 12,477,184 B -> 12.48 MB. The budget, not a
+        # measured JPEG size: file_size must never claim more card time than
+        # the operator really has, so the estimate deliberately sits above
+        # what a JPEG thumbnail actually costs (measured 0.07-0.09 B/px on
+        # hardware 2026-09-13).
+        self.assertEqual(controller.file_size, 12.48)
 
     def test_recompute_honors_a_non_default_settings_choice_when_redis_is_absent(self):
         # settings.jsonc explicitly chose mono/shift-1 -- different from

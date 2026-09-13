@@ -80,7 +80,7 @@ class ParseThumbnailModeTests(unittest.TestCase):
 class ThumbnailStartupValueTests(unittest.TestCase):
     # (raw settings.jsonc value, expected validated value)
     CASES = [
-        (_ABSENT, 2),          # no key at all -> shipped default (colour, 2026-09-13 final)
+        (_ABSENT, 3),          # no key at all -> shipped default (colour, 2026-09-13 final)
         (0, 0),
         (1, 1),
         (2, 2),
@@ -91,16 +91,16 @@ class ThumbnailStartupValueTests(unittest.TestCase):
         ("color", 2),
         ("jpeg", 3),
         (" JPEG ", 3),         # case-insensitive, stripped
-        (-5, 2),               # out of range -> default (not clamped: see parse_thumbnail_mode)
-        (99, 2),               # out of range -> default
-        (True, 2),             # Phase 2: a bool is now rejected, not coerced -- was (True, 1)
-        (False, 2),            # Phase 2: ditto -- was (False, 0)
+        (-5, 3),               # out of range -> default (not clamped: see parse_thumbnail_mode)
+        (99, 3),               # out of range -> default
+        (True, 3),             # Phase 2: a bool is now rejected, not coerced -- was (True, 1)
+        (False, 3),            # Phase 2: ditto -- was (False, 0)
         ("2", 2),              # numeric string
         ("0", 0),
-        ("banana", 2),         # unrecognised -> default
-        (None, 2),             # TypeError path -> default
-        ([], 2),               # TypeError path -> default
-        ({}, 2),               # TypeError path -> default
+        ("banana", 3),         # unrecognised -> default
+        (None, 3),             # TypeError path -> default
+        ([], 3),               # TypeError path -> default
+        ({}, 3),               # TypeError path -> default
     ]
 
     def test_decision_table(self):
@@ -111,10 +111,10 @@ class ThumbnailStartupValueTests(unittest.TestCase):
                 )
 
     def test_empty_settings_dict_is_the_default(self):
-        self.assertEqual(thumbnail_startup_value({}), 2)
+        self.assertEqual(thumbnail_startup_value({}), 3)
 
     def test_missing_image_capture_section_is_the_default(self):
-        self.assertEqual(thumbnail_startup_value({"some_other_key": {}}), 2)
+        self.assertEqual(thumbnail_startup_value({"some_other_key": {}}), 3)
 
 
 class ThumbnailSizeStartupValueTests(unittest.TestCase):

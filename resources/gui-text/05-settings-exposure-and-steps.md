@@ -103,10 +103,11 @@ Applied when a ClearHDR mode is selected. Adjust live afterwards with `set hdr �
 ### DNG thumbnails
 <!-- key: card.image_capture.thumbnail -->
 
-Each recorded frame can carry a small second image so the Playback pane doesn't have to decode the raw frame to show one. The bytes-per-frame figures in the mode list are for the size chosen on the right; the JPEG figure is a range because it depends on the scene. CPU cost rises left to right, off to colour JPEG. Changing the size restarts CineMate, like any other setting here, so it takes effect on the next start.
+Each recorded frame carries a small second image, so the Playback pane can show a take without decoding the raw frame — which it cannot do, so a take recorded with this off is not playable there. On writes a compressed colour thumbnail at half the preview size; off writes nothing at all.
 
-<!-- key: caption.image_capture.thumbnail · one per control, separated by ' · ' -->
-*Mode · Size*
+What it costs, measured on a 4K 16-bit ClearHDR take with CineMate Log 12 at 25 fps: the figure below is the per-frame size and the extra encode time for this camera's current mode. In whole-take terms that is well under a megabyte a second of extra write rate, about six seconds of recording time per terabyte of card, and around a fifth more encode time per frame — against a frame budget the encode already sits comfortably inside, with no dropped frames at any setting.
+
+Greyscale and uncompressed variants, and other sizes, exist for anyone who wants them — set `image_capture.thumbnail` and `thumbnail_size` in the file, or `set thumbnail` live.
 
 ### Sensor database
 <!-- key: card.sensors.database_file -->

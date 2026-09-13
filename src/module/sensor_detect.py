@@ -143,6 +143,50 @@ _THUMBNAIL_JPEG_LABEL_RANGE_KB = {
 }
 
 
+# Measured per-frame encode cost of each thumbnail mode, as (ms, percent over
+# a take with no thumbnail at all), keyed by mode and then by shift. From the
+# 2026-09-13 hardware benchmark (the entry in cinemate-handbook's hardware log):
+# imx585 4K 16-bit ClearHDR with CineMate Log 12 at 25 fps, 250+ frames per
+# cell, against a 22.2 ms no-thumbnail baseline. The noise floor that session
+# measured -- two identical "off" takes three minutes apart -- was 0.09 ms, so
+# every figure here is real rather than scatter.
+#
+# One configuration, and the labels say so: on a log-encoded frame the LUT pass
+# dominates dng_save(), so the thumbnail's share is smaller than it would be on
+# a plain linear take, and smaller again than at HD where the raw frame is far
+# cheaper to encode. Treat these as "what it cost on the mode this camera
+# actually shoots", not as a universal constant -- which is exactly why the
+# figure is written down once, here, instead of being restated in the settings
+# page, the docs and the schema.
+#
+# Shift 0 is absent on purpose: it was not measured. Its labels fall back to
+# the nearest measured shift rather than extrapolating a number nobody has seen.
+_THUMBNAIL_CPU_MS = {
+    1: {1: (1.25, 5.6), 2: (0.66, 3.0)},    # mono
+    2: {1: (3.22, 14.5), 2: (1.10, 5.0)},   # colour
+    3: {1: (4.02, 18.1), 2: (1.26, 5.7)},   # jpeg
+}
+
+
+def _thumbnail_cpu_phrase(mode: int, shift: int) -> str:
+    """The measured encode-time cost of *mode* at *shift*, as label prose.
+
+    Falls back to the nearest measured shift when the exact one has no
+    measurement (shift 0, and anything past 2), and says "about" in that case
+    rather than quoting a number as if it had been observed at that size.
+    """
+    by_shift = _THUMBNAIL_CPU_MS.get(mode)
+    if not by_shift:
+        return "no CPU"
+    exact = by_shift.get(shift)
+    if exact is not None:
+        ms, pct = exact
+        return f"+{ms:.1f} ms per frame (+{pct:.0f}%)"
+    nearest = min(by_shift, key=lambda k: abs(k - shift))
+    ms, pct = by_shift[nearest]
+    return f"about +{ms:.1f} ms per frame (+{pct:.0f}%) at the nearest measured size"
+
+
 def _thumbnail_jpeg_label_range_kb(width: int, height: int, shift: int) -> tuple[int, int]:
     """(low, high) whole-KB range for the JPEG choice's label at this size.
 
@@ -188,11 +232,14 @@ def thumbnail_choice_labels(lores_w: int, lores_h: int, shift: int) -> list[tupl
     jpeg_low_kb, jpeg_high_kb = _thumbnail_jpeg_label_range_kb(width, height, shift)
 
     return [
-        ("off", "Off — 0 B per frame, no CPU; takes are not playable in the Playback pane"),
-        ("mono", f"Greyscale {dims} — {_format_thumbnail_kb(mono_bytes)} per frame, lightest CPU"),
-        ("colour", f"Colour {dims} — {_format_thumbnail_kb(colour_bytes)} per frame, moderate CPU"),
+        ("off", "Off — 0 B per frame, no extra encode time; takes are not playable "
+                "in the Playback pane"),
+        ("mono", f"Greyscale {dims} — {_format_thumbnail_kb(mono_bytes)} per frame, "
+                 f"{_thumbnail_cpu_phrase(1, shift)}"),
+        ("colour", f"Colour {dims} — {_format_thumbnail_kb(colour_bytes)} per frame, "
+                   f"{_thumbnail_cpu_phrase(2, shift)}"),
         ("jpeg", f"Colour JPEG {dims} — about {jpeg_low_kb}–{jpeg_high_kb} KB per frame "
-                 "(varies by scene), highest CPU"),
+                 f"(varies by scene), {_thumbnail_cpu_phrase(3, shift)}"),
     ]
 
 

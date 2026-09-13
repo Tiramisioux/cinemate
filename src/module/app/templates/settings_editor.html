@@ -1808,41 +1808,33 @@
           <div class="card-main">
             <label class="card-label">{{ t('card.image_capture.thumbnail.label') }}</label>
             <p class="card-help">{{ t('card.image_capture.thumbnail.help') }}</p>
+            <!-- What "on" costs, in this camera's own numbers rather than a
+                 figure restated by hand: rendered from thumbnail_choice_labels()
+                 (sensor_detect.py), the same function and the same byte formula
+                 file_size uses, so it cannot drift from what a take costs. Only
+                 the on position needs a figure -- off is 0 B. -->
+            <p class="card-help" id="thumb-cost" style="color:var(--muted)">{{ thumbnail_on_label }}</p>
           </div>
-          <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.thumbnail.0') }}</span>
-              <!-- Options rendered from thumbnail_choice_labels() (sensor_detect.py)
-                   in the route's template context (settings_editor.py's index()) --
-                   the bytes-per-frame and CPU words in each label are computed for
-                   THIS camera's actual lores plane and thumbnail_size, not restated
-                   by hand here, so they cannot drift from what a take really costs.
-                   "selected" is the shipped default (colour) like every other
-                   static <select> on this page; the page's own hydration sets the
-                   real current value from settings.jsonc/redis on load, same as
-                   every other [data-path] field. -->
-              <select class="field-input" id="f-thumb-mode" data-path="image_capture.thumbnail" data-type="string" data-original="colour" style="min-width:300px">
-                {% for value, label in thumbnail_choices %}
-                <option value="{{ value }}"{% if value == 'colour' %} selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-              <!-- Every size's label set, so changing the size <select> below
-                   can relabel the modes without a reload and without a second
-                   formula in JavaScript: the server computed all three sets
-                   (settings_editor.py's _current_thumbnail_editor_context()),
-                   and thumbSizeRelabel() just picks one. Rendered as a JSON
-                   <script> rather than a data- attribute because the labels
-                   contain the quotes and the multiplication sign. -->
-              <script type="application/json" id="thumb-labels-by-size">{{ thumbnail_choices_by_size | tojson }}</script>
-            </label>
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.thumbnail.1') }}</span>
-              <select class="field-input" id="f-thumb-size" data-path="image_capture.thumbnail_size" data-type="number" data-original="1" style="min-width:170px">
-                <option value="0">Full lores {{ thumbnail_size_dims[0] }}</option>
-                <option value="1" selected>Half {{ thumbnail_size_dims[1] }}</option>
-                <option value="2">Quarter {{ thumbnail_size_dims[2] }}</option>
-              </select>
-            </label>
+          <div class="card-control">
+            <!-- One toggle, not a mode picker and a size picker (operator
+                 decision 2026-09-13). All four modes and every size still
+                 work and are still reachable -- by hand in settings.jsonc or
+                 live with `set thumbnail` -- but this page offers the choice
+                 that is actually a choice: a preview in the Playback pane, or
+                 nothing.
+
+                 The toggle carries no data-path of its own, so buildState()
+                 ignores it; the hidden inputs below are what the save reads
+                 and what populateSimpleFields() hydrates, exactly like every
+                 other field on this page. thumbnail_size is hidden rather
+                 than absent for the reason B-2 recorded: a key the form does
+                 not carry is dropped from settings.jsonc on the next save,
+                 and that drop is a structural change, which costs the file
+                 every comment in it. -->
+            <button class="toggle" id="f-thumb-toggle" role="switch" aria-checked="true"
+                    aria-label="Embedded DNG thumbnail"></button>
+            <input type="hidden" id="f-thumb-value" data-path="image_capture.thumbnail" data-type="string" data-original="jpeg" value="jpeg">
+            <input type="hidden" id="f-thumb-size-value" data-path="image_capture.thumbnail_size" data-type="number" data-original="1" value="1">
           </div>
         </div>
         <div class="card" data-search="sensor database file resources sensors json advanced">
@@ -3710,40 +3702,41 @@
     inp.addEventListener('change', function(){ checkDirty(inp); });
   });
 
-  /* ---------- DNG thumbnail: relabel the modes when the size changes ----------
-     The mode <select>'s labels carry a byte count per frame, and that count
-     depends entirely on the size <select> next to it -- full lores colour is
-     16x quarter-size colour. Labels rendered for the stored size would go
-     silently wrong the moment an operator touched the size field, and wrong in
-     the worst way: still plausible.
+  /* ---------- DNG thumbnail: one toggle over a four-value key ----------
+     image_capture.thumbnail is "off" | "mono" | "colour" | "jpeg", and this
+     page shows it as on/off. The hidden #f-thumb-value is what buildState()
+     saves and what populateSimpleFields() hydrates; the toggle only mirrors
+     it, which is why it carries no data-path of its own.
 
-     No arithmetic here on purpose. The server rendered one complete label set
-     per offered size into #thumb-labels-by-size (settings_editor.py's
-     _current_thumbnail_editor_context(), from sensor_detect's
-     thumbnail_choice_labels()); this only picks the set for the selected shift
-     and rewrites each option's TEXT. Putting the byte formula in JavaScript
-     would be a third copy of it, after cinepi/dng_thumbnail.hpp and
-     sensor_detect.py, with nothing keeping the three in agreement.
-
-     Values and the current selection are never touched, so this cannot disturb
-     buildState() or the dirty tracking -- both read value, not text. */
+     Off writes "off". On writes back whichever non-off value was loaded --
+     so a settings.jsonc hand-set to "mono" survives a round trip through
+     this page instead of being silently rewritten to the default. Only when
+     the loaded value was "off" (nothing to preserve) does on mean "jpeg". */
+  var thumbOnValue = 'jpeg';
+  function syncThumbnailToggle(){
+    var val = document.getElementById('f-thumb-value');
+    var tog = document.getElementById('f-thumb-toggle');
+    if (!val || !tog) return;
+    var on = String(val.value || 'off') !== 'off';
+    if (on) thumbOnValue = val.value;          /* remember mono/colour/jpeg */
+    tog.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
   (function(){
-    var sizeSel = document.getElementById('f-thumb-size');
-    var modeSel = document.getElementById('f-thumb-mode');
-    var blob = document.getElementById('thumb-labels-by-size');
-    if (!sizeSel || !modeSel || !blob) return;
-    var bySize;
-    try { bySize = JSON.parse(blob.textContent || '{}'); } catch (e) { return; }
-    /* A stale cached page can reach a newer server whose context it does not
-       know (see browser-side-traps.md): leave the rendered labels alone rather
-       than throwing, which would take the rest of this script's setup with it. */
-    sizeSel.addEventListener('change', function(){
-      var labels = bySize[String(sizeSel.value)];
-      if (!labels) return;
-      labels.forEach(function(pair){
-        var opt = modeSel.querySelector('option[value="' + pair[0] + '"]');
-        if (opt) opt.textContent = pair[1];
-      });
+    var tog = document.getElementById('f-thumb-toggle');
+    var val = document.getElementById('f-thumb-value');
+    if (!tog || !val) return;
+    function flip(){
+      var on = tog.getAttribute('aria-checked') !== 'true';
+      tog.setAttribute('aria-checked', on ? 'true' : 'false');
+      val.value = on ? thumbOnValue : 'off';
+      /* checkDirty on the hidden input, not the toggle: the input is the
+         [data-path] element, so it is what the dirty pill and the save
+         payload both read. */
+      checkDirty(val);
+    }
+    tog.addEventListener('click', flip);
+    tog.addEventListener('keydown', function(e){
+      if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); flip(); }
     });
   })();
 
@@ -4360,6 +4353,9 @@
     // applyControlValue writes aria-checked without going through the click
     // handler, so the chips are re-read once the whole form has settled.
     syncAllFreeSteppingChips();
+    // Same reason: the thumbnail toggle mirrors a hidden input that was just
+    // written straight from settings, with no click to notice it.
+    syncThumbnailToggle();
   }
 
   function loadSettings(){

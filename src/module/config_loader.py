@@ -376,30 +376,28 @@ def thumbnail_startup_value(settings: dict) -> int:
     int(True) == 1 was itself part of B-1's surprise, not a safe accident to
     keep).
 
-    Defaults to 2 (colour), not 0: the embedded thumbnail is the standard
-    playback path, and playback.py's raw-decode fallback is disabled (too
-    demanding on the Pi) -- so a take recorded with thumbnail=0, or a
-    parse failure that used to fall back to 0, would otherwise be
-    unplayable in the pane. Colour over mono is the operator's FINAL
-    2026-09-13 decision (an interim session default mono, then reverted):
-    paired with thumbnail_size defaulting to 2
-    (thumbnail_size_startup_value() below), colour at quarter size
-    (172,800 B/frame) costs FEWER bytes than mono at half size
-    (230,400 B/frame) would have, so there is no size/colour trade-off
-    left to make. `set thumbnail 1` (or `image_capture.thumbnail: 1`)
-    still gives mono, at a third of the bytes, for anyone who wants it
-    lighter still; see cinepi-raw's CP_DEF_THUMBNAIL for the matching
-    compiled-in fallback. JPEG (3, "jpeg") is smaller still -- FINDINGS.md
-    §2b measured colour JPEG at 640x360 at 9-16 KB per frame, a twentieth
-    of mono at the same size -- but costs the most CPU of the four (YUV to
-    RGB plus the JPEG encode), which is exactly why it stays an opt-in
-    rather than becoming the new default: processor headroom is the
-    camera's stated constraint, and 2 (colour, uncompressed) does not
-    spend any of it.
+    Defaults to 3 (colour JPEG), not 0: the embedded thumbnail is the
+    Playback pane's only path to a picture (its raw-decode fallback is
+    disabled -- too demanding on the Pi), so a take recorded with
+    thumbnail=0, or a parse failure that fell back to 0, is simply
+    unplayable there. JPEG rather than uncompressed colour is the
+    operator's settled 2026-09-13 decision, and the first one taken with
+    measurements: at the shipped half size it is roughly 16 KB/frame
+    against 678,240 B for uncompressed colour at the same size -- the same
+    picture -- for +4.0 ms/frame of encode time at 4K 16-bit ClearHDR with
+    CineMate Log 12, which is the most of the four modes and still small
+    against a 40 ms frame budget at 25 fps (the 2026-09-13 benchmark entry
+    in cinemate-handbook's hardware log).
+
+    The settings editor exposes this key as an on/off toggle only, writing
+    "jpeg" or "off". Modes 1 and 2 (uncompressed mono and colour) remain
+    fully supported and are reachable from settings.jsonc by hand or from
+    `set thumbnail`; the toggle preserves whichever of them it finds rather
+    than overwriting it (see the page's own thumbnail block).
     """
-    raw = settings.get("image_capture", {}).get("thumbnail", 2)
+    raw = settings.get("image_capture", {}).get("thumbnail", 3)
     parsed = parse_thumbnail_mode(raw)
-    return parsed if parsed is not None else 2
+    return parsed if parsed is not None else 3
 
 
 def thumbnail_size_startup_value(settings: dict) -> int:
@@ -641,8 +639,10 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # Four values, as words now that parse_thumbnail_mode() accepts them:
         # "off" / "mono" / "colour" (or "color") / "jpeg" -- see
         # THUMBNAIL_MODE_NAMES above. "jpeg" is the smallest file of the
-        # four but the most CPU, so it is the opt-in, not this default.
-        "thumbnail": "colour",
+        # four and the most CPU; measured 2026-09-13, that CPU cost is
+        # small enough against a log-encoded frame to make it the default
+        # rather than the opt-in. See thumbnail_startup_value().
+        "thumbnail": "jpeg",
         # 1 (half the lores plane, 640x360): at the colour default above,
         # 691,200 B/frame, +5.6% on a 4K 12-bit frame. Operator decision
         # 2026-09-13, after a quarter-size default shipped and proved too

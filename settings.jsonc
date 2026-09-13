@@ -279,17 +279,24 @@
       // development/mono-clearhdr-fixes/ROUND9-RESULTS.md.
       "self_heal": false
     },
-    // Embedded DNG thumbnail (IFD1), read by the Playback pane. Four
-    // choices, cost rising with the words: "off" (0 B/frame, no CPU, not
-    // playable in the pane); "mono" (greyscale, lightest CPU, 57,600
-    // B/frame at the default size); "colour" (RGB, moderate CPU, 172,800
-    // B/frame -- fewer bytes than mono cost at half size, hence the
-    // default, 2026-09-13); "jpeg" (quality-85 JPEG, highest CPU, ~3-8 KB
-    // scene-dependent -- by far the fewest bytes). `set thumbnail <word>`
-    // (or 0-3) changes this live, for the next take. `thumbnail_size`
-    // below scales every choice. Full table: docs/settings-json.md's
-    // "DNG thumbnails" section.
-    "thumbnail": "colour",
+    // Embedded DNG thumbnail (IFD1), read by the Playback pane -- which has
+    // no other way to show a take, so "off" means a take is not playable
+    // there. Four choices; figures are per frame at the default size below,
+    // and the encode times were measured 2026-09-13 on a 4K 16-bit ClearHDR
+    // take with CineMate Log 12 at 25 fps (22.2 ms/frame with no thumbnail):
+    //   "off"    0 B,        no extra encode time
+    //   "mono"   230,400 B,  +1.2 ms (+6%)   greyscale pane
+    //   "colour" 691,200 B,  +3.2 ms (+14%)
+    //   "jpeg"   ~10-25 KB,  +4.0 ms (+18%)  the default: the same picture
+    //            as "colour" for a fortieth of the bytes, at the most CPU
+    //            of the four -- which is still ~6 seconds of recording time
+    //            per TB and no dropped frames at any setting measured.
+    // The settings editor shows this as a plain on/off toggle (on writes
+    // "jpeg", or preserves a hand-set "mono"/"colour"); every value is
+    // reachable here or with `set thumbnail <word>` (or 0-3), live, for the
+    // next take. `thumbnail_size` below scales every choice. Full table:
+    // docs/settings-json.md's "DNG thumbnails" section.
+    "thumbnail": "jpeg",
     // Right-shift applied to the lores plane before writing the
     // thumbnail: 0 = full lores size, 1 = half each side, 2 = quarter,
     // and so on. Changing this restarts the camera (unlike `thumbnail`

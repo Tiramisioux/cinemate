@@ -115,8 +115,11 @@
       "self_heal": false
     },
     // "off" / "mono" / "colour" / "jpeg" (or 0-3) -- see settings.jsonc's
-    // comment. Colour by default (2026-09-13 operator decision, final).
-    "thumbnail": "colour",
+    // comment for the per-frame byte and encode-time cost of each. Colour
+    // JPEG by default (2026-09-13 operator decision, taken on measurements):
+    // the same picture as uncompressed colour for a fortieth of the bytes,
+    // at +4.0 ms/frame, the most of the four and still comfortable.
+    "thumbnail": "jpeg",
     // Right-shift of the lores plane before the thumbnail is written --
     // see settings.jsonc's comment.
     "thumbnail_size": 1,

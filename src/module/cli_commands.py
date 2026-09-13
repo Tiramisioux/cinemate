@@ -94,7 +94,13 @@ class CommandExecutor(threading.Thread):
             #  the live bit depth supports it; "set log off" forces off. Restarts
             #  the camera when idle, deferred while recording.
             'set log'                : (cinepi_controller.set_log_encode,    [int, str]),
-            'set thumbnail'          : (cinepi_controller.set_thumbnail,     int),
+            # str, not int: set_thumbnail() now accepts the four words
+            # (off/mono/colour/jpeg) as well as 0-3 via parse_thumbnail_mode()
+            # (config_loader.py) -- forcing int() here first would reject
+            # every word before that parser ever saw it. is_valid_arg(arg, str)
+            # accepts anything, which is correct: parse_thumbnail_mode() is the
+            # one place that decides valid vs invalid, not this table.
+            'set thumbnail'          : (cinepi_controller.set_thumbnail,     str),
 
             # ── White balance (Kelvin or step) ────────────────────────────────────
             'set wb'                 : (cinepi_controller.set_wb,         [int, None]),

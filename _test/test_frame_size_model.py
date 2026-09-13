@@ -14,6 +14,7 @@ from module.sensor_detect import (
     SensorDetect,
     compute_frame_size_mb,
     thumbnail_plane_bytes,
+    THUMBNAIL_JPEG_BUDGET_BYTES_PER_PIXEL,
 )
 from module.cinepi_controller import CinePiController
 from module.redis_controller import ParameterKey
@@ -57,6 +58,34 @@ class ThumbnailPlaneBytesTests(unittest.TestCase):
         # The floor that keeps an over-large thumbnail_size from ever
         # producing a 0-byte-dimension thumbnail (max(1, dim >> shift)).
         self.assertEqual(thumbnail_plane_bytes(1272, 720, 2, 12), 3)
+
+    def test_mode3_jpeg_is_the_budget_estimate_not_the_spp_formula(self):
+        # Mode 3 (colour JPEG): int(w*h*BUDGET), a conservative ESTIMATE --
+        # not width*height*3 the way uncompressed colour (mode 2) is. Pins
+        # the same three shifts tests/dng_thumbnail_test.cpp's mode-3 cases
+        # do, through THUMBNAIL_JPEG_BUDGET_BYTES_PER_PIXEL rather than
+        # retyping 0.15 a second time.
+        budget = THUMBNAIL_JPEG_BUDGET_BYTES_PER_PIXEL
+        self.assertEqual(
+            thumbnail_plane_bytes(1280, 720, 3, 0), int(1280 * 720 * budget)
+        )
+        self.assertEqual(
+            thumbnail_plane_bytes(1280, 720, 3, 1), int(640 * 360 * budget)
+        )
+        self.assertEqual(
+            thumbnail_plane_bytes(1280, 720, 3, 2), int(320 * 180 * budget)
+        )
+        # Strictly less than mode 2 (uncompressed colour) at the same
+        # geometry -- the entire premise of offering JPEG as the low-cost
+        # choice.
+        self.assertLess(
+            thumbnail_plane_bytes(1280, 720, 3, 2),
+            thumbnail_plane_bytes(1280, 720, 2, 2),
+        )
+
+    def test_mode3_jpeg_floor_matches_mode2s(self):
+        # Same width/height floor as every other mode (max(1, dim >> shift)).
+        self.assertEqual(thumbnail_plane_bytes(1272, 720, 3, 12), int(1 * 1 * THUMBNAIL_JPEG_BUDGET_BYTES_PER_PIXEL))
 
 
 class ComputeFrameSizeMbTests(unittest.TestCase):

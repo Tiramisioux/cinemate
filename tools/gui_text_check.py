@@ -56,7 +56,13 @@ def template_body(html: str) -> str:
     body = re.sub(r"<script\b.*?</script>", "", body, flags=re.S | re.I)
     body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
     # The lookups themselves sit between tags and would otherwise read as the
-    # very prose this is looking for.
+    # very prose this is looking for. Same reasoning for {% ... %} control-flow
+    # tags (the settings-editor DNG-thumbnails card's {% for %} over
+    # thumbnail_choices, added alongside cinemate's own JPEG thumbnail mode --
+    # the template's first use of Jinja control flow, everything before it
+    # being plain {{ t('key') }} lookups): a "for value, label in ..." is
+    # Jinja syntax, not a hardcoded sentence, and must not read as either.
+    body = re.sub(r"\{%.*?%\}", "", body, flags=re.S)
     return re.sub(r"\{\{.*?\}\}", "", body, flags=re.S)
 
 

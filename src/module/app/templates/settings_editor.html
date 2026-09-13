@@ -1804,29 +1804,39 @@
             </label>
           </div>
         </div>
-        <!-- No visible card here: the embedded DNG thumbnail is the
-             standard playback path (image_capture.thumbnail defaults to 2,
-             colour), not an operator-facing toggle -- the 0/1/2 field with
-             its "off / mono / colour, applied live" explanation was found
-             confusing now that "off" isn't really a supported playback
-             configuration (playback.py's raw-decode fallback is disabled).
-             Colour is the default because, paired with thumbnail_size
-             defaulting to 2 below, it costs FEWER bytes than mono did at
-             half size (2026-09-13 operator decision, final) -- still
-             adjustable via `set thumbnail 1` (CLI) if you want mono, at a
-             third of the bytes. This hidden input is NOT decorative: it
-             is what keeps buildState() from silently dropping
-             image_capture.thumbnail from settings.jsonc on the next
-             editor save (B-2's exact bug, reintroduced by removing the
-             visible field without this) -- every [data-path] element
-             participates in the save payload whether or not it is shown. -->
-        <input type="hidden" data-path="image_capture.thumbnail" data-type="number" data-original="2" value="2">
-        <!-- Same reason as the input just above: image_capture.thumbnail_size
-             has no visible card either (changing it restarts the camera, so
-             it is a settings-only knob -- see settings.jsonc's own comment
-             on the key), but it must still round-trip through buildState()'s
-             save payload or a Save silently erases it, the same B-2 bug. -->
-        <input type="hidden" data-path="image_capture.thumbnail_size" data-type="number" data-original="2" value="2">
+        <div class="card" data-search="dng thumbnail embedded preview playback mono colour color jpeg greyscale off">
+          <div class="card-main">
+            <label class="card-label">{{ t('card.image_capture.thumbnail.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.thumbnail.help') }}</p>
+          </div>
+          <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
+            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.thumbnail.0') }}</span>
+              <!-- Options rendered from thumbnail_choice_labels() (sensor_detect.py)
+                   in the route's template context (settings_editor.py's index()) --
+                   the bytes-per-frame and CPU words in each label are computed for
+                   THIS camera's actual lores plane and thumbnail_size, not restated
+                   by hand here, so they cannot drift from what a take really costs.
+                   "selected" is the shipped default (colour) like every other
+                   static <select> on this page; the page's own hydration sets the
+                   real current value from settings.jsonc/redis on load, same as
+                   every other [data-path] field. -->
+              <select class="field-input" id="f-thumb-mode" data-path="image_capture.thumbnail" data-type="string" data-original="colour" style="min-width:300px">
+                {% for value, label in thumbnail_choices %}
+                <option value="{{ value }}"{% if value == 'colour' %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.thumbnail.1') }}</span>
+              <select class="field-input" id="f-thumb-size" data-path="image_capture.thumbnail_size" data-type="number" data-original="2" style="min-width:170px">
+                <option value="0">Full lores {{ thumbnail_size_dims[0] }}</option>
+                <option value="1">Half {{ thumbnail_size_dims[1] }}</option>
+                <option value="2" selected>Quarter {{ thumbnail_size_dims[2] }}</option>
+              </select>
+            </label>
+          </div>
+        </div>
         <div class="card" data-search="sensor database file resources sensors json advanced">
           <div class="card-main">
             <label class="card-label">{{ t('card.sensors.database_file.label') }}</label>
@@ -5816,7 +5826,7 @@
     { group: 'ClearHDR', value: 'set_hdr_blend', label: 'Set HDR blend', noArg: 'required', arg: { type: 'number', min: 0, max: 8, placeholder: '0–8' } },
     { group: 'ClearHDR', value: 'set_hdr_gain_adder', label: 'Set HDR gain adder', noArg: 'required', arg: { type: 'number', min: 0, max: 5, placeholder: '0–5' } },
     { group: 'CineMate Log', value: 'set_log_encode', label: 'Set CineMate Log target', noArg: 'toggle', arg: { type: 'select', options: ['off','10','12'] } },
-    { group: 'Thumbnail', value: 'set_thumbnail', label: 'Set DNG thumbnail mode', noArg: 'required', arg: { type: 'select', options: [0,1,2] } },
+    { group: 'Thumbnail', value: 'set_thumbnail', label: 'Set DNG thumbnail mode', noArg: 'required', arg: { type: 'select', options: ['off','mono','colour','jpeg'] } },
     { group: 'Zoom / anamorphic', value: 'set_zoom', label: 'Set preview zoom', noArg: 'cycle', arg: { type: 'select', options: [1,2], suffix: '×' } },
     { group: 'Zoom / anamorphic', value: 'inc_zoom', label: 'Zoom in one stop' },
     { group: 'Zoom / anamorphic', value: 'dec_zoom', label: 'Zoom out one stop' },

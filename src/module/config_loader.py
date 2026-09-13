@@ -302,6 +302,60 @@ def clearhdr_startup_values(settings: dict) -> dict:
     }
 
 
+# The four thumbnail values, keyed by what actually reaches Redis/cinepi-raw
+# (always an int -- cinepi-raw's sync() and CONTROL_KEY_THUMBNAIL handler
+# both stoi() the wire value, per architecture/redis-contract.md). This is
+# the reverse direction from parse_thumbnail_mode() below: docs, the
+# settings-editor labels, and log lines name a mode from its int, rather
+# than restating the four words a second time.
+THUMBNAIL_MODE_NAMES = {0: "off", 1: "mono", 2: "colour", 3: "jpeg"}
+
+# parse_thumbnail_mode()'s word table is this dict inverted, plus "color"
+# (settings.schema.json's enum accepts both spellings; only one needs a
+# canonical name in THUMBNAIL_MODE_NAMES).
+_THUMBNAIL_MODE_WORDS = {name: value for value, name in THUMBNAIL_MODE_NAMES.items()}
+_THUMBNAIL_MODE_WORDS["color"] = _THUMBNAIL_MODE_WORDS["colour"]
+
+
+def parse_thumbnail_mode(value) -> int | None:
+    """Validate a raw image_capture.thumbnail / `set thumbnail` value.
+
+    Returns 0..3 for anything that names a real mode, or None otherwise --
+    the single parser thumbnail_startup_value() (below) and
+    set_thumbnail() (cinepi_controller.py) both use, so a settings.jsonc
+    value and a live `set thumbnail` word are validated identically and
+    the file and the CLI cannot disagree about the same raw value the way
+    they did before (see thumbnail_startup_value()'s own history below).
+
+    Accepts, case-insensitively and stripped of surrounding whitespace: the
+    four words "off" / "mono" / "colour" / "color" / "jpeg"; an int 0..3;
+    or a numeric string in that range. Rejects a bool outright, checked
+    before anything else reaches int() -- bool is an int subclass in
+    Python, so int(True) == 1 and int(False) == 0 would otherwise silently
+    accept a JSON true/false as a real mode instead of the type error it
+    actually is. That silent coercion is exactly how a hand-edited
+    "thumbnail": true crashed Cinemate at startup once redis-py rejected
+    the bool it was handed unvalidated (B-1) -- accepting it here as
+    mode 1 would only move the same confusion one step later. Anything
+    else that cannot be resolved to 0..3 -- None, a list/dict, an
+    out-of-range int, an unrecognised or non-numeric string -- is also
+    None, so every caller has exactly one place to fall back to a safe
+    default rather than reaching Redis or cinepi-raw unvalidated.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        word = value.strip().lower()
+        if word in _THUMBNAIL_MODE_WORDS:
+            return _THUMBNAIL_MODE_WORDS[word]
+        value = word   # fall through: might still be a numeric string
+    try:
+        mode = int(value)
+    except (TypeError, ValueError):
+        return None
+    return mode if 0 <= mode <= 3 else None
+
+
 def thumbnail_startup_value(settings: dict) -> int:
     """Validated startup value for image_capture.thumbnail, keyed by Redis key.
 
@@ -313,9 +367,14 @@ def thumbnail_startup_value(settings: dict) -> int:
     coerced it), a non-numeric string reached cinepi-raw's sync() and its
     then-unguarded stoi(), and 3 passed through where the CLI path clamps
     to 2 -- so the same raw value in the file meant "off" via one path and
-    "colour" via the other. This applies the exact same clamp as
-    set_thumbnail() so both paths agree, and so a malformed value degrades
-    to a safe default instead of reaching either process unvalidated.
+    "colour" via the other. This now goes through parse_thumbnail_mode()
+    (above), which folds in a fourth value (3, colour JPEG) and additionally
+    accepts the four words directly -- "off" / "mono" / "colour" (or
+    "color") / "jpeg" -- so a hand-written settings.jsonc can say
+    `"thumbnail": "colour"` as well as `2`. A bool is now rejected outright
+    rather than coerced (see parse_thumbnail_mode()'s own docstring for why
+    int(True) == 1 was itself part of B-1's surprise, not a safe accident to
+    keep).
 
     Defaults to 2 (colour), not 0: the embedded thumbnail is the standard
     playback path, and playback.py's raw-decode fallback is disabled (too
@@ -330,13 +389,17 @@ def thumbnail_startup_value(settings: dict) -> int:
     left to make. `set thumbnail 1` (or `image_capture.thumbnail: 1`)
     still gives mono, at a third of the bytes, for anyone who wants it
     lighter still; see cinepi-raw's CP_DEF_THUMBNAIL for the matching
-    compiled-in fallback.
+    compiled-in fallback. JPEG (3, "jpeg") is smaller still -- FINDINGS.md
+    §2b measured colour JPEG at 640x360 at 9-16 KB per frame, a twentieth
+    of mono at the same size -- but costs the most CPU of the four (YUV to
+    RGB plus the JPEG encode), which is exactly why it stays an opt-in
+    rather than becoming the new default: processor headroom is the
+    camera's stated constraint, and 2 (colour, uncompressed) does not
+    spend any of it.
     """
     raw = settings.get("image_capture", {}).get("thumbnail", 2)
-    try:
-        return max(0, min(2, int(raw)))
-    except (TypeError, ValueError):
-        return 2
+    parsed = parse_thumbnail_mode(raw)
+    return parsed if parsed is not None else 2
 
 
 def thumbnail_size_startup_value(settings: dict) -> int:
@@ -562,11 +625,15 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "imx585_clear_hdr_12bit": True,
             "imx585_clear_hdr_16bit": True,
         },
-        # 2 (colour): the embedded thumbnail is the standard playback path,
+        # "colour": the embedded thumbnail is the standard playback path,
         # not an opt-in. Paired with thumbnail_size defaulting to 2 below,
         # colour costs FEWER bytes than mono did at half size -- see
         # thumbnail_startup_value()'s docstring for the 2026-09-13 decision.
-        "thumbnail": 2,
+        # Four values, as words now that parse_thumbnail_mode() accepts them:
+        # "off" / "mono" / "colour" (or "color") / "jpeg" -- see
+        # THUMBNAIL_MODE_NAMES above. "jpeg" is the smallest file of the
+        # four but the most CPU, so it is the opt-in, not this default.
+        "thumbnail": "colour",
         # 2 (320x180): at the colour default above, 172,800 B/frame -- less
         # than 640x360 mono (shift 1) would have cost. Shift 0 (full lores
         # plane) in colour is 2,764,800 B/frame, the growth FINDINGS.md

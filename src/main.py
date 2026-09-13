@@ -815,15 +815,18 @@ def run_application(args, log_queue):
     for _hdr_key, _hdr_value in clearhdr_startup_values(settings).items():
         redis_controller.set_value(_hdr_key, _hdr_value)
 
-    # Embedded DNG thumbnail mode (image_capture.thumbnail): 0 off, 1 mono,
-    # 2 colour. cinepi-raw's own compiled-in default (CP_DEF_THUMBNAIL) is 0
-    # if this key is never seeded at all -- for a standalone launch with no
-    # CineMate in front of it. Seeding it here means the shipped default is
-    # what a fresh boot actually applies. thumbnail_startup_value() clamps
-    # the same way set_thumbnail() does (B-1): the raw settings.jsonc value
+    # Embedded DNG thumbnail mode (image_capture.thumbnail): off, mono,
+    # colour (default), or jpeg (0-3 on the wire either way). cinepi-raw's
+    # own compiled-in default (CP_DEF_THUMBNAIL) is 2 (colour) if this key
+    # is never seeded at all -- for a standalone launch with no CineMate in
+    # front of it. Seeding it here means the shipped default is what a
+    # fresh boot actually applies. thumbnail_startup_value() now goes
+    # through parse_thumbnail_mode() (config_loader.py, Phase 2), which
+    # accepts the four words as well as the legacy ints and rejects a bool
+    # outright rather than coercing it (B-1: the raw settings.jsonc value
     # used to reach redis unvalidated, where a bool crashed at startup and a
-    # non-numeric string crashed cinepi-raw's sync() instead of set_thumbnail's
-    # int(value) coercion ever running on it.
+    # non-numeric string crashed cinepi-raw's sync() instead of
+    # set_thumbnail's coercion ever running on it).
     redis_controller.set_value(
         ParameterKey.THUMBNAIL.value,
         thumbnail_startup_value(settings)

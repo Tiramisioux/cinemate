@@ -63,6 +63,26 @@ DNG_HEADER_OVERHEAD_BYTES = 1024
 DNG_COMPRESSION_RATIO = 1.0
 
 
+# Colour-JPEG (mode 3) per-frame ESTIMATE, not the exact formula the other
+# three modes have: a JPEG's actual size depends on scene content, and is
+# unknowable here the same way it is unknowable to cinepi-raw's own
+# dng_thumbnail.hpp before libjpeg has actually encoded a given frame (see
+# that header's ThumbGeometry::compressed comment -- its own JPEG number is
+# a RESERVATION, the uncompressed worst case, deliberately different from
+# this estimate). Measured 0.04-0.08 B/px at quality 85 across three
+# ordinary takes (FINDINGS.md §2b, development/dng-thumbnail-cost/);
+# detailed or noisy scenes compressed two to three times worse there. 0.15
+# is deliberately ABOVE that measured range: this feeds compute_frame_size_mb()
+# and, through it, the GUI's minutes-remaining figure, and an under-estimate
+# here would tell an operator they have more card space left than they
+# really do -- the one direction that figure must never be wrong in. Named
+# once so every reader of file_size math sees the same number and the same
+# reasoning; see thumbnail_choice_labels() below for the DIFFERENT (and
+# lower, since it is describing typical size rather than budgeting worst
+# case) range shown to an operator choosing a mode in the settings editor.
+THUMBNAIL_JPEG_BUDGET_BYTES_PER_PIXEL = 0.15
+
+
 def thumbnail_plane_bytes(lores_w: int, lores_h: int, mode: int, shift: int) -> int:
     """Bytes the embedded DNG thumbnail (IFD1) adds to one frame.
 
@@ -79,7 +99,11 @@ def thumbnail_plane_bytes(lores_w: int, lores_h: int, mode: int, shift: int) -> 
     -- mode and shift are swapped. Read the parameter names, not the
     position, when calling either one.
 
-    mode: 0 off, 1 mono (1 byte/pixel), 2 colour (3 bytes/pixel).
+    mode: 0 off, 1 mono (1 byte/pixel), 2 colour (3 bytes/pixel), 3 colour
+    JPEG -- THUMBNAIL_JPEG_BUDGET_BYTES_PER_PIXEL per pixel, a conservative
+    ESTIMATE (see that constant's own comment), not the uncompressed spp
+    formula the other three modes use and not the same number as
+    cinepi-raw's own JPEG reservation in dng_thumbnail.hpp.
     shift: right-shift applied to each lores dimension, 0..12 (cinepi-raw's
     own clamp; see thumbnail_size_startup_value() in config_loader.py for
     cinemate's own, tighter 0..4). Returns 0 when mode is 0; width/height
@@ -88,8 +112,88 @@ def thumbnail_plane_bytes(lores_w: int, lores_h: int, mode: int, shift: int) -> 
     """
     width = max(1, lores_w >> shift)
     height = max(1, lores_h >> shift)
+    if mode == 0:
+        return 0
+    if mode == 3:
+        return int(width * height * THUMBNAIL_JPEG_BUDGET_BYTES_PER_PIXEL)
     spp = 3 if mode == 2 else 1
-    return 0 if mode == 0 else width * height * spp
+    return width * height * spp
+
+
+def _format_thumbnail_kb(n_bytes: int) -> str:
+    """n_bytes as whole decimal KB for a settings-editor label, e.g. the
+    mono default at 640x360 (230,400 B) -> "230 KB"."""
+    return f"{round(n_bytes / 1000):,} KB"
+
+
+# Colour-JPEG label range, keyed by thumbnail_size (shift) -- the settings
+# editor's size dropdown only ever offers 0/1/2 (Full lores / Half / Quarter,
+# item 6), so these are the three sizes an operator can actually choose,
+# and each is a MEASURED range (FINDINGS.md §2b's own re-encodes; shift 0's
+# is FINDINGS.md §1's full-lores figure), cited here rather than re-derived
+# from a formula -- the ground rule for how measured numbers travel into
+# docs/labels. Wider than FINDINGS.md's narrowest per-take figures on
+# purpose, matching that section's own "detailed or noisy scenes compress
+# two to three times worse" caveat: a label should not undersell how big a
+# demanding scene's thumbnail can get.
+_THUMBNAIL_JPEG_LABEL_RANGE_KB = {
+    0: (64, 76),    # full lores (~1280x720), FINDINGS.md §1 / §2b
+    1: (10, 25),    # half (~640x360)
+    2: (3, 8),      # quarter (~320x180) -- the shipped default size
+}
+
+
+def _thumbnail_jpeg_label_range_kb(width: int, height: int, shift: int) -> tuple[int, int]:
+    """(low, high) whole-KB range for the JPEG choice's label at this size.
+
+    Uses the measured table above for the three shifts the settings editor
+    actually offers; falls back to scaling FINDINGS.md §2b's own stated
+    0.04-0.08 B/px range by actual pixel count for any other shift, so this
+    stays a total function over the same domain thumbnail_plane_bytes()
+    accepts even though nothing in this codebase currently asks for a
+    shift outside 0-2 here.
+    """
+    if shift in _THUMBNAIL_JPEG_LABEL_RANGE_KB:
+        return _THUMBNAIL_JPEG_LABEL_RANGE_KB[shift]
+    pixels = width * height
+    low_rate, high_rate = 0.04, 0.08
+    return (
+        max(1, round(pixels * low_rate / 1000)),
+        max(1, round(pixels * high_rate / 1000)),
+    )
+
+
+def thumbnail_choice_labels(lores_w: int, lores_h: int, shift: int) -> list[tuple[str, str]]:
+    """(value, label) for the four `image_capture.thumbnail` choices, sized
+    and costed for the CURRENT camera's lores plane and the CURRENT
+    thumbnail_size -- what the settings editor's mode dropdown renders, so
+    an operator picks with the bytes-per-frame and CPU cost in front of
+    them instead of a bare word. Order matches THUMBNAIL_MODE_NAMES
+    (config_loader.py): off, mono, colour, jpeg.
+
+    Bytes for mono/colour come from thumbnail_plane_bytes() -- the same
+    formula file_size uses, so the label can never disagree with what a
+    take actually costs. JPEG's is a measured RANGE
+    (_thumbnail_jpeg_label_range_kb()), not thumbnail_plane_bytes()'s own
+    conservative budget estimate for mode 3 -- that budget is deliberately
+    pessimistic for minutes-remaining math, which is not what an operator
+    asking "how big will this actually be" should be shown.
+    """
+    width = max(1, lores_w >> shift)
+    height = max(1, lores_h >> shift)
+    dims = f"{width}×{height}"
+
+    mono_bytes = thumbnail_plane_bytes(lores_w, lores_h, 1, shift)
+    colour_bytes = thumbnail_plane_bytes(lores_w, lores_h, 2, shift)
+    jpeg_low_kb, jpeg_high_kb = _thumbnail_jpeg_label_range_kb(width, height, shift)
+
+    return [
+        ("off", "Off — 0 B per frame, no CPU; takes are not playable in the Playback pane"),
+        ("mono", f"Greyscale {dims} — {_format_thumbnail_kb(mono_bytes)} per frame, lightest CPU"),
+        ("colour", f"Colour {dims} — {_format_thumbnail_kb(colour_bytes)} per frame, moderate CPU"),
+        ("jpeg", f"Colour JPEG {dims} — about {jpeg_low_kb}–{jpeg_high_kb} KB per frame "
+                 "(varies by scene), highest CPU"),
+    ]
 
 
 def compute_frame_size_mb(width: int, height: int, bit_depth: int,

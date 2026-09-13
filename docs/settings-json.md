@@ -274,6 +274,22 @@ imx585 ClearHDR.
 
     A row the attached sensor has no mode for is dimmed — 1.5K, 3K, 5.5K and 10-bit on an IMX585, for instance. Dimmed, not disabled: the switch still flips, still saves and applies the moment a sensor that has those modes is fitted, the same way the Grove HAT's channel assignments survive the HAT being unplugged. With no camera detected at all, nothing is dimmed.
 
+## DNG thumbnails
+<a id="dng-thumbnails"></a>
+
+Every DNG can carry a second image (IFD1) alongside the raw frame, so the settings editor's [Playback pane](playback.md#the-embedded-thumbnail) can show a take without decoding the much heavier raw frame. Every frame in a take pays for whichever choice is made — the bytes and the CPU cost below apply to every single frame recorded, not once per take.
+
+| Value | What is written | Bytes/frame at 320×180 (default size) | Bytes/frame at 1280×720 (full size) | CPU cost | Playback result |
+| --- | --- | --- | --- | --- | --- |
+| `off` | Nothing — IFD0 only | 0 B | 0 B | None | Not playable in the pane (`NO EMBEDDED THUMBNAIL`) |
+| `mono` | 8-bit greyscale, uncompressed | 57,600 B | 921,600 B | Lightest — one range-expanded byte per pixel | Greyscale |
+| `colour` (default; `color` also accepted) | 8-bit RGB, uncompressed | 172,800 B | 2,764,800 B | Moderate — YUV→RGB per pixel | Colour |
+| `jpeg` | Baseline JPEG, YCbCr 4:2:0, quality 85 | ~3–8 KB, scene-dependent | ~64–76 KB, scene-dependent | Highest — YUV→RGB plus the JPEG encode | Colour, served without re-encoding |
+
+Sizes scale with `image_capture.thumbnail_size` (`0` full lores plane, `1` half, `2` quarter — the default) exactly the same way for all four choices; the JPEG figures are measured ranges, not a formula, because a JPEG's size depends on the scene (a detailed or noisy frame compresses two to three times worse than these figures).
+
+Colour is the default: paired with the quarter-size default above, it costs fewer bytes than mono did at half size, so there is no size/colour trade-off left to make, and the pane gets a real colour picture for free. Choose `mono` when CPU headroom matters more than colour — it is the lightest of the four. Choose `jpeg` when storage or card space is the binding constraint and the CPU has the headroom to spend (4K at 25 fps on a Pi 5 — to be confirmed on hardware): it is by far the smallest file, at the highest per-frame CPU cost. Choose `colour` (uncompressed) when CPU is tight and a colour preview still matters more than the extra bytes. Choose `off` when neither the pane nor the bytes matter at all. `image_capture.thumbnail_size` (below) scales whichever mode is chosen.
+
 ## Per-mode fps ceilings
 <a id="custom_modes"></a>
 
@@ -508,8 +524,6 @@ Edit these by hand, or leave them at the defaults.
 | `arrays.hdr_threshold_low` · `hdr_threshold_high` · `hdr_blend` · `hdr_gain_adder` | Click-stop tables (`steps`, `free`, `free_increment`) a pot or encoder steps through. Startup values: [Resolution & sensor](#resolution-sensor). |
 | `arrays.shutter_a.sync_increment` | Granularity in shutter-angle sync mode only. Default `0.1`°, independent of the shutter angle's own free increment. |
 | `image_capture.hdr.self_heal` | Auto-recovery for the flat-pedestal ClearHDR startup defect. Off by default, [details](clear-hdr.md#flat-black-pedestal-frames). |
-| `image_capture.thumbnail` | Embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour. Colour by default (operator decision, final) — paired with `thumbnail_size` defaulting to `2`, colour at quarter size costs fewer bytes than mono did at half size; `set thumbnail 1` gives mono, at a third of the bytes. Live, per take, no camera restart. [Redis keys](redis-keys.md), [Playback](playback.md#the-embedded-thumbnail). |
-| `image_capture.thumbnail_size` | Right-shift of the lores plane before the thumbnail is written: `0` full size, `1` half, `2` quarter (default, 320×180, 172,800 B/frame at the colour default). Changing it restarts the camera. [Redis keys](redis-keys.md), [Playback](playback.md#the-embedded-thumbnail). |
 | `hdmi_display.preview.zoom_steps` | Zoom factors `set zoom` cycles through. Default `1.0, 1.5, 2.0`; **Default zoom** offers only `1.0` and `2.0`. |
 | `hdmi_display.preview.pip.scale` / `pip.margin` | PiP inset size and edge gap, as fractions of the pane. Defaults `0.28` and `0.03`. |
 | `hdmi_display.preview.anamorphic.default_factor` | Desqueeze factor at startup, default `1.0`; the factor list is on the page, under **Value steps**. |

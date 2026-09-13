@@ -17,8 +17,10 @@ from module.config_loader import (
     TRUE_VALUES,
     FALSE_VALUES,
     DEFAULT_SETTINGS_PATH,
+    parse_thumbnail_mode,
     thumbnail_startup_value,
     thumbnail_size_startup_value,
+    THUMBNAIL_MODE_NAMES,
 )
 from module.storage_profiles import recorder_profile_name_for_filesystem
 from module.dynamic_resolution import (
@@ -1119,13 +1121,18 @@ class CinePiController:
         # above: an operator's live `set thumbnail`, or a `thumbnail_size`
         # change, is meant to show up in file_size immediately, not only
         # after the next boot. Clamped the same way as
-        # thumbnail_startup_value() / thumbnail_size_startup_value() (0..2,
+        # thumbnail_startup_value() / thumbnail_size_startup_value() (0..3,
         # 0..4) rather than cinepi-raw's own wider 0..12 for
         # thumbnail_size -- this estimate only needs to track what an
-        # operator can actually set from here.
+        # operator can actually set from here. 0..3, not 0..2: mode 3
+        # (colour JPEG) must reach thumbnail_plane_bytes() too, or
+        # file_size would silently keep costing it as colour uncompressed
+        # after a `set thumbnail jpeg`. The redis value is always a plain
+        # int on the wire (architecture/redis-contract.md), so int()
+        # rather than parse_thumbnail_mode() is enough here.
         lores_w, lores_h = self.sensor_detect._calc_lores(width, height)
         try:
-            thumb_mode = max(0, min(2, int(self.redis_controller.get_value(ParameterKey.THUMBNAIL.value))))
+            thumb_mode = max(0, min(3, int(self.redis_controller.get_value(ParameterKey.THUMBNAIL.value))))
         except (TypeError, ValueError):
             thumb_mode = thumbnail_startup_value(self.settings)
         try:
@@ -1140,20 +1147,28 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(self.file_size))
 
     def set_thumbnail(self, value):
-        """Set the embedded DNG thumbnail mode: 0 off, 1 mono, 2 colour.
+        """Set the embedded DNG thumbnail mode: off, mono, colour, or jpeg
+        (0..3; the words or their ints, case-insensitively -- see
+        parse_thumbnail_mode() in config_loader.py, the same parser
+        thumbnail_startup_value() validates settings.jsonc with, so a
+        settings-file value and a live `set thumbnail` word can never
+        disagree about what the same raw value means).
 
         Applied live: cinepi-raw's CONTROL_KEY_THUMBNAIL handler takes
         effect on the next frame with no camera restart, unlike
         thumbnail_size (not exposed here yet -- its handler does restart
         the camera). New takes only; nothing already on the card changes.
         """
-        try:
-            v = max(0, min(2, int(value)))
-        except (TypeError, ValueError):
-            logging.error("thumbnail expects an integer 0 (off), 1 (mono), or 2 (colour)")
+        v = parse_thumbnail_mode(value)
+        if v is None:
+            logging.error(
+                "thumbnail expects off/mono/colour/jpeg (or 0-3), got %r", value
+            )
             return
         self.redis_controller.set_value(ParameterKey.THUMBNAIL.value, v)
-        logging.info(f"DNG thumbnail mode set to {v}")
+        logging.info(
+            "DNG thumbnail mode set to %d (%s)", v, THUMBNAIL_MODE_NAMES.get(v, "?")
+        )
         # The mode changes the per-frame byte count (C9 fix): recompute
         # file_size / minutes-remaining now rather than leaving them stale
         # until the next sensor-mode switch or `set log` toggle.

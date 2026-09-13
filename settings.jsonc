@@ -279,28 +279,30 @@
       // development/mono-clearhdr-fixes/ROUND9-RESULTS.md.
       "self_heal": false
     },
-    // Embedded DNG thumbnail written by cinepi-raw's DNG encoder: 0 off,
-    // 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour
-    // by default -- operator decision 2026-09-13 (final): paired with
-    // thumbnail_size defaulting to 2 below, colour at quarter size costs
-    // FEWER bytes than mono did at half size, so there is no size/colour
-    // trade-off left to make. `set thumbnail 1` (or this key set to 1)
-    // gives mono, at a third of the bytes below, for anyone who wants it
-    // lighter still. New takes only -- a take recorded with this off (or
-    // before a rebuilt cinepi-raw shipped it) has no thumbnail and is not
-    // currently playable in the pane.
-    "thumbnail": 2,
+    // Embedded DNG thumbnail (IFD1), read by the Playback pane. Four
+    // choices, cost rising with the words: "off" (0 B/frame, no CPU, not
+    // playable in the pane); "mono" (greyscale, lightest CPU, 57,600
+    // B/frame at the default size); "colour" (RGB, moderate CPU, 172,800
+    // B/frame -- fewer bytes than mono cost at half size, hence the
+    // default, 2026-09-13); "jpeg" (quality-85 JPEG, highest CPU, ~3-8 KB
+    // scene-dependent -- by far the fewest bytes). `set thumbnail <word>`
+    // (or 0-3) changes this live, for the next take. `thumbnail_size`
+    // below scales every choice. Full table: docs/settings-json.md's
+    // "DNG thumbnails" section.
+    "thumbnail": "colour",
     // Right-shift applied to the lores plane before writing the
     // thumbnail: 0 = full lores size, 1 = half each side, 2 = quarter,
     // and so on. Changing this restarts the camera (unlike `thumbnail`
-    // above), so it is a settings-only knob, not exposed via CLI or the
-    // settings editor. At the colour default above: 0 = 1280x720 =
-    // 2,764,800 B/frame (+22.2% on a 4K 12-bit frame, +88.9% on HD
-    // 12-bit -- what CineMate 3.4 actually shipped with before this fix),
-    // 1 = 640x360 = 691,200 B/frame (+5.6% / +22.2%), 2 = 320x180 =
-    // 172,800 B/frame (the default, +1.4% / +5.6%). Mono is a third of
-    // each figure. See development/dng-thumbnail-cost/FINDINGS.md and the
-    // 2026-09-13 hardware-log entry.
+    // above), so it is a settings-editor field, not a live CLI verb --
+    // a Save applies it on the next start. At the colour default above:
+    // 0 = 1280x720 = 2,764,800 B/frame (+22.2% on a 4K 12-bit frame,
+    // +88.9% on HD 12-bit -- what CineMate 3.4 actually shipped with
+    // before this fix), 1 = 640x360 = 691,200 B/frame (+5.6% / +22.2%),
+    // 2 = 320x180 = 172,800 B/frame (the default, +1.4% / +5.6%). Mono is
+    // a third of each figure; jpeg is a stated range, not this formula --
+    // see thumbnail's own comment above. See
+    // development/dng-thumbnail-cost/FINDINGS.md and the 2026-09-13
+    // hardware-log entry.
     "thumbnail_size": 2,
     "custom_modes": {}
   },

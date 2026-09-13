@@ -346,18 +346,17 @@
           }
         },
         "thumbnail": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 2,
-          "default": 2,
-          "description": "Embedded DNG thumbnail mode written by cinepi-raw's DNG encoder: 0 off, 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour by default -- operator decision 2026-09-13 (final): paired with thumbnail_size defaulting to 2, colour at quarter size costs fewer bytes than mono did at half size, so there is no size/colour trade-off left to make. `set thumbnail 1` gives mono, at a third of the bytes, for anyone who wants it lighter still. New takes only -- a take recorded with this off (or before a rebuilt cinepi-raw shipped it) has no thumbnail and is not currently playable in the pane."
+          "type": ["string", "integer"],
+          "enum": ["off", "mono", "colour", "jpeg", 0, 1, 2, 3],
+          "default": "colour",
+          "description": "Embedded DNG thumbnail mode written by cinepi-raw's DNG encoder: off (no IFD1, no bytes, no CPU -- not playable in the Playback pane), mono (greyscale, lightest CPU), colour (RGB, moderate CPU), or jpeg (quality-85 colour JPEG, highest CPU, by far the fewest bytes -- scene-dependent). Accepts the words (case-insensitively; \"color\" also accepted) or the legacy ints 0-3. `set thumbnail <word>` changes this live, for the next take. Colour by default -- operator decision 2026-09-13 (final): paired with thumbnail_size defaulting to 2, colour at quarter size costs fewer bytes than mono did at half size, so there is no size/colour trade-off left to make. See docs/settings-json.md's \"DNG thumbnails\" section for the measured bytes-per-frame and CPU cost of each choice."
         },
         "thumbnail_size": {
           "type": "integer",
           "minimum": 0,
           "maximum": 4,
           "default": 2,
-          "description": "Right-shift applied to the lores plane before writing the embedded thumbnail: 0 = full lores size, 1 = half each side, 2 = quarter, and so on. Changing this restarts the camera (unlike `thumbnail`), so it is settings-only, not exposed via CLI or the settings editor. At the colour default above: 0 = 1280x720 = 2,764,800 B/frame (+22.2% on a 4K 12-bit frame, +88.9% on HD 12-bit -- what CineMate 3.4 actually shipped with before this fix), 1 = 640x360 = 691,200 B/frame, 2 = 320x180 = 172,800 B/frame (the default, +1.4% / +5.6%). Mono is a third of each figure. See development/dng-thumbnail-cost/FINDINGS.md and the 2026-09-13 hardware-log entry."
+          "description": "Right-shift applied to the lores plane before writing the embedded thumbnail: 0 = full lores size, 1 = half each side, 2 = quarter, and so on. Applies to every thumbnail mode, jpeg included. Changing this restarts the camera (unlike `thumbnail`), so it is a settings-editor field rather than a live CLI verb -- a Save applies it on the next start. At the colour default above: 0 = 1280x720 = 2,764,800 B/frame (+22.2% on a 4K 12-bit frame, +88.9% on HD 12-bit -- what CineMate 3.4 actually shipped with before this fix), 1 = 640x360 = 691,200 B/frame, 2 = 320x180 = 172,800 B/frame (the default, +1.4% / +5.6%). Mono is a third of each figure; jpeg is a stated range instead, not this formula. See development/dng-thumbnail-cost/FINDINGS.md and the 2026-09-13 hardware-log entry."
         },
         "dynamic_resolution": {
           "type": "boolean",

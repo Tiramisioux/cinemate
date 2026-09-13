@@ -100,6 +100,14 @@ Applied when a ClearHDR mode is selected. Adjust live afterwards with `set hdr �
 <!-- key: caption.image_capture.hdr.threshold_low · one per control, separated by ' · ' -->
 *Threshold low · Threshold high · Blend · Gain adder*
 
+### DNG thumbnails
+<!-- key: card.image_capture.thumbnail -->
+
+Each recorded frame can carry a small second image so the Playback pane doesn't have to decode the raw frame to show one. The bytes-per-frame figures in the mode list are for the size chosen on the right; the JPEG figure is a range because it depends on the scene. CPU cost rises left to right, off to colour JPEG. Changing the size restarts CineMate, like any other setting here, so it takes effect on the next start.
+
+<!-- key: caption.image_capture.thumbnail · one per control, separated by ' · ' -->
+*Mode · Size*
+
 ### Sensor database
 <!-- key: card.sensors.database_file -->
 

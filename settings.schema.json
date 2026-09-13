@@ -781,7 +781,7 @@
         },
         "tuning_file_override": {
           "type": "object",
-          "description": "Override the libcamera tuning file for this sensor",
+          "description": "Override the libcamera tuning file for this sensor. Checked before launch: a path that is missing, unreadable, not JSON, or not a \"pisp\"-target tuning (a Pi 4 / vc4 file cannot load on a Pi 5) falls back to the auto-detected tuning and logs one ERROR line naming the path and the reason, rather than failing camera registration.",
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -789,6 +789,7 @@
             },
             "path": {
               "type": "string",
+              "description": "Path to a tuning JSON file. Relative paths resolve against the repo root (not the working directory); absolute paths are used as-is.",
               "default": "resources/tuning_files/imx477.json"
             }
           }

@@ -280,12 +280,15 @@
       "self_heal": false
     },
     // By default DNGs carry a small preview image, used by the Playback
-    // pane for gapless playback. Disable to slightly increase write speed
-    // and reduce CPU load during recording (disables web GUI playback).
+    // pane for renderless playback. Colour JPEG 628x360 -- about 10-25 KB
+    // per frame, +4.0 ms per frame (+18%). Disable to slightly increase
+    // write speed and reduce cpu load during recording (disables web GUI
+    // playback).
     //
-    // Four values; the figures are per frame at the default size below, and
-    // the encode times were measured 2026-09-13 on a 4K 16-bit ClearHDR take
-    // with CineMate Log 12 at 25 fps (22.2 ms/frame with no preview image):
+    // The figures above are this camera's 4K 16-bit ClearHDR mode with
+    // CineMate Log 12 at 25 fps (22.2 ms/frame with no preview image),
+    // measured 2026-09-13; the thumbnail is half the preview plane, so a
+    // 16:9 sensor mode gives 640x360 instead. Four values:
     //   "off"    0 B,        no extra encode time
     //   "mono"   230,400 B,  +1.2 ms (+6%)   greyscale pane
     //   "colour" 691,200 B,  +3.2 ms (+14%)

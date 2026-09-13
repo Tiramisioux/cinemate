@@ -274,6 +274,37 @@ imx585 ClearHDR.
 
     A row the attached sensor has no mode for is dimmed — 1.5K, 3K, 5.5K and 10-bit on an IMX585, for instance. Dimmed, not disabled: the switch still flips, still saves and applies the moment a sensor that has those modes is fitted, the same way the Grove HAT's channel assignments survive the HAT being unplugged. With no camera detected at all, nothing is dimmed.
 
+## DNG thumbnails
+<a id="dng-thumbnails"></a>
+
+Every DNG can carry a second image (IFD1) alongside the raw frame, so the settings editor's [Playback pane](playback.md#the-embedded-thumbnail) can show a take without decoding the much heavier raw frame. Every frame in a take pays for whichever choice is made — the bytes and the CPU cost below apply to every single frame recorded, not once per take.
+
+| Value | What is written | Bytes/frame at 640×360 (default size) | Extra encode time per frame | Playback result |
+| --- | --- | --- | --- | --- |
+| `off` | Nothing — IFD0 only | 0 B | none | Not playable in the pane (`NO EMBEDDED THUMBNAIL`) |
+| `mono` | 8-bit greyscale, uncompressed | 230,400 B | +1.2 ms (+6%) | Greyscale |
+| `colour` (`color` also accepted) | 8-bit RGB, uncompressed | 691,200 B | +3.2 ms (+14%) | Colour |
+| `jpeg` (default) | Baseline JPEG, YCbCr 4:2:0, quality 85 | ~10–25 KB, scene-dependent | +4.0 ms (+18%) | Colour, served without re-encoding |
+
+Sizes scale with `image_capture.thumbnail_size` (`0` full lores plane, `1` half — the default, `2` quarter) exactly the same way for all four choices; the JPEG figures are measured ranges, not a formula, because a JPEG's size depends on the scene (a detailed or noisy frame compresses two to three times worse than these figures). At quarter size every encode-time figure falls to roughly a third of the one above: +0.7 ms for mono, +1.1 ms for colour, +1.3 ms for JPEG.
+
+### What it actually costs you
+
+Measured on hardware 2026-09-13 — imx585 4K 16-bit ClearHDR with CineMate Log 12, 25 fps, eight takes of 250+ frames each, against a 22.2 ms no-thumbnail baseline. The noise floor between two identical thumbnail-off takes was 0.09 ms, so every figure above is real rather than scatter.
+
+| | Write rate | Recording time per TB | Encode time per frame |
+| --- | --- | --- | --- |
+| No thumbnail | 317.0 MB/s | 52.6 min | 22.2 ms |
+| `jpeg` (default) | 317.4 MB/s | 52.5 min | 26.3 ms |
+| `mono` | 322.7 MB/s | 51.7 min | 23.5 ms |
+| `colour` | 334.0 MB/s | 49.9 min | 25.5 ms |
+
+So the default costs about six seconds of recording time per terabyte of card, and about a fifth more encode time per frame. That encode figure sounds larger than it is: at 25 fps a frame has a 40 ms budget and four encode workers share the load, so the heaviest setting measured never dropped a frame, never failed a write, and never let the disk queue past two. Temperature rose about one degree across the whole session and the board never throttled.
+
+Two caveats worth carrying. These numbers are for a log-encoded 4K frame, where the log curve's pass over every sample dominates the encode and makes the thumbnail's share small; at HD, or at higher frame rates, the raw frame is far cheaper to encode and the same thumbnail is a larger fraction of it. And `off` is genuinely free — a take with no thumbnail is byte-for-byte what a build without the feature would have written.
+
+Colour JPEG at half the lores plane is the default: 640×360 is large enough to judge a take by on a phone or a laptop, which is the only thing the embedded thumbnail exists for, and compressing it costs a fortieth of what the same picture costs uncompressed. Choose `mono` when you want no JPEG encode in the frame path at all — it is the lightest of the four, at the price of a greyscale pane. Choose `jpeg` when storage or card space is the binding constraint and the CPU has the headroom to spend (4K at 25 fps on a Pi 5 — to be confirmed on hardware): it is by far the smallest file, at the highest per-frame CPU cost. Choose `colour` (uncompressed) when CPU is tight and a colour preview still matters more than the extra bytes. Choose `off` when neither the pane nor the bytes matter at all. `image_capture.thumbnail_size` (below) scales whichever mode is chosen.
+
 ## Per-mode fps ceilings
 <a id="custom_modes"></a>
 

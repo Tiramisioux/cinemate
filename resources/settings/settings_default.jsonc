@@ -114,8 +114,16 @@
       "gain_adder": 1,
       "self_heal": false
     },
-    // 0 off / 1 mono / 2 colour -- see settings.jsonc's comment.
-    "thumbnail": 2,
+    // By default DNGs carry a small preview image, used by the Playback
+    // pane for renderless playback. Colour JPEG 628x360 -- about 10-25 KB
+    // per frame, +4.0 ms per frame (+18%). Disable to slightly increase
+    // write speed and reduce cpu load during recording (disables web GUI
+    // playback). "off" / "mono" / "colour" / "jpeg" (or 0-3) -- see
+    // settings.jsonc's comment for the cost of each.
+    "thumbnail": "jpeg",
+    // Right-shift of the lores plane before the thumbnail is written --
+    // see settings.jsonc's comment.
+    "thumbnail_size": 1,
     "custom_modes": {}
   },
   "audio_capture": {

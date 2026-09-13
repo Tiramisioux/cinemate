@@ -46,6 +46,13 @@ class FakeSensorDetect:
     def resolve_effective_bit_depth(self, camera_name, native_bit_depth, *, log_requested=False, hdr=False):
         return native_bit_depth
 
+    def _calc_lores(self, sensor_w, sensor_h):
+        # _recompute_file_size()'s thumbnail term (C9 fix) needs lores dims
+        # too -- these tests are still about the redis/restart side of
+        # set_log_encode(), not the file-size number, so a fixed pair is
+        # enough here as well.
+        return 640, 360
+
 
 class LogEncodeRequestCodecTests(unittest.TestCase):
     def test_round_trips_every_valid_settings_value(self):

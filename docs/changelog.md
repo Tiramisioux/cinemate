@@ -2,6 +2,15 @@
 
 Release notes for CineMate. For downloads, see the [releases page](https://github.com/Tiramisioux/cinemate/releases).
 
+## Unreleased
+
+- **The embedded DNG thumbnail costs a fraction of what it did** — it is now a compressed colour thumbnail at half the preview size (`image_capture.thumbnail` defaults to `jpeg`, the new `image_capture.thumbnail_size` to `1`) instead of an uncompressed colour one at the full lores plane on every frame. Per-frame growth over a 3.3.1-era file drops from +22% to about +0.2% at 4K 12-bit, and from +89% to under +1% at HD 12-bit. Measured on hardware: roughly six seconds of recording time per terabyte, and +4.0 ms of encode time per frame (+18%) with no dropped frames — see [settings.jsonc's "DNG thumbnails" section](settings-json.md#dng-thumbnails).
+- **The `thumbnail` toggle works again** — `set thumbnail 0` actually disables the embedded thumbnail now; a bug had hard-coded colour mode regardless of this setting since the 2026-09-05 `dng-playback` merge.
+- **`file_size` and the GUI's minutes-remaining now account for the thumbnail** — both were previously low by the thumbnail's full byte count on every frame.
+- **A fourth embedded-thumbnail type: colour JPEG** — `image_capture.thumbnail` (and `set thumbnail`) now takes the words `off` / `mono` / `colour` / `jpeg` (the legacy `0`-`3` still work), where `jpeg` is a baseline JPEG, quality 85, 4:2:0 — measured 9–16 KB per frame at the shipped 640×360 default and 3–8 KB at 320×180, against 230,400 B / 57,600 B for mono at the same sizes, paid in the most CPU of the four (a YUV→RGB conversion plus the JPEG encode itself). `jpeg` is now the default. See [settings.jsonc's "DNG thumbnails" section](settings-json.md#dng-thumbnails) for the full table.
+- **The settings editor shows the choice, and its cost** — the Resolution & sensor section gains a visible "DNG thumbnails" card: a mode dropdown whose four labels state the bytes-per-frame and CPU cost of each choice for the attached camera's actual lores size, and a size dropdown labelled with the resulting dimensions. Previously `image_capture.thumbnail`/`thumbnail_size` had no field on the page at all.
+- **The Playback pane serves a JPEG-mode take's thumbnail without re-encoding it** — the two uncompressed modes are still decoded and re-encoded through PIL on every request, as before.
+
 ## Version 3.4.0
 
 ### imx585 driver

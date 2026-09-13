@@ -136,14 +136,31 @@ def build_dng(path, width=64, height=32, bits=12, white=None, black=200,
     out += extra
 
     if thumbnail is not None:
+        if thumbnail == "jpeg":
+            # Shorthand for a tiny mode-3 (colour JPEG) thumbnail -- see the
+            # `compressed` key below for what this actually builds.
+            thumbnail = {"width": 16, "height": 8, "samples_per_pixel": 3, "compressed": True}
         tw = thumbnail["width"]
         th = thumbnail["height"]
         tspp = thumbnail.get("samples_per_pixel", 1)
         tfill = thumbnail.get("fill", 0x80)
-        tphot = 2 if tspp == 3 else 1   # RGB : MINISBLACK, matching dng_save()
+        # Phase 2 (colour JPEG, mode 3): compressed=True builds IFD1 the way
+        # dng_encoder.cpp's JPEG path does -- Compression 7, Photometric 6
+        # (YCbCr), tags 530/531 -- with a REAL JPEG strip (made with PIL,
+        # not a flat-fill placeholder), because decode_thumbnail() must
+        # return this exact path's bytes verbatim, and only an actual JPEG
+        # proves that.
+        compressed = thumbnail.get("compressed", False)
+        tphot = 6 if compressed else (2 if tspp == 3 else 1)
 
         thumb_off = len(out)
-        thumb_data = bytes([tfill]) * (tw * th * tspp)
+        if compressed:
+            img = Image.new("RGB", (tw, th), (tfill, tfill, tfill))
+            jpeg_buf = io.BytesIO()
+            img.save(jpeg_buf, "JPEG", quality=90)
+            thumb_data = jpeg_buf.getvalue()
+        else:
+            thumb_data = bytes([tfill]) * (tw * th * tspp)
         out += thumb_data
         thumb_size = len(thumb_data)
 
@@ -163,13 +180,16 @@ def build_dng(path, width=64, height=32, bits=12, white=None, black=200,
         t_add(256, LONG, 1, struct.pack("<I", tw))
         t_add(257, LONG, 1, struct.pack("<I", th))
         t_add(258, SHORT, tspp, b"".join(struct.pack("<H", 8) for _ in range(tspp)))
-        t_add(259, SHORT, 1, struct.pack("<H", 1))              # uncompressed
+        t_add(259, SHORT, 1, struct.pack("<H", 7 if compressed else 1))
         t_add(262, SHORT, 1, struct.pack("<H", tphot))
         t_add(273, LONG, 1, struct.pack("<I", thumb_off))
         t_add(277, SHORT, 1, struct.pack("<H", tspp))
         t_add(278, LONG, 1, struct.pack("<I", th))              # RowsPerStrip
         t_add(279, LONG, 1, struct.pack("<I", thumb_size))
         t_add(284, SHORT, 1, struct.pack("<H", 1))              # PlanarConfig
+        if compressed:
+            t_add(530, SHORT, 2, struct.pack("<HH", 2, 2))     # YCbCrSubSampling 4:2:0
+            t_add(531, SHORT, 1, struct.pack("<H", 1))          # YCbCrPositioning centered
 
         t_entries.sort(key=lambda e: e[0])
         t_ifd_size = 2 + 12 * len(t_entries) + 4
@@ -488,6 +508,64 @@ class ThumbnailReaderTest(unittest.TestCase):
         meta = dng_preview.read_metadata(p)
         with self.assertRaises(dng_preview.DngError):
             dng_preview.decode_thumbnail(p, meta)
+
+    def test_jpeg_thumbnail_is_read_with_compression_and_photometric_tags(self):
+        # Mode 3 (colour JPEG): IFD1's tags must say so -- Compression 7,
+        # PhotometricInterpretation 6 (YCbCr), matching what
+        # cinepi-raw's dng_thumbnail.hpp writes for this mode. Also confirms
+        # _THUMBNAIL_TAG_NAMES now carries "compression" through to meta --
+        # before Phase 2 it did not, so this key was always absent.
+        p = build_dng(self.dir / "jpeg_thumb.dng", width=64, height=32, thumbnail="jpeg")
+        meta = dng_preview.read_metadata(p)
+        thumb = meta["thumbnail"]
+        self.assertEqual(thumb["compression"], 7)
+        self.assertEqual(thumb["photometric"], 6)
+        self.assertEqual((thumb["width"], thumb["height"]), (16, 8))
+        self.assertEqual(thumb["samples_per_pixel"], 3)
+        # IFD0's own tags are untouched by a JPEG thumbnail any more than by
+        # an uncompressed one.
+        self.assertEqual((meta["width"], meta["height"]), (64, 32))
+
+    def test_decode_thumbnail_jpeg_mode_returns_the_exact_bytes(self):
+        # The whole point of mode 3 on the reader side: the strip already
+        # IS a JPEG, so decode_thumbnail() must hand it back byte-for-byte,
+        # not decode-and-re-encode it through PIL the way the uncompressed
+        # modes do (test_decode_thumbnail_returns_the_bytes_verbatim, just
+        # above, is deliberately NOT byte-identical to its own raw strip --
+        # this test is the one where "verbatim" means the literal bytes).
+        p = build_dng(self.dir / "jpeg_thumb2.dng", width=64, height=32, thumbnail="jpeg")
+        meta = dng_preview.read_metadata(p)
+        thumb = meta["thumbnail"]
+
+        # The exact bytes dng_encoder.cpp's JPEG path would have written --
+        # read directly out of the file at IFD1's own recorded offset/length,
+        # independent of decode_thumbnail() itself.
+        with open(p, "rb") as handle:
+            handle.seek(thumb["strip_offset"])
+            expected = handle.read(thumb["strip_bytes"])
+        self.assertEqual(expected[:2], b"\xff\xd8", "fixture sanity: the strip itself is a JPEG")
+
+        data, size = dng_preview.decode_thumbnail(p, meta)
+        self.assertEqual(size, (16, 8))
+        self.assertEqual(data, expected)
+
+        # And it is a valid, decodable JPEG -- not merely byte-identical to
+        # itself by construction.
+        rendered = Image.open(io.BytesIO(data))
+        rendered.load()
+        self.assertEqual(rendered.size, (16, 8))
+
+    def test_decode_thumbnail_jpeg_mode_skips_the_strip_length_check(self):
+        # width*height*spp (16*8*3 = 384) does NOT equal a real JPEG's byte
+        # count -- decode_thumbnail() must not apply the uncompressed-mode
+        # length check to a compressed strip, or every JPEG thumbnail would
+        # raise DngError on a perfectly valid file.
+        p = build_dng(self.dir / "jpeg_thumb3.dng", width=64, height=32, thumbnail="jpeg")
+        meta = dng_preview.read_metadata(p)
+        thumb = meta["thumbnail"]
+        self.assertNotEqual(thumb["strip_bytes"], thumb["width"] * thumb["height"] * thumb["samples_per_pixel"])
+        # Must not raise:
+        dng_preview.decode_thumbnail(p, meta)
 
     def test_a_next_ifd_pointer_past_eof_does_not_crash_metadata_reading(self):
         """A corrupt/truncated file's IFD0 tags must still come back -- a

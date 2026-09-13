@@ -43,10 +43,12 @@ from module.config_loader import (
     load_settings,
     strip_jsonc,
     DEFAULT_SETTINGS_PATH,
+    thumbnail_size_startup_value,
 )
 from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
 from module.redis_controller import ParameterKey, smpte_frame_base
+from module.sensor_detect import thumbnail_choice_labels
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -131,7 +133,7 @@ ACTION_METHODS = [
     {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "no_arg": "toggle",
      "arg": {"type": "select", "options": ["off", "10", "12"]}},
     {"group": "Thumbnail", "value": "set_thumbnail", "label": "Set DNG thumbnail mode", "no_arg": "required",
-     "arg": {"type": "select", "options": [0, 1, 2]}},
+     "arg": {"type": "select", "options": ["off", "mono", "colour", "jpeg"]}},
     {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "no_arg": "cycle",
      "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
     {"group": "Zoom / anamorphic", "value": "inc_zoom", "label": "Zoom in one stop"},
@@ -237,6 +239,76 @@ def _is_recording() -> bool:
     return _playback_blocked()[0]
 
 
+# 16:9 lores plane, the same fallback thumbnail_choice_labels()'s own
+# reservation/estimate formulas are written against -- used only when no
+# camera is attached (SENSOR_DETECT unset, or CINEPI_CONTROLLER has not
+# resolved a mode yet), so the DNG-thumbnails card still renders sane
+# labels rather than guessing at 0x0 or raising.
+_FALLBACK_LORES_SIZE = (1280, 720)
+
+
+def _current_thumbnail_editor_context(settings: dict) -> dict:
+    """Template context for the settings editor's "DNG thumbnails" card:
+    the four mode choices' labels (thumbnail_choice_labels(), sized for the
+    CURRENT camera's lores plane and thumbnail_size) and the three
+    dimension strings the size <select>'s own options show.
+
+    Lores plane: from the live sensor mode via CINEPI_CONTROLLER's
+    SensorDetect (the same res_modes/sensor_mode/_calc_lores() lookup
+    _recompute_file_size() uses in cinepi_controller.py), falling back to
+    _FALLBACK_LORES_SIZE when no camera has resolved a mode.
+
+    thumbnail_size: the live Redis value if one is set, else the validated
+    settings.jsonc startup value -- "Redis first, settings.jsonc second",
+    the same precedence _recompute_file_size() uses, because an operator's
+    live `set thumbnail_size` (it restarts the camera immediately) is a
+    truer answer for "what size is this camera keeping" than the file.
+    """
+    controller = current_app.config.get("CINEPI_CONTROLLER")
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+
+    lores_w, lores_h = _FALLBACK_LORES_SIZE
+    sensor_detect = getattr(controller, "sensor_detect", None) if controller else None
+    if sensor_detect is not None:
+        resolution_info = (getattr(sensor_detect, "res_modes", None) or {}).get(
+            getattr(controller, "sensor_mode", None)
+        )
+        width = (resolution_info or {}).get("width")
+        height = (resolution_info or {}).get("height")
+        if width and height:
+            lores_w, lores_h = sensor_detect._calc_lores(width, height)
+
+    thumb_size_shift = None
+    if redis_controller is not None:
+        try:
+            thumb_size_shift = max(
+                0, min(4, int(redis_controller.get_value(ParameterKey.THUMBNAIL_SIZE.value)))
+            )
+        except (TypeError, ValueError):
+            thumb_size_shift = None
+    if thumb_size_shift is None:
+        thumb_size_shift = thumbnail_size_startup_value(settings)
+
+    # The editor shows ONE on/off toggle over image_capture.thumbnail, not a
+    # mode picker and a size picker (operator decision 2026-09-13). All four
+    # modes and every size still work and are still reachable -- by hand in
+    # settings.jsonc, or live with `set thumbnail` -- but the page offers the
+    # one choice that is actually a choice for most operators: a colour
+    # preview in the Playback pane, or nothing.
+    #
+    # What the toggle needs from here is the COST of the on position, in this
+    # camera's own numbers, so the card can state it instead of leaving an
+    # operator to guess what "on" costs per frame. That string comes from
+    # thumbnail_choice_labels() -- the same function, and therefore the same
+    # byte formula, that file_size and cinepi/dng_thumbnail.hpp use -- so the
+    # figure on the page can never drift from what a take actually costs.
+    choices = dict(thumbnail_choice_labels(lores_w, lores_h, thumb_size_shift))
+    return {
+        "thumbnail_on_label": choices.get("jpeg", ""),
+        "thumbnail_off_label": choices.get("off", ""),
+    }
+
+
 @settings_editor_bp.route("/")
 def index():
     settings = current_app.config["SETTINGS"]
@@ -251,6 +323,7 @@ def index():
         sensor_db_path=str(
             resolve_database_path((settings.get("sensors") or {}).get("database_file"))
         ),
+        **_current_thumbnail_editor_context(settings),
     )
 
 

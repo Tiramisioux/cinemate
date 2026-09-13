@@ -1804,20 +1804,40 @@
             </label>
           </div>
         </div>
-        <!-- No visible card here: the embedded DNG thumbnail is now the
-             standard playback path (image_capture.thumbnail defaults to 2,
-             colour), not an operator-facing toggle -- the 0/1/2 field with
-             its "off / mono / colour, applied live" explanation was found
-             confusing now that "off" isn't really a supported playback
-             configuration (playback.py's raw-decode fallback is disabled).
-             Still adjustable via `set thumbnail` (CLI) if you want mono for
-             a lighter write cost. This hidden input is NOT decorative: it
-             is what keeps buildState() from silently dropping
-             image_capture.thumbnail from settings.jsonc on the next editor
-             save (B-2's exact bug, reintroduced by removing the visible
-             field without this) -- every [data-path] element participates
-             in the save payload whether or not it is shown. -->
-        <input type="hidden" data-path="image_capture.thumbnail" data-type="number" data-original="2" value="2">
+        <div class="card" data-search="dng thumbnail embedded preview playback mono colour color jpeg greyscale off">
+          <div class="card-main">
+            <label class="card-label">{{ t('card.image_capture.thumbnail.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.thumbnail.help') }}</p>
+            <!-- What "on" costs, in this camera's own numbers rather than a
+                 figure restated by hand: rendered from thumbnail_choice_labels()
+                 (sensor_detect.py), the same function and the same byte formula
+                 file_size uses, so it cannot drift from what a take costs. Only
+                 the on position needs a figure -- off is 0 B. -->
+            <p class="card-help" id="thumb-cost" style="color:var(--muted)">{{ thumbnail_on_label }}</p>
+            <p class="card-help">{{ t('caption.image_capture.thumbnail.0') }}</p>
+          </div>
+          <div class="card-control">
+            <!-- One toggle, not a mode picker and a size picker (operator
+                 decision 2026-09-13). All four modes and every size still
+                 work and are still reachable -- by hand in settings.jsonc or
+                 live with `set thumbnail` -- but this page offers the choice
+                 that is actually a choice: a preview in the Playback pane, or
+                 nothing.
+
+                 The toggle carries no data-path of its own, so buildState()
+                 ignores it; the hidden inputs below are what the save reads
+                 and what populateSimpleFields() hydrates, exactly like every
+                 other field on this page. thumbnail_size is hidden rather
+                 than absent for the reason B-2 recorded: a key the form does
+                 not carry is dropped from settings.jsonc on the next save,
+                 and that drop is a structural change, which costs the file
+                 every comment in it. -->
+            <button class="toggle" id="f-thumb-toggle" role="switch" aria-checked="true"
+                    aria-label="Embedded DNG thumbnail"></button>
+            <input type="hidden" id="f-thumb-value" data-path="image_capture.thumbnail" data-type="string" data-original="jpeg" value="jpeg">
+            <input type="hidden" id="f-thumb-size-value" data-path="image_capture.thumbnail_size" data-type="number" data-original="1" value="1">
+          </div>
+        </div>
         <div class="card" data-search="sensor database file resources sensors json advanced">
           <div class="card-main">
             <label class="card-label">{{ t('card.sensors.database_file.label') }}</label>
@@ -3683,6 +3703,44 @@
     inp.addEventListener('change', function(){ checkDirty(inp); });
   });
 
+  /* ---------- DNG thumbnail: one toggle over a four-value key ----------
+     image_capture.thumbnail is "off" | "mono" | "colour" | "jpeg", and this
+     page shows it as on/off. The hidden #f-thumb-value is what buildState()
+     saves and what populateSimpleFields() hydrates; the toggle only mirrors
+     it, which is why it carries no data-path of its own.
+
+     Off writes "off". On writes back whichever non-off value was loaded --
+     so a settings.jsonc hand-set to "mono" survives a round trip through
+     this page instead of being silently rewritten to the default. Only when
+     the loaded value was "off" (nothing to preserve) does on mean "jpeg". */
+  var thumbOnValue = 'jpeg';
+  function syncThumbnailToggle(){
+    var val = document.getElementById('f-thumb-value');
+    var tog = document.getElementById('f-thumb-toggle');
+    if (!val || !tog) return;
+    var on = String(val.value || 'off') !== 'off';
+    if (on) thumbOnValue = val.value;          /* remember mono/colour/jpeg */
+    tog.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
+  (function(){
+    var tog = document.getElementById('f-thumb-toggle');
+    var val = document.getElementById('f-thumb-value');
+    if (!tog || !val) return;
+    function flip(){
+      var on = tog.getAttribute('aria-checked') !== 'true';
+      tog.setAttribute('aria-checked', on ? 'true' : 'false');
+      val.value = on ? thumbOnValue : 'off';
+      /* checkDirty on the hidden input, not the toggle: the input is the
+         [data-path] element, so it is what the dirty pill and the save
+         payload both read. */
+      checkDirty(val);
+    }
+    tog.addEventListener('click', flip);
+    tog.addEventListener('keydown', function(e){
+      if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); flip(); }
+    });
+  })();
+
   /* ---------- password show/hide ---------- */
   document.querySelectorAll('[data-pw-toggle]').forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -4296,6 +4354,9 @@
     // applyControlValue writes aria-checked without going through the click
     // handler, so the chips are re-read once the whole form has settled.
     syncAllFreeSteppingChips();
+    // Same reason: the thumbnail toggle mirrors a hidden input that was just
+    // written straight from settings, with no click to notice it.
+    syncThumbnailToggle();
   }
 
   function loadSettings(){
@@ -5807,7 +5868,7 @@
     { group: 'ClearHDR', value: 'set_hdr_blend', label: 'Set HDR blend', noArg: 'required', arg: { type: 'number', min: 0, max: 8, placeholder: '0–8' } },
     { group: 'ClearHDR', value: 'set_hdr_gain_adder', label: 'Set HDR gain adder', noArg: 'required', arg: { type: 'number', min: 0, max: 5, placeholder: '0–5' } },
     { group: 'CineMate Log', value: 'set_log_encode', label: 'Set CineMate Log target', noArg: 'toggle', arg: { type: 'select', options: ['off','10','12'] } },
-    { group: 'Thumbnail', value: 'set_thumbnail', label: 'Set DNG thumbnail mode', noArg: 'required', arg: { type: 'select', options: [0,1,2] } },
+    { group: 'Thumbnail', value: 'set_thumbnail', label: 'Set DNG thumbnail mode', noArg: 'required', arg: { type: 'select', options: ['off','mono','colour','jpeg'] } },
     { group: 'Zoom / anamorphic', value: 'set_zoom', label: 'Set preview zoom', noArg: 'cycle', arg: { type: 'select', options: [1,2], suffix: '×' } },
     { group: 'Zoom / anamorphic', value: 'inc_zoom', label: 'Zoom in one stop' },
     { group: 'Zoom / anamorphic', value: 'dec_zoom', label: 'Zoom out one stop' },

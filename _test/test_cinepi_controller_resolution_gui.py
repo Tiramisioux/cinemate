@@ -73,6 +73,13 @@ class FakeSensorDetect:
     def get_lores_height(self, _sensor, mode):
         return 540 if int(mode) == 1 else 360
 
+    def _calc_lores(self, sensor_w, sensor_h):
+        # _recompute_file_size()'s thumbnail term (C9 fix) needs lores dims
+        # even though none of these tests are about thumbnails -- a fixed,
+        # plausible pair is enough; no test here asserts an exact
+        # thumbnail byte count.
+        return 1280, 720
+
     def get_fps_correction_factor(self, _sensor, _mode, _fps=None):
         return 1.0
 

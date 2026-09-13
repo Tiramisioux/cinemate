@@ -64,11 +64,14 @@ _TAGS = {
 }
 
 # Tags read off IFD1 (the embedded thumbnail, when present) and carried
-# under meta["thumbnail"]. A subset of _TAGS -- 256/257/258/277/278/279/262
+# under meta["thumbnail"]. A subset of _TAGS -- 256/257/258/259/277/278/279/262
 # are the ones a thumbnail IFD actually carries (dng_encoder.cpp's IFD1).
+# 259 (compression) is what tells decode_thumbnail() whether the strip is
+# raw pixels (1, mono/colour) or an already-encoded JPEG (7, mode 3).
 _THUMBNAIL_TAG_NAMES = (
     "width", "height", "bits", "samples_per_pixel",
     "rows_per_strip", "strip_bytes", "strip_offset", "photometric",
+    "compression",
 )
 
 _TYPE_SIZE = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8}
@@ -513,14 +516,19 @@ def decode_frame(path, meta=None, scale=4, quality=80, auto_levels=False,
 
 
 def decode_thumbnail(path, meta, quality=80):
-    """Serve the embedded lores-plane thumbnail (IFD1) as JPEG, verbatim.
+    """Serve the embedded lores-plane thumbnail (IFD1) as JPEG, verbatim
+    when it already is one.
 
     The sibling of decode_frame() for the other half of frame_source()'s
     decision: no demosaic, no LinearizationTable, no scale/mono knobs --
-    cinepi-raw already wrote this plane at a fixed size, in 8-bit mono or
-    RGB (dng_encoder.cpp's thumbnail block). This function only reads and
-    re-encodes those bytes; it has no opinion about what size or mode a
-    take was recorded with.
+    cinepi-raw already wrote this plane at a fixed size, in 8-bit mono,
+    RGB, or (thumbnail mode 3) baseline JPEG (dng_encoder.cpp's thumbnail
+    block). For the two uncompressed modes this function reads the raw
+    strip and re-encodes it through PIL, same as always; for mode 3
+    (IFD1 compression 7) the strip already IS the JPEG bytes a browser
+    wants, so they are returned as read, with no decode/re-encode round
+    trip -- this is the whole point of the JPEG thumbnail mode on the
+    reader side: the Pi no longer re-encodes every served frame.
 
     Returns ``(jpeg_bytes, (width, height))``, the same shape as
     decode_frame(), so frame_jpeg() can be indifferent to which one ran.
@@ -537,9 +545,19 @@ def decode_thumbnail(path, meta, quality=80):
     spp = int(thumb.get("samples_per_pixel", 1))
     offset = int(thumb["strip_offset"])
     length = int(thumb["strip_bytes"])
+    # 259 (Compression): 1 uncompressed (mono/colour), 7 baseline JPEG
+    # (mode 3). Absent (an older take, or a thumbnail IFD this reader
+    # cannot fully parse) defaults to 1 -- the only shape every take
+    # before this phase ever wrote.
+    compression = int(thumb.get("compression", 1))
     if spp not in (1, 3):
         raise DngError(f"unsupported thumbnail samples_per_pixel {spp}")
-    if length != width * height * spp:
+    # width*height*spp only holds for an uncompressed strip -- every pixel
+    # is one (or three) literal byte(s) there. A JPEG strip's byte count is
+    # whatever libjpeg produced (FINDINGS.md §2b: usually far LESS -- that
+    # is the mode's entire reason to exist), so this check does not apply
+    # to it; the truncation check just below still does, for both.
+    if compression != 7 and length != width * height * spp:
         raise DngError(
             f"thumbnail strip_bytes {length} does not match {width}x{height}x{spp}")
 
@@ -548,6 +566,9 @@ def decode_thumbnail(path, meta, quality=80):
         strip = handle.read(length)
     if len(strip) < length:
         raise DngError("thumbnail strip truncated")
+
+    if compression == 7:
+        return strip, (width, height)
 
     arr = np.frombuffer(strip, np.uint8)
     if spp == 1:

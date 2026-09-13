@@ -37,11 +37,24 @@ class FakeSensorDetect:
         self.res_modes = res_modes if res_modes is not None else {}
         self.camera_model = camera_model
 
+    def _calc_lores(self, sensor_w, sensor_h):
+        # _recompute_file_size()'s thumbnail term (C9 fix) needs lores
+        # dims even when nothing about this test is otherwise about
+        # thumbnails -- a fixed, plausible pair is enough; no test in this
+        # file asserts an exact thumbnail byte count.
+        return 1280, 720
+
 
 def make_controller(redis_controller, sensor_detect):
     controller = CinePiController.__new__(CinePiController)
     controller.redis_controller = redis_controller
     controller.sensor_detect = sensor_detect
+    # _recompute_file_size()'s thumbnail-term fallback (C9 fix) reads
+    # settings.image_capture when the live thumbnail/thumbnail_size keys
+    # are unset, which every FakeRedis() here starts as. Empty is enough --
+    # thumbnail_startup_value()/thumbnail_size_startup_value() both degrade
+    # to their shipped defaults from {}.
+    controller.settings = {}
     return controller
 
 

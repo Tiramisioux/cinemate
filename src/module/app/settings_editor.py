@@ -247,6 +247,15 @@ def _is_recording() -> bool:
 _FALLBACK_LORES_SIZE = (1280, 720)
 
 
+# The thumbnail sizes the editor offers. thumbnail_size_startup_value() clamps
+# 0..4 and cinepi-raw accepts 0..12, but beyond a quarter the thumbnail is too
+# small for the Playback pane to be worth anything, so the field offers the
+# three sizes that are actually a choice. A settings.jsonc hand-edited to 3 or 4
+# still loads and still works -- it just has no matching option here, the same
+# as any other out-of-list value on this page.
+_THUMBNAIL_EDITOR_SHIFTS = (0, 1, 2)
+
+
 def _current_thumbnail_editor_context(settings: dict) -> dict:
     """Template context for the settings editor's "DNG thumbnails" card:
     the four mode choices' labels (thumbnail_choice_labels(), sized for the
@@ -289,11 +298,29 @@ def _current_thumbnail_editor_context(settings: dict) -> dict:
     if thumb_size_shift is None:
         thumb_size_shift = thumbnail_size_startup_value(settings)
 
+    # One full label set PER OFFERED SIZE, not just the current one. The size
+    # <select> changes what every mode costs -- a quarter-size colour thumbnail
+    # and a full-lores one differ by 16x -- so labels computed for one shift are
+    # simply wrong for another, which is the failure an operator would never
+    # notice because the numbers still look plausible.
+    #
+    # Computed here rather than in the browser ON PURPOSE. The obvious
+    # alternative, recomputing on change in JavaScript, would put
+    # thumbnail_plane_bytes()'s formula and the JPEG range table into a THIRD
+    # place (after cinepi/dng_thumbnail.hpp and sensor_detect.py) with nothing
+    # to keep them agreeing -- exactly the drift the single-formula rule exists
+    # to prevent. Three label sets is a few hundred bytes in the page; the page
+    # script only indexes into them.
     return {
         "thumbnail_choices": thumbnail_choice_labels(lores_w, lores_h, thumb_size_shift),
+        "thumbnail_choices_by_size": {
+            shift: thumbnail_choice_labels(lores_w, lores_h, shift)
+            for shift in _THUMBNAIL_EDITOR_SHIFTS
+        },
+        "thumbnail_size_current": thumb_size_shift,
         "thumbnail_size_dims": {
             shift: f"{max(1, lores_w >> shift)}\u00d7{max(1, lores_h >> shift)}"
-            for shift in (0, 1, 2)
+            for shift in _THUMBNAIL_EDITOR_SHIFTS
         },
     }
 

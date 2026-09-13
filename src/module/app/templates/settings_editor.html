@@ -1826,13 +1826,21 @@
                 <option value="{{ value }}"{% if value == 'colour' %} selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
+              <!-- Every size's label set, so changing the size <select> below
+                   can relabel the modes without a reload and without a second
+                   formula in JavaScript: the server computed all three sets
+                   (settings_editor.py's _current_thumbnail_editor_context()),
+                   and thumbSizeRelabel() just picks one. Rendered as a JSON
+                   <script> rather than a data- attribute because the labels
+                   contain the quotes and the multiplication sign. -->
+              <script type="application/json" id="thumb-labels-by-size">{{ thumbnail_choices_by_size | tojson }}</script>
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.thumbnail.1') }}</span>
-              <select class="field-input" id="f-thumb-size" data-path="image_capture.thumbnail_size" data-type="number" data-original="2" style="min-width:170px">
+              <select class="field-input" id="f-thumb-size" data-path="image_capture.thumbnail_size" data-type="number" data-original="1" style="min-width:170px">
                 <option value="0">Full lores {{ thumbnail_size_dims[0] }}</option>
-                <option value="1">Half {{ thumbnail_size_dims[1] }}</option>
-                <option value="2" selected>Quarter {{ thumbnail_size_dims[2] }}</option>
+                <option value="1" selected>Half {{ thumbnail_size_dims[1] }}</option>
+                <option value="2">Quarter {{ thumbnail_size_dims[2] }}</option>
               </select>
             </label>
           </div>
@@ -3701,6 +3709,43 @@
     inp.addEventListener('input', function(){ checkDirty(inp); });
     inp.addEventListener('change', function(){ checkDirty(inp); });
   });
+
+  /* ---------- DNG thumbnail: relabel the modes when the size changes ----------
+     The mode <select>'s labels carry a byte count per frame, and that count
+     depends entirely on the size <select> next to it -- full lores colour is
+     16x quarter-size colour. Labels rendered for the stored size would go
+     silently wrong the moment an operator touched the size field, and wrong in
+     the worst way: still plausible.
+
+     No arithmetic here on purpose. The server rendered one complete label set
+     per offered size into #thumb-labels-by-size (settings_editor.py's
+     _current_thumbnail_editor_context(), from sensor_detect's
+     thumbnail_choice_labels()); this only picks the set for the selected shift
+     and rewrites each option's TEXT. Putting the byte formula in JavaScript
+     would be a third copy of it, after cinepi/dng_thumbnail.hpp and
+     sensor_detect.py, with nothing keeping the three in agreement.
+
+     Values and the current selection are never touched, so this cannot disturb
+     buildState() or the dirty tracking -- both read value, not text. */
+  (function(){
+    var sizeSel = document.getElementById('f-thumb-size');
+    var modeSel = document.getElementById('f-thumb-mode');
+    var blob = document.getElementById('thumb-labels-by-size');
+    if (!sizeSel || !modeSel || !blob) return;
+    var bySize;
+    try { bySize = JSON.parse(blob.textContent || '{}'); } catch (e) { return; }
+    /* A stale cached page can reach a newer server whose context it does not
+       know (see browser-side-traps.md): leave the rendered labels alone rather
+       than throwing, which would take the rest of this script's setup with it. */
+    sizeSel.addEventListener('change', function(){
+      var labels = bySize[String(sizeSel.value)];
+      if (!labels) return;
+      labels.forEach(function(pair){
+        var opt = modeSel.querySelector('option[value="' + pair[0] + '"]');
+        if (opt) opt.textContent = pair[1];
+      });
+    });
+  })();
 
   /* ---------- password show/hide ---------- */
   document.querySelectorAll('[data-pw-toggle]').forEach(function(btn){

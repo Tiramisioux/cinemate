@@ -8,6 +8,8 @@ set_thumbnail() accepting "jpeg", and the settings-editor route actually
 rendering four options with the current camera's size baked into their text.
 """
 
+import json
+import re
 import sys
 import types
 import unittest
@@ -19,7 +21,12 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 sys.modules.setdefault("smbus", types.SimpleNamespace(SMBus=object))
 
-from module.sensor_detect import SensorDetect, thumbnail_choice_labels
+from module.sensor_detect import (
+    SensorDetect,
+    _format_thumbnail_kb,
+    thumbnail_choice_labels,
+    thumbnail_plane_bytes,
+)
 from module.cinepi_controller import CinePiController
 from module.redis_controller import ParameterKey
 
@@ -242,6 +249,69 @@ class SettingsEditorRouteRendersFourOptionsTests(unittest.TestCase):
         ).get_data(as_text=True)
         self.assertIn("Greyscale 1280×720", html)
         self.assertNotIn("Greyscale 320×180", html)
+
+    def test_every_offered_size_ships_its_own_label_set(self):
+        # The whole point of the JSON blob: the mode labels must be able to
+        # follow the size <select> without a reload, and without the byte
+        # formula existing anywhere in JavaScript. The page therefore has to
+        # carry a COMPLETE label set for every size it offers -- if the route
+        # sent only the current one, the page script would silently leave
+        # stale byte counts on screen the moment the size changed.
+        controller = _RouteFakeController(
+            sensor_mode=0,
+            res_modes={0: {"width": 3840, "height": 2160, "bit_depth": 12, "hdr": False}},
+        )
+        html = self._client(controller=controller).get("/settings-editor/").get_data(as_text=True)
+        blob = re.search(
+            r'<script type="application/json" id="thumb-labels-by-size">(.*?)</script>',
+            html, re.S)
+        self.assertIsNotNone(blob, "the per-size label blob is missing from the page")
+        by_size = json.loads(blob.group(1))
+        self.assertEqual(sorted(by_size), ["0", "1", "2"])
+        for shift, expected_dims in (("0", "1280×720"), ("1", "640×360"), ("2", "320×180")):
+            with self.subTest(shift=shift):
+                labels = by_size[shift]
+                self.assertEqual([value for value, _ in labels],
+                                 ["off", "mono", "colour", "jpeg"])
+                # Every non-off label names that size's own dimensions, so a
+                # set can never be mistaken for another size's.
+                for value, label in labels:
+                    if value != "off":
+                        self.assertIn(expected_dims, label)
+
+    def test_the_blobs_byte_figures_match_the_shipped_formula(self):
+        # The labels an operator reads must come from the same function
+        # file_size uses, not from anything restated in the page. Checked
+        # against thumbnail_plane_bytes() directly rather than against a
+        # hardcoded number, so this stays true if the formula ever changes.
+        controller = _RouteFakeController(
+            sensor_mode=0,
+            res_modes={0: {"width": 3840, "height": 2160, "bit_depth": 12, "hdr": False}},
+        )
+        html = self._client(controller=controller).get("/settings-editor/").get_data(as_text=True)
+        blob = re.search(
+            r'<script type="application/json" id="thumb-labels-by-size">(.*?)</script>',
+            html, re.S)
+        by_size = json.loads(blob.group(1))
+        for shift in (0, 1, 2):
+            for mode_name, mode in (("mono", 1), ("colour", 2)):
+                expected = thumbnail_plane_bytes(1280, 720, mode, shift)
+                label = dict(by_size[str(shift)])[mode_name]
+                with self.subTest(shift=shift, mode=mode_name):
+                    # The label formats bytes as KB/MB; the formatter is the
+                    # one sensor_detect uses, so compare through it.
+                    self.assertIn(_format_thumbnail_kb(expected), label)
+
+    def test_the_initial_options_are_the_default_sizes_set(self):
+        # The rendered options and the blob must agree on load, or the first
+        # size change would appear to alter labels that were already right.
+        html = self._client().get("/settings-editor/").get_data(as_text=True)
+        blob = re.search(
+            r'<script type="application/json" id="thumb-labels-by-size">(.*?)</script>',
+            html, re.S)
+        by_size = json.loads(blob.group(1))
+        for _, label in by_size["1"]:          # shift 1 == the shipped default
+            self.assertIn(label, html)
 
 
 if __name__ == "__main__":

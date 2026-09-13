@@ -4,7 +4,7 @@ Release notes for CineMate. For downloads, see the [releases page](https://githu
 
 ## Unreleased
 
-- **Embedded DNG thumbnail defaults to greyscale, at a quarter of its previous size** — `image_capture.thumbnail` now defaults to `1` (mono) instead of writing colour at the full lores plane size on every frame, and a new `image_capture.thumbnail_size` setting (default `1`) halves each side again, to 640×360. Per-frame growth over a 3.3.1-era file drops from +22% to +1.9% at 4K 12-bit (14.50 → 12.09 MiB per frame) and from +89% to +7.4% at HD 12-bit (5.60 → 3.19 MiB per frame). `set thumbnail 2` restores colour, at three times the thumbnail's bytes.
+- **Embedded DNG thumbnail shrinks to a quarter of its previous size, and stays in colour** — a new `image_capture.thumbnail_size` setting (default `2`) downscales the thumbnail to 320×180 instead of writing it at the full lores plane size on every frame; `image_capture.thumbnail` stays `2` (colour) by default, since colour at this size (172,800 B/frame) now costs fewer bytes than mono did at half size. Per-frame growth over a 3.3.1-era file drops from +22% to +1.4% at 4K 12-bit (14.50 → 12.03 MiB per frame) and from +89% to +5.6% at HD 12-bit (5.60 → 3.13 MiB per frame). `set thumbnail 1` switches to mono, at a third of the thumbnail's bytes, for anyone who wants it lighter still.
 - **The `thumbnail` toggle works again** — `set thumbnail 0` actually disables the embedded thumbnail now; a bug had hard-coded colour mode regardless of this setting since the 2026-09-05 `dng-playback` merge.
 - **`file_size` and the GUI's minutes-remaining now account for the thumbnail** — both were previously low by the thumbnail's full byte count on every frame.
 

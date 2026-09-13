@@ -49,8 +49,8 @@ PI5_MODEL_MARKERS = (
 # on log-encoded frames) is <0.07% of frame size across every measured case,
 # so one flat constant is used rather than modelling it exactly -- true only
 # once the embedded thumbnail's own bytes are included via thumbnail_bytes
-# below. Without that term this model silently under-counts: by +1.9% to
-# +7.4% at the shipped mono/shift-1 default, and by +22% to +89% at the
+# below. Without that term this model silently under-counts: by +1.4% to
+# +5.6% at the shipped colour/shift-2 default, and by +22% to +89% at the
 # full-lores colour size CineMate 3.4 actually shipped with before this fix
 # -- which is exactly what made file_size and the GUI's minutes-remaining
 # wrong (FINDINGS.md and the 2026-09-13 hardware-log entry,

@@ -21,11 +21,12 @@ from module.redis_controller import ParameterKey
 
 class ThumbnailPlaneBytesTests(unittest.TestCase):
     """Pins the same seven geometry cases as cinepi-raw's
-    tests/dng_thumbnail_test.cpp, through the Python mirror. NOTE the
-    argument order here is (lores_w, lores_h, mode, shift) -- see
-    thumbnail_plane_bytes()'s own docstring for why that is the opposite
-    of thumbnail_geometry()'s (lores_w, lores_h, shift, mode) on the C++
-    side."""
+    tests/dng_thumbnail_test.cpp, through the Python mirror, plus one more
+    (shift-1 mono) that is not one of the compiled-in defaults on either
+    side but is still worth a fixed point. NOTE the argument order here is
+    (lores_w, lores_h, mode, shift) -- see thumbnail_plane_bytes()'s own
+    docstring for why that is the opposite of thumbnail_geometry()'s
+    (lores_w, lores_h, shift, mode) on the C++ side."""
 
     def test_full_lores_colour(self):
         # 16:9 lores plane, shift 0, colour -- FINDINGS.md §2's full-size cost.
@@ -43,12 +44,10 @@ class ThumbnailPlaneBytesTests(unittest.TestCase):
         self.assertEqual(thumbnail_plane_bytes(1280, 720, 2, 2), 172800)
 
     def test_shift0_mono(self):
-        # Mono: same plane, spp 1 -- half the colour byte count, and the
-        # shipped default mode (2026-09-13 operator decision).
+        # Mono: same plane, spp 1 -- a third of the colour byte count.
         self.assertEqual(thumbnail_plane_bytes(1280, 720, 1, 0), 921600)
 
-    def test_shift1_mono_is_the_shipped_default(self):
-        # thumbnail=1, thumbnail_size=1: the actual shipped default.
+    def test_shift1_mono(self):
         self.assertEqual(thumbnail_plane_bytes(1280, 720, 1, 1), 230400)
 
     def test_mode_off_is_zero_bytes(self):
@@ -80,12 +79,12 @@ class ComputeFrameSizeMbTests(unittest.TestCase):
         measured_mb = 13135688 / 1_000_000
         self.assertAlmostEqual(with_term, measured_mb, delta=0.01)
 
-    def test_matches_the_mono_default_for_a_4k_12bit_frame(self):
-        # 4K 12-bit frame at the actual shipped default (mono, shift 1):
-        # 12,441,600 (raw) + 230,400 (thumbnail) + 1,024 (overhead)
-        # = 12,673,024 B -> 12.67 MB.
-        mb = compute_frame_size_mb(3840, 2160, 12, thumbnail_bytes=230400)
-        self.assertEqual(mb, 12.67)
+    def test_matches_the_shipped_colour_default_for_a_4k_12bit_frame(self):
+        # 4K 12-bit frame at the actual shipped default (colour, shift 2):
+        # 12,441,600 (raw) + 172,800 (thumbnail) + 1,024 (overhead)
+        # = 12,615,424 B -> 12.62 MB.
+        mb = compute_frame_size_mb(3840, 2160, 12, thumbnail_bytes=172800)
+        self.assertEqual(mb, 12.62)
 
 
 class FakeRedis:
@@ -133,7 +132,11 @@ class RecomputeFileSizeThumbnailTests(unittest.TestCase):
         controller.sensor_mode = 0
         controller.settings = {
             "sensors": {"cam0": {"log_encode": False}, "cam1": {}},
-            "image_capture": settings_image_capture or {"thumbnail": 1, "thumbnail_size": 1},
+            # Default {} on purpose: thumbnail_startup_value()/
+            # thumbnail_size_startup_value() then fall through to their own
+            # shipped defaults (colour, shift 2) -- the real boot path, not
+            # a value hardcoded a second time here.
+            "image_capture": settings_image_capture or {},
         }
         return controller
 
@@ -165,12 +168,27 @@ class RecomputeFileSizeThumbnailTests(unittest.TestCase):
         # = 15,207,424 B -> 15.21 MB.
         self.assertEqual(controller.file_size, 15.21)
 
-    def test_recompute_falls_back_to_startup_values_when_keys_absent(self):
-        # No live keys at all -- must fall back to thumbnail_startup_value()/
-        # thumbnail_size_startup_value() against controller.settings, same as
-        # main.py's own boot seed would produce (mono, shift 1: the shipped
-        # default), not silently treat the thumbnail as absent.
+    def test_recompute_uses_the_shipped_colour_default_when_keys_and_settings_are_absent(self):
+        # No live redis keys AND no image_capture settings at all -- the
+        # true fresh-boot path. Must fall back to thumbnail_startup_value()/
+        # thumbnail_size_startup_value()'s own shipped default (colour,
+        # shift 2, 2026-09-13 final decision), not silently treat the
+        # thumbnail as absent or as some other value.
         controller = self.controller(redis_values={})
+        controller._recompute_file_size(log_requested=False)
+        # 12,441,600 + colour 320x180 thumbnail (172,800) + 1,024
+        # = 12,615,424 B -> 12.62 MB.
+        self.assertEqual(controller.file_size, 12.62)
+
+    def test_recompute_honors_a_non_default_settings_choice_when_redis_is_absent(self):
+        # settings.jsonc explicitly chose mono/shift-1 -- different from
+        # thumbnail_startup_value()'s own built-in default (colour/shift-2)
+        # -- to prove the fallback reads what settings.jsonc actually says,
+        # not a value hardcoded a second time in the fallback path.
+        controller = self.controller(
+            redis_values={},
+            settings_image_capture={"thumbnail": 1, "thumbnail_size": 1},
+        )
         controller._recompute_file_size(log_requested=False)
         self.assertEqual(controller.file_size, 12.67)
 

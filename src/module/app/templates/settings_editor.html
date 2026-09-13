@@ -1805,26 +1805,28 @@
           </div>
         </div>
         <!-- No visible card here: the embedded DNG thumbnail is the
-             standard playback path (image_capture.thumbnail defaults to 1,
-             mono), not an operator-facing toggle -- the 0/1/2 field with
+             standard playback path (image_capture.thumbnail defaults to 2,
+             colour), not an operator-facing toggle -- the 0/1/2 field with
              its "off / mono / colour, applied live" explanation was found
              confusing now that "off" isn't really a supported playback
              configuration (playback.py's raw-decode fallback is disabled).
-             Still adjustable via `set thumbnail` (CLI) if you want colour,
-             at three times the bytes (2026-09-13 operator decision made
-             mono the default for efficiency). This hidden input is NOT
-             decorative: it is what keeps buildState() from silently
-             dropping image_capture.thumbnail from settings.jsonc on the
-             next editor save (B-2's exact bug, reintroduced by removing
-             the visible field without this) -- every [data-path] element
+             Colour is the default because, paired with thumbnail_size
+             defaulting to 2 below, it costs FEWER bytes than mono did at
+             half size (2026-09-13 operator decision, final) -- still
+             adjustable via `set thumbnail 1` (CLI) if you want mono, at a
+             third of the bytes. This hidden input is NOT decorative: it
+             is what keeps buildState() from silently dropping
+             image_capture.thumbnail from settings.jsonc on the next
+             editor save (B-2's exact bug, reintroduced by removing the
+             visible field without this) -- every [data-path] element
              participates in the save payload whether or not it is shown. -->
-        <input type="hidden" data-path="image_capture.thumbnail" data-type="number" data-original="1" value="1">
+        <input type="hidden" data-path="image_capture.thumbnail" data-type="number" data-original="2" value="2">
         <!-- Same reason as the input just above: image_capture.thumbnail_size
              has no visible card either (changing it restarts the camera, so
              it is a settings-only knob -- see settings.jsonc's own comment
              on the key), but it must still round-trip through buildState()'s
              save payload or a Save silently erases it, the same B-2 bug. -->
-        <input type="hidden" data-path="image_capture.thumbnail_size" data-type="number" data-original="1" value="1">
+        <input type="hidden" data-path="image_capture.thumbnail_size" data-type="number" data-original="2" value="2">
         <div class="card" data-search="sensor database file resources sensors json advanced">
           <div class="card-main">
             <label class="card-label">{{ t('card.sensors.database_file.label') }}</label>

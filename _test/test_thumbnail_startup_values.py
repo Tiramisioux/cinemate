@@ -37,7 +37,7 @@ def _settings(key, raw):
 class ThumbnailStartupValueTests(unittest.TestCase):
     # (raw settings.jsonc value, expected validated value)
     CASES = [
-        (_ABSENT, 1),          # no key at all -> shipped default (mono, 2026-09-13)
+        (_ABSENT, 2),          # no key at all -> shipped default (colour, 2026-09-13 final)
         (0, 0),
         (1, 1),
         (2, 2),
@@ -47,10 +47,10 @@ class ThumbnailStartupValueTests(unittest.TestCase):
         (False, 0),            # int(False) == 0
         ("2", 2),              # numeric string
         ("0", 0),
-        ("banana", 1),         # ValueError -> default
-        (None, 1),             # TypeError -> default
-        ([], 1),               # TypeError -> default
-        ({}, 1),               # TypeError -> default
+        ("banana", 2),         # ValueError -> default
+        (None, 2),             # TypeError -> default
+        ([], 2),               # TypeError -> default
+        ({}, 2),               # TypeError -> default
     ]
 
     def test_decision_table(self):
@@ -61,16 +61,16 @@ class ThumbnailStartupValueTests(unittest.TestCase):
                 )
 
     def test_empty_settings_dict_is_the_default(self):
-        self.assertEqual(thumbnail_startup_value({}), 1)
+        self.assertEqual(thumbnail_startup_value({}), 2)
 
     def test_missing_image_capture_section_is_the_default(self):
-        self.assertEqual(thumbnail_startup_value({"some_other_key": {}}), 1)
+        self.assertEqual(thumbnail_startup_value({"some_other_key": {}}), 2)
 
 
 class ThumbnailSizeStartupValueTests(unittest.TestCase):
     # (raw settings.jsonc value, expected validated value)
     CASES = [
-        (_ABSENT, 1),          # no key at all -> shipped default (shift 1, 640x360)
+        (_ABSENT, 2),          # no key at all -> shipped default (shift 2, 320x180)
         (0, 0),
         (1, 1),
         (4, 4),
@@ -79,9 +79,9 @@ class ThumbnailSizeStartupValueTests(unittest.TestCase):
         (5, 4),                # one past the ceiling
         (True, 1),             # int(True) == 1, a valid shift -- does not crash
         ("2", 2),              # numeric string
-        ("nonsense", 1),       # ValueError -> default
-        (None, 1),             # TypeError -> default
-        ([], 1),               # TypeError -> default
+        ("nonsense", 2),       # ValueError -> default
+        (None, 2),             # TypeError -> default
+        ([], 2),               # TypeError -> default
     ]
 
     def test_decision_table(self):
@@ -92,10 +92,10 @@ class ThumbnailSizeStartupValueTests(unittest.TestCase):
                 )
 
     def test_empty_settings_dict_is_the_default(self):
-        self.assertEqual(thumbnail_size_startup_value({}), 1)
+        self.assertEqual(thumbnail_size_startup_value({}), 2)
 
     def test_missing_image_capture_section_is_the_default(self):
-        self.assertEqual(thumbnail_size_startup_value({"some_other_key": {}}), 1)
+        self.assertEqual(thumbnail_size_startup_value({"some_other_key": {}}), 2)
 
 
 if __name__ == "__main__":

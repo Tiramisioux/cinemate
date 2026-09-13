@@ -317,23 +317,26 @@ def thumbnail_startup_value(settings: dict) -> int:
     set_thumbnail() so both paths agree, and so a malformed value degrades
     to a safe default instead of reaching either process unvalidated.
 
-    Defaults to 1 (mono), not 0: the embedded thumbnail is the standard
+    Defaults to 2 (colour), not 0: the embedded thumbnail is the standard
     playback path, and playback.py's raw-decode fallback is disabled (too
     demanding on the Pi) -- so a take recorded with thumbnail=0, or a
     parse failure that used to fall back to 0, would otherwise be
-    unplayable in the pane. Mono rather than colour is an operator
-    decision made 2026-09-13, for efficiency: one byte per pixel against
-    colour's three, at the cost of a greyscale playback pane and take
-    strip, which the operator accepts. `set thumbnail 2` (or
-    `image_capture.thumbnail: 2`) restores colour at three times the
-    bytes; see cinepi-raw's CP_DEF_THUMBNAIL for the matching compiled-in
-    fallback.
+    unplayable in the pane. Colour over mono is the operator's FINAL
+    2026-09-13 decision (an interim session default mono, then reverted):
+    paired with thumbnail_size defaulting to 2
+    (thumbnail_size_startup_value() below), colour at quarter size
+    (172,800 B/frame) costs FEWER bytes than mono at half size
+    (230,400 B/frame) would have, so there is no size/colour trade-off
+    left to make. `set thumbnail 1` (or `image_capture.thumbnail: 1`)
+    still gives mono, at a third of the bytes, for anyone who wants it
+    lighter still; see cinepi-raw's CP_DEF_THUMBNAIL for the matching
+    compiled-in fallback.
     """
-    raw = settings.get("image_capture", {}).get("thumbnail", 1)
+    raw = settings.get("image_capture", {}).get("thumbnail", 2)
     try:
         return max(0, min(2, int(raw)))
     except (TypeError, ValueError):
-        return 1
+        return 2
 
 
 def thumbnail_size_startup_value(settings: dict) -> int:
@@ -345,14 +348,15 @@ def thumbnail_size_startup_value(settings: dict) -> int:
     clamp so a malformed value degrades to the shipped default instead of
     reaching cinepi-raw unvalidated.
 
-    Defaults to 1 (640x360, half the lores plane) rather than 0 (the full
-    lores plane): at the shipped mono default (thumbnail_startup_value()
-    above) that is 230,400 B/frame from a 1280-wide lores plane, versus
-    921,600 B at shift 0 -- and 2,764,800 B in colour at shift 0, which is
-    what FINDINGS measured as the DNG growth between releases
-    (development/dng-thumbnail-cost/FINDINGS.md; the cinemate-handbook
-    2026-09-13 hardware-log entry). The shift and the mode are independent
-    knobs; the byte count scales with both.
+    Defaults to 2 (320x180, quarter the lores plane) rather than 0 or 1:
+    paired with the colour default above (thumbnail_startup_value()), that
+    is 172,800 B/frame from a 1280-wide lores plane -- fewer bytes than a
+    640x360 MONO thumbnail (shift 1) would have cost (230,400 B), and far
+    below the 2,764,800 B/frame that colour at shift 0 measured as the DNG
+    growth between releases (development/dng-thumbnail-cost/FINDINGS.md;
+    the cinemate-handbook 2026-09-13 hardware-log entry) -- what CineMate
+    3.4 actually shipped with, before this fix. The shift and the mode are
+    independent knobs; the byte count scales with both.
 
     Clamped to 0..4, not cinepi-raw's 0..12: cinepi-raw's own clamp exists
     so a raw redis value cannot collapse the thumbnail below usefulness,
@@ -362,11 +366,11 @@ def thumbnail_size_startup_value(settings: dict) -> int:
     for the playback pane to show anything, so there is no reason to offer
     it here even though cinepi-raw would still accept it.
     """
-    raw = settings.get("image_capture", {}).get("thumbnail_size", 1)
+    raw = settings.get("image_capture", {}).get("thumbnail_size", 2)
     try:
         return max(0, min(4, int(raw)))
     except (TypeError, ValueError):
-        return 1
+        return 2
 
 
 REC_TONE_DEFAULTS = {
@@ -558,15 +562,17 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "imx585_clear_hdr_12bit": True,
             "imx585_clear_hdr_16bit": True,
         },
-        # 1 (mono): the embedded thumbnail is the standard playback path,
-        # not an opt-in; mono over colour is the 2026-09-13 operator
-        # efficiency decision -- see thumbnail_startup_value()'s docstring.
-        "thumbnail": 1,
-        # 1 (640x360): at the mono default above, 230,400 B/frame; shift 0
-        # (full lores plane) is 921,600 B mono, or 2,764,800 B in colour --
-        # the growth FINDINGS.md measured between releases -- see
+        # 2 (colour): the embedded thumbnail is the standard playback path,
+        # not an opt-in. Paired with thumbnail_size defaulting to 2 below,
+        # colour costs FEWER bytes than mono did at half size -- see
+        # thumbnail_startup_value()'s docstring for the 2026-09-13 decision.
+        "thumbnail": 2,
+        # 2 (320x180): at the colour default above, 172,800 B/frame -- less
+        # than 640x360 mono (shift 1) would have cost. Shift 0 (full lores
+        # plane) in colour is 2,764,800 B/frame, the growth FINDINGS.md
+        # measured between releases -- see
         # thumbnail_size_startup_value()'s docstring.
-        "thumbnail_size": 1,
+        "thumbnail_size": 2,
         # Dynamic resolution: substitute a lesser mode when the requested fps
         # outruns the selected one, and which axis of quality ("mode" =
         # bit depth + ClearHDR class, "resolution" = frame size, "none" =

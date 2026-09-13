@@ -508,6 +508,8 @@ Edit these by hand, or leave them at the defaults.
 | `arrays.hdr_threshold_low` · `hdr_threshold_high` · `hdr_blend` · `hdr_gain_adder` | Click-stop tables (`steps`, `free`, `free_increment`) a pot or encoder steps through. Startup values: [Resolution & sensor](#resolution-sensor). |
 | `arrays.shutter_a.sync_increment` | Granularity in shutter-angle sync mode only. Default `0.1`°, independent of the shutter angle's own free increment. |
 | `image_capture.hdr.self_heal` | Auto-recovery for the flat-pedestal ClearHDR startup defect. Off by default, [details](clear-hdr.md#flat-black-pedestal-frames). |
+| `image_capture.thumbnail` | Embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour. Mono by default (operator decision, efficiency) — the Playback pane and its take strip render greyscale; `set thumbnail 2` restores colour at three times the bytes. Live, per take, no camera restart. [Redis keys](redis-keys.md), [Playback](playback.md#the-embedded-thumbnail). |
+| `image_capture.thumbnail_size` | Right-shift of the lores plane before the thumbnail is written: `0` full size, `1` half (default, 640×360, 230,400 B/frame at the mono default), `2` quarter. Changing it restarts the camera. [Redis keys](redis-keys.md), [Playback](playback.md#the-embedded-thumbnail). |
 | `hdmi_display.preview.zoom_steps` | Zoom factors `set zoom` cycles through. Default `1.0, 1.5, 2.0`; **Default zoom** offers only `1.0` and `2.0`. |
 | `hdmi_display.preview.pip.scale` / `pip.margin` | PiP inset size and edge gap, as fractions of the pane. Defaults `0.28` and `0.03`. |
 | `hdmi_display.preview.anamorphic.default_factor` | Desqueeze factor at startup, default `1.0`; the factor list is on the page, under **Value steps**. |

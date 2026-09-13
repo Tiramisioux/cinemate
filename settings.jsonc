@@ -280,11 +280,27 @@
       "self_heal": false
     },
     // Embedded DNG thumbnail written by cinepi-raw's DNG encoder: 0 off,
-    // 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour
-    // by default -- verified on hardware (G10/G11) and the standard
-    // playback path; raw decode is far more demanding on the Pi and is no
-    // longer the pane's fallback. New takes only.
-    "thumbnail": 2,
+    // 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Mono by
+    // default -- operator decision 2026-09-13, for efficiency: one byte
+    // per pixel against colour's three. The Playback pane and its take
+    // strip render greyscale as a result; `set thumbnail 2` (or this key
+    // set to 2) restores colour at three times the bytes. New takes only
+    // -- a take recorded with this off (or before a rebuilt cinepi-raw
+    // shipped it) has no thumbnail and is not currently playable in the
+    // pane.
+    "thumbnail": 1,
+    // Right-shift applied to the lores plane before writing the
+    // thumbnail: 0 = full lores size, 1 = half each side, 2 = quarter,
+    // and so on. Changing this restarts the camera (unlike `thumbnail`
+    // above), so it is a settings-only knob, not exposed via CLI or the
+    // settings editor. At the mono default above: 0 = 1280x720 =
+    // 921,600 B/frame (+7.4% on a 4K 12-bit frame, +30% on HD 12-bit;
+    // CineMate 3.4 shipped this size in COLOUR, 2,764,800 B), 1 = 640x360
+    // = 230,400 B/frame (the default, +1.9% / +7.4%), 2 = 320x180 =
+    // 57,600 B/frame. Colour is three times each figure. See
+    // development/dng-thumbnail-cost/FINDINGS.md and the 2026-09-13
+    // hardware-log entry.
+    "thumbnail_size": 1,
     "custom_modes": {}
   },
 

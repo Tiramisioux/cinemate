@@ -114,8 +114,12 @@
       "gain_adder": 1,
       "self_heal": false
     },
-    // 0 off / 1 mono / 2 colour -- see settings.jsonc's comment.
-    "thumbnail": 2,
+    // 0 off / 1 mono / 2 colour -- see settings.jsonc's comment. Mono by
+    // default (2026-09-13 operator decision, efficiency).
+    "thumbnail": 1,
+    // Right-shift of the lores plane before the thumbnail is written --
+    // see settings.jsonc's comment.
+    "thumbnail_size": 1,
     "custom_modes": {}
   },
   "audio_capture": {

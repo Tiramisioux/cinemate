@@ -1,0 +1,196 @@
+import sys
+import types
+import unittest
+from pathlib import Path
+from unittest import mock
+
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
+sys.modules.setdefault("smbus", types.SimpleNamespace(SMBus=object))
+
+from module.sensor_detect import (
+    SensorDetect,
+    compute_frame_size_mb,
+    thumbnail_plane_bytes,
+)
+from module.cinepi_controller import CinePiController
+from module.redis_controller import ParameterKey
+
+
+class ThumbnailPlaneBytesTests(unittest.TestCase):
+    """Pins the same seven geometry cases as cinepi-raw's
+    tests/dng_thumbnail_test.cpp, through the Python mirror. NOTE the
+    argument order here is (lores_w, lores_h, mode, shift) -- see
+    thumbnail_plane_bytes()'s own docstring for why that is the opposite
+    of thumbnail_geometry()'s (lores_w, lores_h, shift, mode) on the C++
+    side."""
+
+    def test_full_lores_colour(self):
+        # 16:9 lores plane, shift 0, colour -- FINDINGS.md §2's full-size cost.
+        self.assertEqual(thumbnail_plane_bytes(1280, 720, 2, 0), 2764800)
+
+    def test_clearhdr_lores_colour(self):
+        # ClearHDR lores plane (1256x720), shift 0, colour -- the operator's
+        # 2026-09-13 example take, exactly what dng_ifd_dump.py reported.
+        self.assertEqual(thumbnail_plane_bytes(1256, 720, 2, 0), 2712960)
+
+    def test_shift1_colour(self):
+        self.assertEqual(thumbnail_plane_bytes(1280, 720, 2, 1), 691200)
+
+    def test_shift2_colour(self):
+        self.assertEqual(thumbnail_plane_bytes(1280, 720, 2, 2), 172800)
+
+    def test_shift0_mono(self):
+        # Mono: same plane, spp 1 -- half the colour byte count, and the
+        # shipped default mode (2026-09-13 operator decision).
+        self.assertEqual(thumbnail_plane_bytes(1280, 720, 1, 0), 921600)
+
+    def test_shift1_mono_is_the_shipped_default(self):
+        # thumbnail=1, thumbnail_size=1: the actual shipped default.
+        self.assertEqual(thumbnail_plane_bytes(1280, 720, 1, 1), 230400)
+
+    def test_mode_off_is_zero_bytes(self):
+        self.assertEqual(thumbnail_plane_bytes(1280, 720, 0, 3), 0)
+
+    def test_shift12_collapses_but_never_to_zero(self):
+        # The floor that keeps an over-large thumbnail_size from ever
+        # producing a 0-byte-dimension thumbnail (max(1, dim >> shift)).
+        self.assertEqual(thumbnail_plane_bytes(1272, 720, 2, 12), 3)
+
+
+class ComputeFrameSizeMbTests(unittest.TestCase):
+    """compute_frame_size_mb() with and without the thumbnail_bytes term,
+    against FINDINGS §2's measured files."""
+
+    def test_without_thumbnail_term_is_far_below_a_file_that_has_one(self):
+        # 4K 10-bit log frame, colour thumbnail at shift 0 (Downloads
+        # 210738, 09-06): measured file size 13,135,688 B. Without the
+        # term this model only sees the raw strip + flat overhead --
+        # exactly the bug this fix corrects.
+        without = compute_frame_size_mb(3840, 2160, 10)
+        measured_mb = 13135688 / 1_000_000
+        self.assertLess(without, measured_mb - 2.0)
+
+    def test_with_thumbnail_term_matches_the_measured_colour_file(self):
+        # Same frame, thumbnail_bytes supplied (1280x720 colour, shift 0):
+        # matches FINDINGS §2's measured 13,135,688 B to within 0.01 MB.
+        with_term = compute_frame_size_mb(3840, 2160, 10, thumbnail_bytes=2764800)
+        measured_mb = 13135688 / 1_000_000
+        self.assertAlmostEqual(with_term, measured_mb, delta=0.01)
+
+    def test_matches_the_mono_default_for_a_4k_12bit_frame(self):
+        # 4K 12-bit frame at the actual shipped default (mono, shift 1):
+        # 12,441,600 (raw) + 230,400 (thumbnail) + 1,024 (overhead)
+        # = 12,673,024 B -> 12.67 MB.
+        mb = compute_frame_size_mb(3840, 2160, 12, thumbnail_bytes=230400)
+        self.assertEqual(mb, 12.67)
+
+
+class FakeRedis:
+    def __init__(self, values=None):
+        self.values = dict(values or {})
+
+    def get_value(self, key, default=None):
+        key = key.value if isinstance(key, ParameterKey) else key
+        return self.values.get(key, default)
+
+    def set_value(self, key, value, *, force=False):
+        key = key.value if isinstance(key, ParameterKey) else key
+        self.values[key] = value
+
+
+class FakeSensorDetect:
+    """Minimal stand-in, same shape as test_cinepi_controller_resolution_gui.py's.
+    _calc_lores is NOT reimplemented here -- it delegates to the real,
+    already-pure SensorDetect._calc_lores (an unbound call; the method
+    never touches self) so this fixture cannot silently drift from the
+    production formula."""
+
+    def __init__(self):
+        self.res_modes = {
+            0: {"width": 3840, "height": 2160, "bit_depth": 12, "hdr": False},
+        }
+
+    def _calc_lores(self, sensor_w, sensor_h):
+        return SensorDetect._calc_lores(None, sensor_w, sensor_h)
+
+    def resolve_effective_bit_depth(self, _camera_name, native_bit_depth, *, log_requested=False, hdr=False):
+        return native_bit_depth
+
+
+class RecomputeFileSizeThumbnailTests(unittest.TestCase):
+    """_recompute_file_size() with the live thumbnail/thumbnail_size keys
+    set, and set_thumbnail()'s recompute-after-write. Fixture follows
+    test_cinepi_controller_resolution_gui.py's ResolutionGuiStateTests.controller()."""
+
+    def controller(self, redis_values=None, settings_image_capture=None):
+        controller = CinePiController.__new__(CinePiController)
+        controller.redis_controller = FakeRedis(redis_values)
+        controller.sensor_detect = FakeSensorDetect()
+        controller.current_sensor = "imx585"
+        controller.sensor_mode = 0
+        controller.settings = {
+            "sensors": {"cam0": {"log_encode": False}, "cam1": {}},
+            "image_capture": settings_image_capture or {"thumbnail": 1, "thumbnail_size": 1},
+        }
+        return controller
+
+    def test_recompute_uses_live_mono_shift1_keys(self):
+        controller = self.controller(
+            redis_values={
+                ParameterKey.THUMBNAIL.value: "1",
+                ParameterKey.THUMBNAIL_SIZE.value: "1",
+            }
+        )
+        controller._recompute_file_size(log_requested=False)
+        # 4K 12-bit raw (12,441,600) + mono 640x360 thumbnail (230,400) +
+        # 1,024 overhead = 12,673,024 B -> 12.67 MB.
+        self.assertEqual(controller.file_size, 12.67)
+        self.assertEqual(
+            controller.redis_controller.get_value(ParameterKey.FILE_SIZE.value),
+            "12.67",
+        )
+
+    def test_recompute_uses_live_colour_shift0_keys(self):
+        controller = self.controller(
+            redis_values={
+                ParameterKey.THUMBNAIL.value: "2",
+                ParameterKey.THUMBNAIL_SIZE.value: "0",
+            }
+        )
+        controller._recompute_file_size(log_requested=False)
+        # 12,441,600 + colour 1280x720 thumbnail (2,764,800) + 1,024
+        # = 15,207,424 B -> 15.21 MB.
+        self.assertEqual(controller.file_size, 15.21)
+
+    def test_recompute_falls_back_to_startup_values_when_keys_absent(self):
+        # No live keys at all -- must fall back to thumbnail_startup_value()/
+        # thumbnail_size_startup_value() against controller.settings, same as
+        # main.py's own boot seed would produce (mono, shift 1: the shipped
+        # default), not silently treat the thumbnail as absent.
+        controller = self.controller(redis_values={})
+        controller._recompute_file_size(log_requested=False)
+        self.assertEqual(controller.file_size, 12.67)
+
+    def test_set_thumbnail_recomputes_file_size(self):
+        controller = self.controller(
+            redis_values={
+                ParameterKey.THUMBNAIL.value: "1",
+                ParameterKey.THUMBNAIL_SIZE.value: "1",
+            }
+        )
+        controller._recompute_file_size(log_requested=False)
+        self.assertEqual(controller.file_size, 12.67)
+
+        controller.set_thumbnail(2)
+
+        self.assertEqual(controller.redis_controller.get_value(ParameterKey.THUMBNAIL.value), 2)
+        # thumbnail_size is still 1 (shift 1) -- only the mode changed, to
+        # colour: 12,441,600 + 691,200 + 1,024 = 13,133,824 B -> 13.13 MB.
+        self.assertEqual(controller.file_size, 13.13)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -317,17 +317,56 @@ def thumbnail_startup_value(settings: dict) -> int:
     set_thumbnail() so both paths agree, and so a malformed value degrades
     to a safe default instead of reaching either process unvalidated.
 
-    Defaults to 2 (colour), not 0: the embedded thumbnail is now the
-    standard playback path, and playback.py's raw-decode fallback is
-    disabled (too demanding on the Pi, operator decision after G10/G11) --
-    so a take recorded with thumbnail=0, or a parse failure that used to
-    fall back to 0, would otherwise be unplayable in the pane.
+    Defaults to 1 (mono), not 0: the embedded thumbnail is the standard
+    playback path, and playback.py's raw-decode fallback is disabled (too
+    demanding on the Pi) -- so a take recorded with thumbnail=0, or a
+    parse failure that used to fall back to 0, would otherwise be
+    unplayable in the pane. Mono rather than colour is an operator
+    decision made 2026-09-13, for efficiency: one byte per pixel against
+    colour's three, at the cost of a greyscale playback pane and take
+    strip, which the operator accepts. `set thumbnail 2` (or
+    `image_capture.thumbnail: 2`) restores colour at three times the
+    bytes; see cinepi-raw's CP_DEF_THUMBNAIL for the matching compiled-in
+    fallback.
     """
-    raw = settings.get("image_capture", {}).get("thumbnail", 2)
+    raw = settings.get("image_capture", {}).get("thumbnail", 1)
     try:
         return max(0, min(2, int(raw)))
     except (TypeError, ValueError):
-        return 2
+        return 1
+
+
+def thumbnail_size_startup_value(settings: dict) -> int:
+    """Validated startup value for image_capture.thumbnail_size, keyed by Redis key.
+
+    Mirrors thumbnail_startup_value() above: main.py used to seed
+    THUMBNAIL_SIZE with the literal 0 on every boot, with no settings owner
+    and no validation of a hand-edited value. This applies int() and a
+    clamp so a malformed value degrades to the shipped default instead of
+    reaching cinepi-raw unvalidated.
+
+    Defaults to 1 (640x360, half the lores plane) rather than 0 (the full
+    lores plane): at the shipped mono default (thumbnail_startup_value()
+    above) that is 230,400 B/frame from a 1280-wide lores plane, versus
+    921,600 B at shift 0 -- and 2,764,800 B in colour at shift 0, which is
+    what FINDINGS measured as the DNG growth between releases
+    (development/dng-thumbnail-cost/FINDINGS.md; the cinemate-handbook
+    2026-09-13 hardware-log entry). The shift and the mode are independent
+    knobs; the byte count scales with both.
+
+    Clamped to 0..4, not cinepi-raw's 0..12: cinepi-raw's own clamp exists
+    so a raw redis value cannot collapse the thumbnail below usefulness,
+    and 12 is only where that floor bites (a >=4096px-wide lores plane).
+    This setting is what an operator actually picks from, and beyond 4 the
+    thumbnail is already under 80px wide (1280 >> 5 == 40) -- too small
+    for the playback pane to show anything, so there is no reason to offer
+    it here even though cinepi-raw would still accept it.
+    """
+    raw = settings.get("image_capture", {}).get("thumbnail_size", 1)
+    try:
+        return max(0, min(4, int(raw)))
+    except (TypeError, ValueError):
+        return 1
 
 
 REC_TONE_DEFAULTS = {
@@ -519,9 +558,15 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "imx585_clear_hdr_12bit": True,
             "imx585_clear_hdr_16bit": True,
         },
-        # 2 (colour): the embedded thumbnail is the standard playback path
-        # now, not an opt-in -- see thumbnail_startup_value()'s docstring.
-        "thumbnail": 2,
+        # 1 (mono): the embedded thumbnail is the standard playback path,
+        # not an opt-in; mono over colour is the 2026-09-13 operator
+        # efficiency decision -- see thumbnail_startup_value()'s docstring.
+        "thumbnail": 1,
+        # 1 (640x360): at the mono default above, 230,400 B/frame; shift 0
+        # (full lores plane) is 921,600 B mono, or 2,764,800 B in colour --
+        # the growth FINDINGS.md measured between releases -- see
+        # thumbnail_size_startup_value()'s docstring.
+        "thumbnail_size": 1,
         # Dynamic resolution: substitute a lesser mode when the requested fps
         # outruns the selected one, and which axis of quality ("mode" =
         # bit depth + ClearHDR class, "resolution" = frame size, "none" =

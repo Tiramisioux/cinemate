@@ -9,7 +9,7 @@ from threading import Timer
 import psutil
 
 from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request
-from module.sensor_detect import compute_frame_size_mb
+from module.sensor_detect import compute_frame_size_mb, thumbnail_plane_bytes
 from module.ir_filter import IRFilter
 from module.config_loader import (
     load_settings as _load_settings,
@@ -17,6 +17,8 @@ from module.config_loader import (
     TRUE_VALUES,
     FALSE_VALUES,
     DEFAULT_SETTINGS_PATH,
+    thumbnail_startup_value,
+    thumbnail_size_startup_value,
 )
 from module.storage_profiles import recorder_profile_name_for_filesystem
 from module.dynamic_resolution import (
@@ -1084,7 +1086,9 @@ class CinePiController:
         Log state, and republish it to redis. Call whenever the active
         mode's effective on-disk bit depth changes (sensor-mode switch or
         `set log` toggle) -- see _publish_resolution_gui_state() and
-        set_log_encode().
+        set_log_encode() -- or whenever the embedded-thumbnail mode/size
+        changes, since either one changes the per-frame byte count this
+        computes; see set_thumbnail() below.
         """
         resolution_info = self.sensor_detect.res_modes.get(self.sensor_mode)
         if resolution_info is None:
@@ -1106,7 +1110,33 @@ class CinePiController:
         height = resolution_info.get('height')
         if width is None or height is None or effective_bit_depth is None:
             return
-        self.file_size = compute_frame_size_mb(width, height, effective_bit_depth)
+
+        # Embedded-thumbnail term (C9 fix, FINDINGS.md / the 2026-09-13
+        # hardware-log entry): the live `thumbnail` / `thumbnail_size` keys
+        # when set, else the same validated startup values main.py seeds
+        # them with at boot. "Redis first, settings.jsonc second" -- same
+        # precedence and reason as _get_startup_dynamic_resolution_enabled()
+        # above: an operator's live `set thumbnail`, or a `thumbnail_size`
+        # change, is meant to show up in file_size immediately, not only
+        # after the next boot. Clamped the same way as
+        # thumbnail_startup_value() / thumbnail_size_startup_value() (0..2,
+        # 0..4) rather than cinepi-raw's own wider 0..12 for
+        # thumbnail_size -- this estimate only needs to track what an
+        # operator can actually set from here.
+        lores_w, lores_h = self.sensor_detect._calc_lores(width, height)
+        try:
+            thumb_mode = max(0, min(2, int(self.redis_controller.get_value(ParameterKey.THUMBNAIL.value))))
+        except (TypeError, ValueError):
+            thumb_mode = thumbnail_startup_value(self.settings)
+        try:
+            thumb_shift = max(0, min(4, int(self.redis_controller.get_value(ParameterKey.THUMBNAIL_SIZE.value))))
+        except (TypeError, ValueError):
+            thumb_shift = thumbnail_size_startup_value(self.settings)
+        thumbnail_bytes = thumbnail_plane_bytes(lores_w, lores_h, thumb_mode, thumb_shift)
+
+        self.file_size = compute_frame_size_mb(
+            width, height, effective_bit_depth, thumbnail_bytes=thumbnail_bytes
+        )
         self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(self.file_size))
 
     def set_thumbnail(self, value):
@@ -1124,6 +1154,10 @@ class CinePiController:
             return
         self.redis_controller.set_value(ParameterKey.THUMBNAIL.value, v)
         logging.info(f"DNG thumbnail mode set to {v}")
+        # The mode changes the per-frame byte count (C9 fix): recompute
+        # file_size / minutes-remaining now rather than leaving them stale
+        # until the next sensor-mode switch or `set log` toggle.
+        self._recompute_file_size()
 
     def set_log_encode(self, value=None):
         """Live control for CineMate Log (`set log`).

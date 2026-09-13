@@ -33,6 +33,12 @@ The take strip heads the pane, listing every take across mounted storage with a 
 
 Neither disturbs what is on the player. The selected take keeps playing and simply moves.
 
+## The embedded thumbnail
+
+Both the take-strip preview cards and the player itself decode this embedded thumbnail rather than the raw frame — raw decode is far more demanding on the Pi. It is **greyscale by default**: `image_capture.thumbnail` defaults to `1` (mono, one byte per pixel), an operator decision made for efficiency. `set thumbnail 2` (or the same key set to `2` in the settings file) switches to colour, at three times the bytes per frame. `image_capture.thumbnail_size` trades resolution for size — the default is `1` (640×360, 230,400 B/frame at the mono default); `0` is the full lores plane, `2` is quarter size. Changing `thumbnail_size` restarts the camera; changing `thumbnail` takes effect on the next take, with no restart.
+
+A take recorded with `thumbnail` set to `0` — or one from before a rebuilt cinepi-raw shipped the embedded thumbnail at all — carries no thumbnail and is not currently playable in this pane.
+
 ## Playing
 
 Transport controls sit under the picture: first frame, previous frame, **PLAY**, next frame, last frame, and a loop toggle. Drag anywhere on the filmstrip to scrub — it holds sixteen frames sampled evenly across the take, with the playhead marking the current position. The take's name and the elapsed position show over the top of the picture.

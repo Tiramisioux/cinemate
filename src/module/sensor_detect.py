@@ -47,7 +47,14 @@ PI5_MODEL_MARKERS = (
 # --log-encode target when active, else the sensor mode's native depth).
 # The remaining per-frame overhead (DNG header/tags, plus a LinearizationTable
 # on log-encoded frames) is <0.07% of frame size across every measured case,
-# so one flat constant is used rather than modelling it exactly.
+# so one flat constant is used rather than modelling it exactly -- true only
+# once the embedded thumbnail's own bytes are included via thumbnail_bytes
+# below. Without that term this model silently under-counts: by +1.9% to
+# +7.4% at the shipped mono/shift-1 default, and by +22% to +89% at the
+# full-lores colour size CineMate 3.4 actually shipped with before this fix
+# -- which is exactly what made file_size and the GUI's minutes-remaining
+# wrong (FINDINGS.md and the 2026-09-13 hardware-log entry,
+# development/dng-thumbnail-cost/).
 DNG_HEADER_OVERHEAD_BYTES = 1024
 # cinepi-raw writes DNGs uncompressed (COMPRESSION_NONE is hardcoded in
 # dng_encoder.cpp; the vendored lj92 lossless codec is dead code) -- this is
@@ -56,12 +63,49 @@ DNG_HEADER_OVERHEAD_BYTES = 1024
 DNG_COMPRESSION_RATIO = 1.0
 
 
+def thumbnail_plane_bytes(lores_w: int, lores_h: int, mode: int, shift: int) -> int:
+    """Bytes the embedded DNG thumbnail (IFD1) adds to one frame.
+
+    Mirrors cinepi/dng_thumbnail.hpp's thumbnail_geometry(): same formula,
+    kept here only because cinemate's file_size / minutes-remaining
+    estimate has no C++ to call into. That header is the authority for
+    this number; this is the mirror. tests/dng_thumbnail_test.cpp and
+    _test/test_frame_size_model.py pin the same cases on both sides, so a
+    change to one formula that is not made to the other shows up as the
+    two test files disagreeing, not as a silent drift in file_size.
+
+    NOTE the argument order: (lores_w, lores_h, mode, shift) here, versus
+    thumbnail_geometry()'s (lores_w, lores_h, shift, mode) on the C++ side
+    -- mode and shift are swapped. Read the parameter names, not the
+    position, when calling either one.
+
+    mode: 0 off, 1 mono (1 byte/pixel), 2 colour (3 bytes/pixel).
+    shift: right-shift applied to each lores dimension, 0..12 (cinepi-raw's
+    own clamp; see thumbnail_size_startup_value() in config_loader.py for
+    cinemate's own, tighter 0..4). Returns 0 when mode is 0; width/height
+    are not returned here -- nothing on this side needs them the way
+    cinepi-raw's dng_thumbnail.hpp does for its own log line.
+    """
+    width = max(1, lores_w >> shift)
+    height = max(1, lores_h >> shift)
+    spp = 3 if mode == 2 else 1
+    return 0 if mode == 0 else width * height * spp
+
+
 def compute_frame_size_mb(width: int, height: int, bit_depth: int,
-                           compression_ratio: float = DNG_COMPRESSION_RATIO) -> float:
+                           compression_ratio: float = DNG_COMPRESSION_RATIO,
+                           thumbnail_bytes: int = 0) -> float:
     """DNG frame size in decimal MB for a *bit_depth*-packed frame of *width*
-    x *height*. See DNG_HEADER_OVERHEAD_BYTES/DNG_COMPRESSION_RATIO above."""
+    x *height*, plus the embedded thumbnail's own bytes, if any.
+
+    thumbnail_bytes defaults to 0 for callers with no live thumbnail state
+    to hand it (SensorDetect's own per-mode metadata below, built before
+    any take exists and therefore before a mode/shift is known) -- see
+    thumbnail_plane_bytes() for how a caller that DOES know the live
+    thumbnail/thumbnail_size keys computes this term.
+    See DNG_HEADER_OVERHEAD_BYTES/DNG_COMPRESSION_RATIO above."""
     row_bytes = (int(width) * int(bit_depth) + 7) // 8
-    pixel_bytes = row_bytes * int(height)
+    pixel_bytes = row_bytes * int(height) + int(thumbnail_bytes)
     return round((pixel_bytes + DNG_HEADER_OVERHEAD_BYTES) / compression_ratio / 1_000_000, 2)
 
 

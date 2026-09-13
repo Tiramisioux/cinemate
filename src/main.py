@@ -16,6 +16,7 @@ from module.config_loader import (
     auto_storage_preroll_enabled,
     clearhdr_startup_values,
     thumbnail_startup_value,
+    thumbnail_size_startup_value,
     rec_tone_config,
     load_settings,
     DEFAULT_CONFORM_FRAME_RATE,
@@ -827,13 +828,20 @@ def run_application(args, log_queue):
         ParameterKey.THUMBNAIL.value,
         thumbnail_startup_value(settings)
     )
-    # thumbnail_size (0 = full lores plane size) is not exposed via CLI or
-    # settings-editor -- seeded only, so a stale pre-Phase-0 resident value
-    # (PI-008: thumbnail_size=50) doesn't survive a fresh boot and collapse
-    # the thumbnail before cinepi-raw's own sync() guard (C-2) would catch
-    # it. CineMate owns this key now that it means something; nothing in
-    # settings.jsonc governs it yet.
-    redis_controller.set_value(ParameterKey.THUMBNAIL_SIZE.value, 0)
+    # thumbnail_size (0 = full lores plane size) now has a settings owner:
+    # image_capture.thumbnail_size, default 1 (640x360, 230,400 B/frame at
+    # the mono default above -- see thumbnail_size_startup_value()'s
+    # docstring for the measured cost at shift 0 and the clamp). Still seeded unconditionally
+    # rather than left absent, for the same reason as before: a stale
+    # pre-Phase-0 resident value (PI-008: thumbnail_size=50) must not
+    # survive a fresh boot and collapse the thumbnail before cinepi-raw's
+    # own sync() guard (C-2) would catch it. Still not exposed via CLI or
+    # settings-editor, only settings.jsonc -- a live change restarts the
+    # camera (C9 plan §2), which makes a live verb a footgun.
+    redis_controller.set_value(
+        ParameterKey.THUMBNAIL_SIZE.value,
+        thumbnail_size_startup_value(settings)
+    )
 
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)

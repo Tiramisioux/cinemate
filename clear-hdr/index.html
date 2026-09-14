@@ -169,7 +169,12 @@
 <p>ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-gain (HG) and a low-gain (LG) readout internally and outputs one 16-bit linear Bayer frame. CineMate records it as true 16-bit CinemaDNGs — BlackLevel 3200, WhiteLevel 65535.</p>
 <ul>
 <li>Frame rates are lower than the plain modes. Per-mode figures are on the <a href="../sensors/#imx585-starlight-eye">sensors page</a>, measured at 1039.5 MHz with the stock and overclocked pixel-rate ceilings side by side; the <a href="../changelog/#imx585-driver">changelog</a> is where those measurements were first recorded.</li>
-<li>Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).</li>
+<li>Analogue gain caps at code 80 ≈ 15.8× (ISO 1580). <strong>CineMate caps ClearHDR ISO at 1585 for this
+  reason</strong>: measured on the rig, ISO 1600, 2500 and 3200 all map to code 80 and record the <em>same</em>
+  exposure — above the cap only the preview brightens, because libcamera's AGC makes up the
+  difference as ISP digital gain, so the monitor shows light the file never received. The 1600 step
+  is kept and lands on 1585, shown <strong>green</strong> in both GUIs to say the camera is holding it. Lift it
+  with <code>image_capture.hdr.iso_max: null</code>.</li>
 <li>Each 3840×2200 16-bit DNG is ≈ 16.9 MB.</li>
 <li>Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.</li>
 <li>Highlights near the HG→LG hand-off can render magenta in flat greys. This is sensor-side merge

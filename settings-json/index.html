@@ -1154,6 +1154,10 @@ it is hidden on Boot config, where Save changes enables on any edit.</p>
 <td>Auto-recovery for the flat-pedestal ClearHDR startup defect. Off by default, <a href="../clear-hdr/#flat-black-pedestal-frames">details</a>.</td>
 </tr>
 <tr>
+<td><code>image_capture.hdr.iso_max</code></td>
+<td>Highest ISO offered while a ClearHDR mode is engaged; default <code>1585</code>, <code>null</code> lifts it. Applies <strong>only</strong> in ClearHDR modes; SDR is never capped. The driver caps analogue gain at code 80, which the ISO steps reach at ~1585 — measured, ISO 1600/2500/3200 all land on code 80 and record the same exposure, so above the cap only the preview brightens (ISP digital gain) and exposure judged from the monitor is wrong. The 1600 step is kept and lands on 1585, shown green in both GUIs to say the camera is holding it; 2500 and 3200 are dropped.</td>
+</tr>
+<tr>
 <td><code>hdmi_display.preview.zoom_steps</code></td>
 <td>Zoom factors <code>set zoom</code> cycles through. Default <code>1.0, 1.5, 2.0</code>; <strong>Default zoom</strong> offers only <code>1.0</code> and <code>2.0</code>.</td>
 </tr>

@@ -53,7 +53,7 @@ The left rail groups the same fields `settings.jsonc` holds, unchanged in meanin
 | Group | Sections |
 |---|---|
 | Look & feel | Welcome screen (HDMI boot splash) · Wi‑Fi hotspot |
-| Cameras | Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, independent per sensor |
+| Cameras | Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, tuning-file override, independent per sensor |
 | Timing | Timing & sync — how strictly frame timing is watched before warning or flagging a take |
 | Exposure & steps | Value steps (click-stops per control) · Resolution & sensor (resolutions, bit depths, dynamic resolution and its priority, ClearHDR startup values) · Per-mode fps ceilings (per-sensor-mode overrides — see `custom_modes` in the settings reference) |
 | Recording | Audio (input gain, timecode alignment per bit depth) · HDMI & preview (monitor overlay, dual-feed framing) |

@@ -49,7 +49,7 @@ Only used while the override above is on.
 ### Custom tuning file
 <!-- key: card.sensors.cam0.tuning_file_override.enabled -->
 
-Overrides the auto‑detected colour tuning with a file from `resources/tuning_files/` — pick one already on the SD card, or upload a new one if yours isn't listed.
+Overrides the auto‑detected colour tuning with a file from `resources/tuning_files/` — pick one already there, or upload a `.json` to copy it in. Only Pi 5 (`pisp`) tunings load; anything missing, unreadable, or the wrong target is reported in the log and falls back to the auto‑detected tuning, so a bad pick degrades the picture instead of blacking the camera.
 
 ### CineMate Log
 <!-- key: card.sensors.cam0.log_encode -->
@@ -81,7 +81,7 @@ Locks this sensor's frame timing to the Pi's clock to prevent slow frame‑rate 
 ### Custom tuning file
 <!-- key: card.sensors.cam1.tuning_file_override.enabled -->
 
-Same idea as cam0 — override with a file from `resources/tuning_files/` or upload a new one.
+Same idea as cam0 — pick a file from `resources/tuning_files/` or upload one to copy it in. Only Pi 5 (`pisp`) tunings load; anything else falls back to the auto‑detected tuning with the reason logged, not a black screen.
 
 ### CineMate Log
 <!-- key: card.sensors.cam1.log_encode -->

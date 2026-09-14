@@ -740,7 +740,17 @@ def get_sensor_modes():
                 "fps_max_detected": detected_fps,
                 "fps_max_effective": mode.get("fps_max"),
             })
-        entries.sort(key=lambda m: ((m["width"] or 0) * (m["height"] or 0), m["bit_depth"] or 0), reverse=True)
+        # Same order the rest of CineMate lists modes in -- the mode table, the
+        # GUI mode index, docs/sensors.md -- which is SensorDetect._order_modes()'s
+        # (hdr, bit_depth, width, height), ascending. This pane used to sort by
+        # pixel count descending, so the same five modes appeared here in a
+        # different order from everywhere else and nothing said why.
+        entries.sort(key=lambda m: (
+            bool(m["hdr"]),
+            m["bit_depth"] or 0,
+            m["width"] or 0,
+            m["height"] or 0,
+        ))
         sensors[camera_name] = entries
 
     return jsonify({

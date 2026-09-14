@@ -67,18 +67,32 @@ class SensorModesEndpointTests(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertEqual(body["sensors"], {})
 
-    def test_modes_are_sorted_largest_first(self):
+    def test_modes_are_listed_in_cinemate_mode_order(self):
+        """Same order as the mode table, the GUI mode index and
+        docs/sensors.md -- SensorDetect._order_modes()'s (hdr, bit_depth,
+        width, height). This pane used to sort by pixel count descending, so
+        the same modes appeared here in a different order from everywhere
+        else."""
         app = _make_app(FakeSensorDetect({
             "imx585": {
-                0: {"width": 1928, "height": 1090, "bit_depth": 12, "fps_max": 87, "hdr": False},
-                1: {"width": 3856, "height": 2180, "bit_depth": 12, "fps_max": 40, "hdr": False},
+                0: {"width": 3840, "height": 2200, "bit_depth": 16, "fps_max": 25, "hdr": True},
+                1: {"width": 3840, "height": 2160, "bit_depth": 12, "fps_max": 50, "hdr": False},
+                2: {"width": 3840, "height": 2160, "bit_depth": 10, "fps_max": 60, "hdr": False},
+                3: {"width": 1920, "height": 1100, "bit_depth": 16, "fps_max": 25, "hdr": True},
+                4: {"width": 1920, "height": 1080, "bit_depth": 12, "fps_max": 50, "hdr": False},
             },
         }))
         res = app.test_client().get("/settings-editor/api/sensor-modes")
         body = res.get_json()
 
-        widths = [m["width"] for m in body["sensors"]["imx585"]]
-        self.assertEqual(widths, [3856, 1928])
+        shape = [(m["width"], m["bit_depth"], m["hdr"]) for m in body["sensors"]["imx585"]]
+        self.assertEqual(shape, [
+            (3840, 10, False),   # 0  4K SDR 10-bit
+            (1920, 12, False),   # 1  HD SDR 12-bit
+            (3840, 12, False),   # 2  4K SDR 12-bit
+            (1920, 16, True),    # 3  HD ClearHDR 16-bit
+            (3840, 16, True),    # 4  4K ClearHDR 16-bit
+        ])
 
 
 if __name__ == "__main__":

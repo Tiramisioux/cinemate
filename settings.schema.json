@@ -327,6 +327,11 @@
               "default": true,
               "description": "Offer the 16-bit ClearHDR modes. Delivered linear, with no compander in the path."
             },
+            "imx585_clear_hdr_16bit_hd": {
+              "type": "boolean",
+              "default": false,
+              "description": "Adds the HD (1920x1100, binned) 16-bit ClearHDR mode. Off by default: its blown highlights render pink, because CineMate ships without the preview-side correction for the sensor's HG/LG merge clamp. The recorded DNG is unaffected -- it is the preview and the DNG thumbnail that go pink. The 4K ClearHDR mode is not affected by this switch."
+            },
             "threshold_low": {
               "type": [
                 "integer",

@@ -120,6 +120,13 @@
       // re-resolved by what it actually was, not by its index, so a camera
       // does not silently wake up in a different capture.
       "imx585_clear_hdr_12bit": false,
+      // Adds the HD (1920x1100, binned) 16-bit ClearHDR mode. OFF by default:
+      // its blown highlights render pink, because CineMate ships without the
+      // preview-side correction for the sensor's HG/LG merge clamp. Turn it on
+      // if you want the mode and can live with that -- the recorded DNG is the
+      // same either way, it is the preview and the DNG thumbnail that go pink.
+      // The 4K ClearHDR mode is unaffected and stays on.
+      "imx585_clear_hdr_16bit_hd": false,
       // null leaves both thresholds unwritten, so the driver keeps its own pair.
       "threshold_low": null,
       "threshold_high": null,

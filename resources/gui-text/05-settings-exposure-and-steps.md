@@ -87,10 +87,15 @@ Show the sensor's non‑HDR modes on the resolution control.
 
 Companded capture — cinepi‑raw applies the CCMP decompand.
 
-### Expose 16‑bit ClearHDR modes
+### Enable IMX585 ClearHDR 16‑bit 4K
 <!-- key: card.image_capture.hdr.imx585_clear_hdr_16bit -->
 
-Delivered linear, with no compander in the path. Both off keeps the sensor SDR‑only.
+Adds the 3840×2200 16‑bit ClearHDR mode — the sensor's single‑frame HDR, delivered linear with no compander in the path. Off keeps the sensor SDR‑only.
+
+### Enable IMX585 ClearHDR 16‑bit HD
+<!-- key: card.image_capture.hdr.imx585_clear_hdr_16bit_hd -->
+
+Adds the 1920×1100 binned ClearHDR mode. Off by default: its blown highlights render pink in the preview and the DNG thumbnail. The recorded DNG is unaffected.
 
 ### ClearHDR startup knobs
 <!-- key: card.image_capture.hdr.threshold_low -->

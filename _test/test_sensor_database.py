@@ -265,7 +265,12 @@ class SensorDatabaseTests(unittest.TestCase):
 
     def test_imx585_clearhdr_modes_merged_and_ordered(self):
         """The plain and --hdr sensor runs merge into one table ordered plain →
-        12-bit HDR → 16-bit HDR, and the HDR modes carry hdr=True."""
+        12-bit HDR → 16-bit HDR, and the HDR modes carry hdr=True.
+
+        ClearHDR is offered at 4K only, so the binned HDR modes (1928 wide) are
+        filtered out while the binned PLAIN mode stays — which is the point of
+        doing it here rather than through image_capture.k_steps, which is
+        global and would have taken the plain mode with it."""
         d = self._detector_for_parse()
         parsed = self._parse(d, self.IMX585_LISTCAMERAS, self.IMX585_HDR_LISTCAMERAS)["imx585"]
         ordered = [
@@ -276,9 +281,7 @@ class SensorDatabaseTests(unittest.TestCase):
             [
                 (1928, 12, False),
                 (3856, 12, False),
-                (1928, 12, True),
                 (3856, 12, True),
-                (1928, 16, True),
                 (3856, 16, True),
             ],
         )

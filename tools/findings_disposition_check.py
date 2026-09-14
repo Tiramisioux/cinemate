@@ -18,11 +18,25 @@ different, weaker property than "has a disposition" -- a finding can be
 planned for future work and still carry `accepted` today. This check only
 enforces the latter.
 
+When there is nothing to check
+------------------------------
+54cae555 moved system-review/ off dev -- it is a dated audit record and an
+analysis workspace, not shipped product code, and lives on feature/dev-track
+now. A tree without the archive has no findings to disposition, so this skips
+rather than failing on a file it was never going to find.
+
+That skip is deliberately narrow. `system-review/` absent entirely is the
+documented state; `system-review/` present without `FINDINGS.md` is a broken
+archive, and still fails. So does a parse that finds fewer rows than the
+archive is known to hold -- see MINIMUM_ROWS.
+
 Usage
 -----
     python3 tools/findings_disposition_check.py [--repo PATH]
 
-Exit codes: 0 ok / 1 a row is missing a disposition or has an invalid one.
+Exit codes: 0 ok, or the archive is not in this tree / 1 a row is missing a
+disposition or has an invalid one, the archive is incomplete, or the table
+stopped parsing.
 """
 
 from __future__ import annotations
@@ -32,14 +46,31 @@ import re
 import sys
 from pathlib import Path
 
-FINDINGS = "system-review/FINDINGS.md"
+ARCHIVE = "system-review"
+FINDINGS = f"{ARCHIVE}/FINDINGS.md"
 ALLOWED = {"fixed", "guarded", "accepted", "superseded", "strength"}
+
+# If ROW_RE ever stops matching the table, this must fail rather than report
+# zero findings and pass forever. B10.1 dispositioned 228 rows and FINDINGS.md
+# is append-only, so the count can grow but never shrink.
+MINIMUM_ROWS = 228
 
 ROW_RE = re.compile(r"^\|\s*(F-\d{3})\s*\|(.*)\|\s*$")
 
 
 def check(repo: Path) -> int:
     path = repo / FINDINGS
+
+    if not (repo / ARCHIVE).exists():
+        print(f"findings_disposition_check: no {ARCHIVE}/ in this tree -- nothing "
+              f"to disposition, skipped")
+        return 0
+
+    if not path.is_file():
+        print(f"{FINDINGS}: {ARCHIVE}/ is here but FINDINGS.md is not -- the "
+              f"archive is incomplete, not absent")
+        return 1
+
     text = path.read_text(encoding="utf-8")
 
     header_line = next(
@@ -65,6 +96,11 @@ def check(repo: Path) -> int:
             missing.append(fid)
         elif disposition not in ALLOWED:
             invalid.append((fid, disposition))
+
+    if len(seen) < MINIMUM_ROWS:
+        print(f"{FINDINGS}: matched only {len(seen)} finding rows, expected at "
+              f"least {MINIMUM_ROWS} -- suspect ROW_RE, not the file")
+        return 1
 
     if missing:
         print(f"MISSING disposition ({len(missing)}): {', '.join(missing)}")

@@ -420,10 +420,10 @@
 <td>Toggle <a href="../cinemate-log/">CineMate Log</a> using each camera's default target for its live bit depth (16-bit → 12, 12-bit → 10). <code>set log 10</code> / <code>set log 12</code> force a target where the live bit depth supports it; <code>set log on</code> / <code>set log off</code> force a state (<code>yes</code>/<code>no</code>, <code>true</code>/<code>false</code> work too). A number other than 10 or 12 is rejected, so <code>set log 1</code> is not a synonym for <code>on</code>. Restarts the camera when idle; while recording the request is stored and applied on the next launch.</td>
 </tr>
 <tr>
-<td><code>set thumbnail &lt;n&gt;</code></td>
-<td>int</td>
+<td><code>set thumbnail &lt;word\|n&gt;</code></td>
+<td>string</td>
 <td><code>set_thumbnail</code></td>
-<td>Embedded DNG thumbnail mode: <code>0</code> off, <code>1</code> mono, <code>2</code> colour. Applied live on the next frame, no camera restart. Affects new takes only. <code>thumbnail_size</code> is not exposed here — its handler restarts the camera.</td>
+<td>Embedded DNG thumbnail mode: <code>off</code> (<code>0</code>), <code>mono</code> (<code>1</code>), <code>colour</code>/<code>color</code> (<code>2</code>, default), <code>jpeg</code> (<code>3</code>) — words are case-insensitive, and the legacy ints still work. Applied live on the next frame, no camera restart. Affects new takes only. Thumbnail size is <code>image_capture.thumbnail_size</code> in <a href="../settings-json/#dng-thumbnails"><code>settings.jsonc</code></a> instead — not exposed as a command here, since its handler restarts the camera.</td>
 </tr>
 </tbody>
 </table>

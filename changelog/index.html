@@ -117,6 +117,8 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Changelog</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#unreleased">Unreleased</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#version-340">Version 3.4.0</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#imx585-driver">imx585 driver</a>
@@ -203,6 +205,18 @@
 <div class="markdown-body">
   <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <p>Release notes for CineMate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
+<h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>The embedded DNG thumbnail costs a fraction of what it did</strong> — it is now a compressed colour thumbnail at half the preview size (<code>image_capture.thumbnail</code> defaults to <code>jpeg</code>, the new <code>image_capture.thumbnail_size</code> to <code>1</code>) instead of an uncompressed colour one at the full lores plane on every frame. Per-frame growth over a 3.3.1-era file drops from +22% to about +0.2% at 4K 12-bit, and from +89% to under +1% at HD 12-bit. Measured on hardware: roughly six seconds of recording time per terabyte, and +4.0 ms of encode time per frame (+18%) with no dropped frames — see <a href="../settings-json/#dng-thumbnails">settings.jsonc's "DNG thumbnails" section</a>.</li>
+<li><strong>The <code>thumbnail</code> toggle works again</strong> — <code>set thumbnail 0</code> actually disables the embedded thumbnail now; a bug had hard-coded colour mode regardless of this setting since the 2026-09-05 <code>dng-playback</code> merge.</li>
+<li><strong><code>file_size</code> and the GUI's minutes-remaining now account for the thumbnail</strong> — both were previously low by the thumbnail's full byte count on every frame.</li>
+<li><strong>A fourth embedded-thumbnail type: colour JPEG</strong> — <code>image_capture.thumbnail</code> (and <code>set thumbnail</code>) now takes the words <code>off</code> / <code>mono</code> / <code>colour</code> / <code>jpeg</code> (the legacy <code>0</code>-<code>3</code> still work), where <code>jpeg</code> is a baseline JPEG, quality 85, 4:2:0 — measured 9–16 KB per frame at the shipped 640×360 default and 3–8 KB at 320×180, against 230,400 B / 57,600 B for mono at the same sizes, paid in the most CPU of the four (a YUV→RGB conversion plus the JPEG encode itself). <code>jpeg</code> is now the default. See <a href="../settings-json/#dng-thumbnails">settings.jsonc's "DNG thumbnails" section</a> for the full table.</li>
+<li><strong>The settings editor shows the choice, and its cost</strong> — the Resolution &amp; sensor section gains a visible "DNG thumbnails" card: a mode dropdown whose four labels state the bytes-per-frame and CPU cost of each choice for the attached camera's actual lores size, and a size dropdown labelled with the resulting dimensions. Previously <code>image_capture.thumbnail</code>/<code>thumbnail_size</code> had no field on the page at all.</li>
+<li><strong>The Playback pane serves a JPEG-mode take's thumbnail without re-encoding it</strong> — the two uncompressed modes are still decoded and re-encoded through PIL on every request, as before.</li>
+<li><strong>A custom tuning file that can't load no longer blacks the camera</strong> — a missing, unreadable, or wrong-target file (a Pi 4 / vc4 tuning on a Pi 5, for instance) now falls back to the auto-detected tuning and logs one <code>ERROR</code> line naming the file and the reason, instead of failing camera registration with the picture never coming up. See <a href="../settings-json/#cameras">Custom tuning file</a>.</li>
+<li><strong>The settings editor's tuning-file upload actually uploads now</strong> — <code>Upload .json</code> used to add an entry to the picker and report success without writing anything. It now copies the file into <code>resources/tuning_files/</code>, validated the same way the camera's own launch guard validates a configured path.</li>
+<li><strong>The tuning-file picker no longer erases an override it can't display</strong> — a configured path that isn't one of the shipped files (including every unit's own absolute default) used to have no matching entry, so opening and saving the settings page silently cleared it. It now shows up as its own, clearly labelled entry instead.</li>
+</ul>
 <h2 id="version-340">Version 3.4.0<a class="headerlink" href="#version-340" title="Permanent link">#</a></h2>
 <h3 id="imx585-driver">imx585 driver<a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h3>
 <ul>

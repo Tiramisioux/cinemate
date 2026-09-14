@@ -247,7 +247,7 @@
 </tr>
 <tr>
 <td>Cameras</td>
-<td>Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, independent per sensor</td>
+<td>Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, tuning-file override, independent per sensor</td>
 </tr>
 <tr>
 <td>Timing</td>
@@ -281,6 +281,12 @@
 <div class="admonition warning">
 <p class="admonition-title">A structural save loses comments without saying so</p>
 <p>The server composes a warning when this happens, but the page does not show it — the toast reads <code>Saved. Restarting CineMate…</code> either way. If you keep notes in <code>settings.jsonc</code>, recover them from the newest file in <code>.settings-backups/</code> after a save that added or removed a key.</p>
+</div>
+<div class="admonition danger">
+<p class="admonition-title">A save writes only what the page carries — and that is less than the file holds</p>
+<p>Observed on a camera 2026-09-13, worth knowing before you use Save on a file you care about. The saved document is built from the form's own fields, so <strong>any setting the page has no field for is not written back at all</strong> — it is dropped from <code>settings.jsonc</code> entirely, not left alone. On that camera a single save had removed the whole <code>system.https</code> and <code>system.web_api</code> blocks, blanked both cameras' <code>tuning_file_override.path</code>, emptied the <code>input_peripherals.pots</code> array, cleared <code>sensors.cam1.camera_name</code>, and stripped every comment in the file. Nothing warned, and the camera kept running, because CineMate falls back to its built-in defaults for whatever is missing — so the loss is invisible until you read the file or a default differs from what you had set.</p>
+<p>Two practical consequences. Edit by hand over SSH if you have customised anything under "<a href="../settings-json/#settings-with-no-field-on-this-page">Settings with no field on this page</a>". And after any Save, compare against a backup — <code>diff .settings-backups/&lt;newest&gt; settings.jsonc</code> — rather than assuming the file still says what you wrote.</p>
+<p>Fixing this properly means the save merging into the file on disk instead of replacing it. Until then, the hidden <code>[data-path]</code> inputs some cards carry exist purely to keep their keys alive through a save; that is a patch per key, not a fix.</p>
 </div>
 </li>
 <li>

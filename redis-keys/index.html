@@ -420,14 +420,14 @@ transition instead of a stale value.</p>
 <tr>
 <td>thumbnail</td>
 <td>CineMate -&gt; CinePi-raw</td>
-<td>Embedded DNG thumbnail mode: <code>0</code> off, <code>1</code> mono, <code>2</code> colour. Applied live (no camera restart), written per frame into new takes only</td>
+<td>Embedded DNG thumbnail mode: <code>0</code> off, <code>1</code> mono, <code>2</code> colour, <code>3</code> colour JPEG (default). <code>image_capture.thumbnail</code> speaks the words (<code>off</code>/<code>mono</code>/<code>colour</code>/<code>jpeg</code>) in settings.jsonc; this wire value is always the int -- cinemate translates at boot and at <code>set thumbnail</code>. Applied live (no camera restart), written per frame into new takes only. See <a href="../settings-json/#dng-thumbnails">settings.jsonc</a> for the bytes/CPU cost of each.</td>
 <td>Yes (publish key to apply)</td>
 </tr>
 <tr>
 <td>thumbnail_size</td>
 <td>CineMate -&gt; CinePi-raw</td>
-<td>Right-shift downscale of the thumbnail plane; <code>0</code> is the full lores size. Changing it restarts the camera. Seeded at launch only — no CLI verb or settings-editor field yet</td>
-<td>No (seeded to avoid a stale pre-Phase-0 resident value collapsing the thumbnail; change by hand only if you understand the restart)</td>
+<td>Right-shift downscale of the thumbnail plane, every mode including jpeg; <code>0</code> is the full lores size. Seeded at boot from <code>image_capture.thumbnail_size</code> (settings.jsonc), default <code>1</code> (half, 640×360). Changing it restarts the camera; a settings-editor field exists (Resolution &amp; sensor -&gt; DNG thumbnails), a Save away from taking effect, but no live CLI verb</td>
+<td>No (seeded from settings at every boot to avoid a stale pre-Phase-0 resident value collapsing the thumbnail; change by hand only if you understand the restart)</td>
 </tr>
 <tr>
 <td>log_encode_request</td>

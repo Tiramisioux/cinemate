@@ -90,6 +90,12 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#resolution-sensor">Resolution &amp; sensor</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#dng-thumbnails">DNG thumbnails</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#what-it-actually-costs-you">What it actually costs you</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#per-mode-fps-ceilings">Per-mode fps ceilings</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#audio">Audio</a>
@@ -307,11 +313,11 @@ record policy.</p>
 </tr>
 <tr>
 <td>Custom tuning file</td>
-<td>Forces a colour tuning file instead of the auto-detected one. Default off; the picker lists <code>resources/tuning_files/</code> (stock <code>imx477.json</code>). Ignored on a Pi 4, which gets none.</td>
+<td>Forces a colour tuning file instead of the auto-detected one. Default off; the picker lists <code>resources/tuning_files/</code> (stock <code>imx477.json</code>), plus a configured path outside that folder shown as its own entry. Paths may be repo-relative or absolute. Only a <code>pisp</code>-target <code>.json</code> loads — a file that's missing, unreadable, or the wrong target falls back to the auto-detected tuning with one <code>ERROR</code> line in the log, rather than blacking the camera. Ignored on a Pi 4, which gets none.</td>
 </tr>
 <tr>
 <td>Upload .json</td>
-<td>Points the setting at <code>resources/tuning_files/&lt;your file&gt;</code> and selects it. Put the file on the Pi over SSH first; the page does not copy it. Non-<code>.json</code> refused.</td>
+<td>Copies the file into <code>resources/tuning_files/</code> and selects it — the page does this now, not you over SSH. Refused with a 400 if it isn't <code>.json</code> or isn't a valid <code>pisp</code>-target tuning file; refused with a 409 if a file with that name already exists (choose another name or remove the old one over SSH).</td>
 </tr>
 <tr>
 <td>CineMate Log</td>
@@ -634,7 +640,7 @@ imx585 ClearHDR.</p>
 </tr>
 <tr>
 <td>Expose 12-bit ClearHDR modes</td>
-<td>Offers the companded ClearHDR capture — cinepi-raw applies the CCMP decompand to it, and the preview needs a measured table for the mode's binning. Default on.</td>
+<td>Offers the companded ClearHDR capture — cinepi-raw applies the CCMP decompand to it, and the preview needs a measured table for the mode's binning. <strong>Default off</strong>, see <a href="../clear-hdr/#12-bit-clearhdr-is-hidden">ClearHDR</a>. Turning it on renumbers the modes above it; a saved mode is re-resolved by what it actually was, so the camera does not wake up in a different capture.</td>
 </tr>
 <tr>
 <td>Expose 16-bit ClearHDR modes</td>
@@ -689,6 +695,92 @@ off.</p>
 <p class="admonition-title">Greyed rows</p>
 <p>A row the attached sensor has no mode for is dimmed — 1.5K, 3K, 5.5K and 10-bit on an IMX585, for instance. Dimmed, not disabled: the switch still flips, still saves and applies the moment a sensor that has those modes is fitted, the same way the Grove HAT's channel assignments survive the HAT being unplugged. With no camera detected at all, nothing is dimmed.</p>
 </div>
+<h2 id="dng-thumbnails">DNG thumbnails<a class="headerlink" href="#dng-thumbnails" title="Permanent link">#</a></h2>
+<p><a id="dng-thumbnails"></a></p>
+<p>Every DNG can carry a second image (IFD1) alongside the raw frame, so the settings editor's <a href="../playback/#the-embedded-thumbnail">Playback pane</a> can show a take without decoding the much heavier raw frame. Every frame in a take pays for whichever choice is made — the bytes and the CPU cost below apply to every single frame recorded, not once per take.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>What is written</th>
+<th>Bytes/frame at 640×360 (default size)</th>
+<th>Extra encode time per frame</th>
+<th>Playback result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>off</code></td>
+<td>Nothing — IFD0 only</td>
+<td>0 B</td>
+<td>none</td>
+<td>Not playable in the pane (<code>NO EMBEDDED THUMBNAIL</code>)</td>
+</tr>
+<tr>
+<td><code>mono</code></td>
+<td>8-bit greyscale, uncompressed</td>
+<td>230,400 B</td>
+<td>+1.2 ms (+6%)</td>
+<td>Greyscale</td>
+</tr>
+<tr>
+<td><code>colour</code> (<code>color</code> also accepted)</td>
+<td>8-bit RGB, uncompressed</td>
+<td>691,200 B</td>
+<td>+3.2 ms (+14%)</td>
+<td>Colour</td>
+</tr>
+<tr>
+<td><code>jpeg</code> (default)</td>
+<td>Baseline JPEG, YCbCr 4:2:0, quality 85</td>
+<td>~10–25 KB, scene-dependent</td>
+<td>+4.0 ms (+18%)</td>
+<td>Colour, served without re-encoding</td>
+</tr>
+</tbody>
+</table>
+<p>Sizes scale with <code>image_capture.thumbnail_size</code> (<code>0</code> full lores plane, <code>1</code> half — the default, <code>2</code> quarter) exactly the same way for all four choices; the JPEG figures are measured ranges, not a formula, because a JPEG's size depends on the scene (a detailed or noisy frame compresses two to three times worse than these figures). At quarter size every encode-time figure falls to roughly a third of the one above: +0.7 ms for mono, +1.1 ms for colour, +1.3 ms for JPEG.</p>
+<h3 id="what-it-actually-costs-you">What it actually costs you<a class="headerlink" href="#what-it-actually-costs-you" title="Permanent link">#</a></h3>
+<p>Measured on hardware 2026-09-13 — imx585 4K 16-bit ClearHDR with CineMate Log 12, 25 fps, eight takes of 250+ frames each, against a 22.2 ms no-thumbnail baseline. The noise floor between two identical thumbnail-off takes was 0.09 ms, so every figure above is real rather than scatter.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Write rate</th>
+<th>Recording time per TB</th>
+<th>Encode time per frame</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No thumbnail</td>
+<td>317.0 MB/s</td>
+<td>52.6 min</td>
+<td>22.2 ms</td>
+</tr>
+<tr>
+<td><code>jpeg</code> (default)</td>
+<td>317.4 MB/s</td>
+<td>52.5 min</td>
+<td>26.3 ms</td>
+</tr>
+<tr>
+<td><code>mono</code></td>
+<td>322.7 MB/s</td>
+<td>51.7 min</td>
+<td>23.5 ms</td>
+</tr>
+<tr>
+<td><code>colour</code></td>
+<td>334.0 MB/s</td>
+<td>49.9 min</td>
+<td>25.5 ms</td>
+</tr>
+</tbody>
+</table>
+<p>So the default costs about six seconds of recording time per terabyte of card, and about a fifth more encode time per frame. That encode figure sounds larger than it is: at 25 fps a frame has a 40 ms budget and four encode workers share the load, so the heaviest setting measured never dropped a frame, never failed a write, and never let the disk queue past two. Temperature rose about one degree across the whole session and the board never throttled.</p>
+<p>Two caveats worth carrying. These numbers are for a log-encoded 4K frame, where the log curve's pass over every sample dominates the encode and makes the thumbnail's share small; at HD, or at higher frame rates, the raw frame is far cheaper to encode and the same thumbnail is a larger fraction of it. And <code>off</code> is genuinely free — a take with no thumbnail is byte-for-byte what a build without the feature would have written.</p>
+<p>Colour JPEG at half the lores plane is the default: 640×360 is large enough to judge a take by on a phone or a laptop, which is the only thing the embedded thumbnail exists for, and compressing it costs a fortieth of what the same picture costs uncompressed. Choose <code>mono</code> when you want no JPEG encode in the frame path at all — it is the lightest of the four, at the price of a greyscale pane. Choose <code>jpeg</code> when storage or card space is the binding constraint and the CPU has the headroom to spend (4K at 25 fps on a Pi 5 — to be confirmed on hardware): it is by far the smallest file, at the highest per-frame CPU cost. Choose <code>colour</code> (uncompressed) when CPU is tight and a colour preview still matters more than the extra bytes. Choose <code>off</code> when neither the pane nor the bytes matter at all. <code>image_capture.thumbnail_size</code> (below) scales whichever mode is chosen.</p>
 <h2 id="per-mode-fps-ceilings">Per-mode fps ceilings<a class="headerlink" href="#per-mode-fps-ceilings" title="Permanent link">#</a></h2>
 <p><a id="custom_modes"></a></p>
 <p><img alt="Per-mode fps ceilings section of the CineMate settings editor" src="../images/gui-fpsceilings.png" /></p>

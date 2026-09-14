@@ -65,6 +65,8 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#choosing-a-take">Choosing a take</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-embedded-thumbnail">The embedded thumbnail</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#playing">Playing</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#playback-speed-and-the-conform-frame-rate">Playback speed and the conform frame rate</a>
@@ -201,6 +203,10 @@
 <p><strong>Sort</strong> orders the strip: <em>oldest first</em> (the default — shooting order, so the first take is leftmost and each later one to its right), <em>newest first</em>, or <em>largest first</em>. The same three orders are offered on the RAW files pane.</p>
 <p><strong>View</strong> picks the shape: <em>one row</em>, which scrolls sideways and keeps the player in sight on a card with a lot of takes, or <em>grid</em>, which wraps every take onto the screen at once for picking one out visually.</p>
 <p>Neither disturbs what is on the player. The selected take keeps playing and simply moves.</p>
+<h2 id="the-embedded-thumbnail">The embedded thumbnail<a class="headerlink" href="#the-embedded-thumbnail" title="Permanent link">#</a></h2>
+<p>Both the take-strip preview cards and the player itself decode this embedded thumbnail rather than the raw frame — raw decode is far more demanding on the Pi. The pane plays whatever the take actually carries — greyscale, colour, or colour JPEG — with no field of its own to override it. It plays <strong>in colour, at 640×360, by default</strong>: <code>image_capture.thumbnail</code> defaults to <code>jpeg</code> and <code>image_capture.thumbnail_size</code> to <code>1</code> (half the lores plane), roughly 10–25 KB per frame — the same picture uncompressed colour would give at 691,200 B. The settings editor shows this as a single on/off toggle; <code>set thumbnail mono</code> (or the key set to <code>mono</code> in the file) switches to an uncompressed greyscale thumbnail, and <code>colour</code> to an uncompressed colour one, for anyone who would rather not have a JPEG encode in the frame path. <code>image_capture.thumbnail_size</code> trades resolution for size independently of mode — <code>0</code> is the full lores plane, <code>2</code> a quarter. Changing <code>thumbnail_size</code> restarts the camera; changing <code>thumbnail</code> takes effect on the next take, with no restart. See <a href="../settings-json/#dng-thumbnails">settings.jsonc's "DNG thumbnails" section</a> for the full cost table.</p>
+<p>A JPEG take (<code>thumbnail</code> = <code>jpeg</code>) is served to the browser without re-encoding: IFD1's strip already is a baseline JPEG, so the pane reads it and serves it as-is, unlike the two uncompressed modes, which are still decoded and re-encoded through PIL on every request the way they always were.</p>
+<p>A take recorded with <code>thumbnail</code> set to <code>off</code> (<code>0</code>) — or one from before a rebuilt cinepi-raw shipped the embedded thumbnail at all — carries no thumbnail and is not currently playable in this pane.</p>
 <h2 id="playing">Playing<a class="headerlink" href="#playing" title="Permanent link">#</a></h2>
 <p>Transport controls sit under the picture: first frame, previous frame, <strong>PLAY</strong>, next frame, last frame, and a loop toggle. Drag anywhere on the filmstrip to scrub — it holds sixteen frames sampled evenly across the take, with the playhead marking the current position. The take's name and the elapsed position show over the top of the picture.</p>
 <p>Playing again from the last frame restarts from the beginning unless loop is on.</p>

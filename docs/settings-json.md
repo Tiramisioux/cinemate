@@ -255,9 +255,7 @@ imx585 ClearHDR.
 !!! note "Why the ClearHDR depths are not just Bit depths offered"
 
     **Bit depths offered** is global: it applies to every mode. On an IMX585 every SDR mode is
-    12-bit, so switching 12 off there to drop 12-bit ClearHDR would take all of them with it.
     The two switches above ask the other question — which ClearHDR *captures* to offer — and
-    that is the only one that can tell 12-bit ClearHDR from 12-bit SDR.
 
     A `settings.jsonc` written before the split carries a single `imx585_clear_hdr`. It is
     still honoured, as the default for both: one that turned ClearHDR off keeps both depths

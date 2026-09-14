@@ -13,7 +13,7 @@ If you are shooting in 16 bit formats, the log storage conversion will be 16 bit
 | Sensor | Live mode | Target |
 | --- | --- | --- |
 | IMX585 | ClearHDR 16-bit | 12 (default) or 10 |
-| IMX585 | 12-bit (SDR or 12-bit ClearHDR) | 10 only |
+| IMX585 | 12-bit SDR | 10 only |
 | IMX283 | 12-bit modes | 10 only |
 | IMX283 | 10-bit modes | not supported |
 | everything else | any | not supported |

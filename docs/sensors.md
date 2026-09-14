@@ -20,10 +20,8 @@ Higher frame rates need fast storage. If you see a purple/magenta `DROP` indicat
 
 ### IMX585 (Starlight Eye)
 
-The `cinemate-7modes` driver the installer ships exposes seven modes, of which CineMate offers
-five: three SDR at 10- and 12-bit, and the two 16-bit ClearHDR modes. The driver's two **12-bit
-ClearHDR** modes are hidden by default — see [ClearHDR](clear-hdr.md#12-bit-clearhdr-is-hidden)
-for why, and for how to turn them back on.
+The `cinemate-7modes` driver the installer ships gives CineMate five modes: three SDR at 10- and
+12-bit, and two 16-bit ClearHDR.
 
 | Mode | Type | Resolution | Bit Depth | Readout | Max FPS | Max FPS overclocked | DNG Frame File Size (MB) |
 |---|---|---|---|---|---|---|---|
@@ -70,7 +68,7 @@ optical-black rows.
 | Sensor                     | Live mode                       | `set log` (default) | `set log 10` / `set log 12`   |
 | -------------------------- | ------------------------------- | ------------------- | ----------------------------- |
 | IMX585                     | ClearHDR 16-bit                 | on → **LOG12**      | 10 or 12, either works        |
-| IMX585                     | 12-bit (SDR or 12-bit ClearHDR) | on → **LOG10**      | only 10 works — no 12→12 spec |
+| IMX585                     | 12-bit SDR                      | on → **LOG10**      | only 10 works — no 12→12 spec |
 | IMX283                     | 12-bit modes                    | on → **LOG10**      | only 10 works                 |
 | IMX283                     | 10-bit modes                    | not supported       | — no 10-bit source spec       |
 | IMX477, IMX296, all others | any                             | not supported       | — black level doesn't match   |
@@ -147,7 +145,7 @@ Which of the two it gives up first is yours to choose.
 
 ### Priority: which half of the picture goes first
 
-Once your mode's own class has nothing left that can sustain the frame rate, `image_capture.dynamic_resolution_priority` decides where the ladder goes next. Take an imx585 with 12-bit ClearHDR hidden, sitting in 16-bit ClearHDR 4K:
+Once your mode's own class has nothing left that can sustain the frame rate, `image_capture.dynamic_resolution_priority` decides where the ladder goes next. Take an imx585 sitting in 16-bit ClearHDR 4K:
 
 | Priority | The ladder | What it protects |
 | --- | --- | --- |

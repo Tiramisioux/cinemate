@@ -1379,6 +1379,10 @@
         $('g-fps').classList.toggle('locked', Boolean(V.fps_lock));
         $('g-shutter').classList.toggle('locked', Boolean(V.shutter_a_nom_lock));
         $('g-iso').classList.toggle('locked', Boolean(V.iso_lock));
+        // ISO green means the camera is holding it, not the operator: in
+        // ClearHDR the gain ceiling lands the 800 step on 799. Same tint and
+        // same meaning as shutter-sync above.
+        $('g-iso').classList.toggle('tinted', Boolean(V.iso_capped));
         $('g-res').classList.toggle('switching', truthy(V.resolution_switching));
         // Green while dynamic resolution is holding a mode the operator did
         // not choose -- the same signal the HDMI overlay gives, so RES never

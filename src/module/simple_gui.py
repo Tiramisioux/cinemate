@@ -904,6 +904,15 @@ class SimpleGUI(threading.Thread):
         # though fps isn't touched by the kick -- an accepted, minor,
         # purely-cosmetic side effect of reusing the existing single flag
         # instead of adding a second one.
+        # True while ClearHDR's ISO cap is what the live ISO is sitting on --
+        # the operator selected 800 and the camera is holding 799 because the
+        # sensor's HG/LG merge stops delivering HDR past that gain step. Drives
+        # the green ISO tint below and the same tint in the web GUI, the same
+        # way shutter_a_sync already marks a system-driven exposure.
+        # getattr for the same reason the self-heal flag below uses it: this
+        # runs against a controller that can still be coming up, and a missing
+        # attribute should read as "not capped" rather than take the GUI down.
+        values["iso_capped"] = bool(getattr(self.cinepi_controller, "iso_is_capped", lambda: False)())
         values["shutter_a_sync"] = (
             self.cinepi_controller.shutter_a_sync_mode != 0
             or bool(getattr(self.cinepi_controller, "clearhdr_self_heal_active", False))
@@ -1176,6 +1185,10 @@ class SimpleGUI(threading.Thread):
         else:
             self.colors["shutter_speed"]["normal"] = (249,249,249)
             self.colors["fps"]["normal"] = (249,249,249)
+
+        # Same convention, applied to ISO: green means the camera is holding
+        # this value, not the operator. Here that is ClearHDR's gain ceiling.
+        self.colors["iso"]["normal"] = "lightgreen" if values["iso_capped"] else (249, 249, 249)
 
         if values["resolution_switching"]:
             self.colors["res"]["normal"] = RESOLUTION_SWITCHING_COLOR

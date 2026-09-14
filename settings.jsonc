@@ -275,6 +275,20 @@
       "threshold_high": null,
       "blend": 5,
       "gain_adder": 1,
+      // Highest ISO offered WHILE A CLEARHDR MODE IS ENGAGED -- SDR modes are
+      // never capped. On by default; set null to lift it.
+      //
+      // ClearHDR caps analogue gain at code 80 in the driver, which CineMate's
+      // ISO steps reach at about ISO 1585. Measured on the rig in 16-bit
+      // ClearHDR: ISO 1600, 2500 and 3200 all map to gain code 80 and record
+      // the SAME exposure. Above the cap only the preview brightens, because
+      // libcamera's AGC makes up the difference as ISP digital gain on the
+      // display path -- so the monitor shows light the file never received,
+      // and exposure judged from it is wrong.
+      //
+      // The 1600 step is kept and lands on 1585, shown green in both GUIs to
+      // say the camera is holding it. 2500 and 3200 are dropped.
+      "iso_max": 1585,
       // Automatic recovery from the flat-pedestal ClearHDR startup defect
       // (round 8, 2026-08-29): probe the live preview after every launch and,
       // if it looks flat, try a brief shutter-angle kick and then a bounded

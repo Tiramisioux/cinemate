@@ -2641,10 +2641,108 @@ class CinePiController:
 
         return None  # Return None if no matching sensor mode is found
 
+    # ── ClearHDR's usable ISO range ───────────────────────────────────────────
+    #
+    # Above roughly ISO 1585 the ISO control stops doing anything to the
+    # recording. The imx585 driver caps analogue gain in ClearHDR at code 80
+    # (IMX585_ANA_GAIN_MAX_HDR), and CineMate's ISO steps reach that code at
+    # about ISO 1585; measured on the rig in 16-bit ClearHDR 4K, reading the
+    # driver's own ANALOG_GAIN journal lines:
+    #
+    #     ISO        800  | 1600  2500  3200
+    #     gain code   60  |   80    80    80
+    #
+    # So 1600, 2500 and 3200 all record the SAME exposure. What changes above
+    # the cap is the preview: libcamera's AGC makes up the shortfall as ISP
+    # digital gain on the display path, so the monitor brightens while the DNG
+    # does not. An operator judging exposure off that monitor is being told a
+    # stop and a half of light exists that the file never received, which is a
+    # worse failure than a control that simply stops.
+    #
+    # Hence a cap rather than a warning, and green rather than silence: the
+    # 1600 step stays selectable, lands on 1585, and both GUIs tint ISO to say
+    # the camera is holding it -- the same tint they already use for a shutter
+    # angle that sync mode is driving. Steps past the first one above the cap
+    # (2500, 3200) are genuinely meaningless and are dropped.
+    #
+    # SDR is never capped: the gain ceiling is a ClearHDR combination limit.
+    CLEARHDR_ISO_MAX_DEFAULT = 1585
+
+    def _clearhdr_iso_ceiling(self):
+        """Highest usable ISO while a ClearHDR mode is engaged, or None when
+        the cap does not apply -- SDR modes, or `iso_max` set to null by an
+        operator who would rather have the range than the highlights."""
+        hdr_on = str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
+        if not hdr_on:
+            return None
+
+        hdr_cfg = (self.settings.get('image_capture', {}) or {}).get('hdr', {}) or {}
+        if 'iso_max' not in hdr_cfg:
+            return self.CLEARHDR_ISO_MAX_DEFAULT
+        ceiling = hdr_cfg.get('iso_max')
+        if ceiling is None:
+            return None
+        try:
+            ceiling = int(ceiling)
+        except (TypeError, ValueError):
+            return self.CLEARHDR_ISO_MAX_DEFAULT
+        return ceiling if ceiling > 0 else None
+
+    def effective_iso_steps(self):
+        """`iso_steps`, truncated at the ClearHDR cap.
+
+        The first step ABOVE the cap is kept, not dropped: the cap is 1585 and
+        the shipped steps go ...1200, 1600, 2500..., so dropping everything
+        above would strand the operator at 1200 and throw away real, usable
+        sensitivity. Keeping 1600 means it stays selectable and set_iso()
+        lands it on 1585 -- the GUI then shows 1585 in green, the same way it
+        already marks a shutter angle the camera is driving. 2500 and 3200 are
+        genuinely meaningless (identical recording, brighter preview only) and
+        are dropped.
+
+        Never returns empty: an `iso_max` below every configured step leaves
+        the lowest one, because a camera with no selectable ISO is worse than
+        one whose cap is badly set."""
+        steps = list(self.iso_steps)
+        ceiling = self._clearhdr_iso_ceiling()
+        if ceiling is None or not steps:
+            return steps
+        limited = [s for s in steps if s <= ceiling]
+        above = [s for s in steps if s > ceiling]
+        if above:
+            limited.append(min(above))
+        return limited or [min(steps)]
+
+    def iso_is_capped(self):
+        """True when ClearHDR's cap is what the live ISO is sitting on.
+
+        Drives the green tint in both GUIs. Reads the live value rather than
+        remembering what set_iso() last did, so it stays right when the ISO is
+        changed from somewhere else -- a pot, the web GUI, a settings load."""
+        ceiling = self._clearhdr_iso_ceiling()
+        if ceiling is None:
+            return False
+        try:
+            current = int(float(self.redis_controller.get_value(ParameterKey.ISO.value) or 0))
+        except (TypeError, ValueError):
+            return False
+        return current == ceiling
+
     def set_iso(self, value):
         if not self.iso_lock:
             with self.parameters_lock_obj:
-                safe_value = max(min(value, max(self.iso_steps)), min(self.iso_steps))
+                steps = self.effective_iso_steps()
+                safe_value = max(min(value, max(steps)), min(steps))
+                ceiling = self._clearhdr_iso_ceiling()
+                if ceiling is not None and safe_value > ceiling:
+                    # The kept step above the cap (800) lands here, on 799.
+                    # Say why: an ISO that reads back as a number nobody
+                    # selected is otherwise indistinguishable from a bug.
+                    logging.info(
+                        f"ISO {value} is above ClearHDR's usable ceiling; holding at "
+                        f"{ceiling}. ClearHDR caps analogue gain at code 80, so past this "
+                        f"the recording does not get brighter -- only the preview does.")
+                    safe_value = ceiling
                 self.redis_controller.set_value(ParameterKey.ISO.value, safe_value)
                 logging.info(f"Setting iso to {safe_value}")
 
@@ -3028,10 +3126,12 @@ class CinePiController:
         self.decrement_setting('shutter_a', self.shutter_a_steps, fps=self.fps)
     
     def inc_iso(self):
-        self.increment_setting('iso', self.iso_steps)
+        # effective_iso_steps() rather than iso_steps: stepping up must stop
+        # where ClearHDR stops being ClearHDR, the same place set_iso() clamps.
+        self.increment_setting('iso', self.effective_iso_steps())
 
     def dec_iso(self):
-        self.decrement_setting('iso', self.iso_steps)
+        self.decrement_setting('iso', self.effective_iso_steps())
         
     def inc_shutter_a_nom(self):
         self.increment_setting('shutter_a_nom', self.shutter_a_steps)

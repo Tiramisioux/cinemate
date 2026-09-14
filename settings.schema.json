@@ -357,6 +357,15 @@
               "maximum": 5,
               "default": 1
             },
+            "iso_max": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "default": 1585,
+              "minimum": 1,
+              "description": "Highest ISO offered while a ClearHDR mode is engaged; SDR modes are never capped. On by default at 1585, null lifts it. The imx585 driver caps analogue gain in ClearHDR at code 80, which CineMate's ISO steps reach at about ISO 1585 -- measured on the rig, ISO 1600, 2500 and 3200 all map to code 80 and record the same exposure. Above the cap only the preview brightens, because libcamera's AGC makes up the difference as ISP digital gain, so exposure judged from the monitor is wrong by that amount. The 1600 step is kept and lands on 1585, shown green in both GUIs to say the camera is holding it; 2500 and 3200 are dropped."
+            },
             "self_heal": {
               "type": "boolean",
               "default": false,

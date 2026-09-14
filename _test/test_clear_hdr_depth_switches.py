@@ -107,9 +107,13 @@ class LegacyKeyTests(unittest.TestCase):
 
 
 class WiringTests(unittest.TestCase):
-    def test_the_page_offers_one_switch_per_depth(self):
+    def test_the_page_offers_the_16bit_switch_only(self):
+        """12-bit ClearHDR is not a switch an operator should be handed: the
+        modes lose their highlight range above analogue gain code ~60. The
+        setting still exists and still works from settings.jsonc for anyone
+        experimenting -- it just is not on the page."""
         html = (ROOT / "src/module/app/templates/settings_editor.html").read_text(encoding="utf-8")
-        self.assertIn('data-path="image_capture.hdr.imx585_clear_hdr_12bit"', html)
+        self.assertNotIn('data-path="image_capture.hdr.imx585_clear_hdr_12bit"', html)
         self.assertIn('data-path="image_capture.hdr.imx585_clear_hdr_16bit"', html)
 
     def test_settings_and_schema_carry_both(self):

@@ -1762,15 +1762,12 @@
             <button class="toggle" id="f-hdr-sdr" data-path="image_capture.hdr.sdr" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
-        <div class="card" data-search="clearhdr imx585 12 bit modes exposed companded ccmp">
-          <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr-12">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-hdr-clearhdr-12" data-path="image_capture.hdr.imx585_clear_hdr_12bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
-          </div>
-        </div>
+        <!-- "Expose 12-bit ClearHDR modes" is deliberately NOT offered here. The
+             setting still exists (image_capture.hdr.imx585_clear_hdr_12bit) and
+             still works over SSH for anyone experimenting, but the 12-bit
+             ClearHDR modes lose their highlight range above analogue gain code
+             ~60 and are not something to hand an operator a switch for. See
+             docs/clear-hdr.md, "12-bit ClearHDR is hidden". -->
         <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear">
           <div class="card-main">
             <label class="card-label" for="f-hdr-clearhdr">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.label') }}</label>

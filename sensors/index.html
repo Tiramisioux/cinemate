@@ -249,10 +249,8 @@
 </tbody>
 </table>
 <h3 id="imx585-starlight-eye">IMX585 (Starlight Eye)<a class="headerlink" href="#imx585-starlight-eye" title="Permanent link">#</a></h3>
-<p>The <code>cinemate-7modes</code> driver the installer ships exposes seven modes, of which CineMate offers
-five: three SDR at 10- and 12-bit, and the two 16-bit ClearHDR modes. The driver's two <strong>12-bit
-ClearHDR</strong> modes are hidden by default — see <a href="../clear-hdr/#12-bit-clearhdr-is-hidden">ClearHDR</a>
-for why, and for how to turn them back on.</p>
+<p>The <code>cinemate-7modes</code> driver the installer ships gives CineMate five modes: three SDR at 10- and
+12-bit, and two 16-bit ClearHDR.</p>
 <table>
 <thead>
 <tr>
@@ -399,7 +397,7 @@ optical-black rows.</p>
 </tr>
 <tr>
 <td>IMX585</td>
-<td>12-bit (SDR or 12-bit ClearHDR)</td>
+<td>12-bit SDR</td>
 <td>on → <strong>LOG10</strong></td>
 <td>only 10 works — no 12→12 spec</td>
 </tr>
@@ -603,7 +601,7 @@ Pi 5, unsupported on Pi 4.</p>
 <p><strong>A substitute is never bigger or better than what you picked.</strong> Every mode sits at a point on two axes: its frame size, and its <em>class</em> -- one bit depth and one SDR/ClearHDR setting, the three blocks the imx585 mode table is laid out in. Dynamic resolution only ever looks at modes that are no better than your selection on either axis. It never hands you a larger frame or a richer class than the one you asked for.</p>
 <p>Which of the two it gives up first is yours to choose.</p>
 <h3 id="priority-which-half-of-the-picture-goes-first">Priority: which half of the picture goes first<a class="headerlink" href="#priority-which-half-of-the-picture-goes-first" title="Permanent link">#</a></h3>
-<p>Once your mode's own class has nothing left that can sustain the frame rate, <code>image_capture.dynamic_resolution_priority</code> decides where the ladder goes next. Take an imx585 with 12-bit ClearHDR hidden, sitting in 16-bit ClearHDR 4K:</p>
+<p>Once your mode's own class has nothing left that can sustain the frame rate, <code>image_capture.dynamic_resolution_priority</code> decides where the ladder goes next. Take an imx585 sitting in 16-bit ClearHDR 4K:</p>
 <table>
 <thead>
 <tr>

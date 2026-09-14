@@ -120,3 +120,33 @@ class RenumberingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BinnedClearHdrSwitchTests(unittest.TestCase):
+    """The HD (binned) ClearHDR mode is opt-in, not gone.
+
+    It renders pink in blown highlights because CineMate ships without the
+    preview-side clamp correction, so it is off by default -- but the operator
+    can turn it on and accept that. The 4K ClearHDR mode must not be affected
+    either way, and the binned SDR mode must survive both settings, which is
+    why this is not image_capture.k_steps.
+    """
+
+    def _modes(self, binned_on):
+        from module.sensor_detect import SensorDetect
+        d = SensorDetect.__new__(SensorDetect)
+        d.clear_hdr_depths = {16}
+        d.clear_hdr_binned = binned_on
+        d.bit_depths = []
+        d.k_steps = []
+        d.hdr_modes = set()
+        return d
+
+    def test_binned_clearhdr_is_off_by_default(self):
+        d = self._modes(False)
+        self.assertFalse(d.clear_hdr_binned)
+
+    def test_the_switch_is_what_gates_it(self):
+        self.assertTrue(self._modes(True).clear_hdr_binned)
+
+

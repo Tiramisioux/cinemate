@@ -116,7 +116,14 @@ class WiringTests(unittest.TestCase):
         import json  # noqa: PLC0415
         from module.config_loader import load_settings  # noqa: PLC0415
         hdr = load_settings(str(ROOT / "settings.jsonc"))["image_capture"]["hdr"]
-        self.assertIs(hdr["imx585_clear_hdr_12bit"], True)
+        # 12-bit ClearHDR ships HIDDEN: past analogue gain code ~60 the
+        # sensor's HG/LG merge stops reaching the top of the container, so the
+        # mode returns less highlight range than SDR at ordinary shooting ISOs
+        # while still charging for the compander and the CPU preview re-render.
+        # The code that serves it is all still here -- see docs/clear-hdr.md,
+        # "12-bit ClearHDR is hidden". 16-bit stays on; it holds across the
+        # ISO range.
+        self.assertIs(hdr["imx585_clear_hdr_12bit"], False)
         self.assertIs(hdr["imx585_clear_hdr_16bit"], True)
         props = json.loads((ROOT / "settings.schema.json").read_text())[
             "properties"]["image_capture"]["properties"]["hdr"]["properties"]

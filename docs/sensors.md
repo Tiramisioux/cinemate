@@ -20,18 +20,18 @@ Higher frame rates need fast storage. If you see a purple/magenta `DROP` indicat
 
 ### IMX585 (Starlight Eye)
 
-The `cinemate-7modes` driver the installer ships exposes seven modes: three SDR and four ClearHDR,
-at 10-, 12- and 16-bit.
+The `cinemate-7modes` driver the installer ships exposes seven modes, of which CineMate offers
+five: three SDR at 10- and 12-bit, and the two 16-bit ClearHDR modes. The driver's two **12-bit
+ClearHDR** modes are hidden by default — see [ClearHDR](clear-hdr.md#12-bit-clearhdr-is-hidden)
+for why, and for how to turn them back on.
 
 | Mode | Type | Resolution | Bit Depth | Readout | Max FPS | Max FPS overclocked | DNG Frame File Size (MB) |
 |---|---|---|---|---|---|---|---|
 | 0 | SDR | 3840 x 2160 | 10 | all-pixel | 44.98 | 68.66 | 10.4 |
 | 1 | SDR | 1920 x 1080 | 12 | binned | 69.92 | 69.92 | 3.15 |
 | 2 | SDR | 3840 x 2160 | 12 | all-pixel | 43.98 | 67.13 | 12.61 |
-| 3 | ClearHDR | 1920 x 1080 | 12 | binned | 30.00 | 30.00 | 3.15 |
-| 4 | ClearHDR | 3840 x 2160 | 12 | all-pixel | 21.99 | 30.00 | 12.61 |
-| 5 | ClearHDR | 1920 x 1100 | 16 | binned | 30.00 | 30.00 | 4.2 |
-| 6 | ClearHDR | 3840 x 2200 | 16 | all-pixel | 21.99 | 30.00 | 16.9 |
+| 3 | ClearHDR | 1920 x 1100 | 16 | binned | 30.00 | 30.00 | 4.2 |
+| 4 | ClearHDR | 3840 x 2200 | 16 | all-pixel | 21.99 | 30.00 | 16.9 |
 
 Both fps columns are the [changelog](changelog.md#imx585-driver)'s measured figures for 3.4.0, taken
 at the sensor's highest link frequency, 1039.5 MHz. "Max FPS" is the stock RP1 pixel-rate ceiling

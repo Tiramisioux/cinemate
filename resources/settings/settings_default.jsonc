@@ -105,6 +105,21 @@
     "hdr": {
       "sdr": true,
       "imx585_clear_hdr": true,
+      // 12-bit ClearHDR is HIDDEN by default. The modes still exist in the
+      // driver and every line of code that serves them is still here -- flip
+      // this to true to get them back for experiment. They are hidden because
+      // on this sensor they do not earn their place: the HG/LG merge stops
+      // reaching the top of the container above analogue gain code ~60 (about
+      // ISO 800), so highlight range collapses at the ISOs people actually
+      // shoot, while 16-bit ClearHDR holds up across the whole ISO range. The
+      // 12-bit modes also carry the compander, a full-frame CPU preview
+      // re-render, and the clamp artefacts that come with both.
+      //
+      // NOTE: hiding them RENUMBERS the remaining modes -- 16-bit ClearHDR HD
+      // and 4K move from 5 and 6 to 3 and 4. A sensor_mode saved in Redis is
+      // re-resolved by what it actually was, not by its index, so a camera
+      // does not silently wake up in a different capture.
+      "imx585_clear_hdr_12bit": false,
       // null leaves both thresholds unwritten, so the driver keeps its own pair.
       "threshold_low": null,
       "threshold_high": null,
@@ -114,8 +129,16 @@
       "gain_adder": 1,
       "self_heal": false
     },
-    // 0 off / 1 mono / 2 colour -- see settings.jsonc's comment.
-    "thumbnail": 2,
+    // By default DNGs carry a small preview image, used by the Playback
+    // pane for renderless playback. Colour JPEG 628x360 -- about 10-25 KB
+    // per frame, +4.0 ms per frame (+18%). Disable to slightly increase
+    // write speed and reduce cpu load during recording (disables web GUI
+    // playback). "off" / "mono" / "colour" / "jpeg" (or 0-3) -- see
+    // settings.jsonc's comment for the cost of each.
+    "thumbnail": "jpeg",
+    // Right-shift of the lores plane before the thumbnail is written --
+    // see settings.jsonc's comment.
+    "thumbnail_size": 1,
     "custom_modes": {}
   },
   "audio_capture": {

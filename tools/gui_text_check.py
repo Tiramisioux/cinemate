@@ -25,14 +25,38 @@ no ratchet, so it behaves the same either way.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import re
 import sys
 from pathlib import Path
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(DEFAULT_ROOT / "src"))
 
-from module.app.gui_text import load_gui_text  # noqa: E402
+
+def _load_gui_text_reader():
+    """Import `gui_text.py` without executing the `module.app` package.
+
+    `gui_text.py` needs nothing but the standard library, but it lives inside
+    `module/app/`, whose `__init__.py` imports flask and flask_socketio to
+    build the web app. A plain `from module.app.gui_text import ...` therefore
+    drags a web framework into a check that only reads two text files -- and
+    the drift job installs jsonschema and nothing else, so it died on
+    `ModuleNotFoundError: No module named 'flask'` rather than on any drift.
+
+    Loading the file directly by path keeps this dependency-free, which is the
+    standard these tools/ checks are held to: they have to run in CI without a
+    fragile install step.
+    """
+    path = DEFAULT_ROOT / "src" / "module" / "app" / "gui_text.py"
+    spec = importlib.util.spec_from_file_location("_gui_text", path)
+    if spec is None or spec.loader is None:          # pragma: no cover
+        raise ImportError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.load_gui_text
+
+
+load_gui_text = _load_gui_text_reader()
 
 TEMPLATE_PATH = "src/module/app/templates/settings_editor.html"
 GUI_TEXT_PATH = "resources/gui-text"
@@ -56,7 +80,13 @@ def template_body(html: str) -> str:
     body = re.sub(r"<script\b.*?</script>", "", body, flags=re.S | re.I)
     body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
     # The lookups themselves sit between tags and would otherwise read as the
-    # very prose this is looking for.
+    # very prose this is looking for. Same reasoning for {% ... %} control-flow
+    # tags (the settings-editor DNG-thumbnails card's {% for %} over
+    # thumbnail_choices, added alongside cinemate's own JPEG thumbnail mode --
+    # the template's first use of Jinja control flow, everything before it
+    # being plain {{ t('key') }} lookups): a "for value, label in ..." is
+    # Jinja syntax, not a hardcoded sentence, and must not read as either.
+    body = re.sub(r"\{%.*?%\}", "", body, flags=re.S)
     return re.sub(r"\{\{.*?\}\}", "", body, flags=re.S)
 
 

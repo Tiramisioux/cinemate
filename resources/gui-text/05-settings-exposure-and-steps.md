@@ -95,10 +95,18 @@ Delivered linear, with no compander in the path. Both off keeps the sensor SDR�
 ### ClearHDR startup knobs
 <!-- key: card.image_capture.hdr.threshold_low -->
 
-Applied when a ClearHDR mode is selected. Adjust live afterwards with `set hdr …` or a pot/quad‑rotary channel.
+Applied when a ClearHDR mode is selected. Adjust live afterwards with `set hdr …` or a pot/quad‑rotary channel. Leave a threshold blank to keep the driver's own pair (low 0, high 4095). Set both or neither — equal thresholds flatten the image.
 
 <!-- key: caption.image_capture.hdr.threshold_low · one per control, separated by ' · ' -->
 *Threshold low · Threshold high · Blend · Gain adder*
+
+### DNG thumbnails
+<!-- key: card.image_capture.thumbnail -->
+
+By default DNGs carry a small preview image, used by the Playback pane for renderless playback.
+
+<!-- key: caption.image_capture.thumbnail · shown under the measured cost line, which the route renders per camera -->
+Disable to slightly increase write speed and reduce cpu load during recording (disables web GUI playback).
 
 ### Sensor database
 <!-- key: card.sensors.database_file -->

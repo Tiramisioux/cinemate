@@ -2,6 +2,18 @@
 
 Release notes for CineMate. For downloads, see the [releases page](https://github.com/Tiramisioux/cinemate/releases).
 
+## Unreleased
+
+- **The embedded DNG thumbnail costs a fraction of what it did** — it is now a compressed colour thumbnail at half the preview size (`image_capture.thumbnail` defaults to `jpeg`, the new `image_capture.thumbnail_size` to `1`) instead of an uncompressed colour one at the full lores plane on every frame. Per-frame growth over a 3.3.1-era file drops from +22% to about +0.2% at 4K 12-bit, and from +89% to under +1% at HD 12-bit. Measured on hardware: roughly six seconds of recording time per terabyte, and +4.0 ms of encode time per frame (+18%) with no dropped frames — see [settings.jsonc's "DNG thumbnails" section](settings-json.md#dng-thumbnails).
+- **The `thumbnail` toggle works again** — `set thumbnail 0` actually disables the embedded thumbnail now; a bug had hard-coded colour mode regardless of this setting since the 2026-09-05 `dng-playback` merge.
+- **`file_size` and the GUI's minutes-remaining now account for the thumbnail** — both were previously low by the thumbnail's full byte count on every frame.
+- **A fourth embedded-thumbnail type: colour JPEG** — `image_capture.thumbnail` (and `set thumbnail`) now takes the words `off` / `mono` / `colour` / `jpeg` (the legacy `0`-`3` still work), where `jpeg` is a baseline JPEG, quality 85, 4:2:0 — measured 9–16 KB per frame at the shipped 640×360 default and 3–8 KB at 320×180, against 230,400 B / 57,600 B for mono at the same sizes, paid in the most CPU of the four (a YUV→RGB conversion plus the JPEG encode itself). `jpeg` is now the default. See [settings.jsonc's "DNG thumbnails" section](settings-json.md#dng-thumbnails) for the full table.
+- **The settings editor shows the choice, and its cost** — the Resolution & sensor section gains a visible "DNG thumbnails" card: a mode dropdown whose four labels state the bytes-per-frame and CPU cost of each choice for the attached camera's actual lores size, and a size dropdown labelled with the resulting dimensions. Previously `image_capture.thumbnail`/`thumbnail_size` had no field on the page at all.
+- **The Playback pane serves a JPEG-mode take's thumbnail without re-encoding it** — the two uncompressed modes are still decoded and re-encoded through PIL on every request, as before.
+- **A custom tuning file that can't load no longer blacks the camera** — a missing, unreadable, or wrong-target file (a Pi 4 / vc4 tuning on a Pi 5, for instance) now falls back to the auto-detected tuning and logs one `ERROR` line naming the file and the reason, instead of failing camera registration with the picture never coming up. See [Custom tuning file](settings-json.md#cameras).
+- **The settings editor's tuning-file upload actually uploads now** — `Upload .json` used to add an entry to the picker and report success without writing anything. It now copies the file into `resources/tuning_files/`, validated the same way the camera's own launch guard validates a configured path.
+- **The tuning-file picker no longer erases an override it can't display** — a configured path that isn't one of the shipped files (including every unit's own absolute default) used to have no matching entry, so opening and saving the settings page silently cleared it. It now shows up as its own, clearly labelled entry instead.
+
 ## Version 3.4.0
 
 ### imx585 driver

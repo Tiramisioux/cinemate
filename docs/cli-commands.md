@@ -73,7 +73,7 @@ Startup values come from `image_capture.hdr` in `settings.jsonc`. All four knobs
 | Command | Argument | Method | What it does |
 |---|---|---|---|
 | `set log [<10\|12\|on\|off>]` | int, string or none | `set_log_encode` | Toggle [CineMate Log](cinemate-log.md) using each camera's default target for its live bit depth (16-bit → 12, 12-bit → 10). `set log 10` / `set log 12` force a target where the live bit depth supports it; `set log on` / `set log off` force a state (`yes`/`no`, `true`/`false` work too). A number other than 10 or 12 is rejected, so `set log 1` is not a synonym for `on`. Restarts the camera when idle; while recording the request is stored and applied on the next launch. |
-| `set thumbnail <n>` | int | `set_thumbnail` | Embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour. Applied live on the next frame, no camera restart. Affects new takes only. `thumbnail_size` is not exposed here — its handler restarts the camera. |
+| `set thumbnail <word\|n>` | string | `set_thumbnail` | Embedded DNG thumbnail mode: `off` (`0`), `mono` (`1`), `colour`/`color` (`2`, default), `jpeg` (`3`) — words are case-insensitive, and the legacy ints still work. Applied live on the next frame, no camera restart. Affects new takes only. Thumbnail size is `image_capture.thumbnail_size` in [`settings.jsonc`](settings-json.md#dng-thumbnails) instead — not exposed as a command here, since its handler restarts the camera. |
 
 ## Resolution and preview
 

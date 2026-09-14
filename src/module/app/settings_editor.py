@@ -43,10 +43,13 @@ from module.config_loader import (
     load_settings,
     strip_jsonc,
     DEFAULT_SETTINGS_PATH,
+    thumbnail_size_startup_value,
 )
 from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
 from module.redis_controller import ParameterKey, smpte_frame_base
+from module.sensor_detect import thumbnail_choice_labels
+from module.tuning_files import tuning_json_problem
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -65,6 +68,15 @@ SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 # (b) the source for the "revert to defaults" action. Resolved relative to
 # the repo root, same pattern as sensor_detect.py's _resolve_repo_path.
 STOCK_SETTINGS_FILE = Path(__file__).resolve().parents[3] / "resources/settings/settings_default.jsonc"
+
+# Backs both tuning-file pickers and the upload route (FINDINGS.md S3.3, S1;
+# PLAN.md S1.2). Same parents[3]-to-repo-root pattern as STOCK_SETTINGS_FILE.
+TUNING_FILES_DIR = Path(__file__).resolve().parents[3] / "resources/tuning_files"
+TUNING_FILES_REL = "resources/tuning_files"
+# The largest shipped file is ~90 KB; a full pisp tuning with LSC tables
+# stays well under this.
+TUNING_FILE_MAX_BYTES = 4 * 1024 * 1024
+TUNING_FILE_NAME_RX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.json$")
 
 # Corrected copy of the mockup's original ACTION_METHODS catalog. Fixes the
 # 3 entries that don't resolve via getattr() on cinepi_controller -- the
@@ -131,7 +143,7 @@ ACTION_METHODS = [
     {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "no_arg": "toggle",
      "arg": {"type": "select", "options": ["off", "10", "12"]}},
     {"group": "Thumbnail", "value": "set_thumbnail", "label": "Set DNG thumbnail mode", "no_arg": "required",
-     "arg": {"type": "select", "options": [0, 1, 2]}},
+     "arg": {"type": "select", "options": ["off", "mono", "colour", "jpeg"]}},
     {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "no_arg": "cycle",
      "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
     {"group": "Zoom / anamorphic", "value": "inc_zoom", "label": "Zoom in one stop"},
@@ -237,6 +249,107 @@ def _is_recording() -> bool:
     return _playback_blocked()[0]
 
 
+# 16:9 lores plane, the same fallback thumbnail_choice_labels()'s own
+# reservation/estimate formulas are written against -- used only when no
+# camera is attached (SENSOR_DETECT unset, or CINEPI_CONTROLLER has not
+# resolved a mode yet), so the DNG-thumbnails card still renders sane
+# labels rather than guessing at 0x0 or raising.
+_FALLBACK_LORES_SIZE = (1280, 720)
+
+
+def _current_thumbnail_editor_context(settings: dict) -> dict:
+    """Template context for the settings editor's "DNG thumbnails" card:
+    the four mode choices' labels (thumbnail_choice_labels(), sized for the
+    CURRENT camera's lores plane and thumbnail_size) and the three
+    dimension strings the size <select>'s own options show.
+
+    Lores plane: from the live sensor mode via CINEPI_CONTROLLER's
+    SensorDetect (the same res_modes/sensor_mode/_calc_lores() lookup
+    _recompute_file_size() uses in cinepi_controller.py), falling back to
+    _FALLBACK_LORES_SIZE when no camera has resolved a mode.
+
+    thumbnail_size: the live Redis value if one is set, else the validated
+    settings.jsonc startup value -- "Redis first, settings.jsonc second",
+    the same precedence _recompute_file_size() uses, because an operator's
+    live `set thumbnail_size` (it restarts the camera immediately) is a
+    truer answer for "what size is this camera keeping" than the file.
+    """
+    controller = current_app.config.get("CINEPI_CONTROLLER")
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+
+    lores_w, lores_h = _FALLBACK_LORES_SIZE
+    sensor_detect = getattr(controller, "sensor_detect", None) if controller else None
+    if sensor_detect is not None:
+        resolution_info = (getattr(sensor_detect, "res_modes", None) or {}).get(
+            getattr(controller, "sensor_mode", None)
+        )
+        width = (resolution_info or {}).get("width")
+        height = (resolution_info or {}).get("height")
+        if width and height:
+            lores_w, lores_h = sensor_detect._calc_lores(width, height)
+
+    thumb_size_shift = None
+    if redis_controller is not None:
+        try:
+            thumb_size_shift = max(
+                0, min(4, int(redis_controller.get_value(ParameterKey.THUMBNAIL_SIZE.value)))
+            )
+        except (TypeError, ValueError):
+            thumb_size_shift = None
+    if thumb_size_shift is None:
+        thumb_size_shift = thumbnail_size_startup_value(settings)
+
+    # The editor shows ONE on/off toggle over image_capture.thumbnail, not a
+    # mode picker and a size picker (operator decision 2026-09-13). All four
+    # modes and every size still work and are still reachable -- by hand in
+    # settings.jsonc, or live with `set thumbnail` -- but the page offers the
+    # one choice that is actually a choice for most operators: a colour
+    # preview in the Playback pane, or nothing.
+    #
+    # What the toggle needs from here is the COST of the on position, in this
+    # camera's own numbers, so the card can state it instead of leaving an
+    # operator to guess what "on" costs per frame. That string comes from
+    # thumbnail_choice_labels() -- the same function, and therefore the same
+    # byte formula, that file_size and cinepi/dng_thumbnail.hpp use -- so the
+    # figure on the page can never drift from what a take actually costs.
+    choices = dict(thumbnail_choice_labels(lores_w, lores_h, thumb_size_shift))
+    return {
+        "thumbnail_on_label": choices.get("jpeg", ""),
+        "thumbnail_off_label": choices.get("off", ""),
+    }
+
+
+def _list_tuning_files() -> list[dict]:
+    """Directory listing behind both tuning-file pickers and
+    GET /api/tuning-files (FINDINGS.md S3.3: the picker used to be two
+    hardcoded <option> lists, so a file copied into resources/tuning_files/
+    over SSH -- the documented procedure -- never appeared in it).
+
+    A missing directory means a broken checkout, not "no files" -- warn
+    rather than let an empty picker pass as normal.
+    """
+    try:
+        names = sorted(p.name for p in TUNING_FILES_DIR.glob("*.json") if p.is_file())
+    except OSError as exc:
+        logger.warning("Tuning files directory unavailable (%s): %s", TUNING_FILES_DIR, exc)
+        return []
+    return [{"name": name, "path": f"{TUNING_FILES_REL}/{name}"} for name in names]
+
+
+def _validate_tuning_json(raw: bytes) -> str | None:
+    """An uploaded tuning file must satisfy the same JSON-shape rule the
+    launch guard enforces (module.tuning_files.tuning_json_problem), so the
+    editor and the launch-time fallback can never disagree about what counts
+    as usable (PLAN.md S1.2). Returns an error message, or None if *raw* is
+    fine.
+    """
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        return f"Not valid JSON: {exc}"
+    return tuning_json_problem(data)
+
+
 @settings_editor_bp.route("/")
 def index():
     settings = current_app.config["SETTINGS"]
@@ -251,7 +364,68 @@ def index():
         sensor_db_path=str(
             resolve_database_path((settings.get("sensors") or {}).get("database_file"))
         ),
+        tuning_files=_list_tuning_files(),
+        **_current_thumbnail_editor_context(settings),
     )
+
+
+@settings_editor_bp.route("/api/tuning-files", methods=["GET"])
+def list_tuning_files():
+    return jsonify({"ok": True, "dir": TUNING_FILES_REL, "files": _list_tuning_files()})
+
+
+@settings_editor_bp.route("/api/tuning-files", methods=["POST"])
+def upload_tuning_file():
+    """Write an uploaded tuning file into resources/tuning_files/ for real --
+    the control this replaces only fabricated an <option> and a toast
+    claiming the same thing (FINDINGS.md S1, S3.5). Validated the same way
+    the launch guard validates a configured path, so nothing accepted here
+    can later black the camera at launch.
+    """
+    upload = request.files.get("file")
+    if upload is None or not upload.filename:
+        return jsonify({"ok": False, "message": "No file uploaded"}), 400
+
+    name = Path(upload.filename).name
+    if not TUNING_FILE_NAME_RX.match(name):
+        return jsonify({"ok": False, "message": f'"{name}" is not a valid .json filename'}), 400
+
+    raw = upload.read()
+    if len(raw) > TUNING_FILE_MAX_BYTES:
+        return jsonify({
+            "ok": False,
+            "message": f"{name} is larger than {TUNING_FILE_MAX_BYTES} bytes",
+        }), 400
+
+    problem = _validate_tuning_json(raw)
+    if problem:
+        return jsonify({"ok": False, "message": problem}), 400
+
+    dest = TUNING_FILES_DIR / name
+    if dest.exists():
+        return jsonify({
+            "ok": False,
+            "message": f"{name} already exists in {TUNING_FILES_REL}/; choose another name or remove it over SSH",
+        }), 409
+
+    try:
+        fd, tmp_path = tempfile.mkstemp(dir=str(TUNING_FILES_DIR), prefix=".tuning-upload-", suffix=".json.tmp")
+        try:
+            with os.fdopen(fd, "wb") as fp:
+                fp.write(raw)
+            os.chmod(tmp_path, 0o644)
+            os.replace(tmp_path, dest)
+        except Exception:
+            os.unlink(tmp_path)
+            raise
+    except OSError as exc:
+        logger.exception("Failed to write %s", dest)
+        return jsonify({"ok": False, "message": f"Could not write {dest}: {exc}"}), 500
+
+    path = f"{TUNING_FILES_REL}/{name}"
+    message = f"Uploaded {name} to {TUNING_FILES_REL}/"
+    logger.info("tuning file uploaded via settings editor: %s (%d bytes)", path, len(raw))
+    return jsonify({"ok": True, "name": name, "path": path, "message": message})
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])

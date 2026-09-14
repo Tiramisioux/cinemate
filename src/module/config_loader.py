@@ -302,6 +302,60 @@ def clearhdr_startup_values(settings: dict) -> dict:
     }
 
 
+# The four thumbnail values, keyed by what actually reaches Redis/cinepi-raw
+# (always an int -- cinepi-raw's sync() and CONTROL_KEY_THUMBNAIL handler
+# both stoi() the wire value, per architecture/redis-contract.md). This is
+# the reverse direction from parse_thumbnail_mode() below: docs, the
+# settings-editor labels, and log lines name a mode from its int, rather
+# than restating the four words a second time.
+THUMBNAIL_MODE_NAMES = {0: "off", 1: "mono", 2: "colour", 3: "jpeg"}
+
+# parse_thumbnail_mode()'s word table is this dict inverted, plus "color"
+# (settings.schema.json's enum accepts both spellings; only one needs a
+# canonical name in THUMBNAIL_MODE_NAMES).
+_THUMBNAIL_MODE_WORDS = {name: value for value, name in THUMBNAIL_MODE_NAMES.items()}
+_THUMBNAIL_MODE_WORDS["color"] = _THUMBNAIL_MODE_WORDS["colour"]
+
+
+def parse_thumbnail_mode(value) -> int | None:
+    """Validate a raw image_capture.thumbnail / `set thumbnail` value.
+
+    Returns 0..3 for anything that names a real mode, or None otherwise --
+    the single parser thumbnail_startup_value() (below) and
+    set_thumbnail() (cinepi_controller.py) both use, so a settings.jsonc
+    value and a live `set thumbnail` word are validated identically and
+    the file and the CLI cannot disagree about the same raw value the way
+    they did before (see thumbnail_startup_value()'s own history below).
+
+    Accepts, case-insensitively and stripped of surrounding whitespace: the
+    four words "off" / "mono" / "colour" / "color" / "jpeg"; an int 0..3;
+    or a numeric string in that range. Rejects a bool outright, checked
+    before anything else reaches int() -- bool is an int subclass in
+    Python, so int(True) == 1 and int(False) == 0 would otherwise silently
+    accept a JSON true/false as a real mode instead of the type error it
+    actually is. That silent coercion is exactly how a hand-edited
+    "thumbnail": true crashed Cinemate at startup once redis-py rejected
+    the bool it was handed unvalidated (B-1) -- accepting it here as
+    mode 1 would only move the same confusion one step later. Anything
+    else that cannot be resolved to 0..3 -- None, a list/dict, an
+    out-of-range int, an unrecognised or non-numeric string -- is also
+    None, so every caller has exactly one place to fall back to a safe
+    default rather than reaching Redis or cinepi-raw unvalidated.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        word = value.strip().lower()
+        if word in _THUMBNAIL_MODE_WORDS:
+            return _THUMBNAIL_MODE_WORDS[word]
+        value = word   # fall through: might still be a numeric string
+    try:
+        mode = int(value)
+    except (TypeError, ValueError):
+        return None
+    return mode if 0 <= mode <= 3 else None
+
+
 def thumbnail_startup_value(settings: dict) -> int:
     """Validated startup value for image_capture.thumbnail, keyed by Redis key.
 
@@ -313,21 +367,80 @@ def thumbnail_startup_value(settings: dict) -> int:
     coerced it), a non-numeric string reached cinepi-raw's sync() and its
     then-unguarded stoi(), and 3 passed through where the CLI path clamps
     to 2 -- so the same raw value in the file meant "off" via one path and
-    "colour" via the other. This applies the exact same clamp as
-    set_thumbnail() so both paths agree, and so a malformed value degrades
-    to a safe default instead of reaching either process unvalidated.
+    "colour" via the other. This now goes through parse_thumbnail_mode()
+    (above), which folds in a fourth value (3, colour JPEG) and additionally
+    accepts the four words directly -- "off" / "mono" / "colour" (or
+    "color") / "jpeg" -- so a hand-written settings.jsonc can say
+    `"thumbnail": "colour"` as well as `2`. A bool is now rejected outright
+    rather than coerced (see parse_thumbnail_mode()'s own docstring for why
+    int(True) == 1 was itself part of B-1's surprise, not a safe accident to
+    keep).
 
-    Defaults to 2 (colour), not 0: the embedded thumbnail is now the
-    standard playback path, and playback.py's raw-decode fallback is
-    disabled (too demanding on the Pi, operator decision after G10/G11) --
-    so a take recorded with thumbnail=0, or a parse failure that used to
-    fall back to 0, would otherwise be unplayable in the pane.
+    Defaults to 3 (colour JPEG), not 0: the embedded thumbnail is the
+    Playback pane's only path to a picture (its raw-decode fallback is
+    disabled -- too demanding on the Pi), so a take recorded with
+    thumbnail=0, or a parse failure that fell back to 0, is simply
+    unplayable there. JPEG rather than uncompressed colour is the
+    operator's settled 2026-09-13 decision, and the first one taken with
+    measurements: at the shipped half size it is roughly 16 KB/frame
+    against 678,240 B for uncompressed colour at the same size -- the same
+    picture -- for +4.0 ms/frame of encode time at 4K 16-bit ClearHDR with
+    CineMate Log 12, which is the most of the four modes and still small
+    against a 40 ms frame budget at 25 fps (the 2026-09-13 benchmark entry
+    in cinemate-handbook's hardware log).
+
+    The settings editor exposes this key as an on/off toggle only, writing
+    "jpeg" or "off". Modes 1 and 2 (uncompressed mono and colour) remain
+    fully supported and are reachable from settings.jsonc by hand or from
+    `set thumbnail`; the toggle preserves whichever of them it finds rather
+    than overwriting it (see the page's own thumbnail block).
     """
-    raw = settings.get("image_capture", {}).get("thumbnail", 2)
+    raw = settings.get("image_capture", {}).get("thumbnail", 3)
+    parsed = parse_thumbnail_mode(raw)
+    return parsed if parsed is not None else 3
+
+
+def thumbnail_size_startup_value(settings: dict) -> int:
+    """Validated startup value for image_capture.thumbnail_size, keyed by Redis key.
+
+    Mirrors thumbnail_startup_value() above: main.py used to seed
+    THUMBNAIL_SIZE with the literal 0 on every boot, with no settings owner
+    and no validation of a hand-edited value. This applies int() and a
+    clamp so a malformed value degrades to the shipped default instead of
+    reaching cinepi-raw unvalidated.
+
+    Defaults to 1 (half the lores plane, 640x360 from a 1280-wide one).
+    Paired with the colour default above (thumbnail_startup_value()) that
+    is 691,200 B/frame: +5.6% on a 4K 12-bit frame, +4.0% on 4K 16-bit
+    ClearHDR, +22.2% on HD 12-bit. Operator decision 2026-09-13, taken
+    after a quarter-size default (shift 2, 172,800 B) had shipped and been
+    measured -- 320x180 is small for judging a take in the playback pane,
+    which is the only thing the embedded thumbnail exists for, and the
+    pane has no other path to a picture. Still far below the 2,764,800
+    B/frame that colour at shift 0 cost, which is what CineMate 3.4
+    actually shipped with and what measured as the DNG growth between
+    releases (development/dng-thumbnail-cost/FINDINGS.md; the
+    cinemate-handbook 2026-09-13 hardware-log entries).
+
+    The shift and the mode are independent knobs and the byte count scales
+    with both -- so at THIS default, unlike the quarter-size one it
+    replaced, mono genuinely is the cheaper choice (230,400 B against
+    691,200 B at the same size), and mode 3 (colour JPEG) is cheaper than
+    either by an order of magnitude, at a CPU cost.
+
+    Clamped to 0..4, not cinepi-raw's 0..12: cinepi-raw's own clamp exists
+    so a raw redis value cannot collapse the thumbnail below usefulness,
+    and 12 is only where that floor bites (a >=4096px-wide lores plane).
+    This setting is what an operator actually picks from, and beyond 4 the
+    thumbnail is already under 80px wide (1280 >> 5 == 40) -- too small
+    for the playback pane to show anything, so there is no reason to offer
+    it here even though cinepi-raw would still accept it.
+    """
+    raw = settings.get("image_capture", {}).get("thumbnail_size", 1)
     try:
-        return max(0, min(2, int(raw)))
+        return max(0, min(4, int(raw)))
     except (TypeError, ValueError):
-        return 2
+        return 1
 
 
 REC_TONE_DEFAULTS = {
@@ -516,12 +629,28 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "sdr": True,
             "imx585_clear_hdr": True,
             # Per-depth ClearHDR switches; see sensor_detect._clear_hdr_depths.
-            "imx585_clear_hdr_12bit": True,
+            "imx585_clear_hdr_12bit": False,
             "imx585_clear_hdr_16bit": True,
         },
-        # 2 (colour): the embedded thumbnail is the standard playback path
-        # now, not an opt-in -- see thumbnail_startup_value()'s docstring.
-        "thumbnail": 2,
+        # "colour": the embedded thumbnail is the standard playback path,
+        # not an opt-in. Paired with thumbnail_size defaulting to 2 below,
+        # colour costs FEWER bytes than mono did at half size -- see
+        # thumbnail_startup_value()'s docstring for the 2026-09-13 decision.
+        # Four values, as words now that parse_thumbnail_mode() accepts them:
+        # "off" / "mono" / "colour" (or "color") / "jpeg" -- see
+        # THUMBNAIL_MODE_NAMES above. "jpeg" is the smallest file of the
+        # four and the most CPU; measured 2026-09-13, that CPU cost is
+        # small enough against a log-encoded frame to make it the default
+        # rather than the opt-in. See thumbnail_startup_value().
+        "thumbnail": "jpeg",
+        # 1 (half the lores plane, 640x360): at the colour default above,
+        # 691,200 B/frame, +5.6% on a 4K 12-bit frame. Operator decision
+        # 2026-09-13, after a quarter-size default shipped and proved too
+        # small to judge a take by in the playback pane. Shift 0 (full
+        # lores plane) in colour is 2,764,800 B/frame, the growth
+        # FINDINGS.md measured between releases -- see
+        # thumbnail_size_startup_value()'s docstring.
+        "thumbnail_size": 1,
         # Dynamic resolution: substitute a lesser mode when the requested fps
         # outruns the selected one, and which axis of quality ("mode" =
         # bit depth + ClearHDR class, "resolution" = frame size, "none" =

@@ -242,7 +242,21 @@
       // image_capture.bit_depths is the wrong lever for this: it applies to
       // every mode, so dropping 12 there would take the 12-bit SDR modes too.
       // Both default to whatever "imx585_clear_hdr" above says.
-      "imx585_clear_hdr_12bit": true,
+      // 12-bit ClearHDR is HIDDEN by default. The modes still exist in the
+      // driver and every line of code that serves them is still here -- flip
+      // this to true to get them back for experiment. They are hidden because
+      // on this sensor they do not earn their place: the HG/LG merge stops
+      // reaching the top of the container above analogue gain code ~60 (about
+      // ISO 800), so highlight range collapses at the ISOs people actually
+      // shoot, while 16-bit ClearHDR holds up across the whole ISO range. The
+      // 12-bit modes also carry the compander, a full-frame CPU preview
+      // re-render, and the clamp artefacts that come with both.
+      //
+      // NOTE: hiding them RENUMBERS the remaining modes -- 16-bit ClearHDR HD
+      // and 4K move from 5 and 6 to 3 and 4. A sensor_mode saved in Redis is
+      // re-resolved by what it actually was, not by its index, so a camera
+      // does not silently wake up in a different capture.
+      "imx585_clear_hdr_12bit": false,
       "imx585_clear_hdr_16bit": true,
       // Startup values for the ClearHDR live knobs (0-4095 / 0-8 / 0-5).
       // Applied when a ClearHDR mode is selected; adjust live afterwards
@@ -279,12 +293,45 @@
       // development/mono-clearhdr-fixes/ROUND9-RESULTS.md.
       "self_heal": false
     },
-    // Embedded DNG thumbnail written by cinepi-raw's DNG encoder: 0 off,
-    // 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour
-    // by default -- verified on hardware (G10/G11) and the standard
-    // playback path; raw decode is far more demanding on the Pi and is no
-    // longer the pane's fallback. New takes only.
-    "thumbnail": 2,
+    // By default DNGs carry a small preview image, used by the Playback
+    // pane for renderless playback. Colour JPEG 628x360 -- about 10-25 KB
+    // per frame, +4.0 ms per frame (+18%). Disable to slightly increase
+    // write speed and reduce cpu load during recording (disables web GUI
+    // playback).
+    //
+    // The figures above are this camera's 4K 16-bit ClearHDR mode with
+    // CineMate Log 12 at 25 fps (22.2 ms/frame with no preview image),
+    // measured 2026-09-13; the thumbnail is half the preview plane, so a
+    // 16:9 sensor mode gives 640x360 instead. Four values:
+    //   "off"    0 B,        no extra encode time
+    //   "mono"   230,400 B,  +1.2 ms (+6%)   greyscale pane
+    //   "colour" 691,200 B,  +3.2 ms (+14%)
+    //   "jpeg"   ~10-25 KB,  +4.0 ms (+18%)  the default: the same picture
+    //            as "colour" for a fortieth of the bytes, at the most CPU
+    //            of the four -- which is still ~6 seconds of recording time
+    //            per TB and no dropped frames at any setting measured.
+    // The settings editor shows this as a plain on/off toggle (on writes
+    // "jpeg", or preserves a hand-set "mono"/"colour"); every value is
+    // reachable here or with `set thumbnail <word>` (or 0-3), live, for the
+    // next take. `thumbnail_size` below scales every choice. Full table:
+    // docs/settings-json.md's "DNG thumbnails" section.
+    "thumbnail": "jpeg",
+    // Right-shift applied to the lores plane before writing the
+    // thumbnail: 0 = full lores size, 1 = half each side, 2 = quarter,
+    // and so on. Changing this restarts the camera (unlike `thumbnail`
+    // above), so it is a settings-editor field, not a live CLI verb --
+    // a Save applies it on the next start. At the colour default above:
+    // 0 = 1280x720 = 2,764,800 B/frame (+22.2% on a 4K 12-bit frame,
+    // +88.9% on HD 12-bit -- what CineMate 3.4 actually shipped with
+    // before this fix), 1 = 640x360 = 691,200 B/frame (+5.6% / +22.2%),
+    // 2 = 320x180 = 172,800 B/frame (+1.4% / +5.6%). 1 is the default:
+    // 320x180 proved too small to judge a take by in the Playback pane,
+    // which is the only thing the thumbnail exists for. Mono is
+    // a third of each figure; jpeg is a stated range, not this formula --
+    // see thumbnail's own comment above. See
+    // development/dng-thumbnail-cost/FINDINGS.md and the 2026-09-13
+    // hardware-log entry.
+    "thumbnail_size": 1,
     "custom_modes": {}
   },
 

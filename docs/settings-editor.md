@@ -53,7 +53,7 @@ The left rail groups the same fields `settings.jsonc` holds, unchanged in meanin
 | Group | Sections |
 |---|---|
 | Look & feel | Welcome screen (HDMI boot splash) · Wi‑Fi hotspot |
-| Cameras | Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, independent per sensor |
+| Cameras | Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, tuning-file override, independent per sensor |
 | Timing | Timing & sync — how strictly frame timing is watched before warning or flagging a take |
 | Exposure & steps | Value steps (click-stops per control) · Resolution & sensor (resolutions, bit depths, dynamic resolution and its priority, ClearHDR startup values) · Per-mode fps ceilings (per-sensor-mode overrides — see `custom_modes` in the settings reference) |
 | Recording | Audio (input gain, timecode alignment per bit depth) · HDMI & preview (monitor overlay, dual-feed framing) |
@@ -71,6 +71,13 @@ Clicking **Save changes** on this tab:
 
     !!! warning "A structural save loses comments without saying so"
         The server composes a warning when this happens, but the page does not show it — the toast reads `Saved. Restarting CineMate…` either way. If you keep notes in `settings.jsonc`, recover them from the newest file in `.settings-backups/` after a save that added or removed a key.
+
+    !!! danger "A save writes only what the page carries — and that is less than the file holds"
+        Observed on a camera 2026-09-13, worth knowing before you use Save on a file you care about. The saved document is built from the form's own fields, so **any setting the page has no field for is not written back at all** — it is dropped from `settings.jsonc` entirely, not left alone. On that camera a single save had removed the whole `system.https` and `system.web_api` blocks, blanked both cameras' `tuning_file_override.path`, emptied the `input_peripherals.pots` array, cleared `sensors.cam1.camera_name`, and stripped every comment in the file. Nothing warned, and the camera kept running, because CineMate falls back to its built-in defaults for whatever is missing — so the loss is invisible until you read the file or a default differs from what you had set.
+
+        Two practical consequences. Edit by hand over SSH if you have customised anything under "[Settings with no field on this page](settings-json.md#settings-with-no-field-on-this-page)". And after any Save, compare against a backup — `diff .settings-backups/<newest> settings.jsonc` — rather than assuming the file still says what you wrote.
+
+        Fixing this properly means the save merging into the file on disk instead of replacing it. Until then, the hidden `[data-path]` inputs some cards carry exist purely to keep their keys alive through a save; that is a patch per key, not a fix.
 
 3. Restarts CineMate automatically to apply the new file — the same effect as the CLI's `restart cinemate`, not a reboot. Recording stops if one is in progress.
 

@@ -33,6 +33,14 @@ The take strip heads the pane, listing every take across mounted storage with a 
 
 Neither disturbs what is on the player. The selected take keeps playing and simply moves.
 
+## The embedded thumbnail
+
+Both the take-strip preview cards and the player itself decode this embedded thumbnail rather than the raw frame — raw decode is far more demanding on the Pi. The pane plays whatever the take actually carries — greyscale, colour, or colour JPEG — with no field of its own to override it. It plays **in colour, at 640×360, by default**: `image_capture.thumbnail` defaults to `jpeg` and `image_capture.thumbnail_size` to `1` (half the lores plane), roughly 10–25 KB per frame — the same picture uncompressed colour would give at 691,200 B. The settings editor shows this as a single on/off toggle; `set thumbnail mono` (or the key set to `mono` in the file) switches to an uncompressed greyscale thumbnail, and `colour` to an uncompressed colour one, for anyone who would rather not have a JPEG encode in the frame path. `image_capture.thumbnail_size` trades resolution for size independently of mode — `0` is the full lores plane, `2` a quarter. Changing `thumbnail_size` restarts the camera; changing `thumbnail` takes effect on the next take, with no restart. See [settings.jsonc's "DNG thumbnails" section](settings-json.md#dng-thumbnails) for the full cost table.
+
+A JPEG take (`thumbnail` = `jpeg`) is served to the browser without re-encoding: IFD1's strip already is a baseline JPEG, so the pane reads it and serves it as-is, unlike the two uncompressed modes, which are still decoded and re-encoded through PIL on every request the way they always were.
+
+A take recorded with `thumbnail` set to `off` (`0`) — or one from before a rebuilt cinepi-raw shipped the embedded thumbnail at all — carries no thumbnail and is not currently playable in this pane.
+
 ## Playing
 
 Transport controls sit under the picture: first frame, previous frame, **PLAY**, next frame, last frame, and a loop toggle. Drag anywhere on the filmstrip to scrub — it holds sixteen frames sampled evenly across the take, with the playhead marking the current position. The take's name and the elapsed position show over the top of the picture.

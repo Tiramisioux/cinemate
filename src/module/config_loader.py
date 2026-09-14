@@ -629,7 +629,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "sdr": True,
             "imx585_clear_hdr": True,
             # Per-depth ClearHDR switches; see sensor_detect._clear_hdr_depths.
-            "imx585_clear_hdr_12bit": True,
+            "imx585_clear_hdr_12bit": False,
             "imx585_clear_hdr_16bit": True,
         },
         # "colour": the embedded thumbnail is the standard playback path,

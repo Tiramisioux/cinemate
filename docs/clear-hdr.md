@@ -6,8 +6,47 @@ ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-ga
 - Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).
 - Each 3840×2200 16-bit DNG is ≈ 16.9 MB.
 - Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.
-- Highlights near the HG→LG hand-off can render magenta in flat greys. This is sensor-side merge behaviour, not a capture defect.
+- Highlights near the HG→LG hand-off can render magenta in flat greys. This is sensor-side merge
+  behaviour, not a capture defect: where the merge clamps, the colour channels converge on one
+  code and the white balance then drives them apart. It is worst when the merge is being asked
+  to work outside its gain window — see [12-bit ClearHDR is hidden](#12-bit-clearhdr-is-hidden)
+  for the measurements, which apply to the 16-bit modes at high ISO too.
 - A launch can record a flat black-level pedestal instead of real image data, on any ClearHDR mode. CineMate's shipped `blend` default of 5 avoids the sensor condition that causes it, so a stock camera does not hit this. See [Flat black-pedestal frames](#flat-black-pedestal-frames) if you have overridden `blend`.
+
+## 12-bit ClearHDR is hidden
+
+The driver exposes ClearHDR at **two** depths. CineMate offers only the 16-bit pair; the two
+12-bit ClearHDR modes are hidden by default (`image_capture.hdr.imx585_clear_hdr_12bit`, or
+"Expose 12-bit ClearHDR modes" in the settings editor).
+
+**Why.** ClearHDR's extra range is the ratio between the sensor's high-gain and low-gain reads,
+and that ratio only survives inside the sensor's documented combination window. Measured on the
+rig, 12-bit ClearHDR HD, everything else fixed, reading the merge ceiling off the raw:
+
+| ISO | 200 | 400 | 640 | 799 | 800 | 1200 | 1600+ |
+|---|---|---|---|---|---|---|---|
+| analogue gain code | 20 | 40 | 51 | 56 | 60 | 71 | 80 |
+| merge ceiling (of 4095) | 4095 | 4095 | 4095 | 4095 | — | 3188 | 2408 |
+
+Past gain code ~60 the merge stops reaching the top of the container: at code 80 it reaches 59%
+of it, about a stop and a half of highlight range gone — and that lost range is precisely what
+ClearHDR is for. The 16-bit modes hold up across the ISO range, so on this camera the 12-bit
+pair is the mode that asks for the compander, a full-frame CPU preview re-render and the clamp
+artefacts that come with both, and returns less highlight range than SDR at the ISOs people
+actually shoot.
+
+**Nothing has been removed.** The driver still has the modes, cinepi-raw still has the CCMP
+decompand, the measured per-binning tables and the preview path that serves them. This switch
+only keeps them out of the mode list. Set `imx585_clear_hdr_12bit` to `true` to get them back
+for tinkering.
+
+**Turning it on (or off) renumbers the modes.** With 12-bit ClearHDR hidden the table is 0-4,
+with the 16-bit ClearHDR pair at 3 and 4; with it shown they move to 5 and 6. A `sensor_mode`
+saved in Redis is re-resolved at startup from the capture it actually described — the stored
+width/height/bit depth/HDR state — rather than from its index, so a camera parked on 4K 16-bit
+ClearHDR comes back in 4K 16-bit ClearHDR either way. A camera parked on a 12-bit ClearHDR mode
+that has just been hidden lands on the same resolution in 16-bit ClearHDR, which is the nearest
+honest thing to what it was recording.
 
 ## Live knobs
 

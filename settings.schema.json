@@ -54,10 +54,23 @@
           "description": "TLS for the web UI on port 5000. Off by default -- cinepi.local and the hotspot address can never hold a publicly-trusted certificate, so this always means a self-signed one and a browser interstitial. Needed for the RAW pane's folder download, which requires a secure browser context.",
           "type": "object",
           "properties": {
-            "enabled": { "type": "boolean", "default": false },
-            "cert_file": { "type": "string", "default": "resources/certs/cinemate.crt" },
-            "key_file": { "type": "string", "default": "resources/certs/cinemate.key" },
-            "valid_days": { "type": "integer", "minimum": 1, "default": 3650 }
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "cert_file": {
+              "type": "string",
+              "default": "resources/certs/cinemate.crt"
+            },
+            "key_file": {
+              "type": "string",
+              "default": "resources/certs/cinemate.key"
+            },
+            "valid_days": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 3650
+            }
           },
           "additionalProperties": false
         },
@@ -306,8 +319,8 @@
             },
             "imx585_clear_hdr_12bit": {
               "type": "boolean",
-              "default": true,
-              "description": "Offer the 12-bit ClearHDR modes. Companded capture: cinepi-raw applies the CCMP decompand to it, and the preview needs a measured table for the mode's binning. Independent of image_capture.bit_depths, which is global and would take the 12-bit SDR modes with it."
+              "default": false,
+              "description": "Hidden by default. The 12-bit ClearHDR modes still exist in the driver and in CineMate's code; this only keeps them out of the selectable mode list. They are hidden because the sensor's HG/LG merge stops reaching the top of the container above analogue gain code ~60 (about ISO 800), so highlight range collapses at ordinary shooting ISOs, while 16-bit ClearHDR holds across the range. Setting this true restores them for experiment -- and renumbers the remaining modes, which the startup mode resolution handles by identity rather than index."
             },
             "imx585_clear_hdr_16bit": {
               "type": "boolean",
@@ -315,13 +328,19 @@
               "description": "Offer the 16-bit ClearHDR modes. Delivered linear, with no compander in the path."
             },
             "threshold_low": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "minimum": 0,
               "maximum": 4095,
               "default": null
             },
             "threshold_high": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "minimum": 0,
               "maximum": 4095,
               "default": null
@@ -346,8 +365,20 @@
           }
         },
         "thumbnail": {
-          "type": ["string", "integer"],
-          "enum": ["off", "mono", "colour", "jpeg", 0, 1, 2, 3],
+          "type": [
+            "string",
+            "integer"
+          ],
+          "enum": [
+            "off",
+            "mono",
+            "colour",
+            "jpeg",
+            0,
+            1,
+            2,
+            3
+          ],
           "default": "jpeg",
           "description": "Embedded DNG thumbnail mode written by cinepi-raw's DNG encoder: off (no IFD1, no bytes, no CPU -- not playable in the Playback pane), mono (greyscale, lightest CPU), colour (RGB, moderate CPU), or jpeg (quality-85 colour JPEG, highest CPU, by far the fewest bytes -- scene-dependent). Accepts the words (case-insensitively; \"color\" also accepted) or the legacy ints 0-3. `set thumbnail <word>` changes this live, for the next take. Colour by default -- operator decision 2026-09-13 (final): paired with thumbnail_size defaulting to 2, colour at quarter size costs fewer bytes than mono did at half size, so there is no size/colour trade-off left to make. See docs/settings-json.md's \"DNG thumbnails\" section for the measured bytes-per-frame and CPU cost of each choice."
         },
@@ -365,7 +396,11 @@
         },
         "dynamic_resolution_priority": {
           "type": "string",
-          "enum": ["mode", "resolution", "none"],
+          "enum": [
+            "mode",
+            "resolution",
+            "none"
+          ],
           "default": "mode",
           "description": "Which axis of quality dynamic resolution gives up first once the selected mode's own class (bit depth + SDR/ClearHDR) runs out of modes that can sustain the frame rate. `mode` holds the class and drops resolution first (16-bit 4K -> 16-bit HD -> 4K SDR -> HD SDR); `resolution` holds the frame size and drops the class first (16-bit 4K -> 4K SDR -> HD SDR); `none` never leaves the class, so resolution is the only thing that ever changes and fps is capped at what the class can do. A substitute is never larger or richer than the selected mode under any policy. `set dynamic resolution priority mode|resolution|none` overrides this live and the override persists in Redis, which a later boot reads back in preference to this value."
         },
@@ -377,16 +412,42 @@
             "items": {
               "type": "object",
               "properties": {
-                "width": { "type": "integer", "minimum": 1 },
-                "height": { "type": "integer", "minimum": 1 },
-                "bit_depth": { "type": "integer", "minimum": 1 },
-                "fps_max": { "type": "number", "minimum": 0 },
-                "hdr": { "type": "boolean", "default": false },
-                "aspect": { "type": "number", "minimum": 0 },
-                "gui_layout": { "type": "integer" },
-                "packing": { "type": "string" }
+                "width": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "bit_depth": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "fps_max": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "hdr": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "aspect": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "gui_layout": {
+                  "type": "integer"
+                },
+                "packing": {
+                  "type": "string"
+                }
               },
-              "required": ["width", "height", "bit_depth"],
+              "required": [
+                "width",
+                "height",
+                "bit_depth"
+              ],
               "additionalProperties": false
             }
           }
@@ -569,19 +630,33 @@
               "button_actions": {
                 "type": "object",
                 "properties": {
-                  "press_action": { "$ref": "#/definitions/action" },
-                  "single_click_action": { "$ref": "#/definitions/action" },
-                  "double_click_action": { "$ref": "#/definitions/action" },
-                  "triple_click_action": { "$ref": "#/definitions/action" },
-                  "hold_action": { "$ref": "#/definitions/action" }
+                  "press_action": {
+                    "$ref": "#/definitions/action"
+                  },
+                  "single_click_action": {
+                    "$ref": "#/definitions/action"
+                  },
+                  "double_click_action": {
+                    "$ref": "#/definitions/action"
+                  },
+                  "triple_click_action": {
+                    "$ref": "#/definitions/action"
+                  },
+                  "hold_action": {
+                    "$ref": "#/definitions/action"
+                  }
                 },
                 "additionalProperties": false
               },
               "encoder_actions": {
                 "type": "object",
                 "properties": {
-                  "rotate_clockwise": { "$ref": "#/definitions/action" },
-                  "rotate_counterclockwise": { "$ref": "#/definitions/action" }
+                  "rotate_clockwise": {
+                    "$ref": "#/definitions/action"
+                  },
+                  "rotate_counterclockwise": {
+                    "$ref": "#/definitions/action"
+                  }
                 },
                 "additionalProperties": false
               }
@@ -631,11 +706,21 @@
                   "button": {
                     "type": "object",
                     "properties": {
-                      "press_action": { "$ref": "#/definitions/action" },
-                      "single_click_action": { "$ref": "#/definitions/action" },
-                      "double_click_action": { "$ref": "#/definitions/action" },
-                      "triple_click_action": { "$ref": "#/definitions/action" },
-                      "hold_action": { "$ref": "#/definitions/action" }
+                      "press_action": {
+                        "$ref": "#/definitions/action"
+                      },
+                      "single_click_action": {
+                        "$ref": "#/definitions/action"
+                      },
+                      "double_click_action": {
+                        "$ref": "#/definitions/action"
+                      },
+                      "triple_click_action": {
+                        "$ref": "#/definitions/action"
+                      },
+                      "hold_action": {
+                        "$ref": "#/definitions/action"
+                      }
                     },
                     "additionalProperties": false
                   }
@@ -766,7 +851,9 @@
               "type": "array"
             }
           },
-          "required": ["method"],
+          "required": [
+            "method"
+          ],
           "additionalProperties": false
         }
       ]

@@ -382,6 +382,51 @@ class CinePiController:
         finally:
             self.dynamic_resolution_suspended = prev_dynamic_suspended
 
+    def _sensor_mode_from_stored_shape(self):
+        """The mode index whose capture matches what Redis says we were in.
+
+        Redis carries the shape of the last capture (width/height/bit_depth/
+        hdr) alongside the mode index. The index is meaningless once res_modes
+        has been re-indexed; the shape is not. Returns None when nothing
+        matches, which is the caller's cue to fall back.
+
+        An exact match is preferred. Failing that, the same resolution and
+        HDR state at a DIFFERENT bit depth is accepted, because that is what
+        hiding the 12-bit ClearHDR modes leaves behind: a camera parked on
+        4K 12-bit ClearHDR should land on 4K 16-bit ClearHDR, which is the
+        same picture from the same sensor area, not on 4K SDR.
+        """
+        r = self.redis_controller
+        try:
+            height = int(r.get_value(ParameterKey.HEIGHT.value))
+        except (TypeError, ValueError):
+            return None
+        try:
+            bit_depth = int(r.get_value(ParameterKey.BIT_DEPTH.value))
+        except (TypeError, ValueError):
+            bit_depth = None
+        hdr = str(r.get_value(ParameterKey.HDR.value) or "0") == "1"
+
+        # Heights differ between depths on this sensor (2160 vs 2200, 1080 vs
+        # 1100), so compare on the nearest height rather than demanding it.
+        def height_close(info):
+            try:
+                return abs(int(info.get("height") or 0) - height) <= 64
+            except (TypeError, ValueError):
+                return False
+
+        exact = [m for m, i in self.sensor_detect.res_modes.items()
+                 if height_close(i) and bool(i.get("hdr", False)) == hdr
+                 and (bit_depth is None or i.get("bit_depth") == bit_depth)]
+        if exact:
+            return min(exact)
+
+        same_shape = [m for m, i in self.sensor_detect.res_modes.items()
+                      if height_close(i) and bool(i.get("hdr", False)) == hdr]
+        if same_shape:
+            return min(same_shape)
+        return None
+
     def _get_startup_sensor_mode(self) -> int:
         value = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
         try:
@@ -413,6 +458,31 @@ class CinePiController:
         # re-indexed from 0. Fall back to a mode that actually exists so
         # callers like _recompute_file_size() (a plain res_modes[...]
         # lookup) don't raise KeyError during startup.
+        #
+        # Before falling back, try to recover what the operator actually had.
+        # An index means nothing across a re-indexing, but the capture it
+        # described is still written in Redis beside it (width/height/
+        # bit_depth/hdr), so match on THAT. Hiding the 12-bit ClearHDR modes
+        # is exactly this case: 16-bit ClearHDR HD and 4K move from 5 and 6 to
+        # 3 and 4, and without this a camera parked on 4K 16-bit ClearHDR
+        # wakes up in mode 0 -- 4K SDR -- which is a different camera as far
+        # as the operator is concerned.
+        recovered = self._sensor_mode_from_stored_shape()
+        if recovered is not None:
+            logging.info(
+                "Stored sensor mode %s is no longer that mode -- re-resolved "
+                "to mode %s from the stored %sx%s %s-bit %s capture.",
+                mode, recovered,
+                self.redis_controller.get_value(ParameterKey.WIDTH.value),
+                self.redis_controller.get_value(ParameterKey.HEIGHT.value),
+                self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value),
+                "ClearHDR" if str(
+                    self.redis_controller.get_value(ParameterKey.HDR.value) or "0"
+                ) == "1" else "SDR",
+            )
+            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, recovered)
+            return recovered
+
         fallback = 0 if 0 in self.sensor_detect.res_modes else next(
             iter(self.sensor_detect.res_modes), 0
         )

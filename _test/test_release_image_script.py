@@ -24,6 +24,7 @@ clean-install question and only hardware settles it -- see the handbook's
 lessons/what-the-pi-taught-us.md.
 """
 
+import re
 import subprocess
 import unittest
 from pathlib import Path
@@ -153,3 +154,72 @@ class TestReleaseImageScript(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestBashrcAliasesMatchTheManualInstall(unittest.TestCase):
+    """The .bashrc aliases are stated twice and nothing compared them.
+
+    cinemate-install.sh writes a managed block of aliases into ~/.bashrc, and
+    docs/installation-steps.md restates that block verbatim for people doing
+    the install by hand. Two hand-maintained copies of one fact, with no check
+    -- the exact shape this codebase keeps drifting on. Adding a fifth alias
+    (make-release-image) is what surfaced it, so the check lands with it.
+
+    Not a comment saying "keep these in sync": a comment cannot fail.
+    """
+
+    # The installer writes $CINEMATE_DIR / $PI_HOME; the docs page, aimed at
+    # someone typing into nano, writes them out. Normalize before comparing.
+    SUBSTITUTIONS = (
+        ("$CINEMATE_DIR", "/home/pi/cinemate"),
+        ("$PI_HOME", "/home/pi"),
+    )
+
+    @staticmethod
+    def _aliases(text):
+        found = {}
+        for match in re.finditer(r"^alias ([\w-]+)='([^']*)'$", text, re.MULTILINE):
+            name, body = match.groups()
+            for token, expansion in TestBashrcAliasesMatchTheManualInstall.SUBSTITUTIONS:
+                body = body.replace(token, expansion)
+            found[name] = body
+        return found
+
+    def setUp(self):
+        self.installer_aliases = self._aliases(INSTALLER.read_text(encoding="utf-8"))
+        docs = (ROOT / "docs" / "installation-steps.md").read_text(encoding="utf-8")
+        self.docs_aliases = self._aliases(docs)
+
+    def test_the_extractor_found_something_plausible(self):
+        # A set comparison passes trivially once the pattern stops matching.
+        # Assert a floor first, so a change to how aliases are written fails as
+        # "suspect this extractor" rather than passing on two empty sets.
+        self.assertGreaterEqual(
+            len(self.installer_aliases), 5,
+            f"only found {sorted(self.installer_aliases)} in cinemate-install.sh -- "
+            "the alias pattern has stopped matching, fix it before trusting the result",
+        )
+        self.assertIn("editsettings", self.installer_aliases)
+
+    def test_every_installer_alias_is_in_the_manual_install(self):
+        missing = set(self.installer_aliases) - set(self.docs_aliases)
+        self.assertFalse(
+            missing,
+            f"cinemate-install.sh writes {sorted(missing)} but docs/installation-steps.md "
+            "does not tell a manual installer to add it -- the two shells would differ",
+        )
+
+    def test_the_manual_install_invents_no_alias_of_its_own(self):
+        extra = set(self.docs_aliases) - set(self.installer_aliases)
+        self.assertFalse(
+            extra,
+            f"docs/installation-steps.md tells people to add {sorted(extra)}, which "
+            "cinemate-install.sh does not write",
+        )
+
+    def test_the_two_copies_expand_to_the_same_commands(self):
+        for name, body in sorted(self.installer_aliases.items()):
+            self.assertEqual(
+                body, self.docs_aliases.get(name),
+                f"alias {name} differs between the installer and the manual install page",
+            )

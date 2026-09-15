@@ -1719,6 +1719,7 @@ alias cinemate='$PI_HOME/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
 alias editsettings='sudo nano $CINEMATE_DIR/settings.jsonc'
+alias make-release-image='sudo $CINEMATE_DIR/scripts/make-release-image.sh'
 $MANAGED_END
 EOF
 

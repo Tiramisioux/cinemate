@@ -773,7 +773,16 @@ alias cinemate='/home/pi/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
 alias editsettings='sudo nano /home/pi/cinemate/settings.jsonc'
+alias make-release-image='sudo /home/pi/cinemate/scripts/make-release-image.sh'
 ```
+
+`make-release-image` is a maintainer tool, not part of using the camera. It builds a
+distributable image: it puts `settings.jsonc` and `config.txt` back to their stock
+values, images the card the way [Backing up the SD card](backing-up-sd-card.md)
+describes, and then restores both files as they were — so the image does not ship
+with one operator's sensor, hotspot and GPIO setup baked in. `make-release-image
+--help` lists the options, and `--dry-run` does the swap and restore without the
+hour of imaging.
 
 Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
 

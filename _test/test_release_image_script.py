@@ -24,8 +24,11 @@ clean-install question and only hardware settles it -- see the handbook's
 lessons/what-the-pi-taught-us.md.
 """
 
+import os
 import re
+import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -223,3 +226,98 @@ class TestBashrcAliasesMatchTheManualInstall(unittest.TestCase):
                 body, self.docs_aliases.get(name),
                 f"alias {name} differs between the installer and the manual install page",
             )
+
+
+class TestUpdateRefreshesShellHelpers(unittest.TestCase):
+    """cinemate-update.sh must rewrite the managed .bashrc block, not restate it.
+
+    An alias added to cinemate-install.sh used to reach only a Pi that got a
+    full reinstall -- which nobody does for an alias -- so `git pull` left the
+    shell permanently behind the code. make-release-image was the first alias
+    added after the initial install and would have been invisible everywhere.
+
+    The fix calls the installer's own configure_bashrc() from the update path.
+    Two things have to keep holding for that to be worth anything: the update
+    script must not grow its own copy of the alias list, and the function has
+    to really be idempotent, since it now runs on every update rather than
+    once per install. The second is a runtime property, so it is exercised
+    rather than read.
+    """
+
+    UPDATE = ROOT / "cinemate-update.sh"
+
+    def setUp(self):
+        self.update = self.UPDATE.read_text(encoding="utf-8")
+
+    def test_update_calls_the_installer_instead_of_restating_aliases(self):
+        self.assertIn("configure_bashrc", self.update)
+        self.assertNotRegex(
+            self.update,
+            r"(?m)^\s*alias \w",
+            "cinemate-update.sh defines an alias of its own -- that is a third "
+            "copy of a list already stated in the installer and the manual "
+            "install page. Call configure_bashrc() instead.",
+        )
+
+    def test_configure_bashrc_is_idempotent_and_writes_every_alias(self):
+        if shutil.which("bash") is None:
+            self.skipTest("bash is required")
+
+        tmp = Path(tempfile.mkdtemp(prefix="bashrc-refresh-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+
+        home = tmp / "home"
+        home.mkdir()
+        # A .bashrc with an edit outside the fence: the managed block's stated
+        # contract is that such a line survives, so check it does.
+        (home / ".bashrc").write_text("export EDITOR=nano  # mine\n")
+
+        stub_dir = tmp / "stubs"
+        stub_dir.mkdir()
+        sudo = stub_dir / "sudo"
+        sudo.write_text(
+            "#!/bin/sh\n"
+            'while [ $# -gt 0 ]; do\n'
+            '  case "$1" in -u) shift 2 ;; -n|-S) shift ;; -p) shift 2 ;; --) shift; break ;; *) break ;; esac\n'
+            "done\n"
+            'exec "$@"\n'
+        )
+        sudo.chmod(0o755)
+
+        script = (
+            f'export PI_USER="$(id -un)" PI_GROUP="$(id -gn)" PI_HOME="{home}" '
+            f'CINEMATE_DIR="{tmp}/cinemate"\n'
+            f'source "{INSTALLER}"\n'
+            f'BACKUP_DIR="{tmp}/backups"\n'
+            "mkdir -p \"$BACKUP_DIR\"\n"
+            "configure_bashrc\n"
+            "configure_bashrc\n"  # twice: this now runs on every update
+        )
+        result = subprocess.run(
+            ["bash", "-c", script],
+            capture_output=True, text=True, timeout=60,
+            env={**os.environ, "PATH": f"{stub_dir}:{os.environ['PATH']}"},
+        )
+        self.assertEqual(
+            result.returncode, 0,
+            f"configure_bashrc failed\n{result.stdout}\n{result.stderr}",
+        )
+
+        written = (home / ".bashrc").read_text()
+        self.assertIn("export EDITOR=nano  # mine", written,
+                      "an edit outside the fence was destroyed")
+
+        for name in ("cinemate", "editboot", "editcmdline", "editsettings",
+                     "make-release-image"):
+            self.assertEqual(
+                written.count(f"alias {name}="), 1,
+                f"alias {name} appears {written.count(f'alias {name}=')} times after "
+                "two runs; configure_bashrc is not idempotent and every update "
+                "would add another copy",
+            )
+
+        self.assertEqual(written.count("# >>> cinemate-install >>>"), 1)
+        self.assertIn(
+            f"alias make-release-image='sudo {tmp}/cinemate/scripts/make-release-image.sh'",
+            written,
+        )

@@ -96,4 +96,50 @@ else
     echo "Cinemate already at latest version."
 fi
 
+# Refresh the managed .bashrc block.
+#
+# Without this, a shell helper added to cinemate-install.sh only reaches a Pi
+# that gets a full reinstall -- which nobody does for an alias, so `git pull`
+# would leave the shell permanently behind the code. make-release-image was the
+# first alias added after the initial install and would have been invisible on
+# every existing Pi.
+#
+# It calls the installer's own configure_bashrc() rather than restating the
+# aliases here: two copies of that list is exactly the drift this repo keeps
+# paying for, and _test/test_release_image_script.py fails if a copy appears.
+# The function is idempotent by design -- it deletes the fenced block and
+# rewrites it -- so this runs every time, not only when the repo moved, and a
+# Pi that was pulled by hand still catches up.
+#
+# Hand edits OUTSIDE the fence survive; inside it they do not. That is the
+# managed block's stated contract, the same as under cinemate-install.sh.
+#
+# The subshell matters: sourcing the installer defines ~100 variables and
+# installs its own ERR and EXIT traps, and none of that should leak back here.
+refresh_shell_helpers() {
+    local installer="$CINEMATE_DIR/cinemate-install.sh"
+    if [ ! -f "$installer" ]; then
+        echo "[warn] $installer not found; leaving ~/.bashrc alone"
+        return 0
+    fi
+
+    printf '\n----- Refreshing shell helpers in ~/.bashrc -----\n'
+    (
+        # Aim the installer at whoever is actually running this, rather than
+        # its own pi/pi/home/pi defaults.
+        export PI_USER PI_HOME CINEMATE_DIR
+        PI_USER="$(id -un)"
+        PI_HOME="$HOME"
+        # shellcheck source=/dev/null
+        source "$installer"
+        BACKUP_DIR="$PI_HOME/.cinemate-install-backups/$(date +%Y%m%d-%H%M%S)"
+        sudo mkdir -p "$BACKUP_DIR"
+        sudo chown -R "$PI_USER:$PI_GROUP" "$BACKUP_DIR"
+        configure_bashrc
+    )
+    echo "Run 'source ~/.bashrc' (or open a new shell) to pick up any new commands."
+}
+
+refresh_shell_helpers
+
 printf '\nAll done.\n'

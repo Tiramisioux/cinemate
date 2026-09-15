@@ -106,6 +106,21 @@ third of a stop the sensor really does deliver, since 700 and 799 both sit on co
 a single override for both depths: an operator who writes a ceiling gets that ceiling, whichever
 mode is engaged, rather than the camera quietly substituting a number they never wrote.
 
+**ISO is also held for the length of a take.** In a ClearHDR mode CineMate ignores ISO changes
+while recording, in both directions, and says so in the log. cinepi-raw measures where the merge
+clamps on the take's *first* frame and writes it as the DNG's WhiteLevel, constant for the whole
+take — it has to be constant, or the exposure would step mid-clip.
+
+The clamp moves with analogue gain, and the direction catches people out: **more gain gives a
+lower ceiling** (measured at full res, gain code 71 → 54100, code 80 → 48600). So raising ISO
+mid-take merely drops the clamp below the declared white and the highlight goes magenta again —
+the old behaviour, unpleasant but not destructive. *Lowering* ISO raises the real clamp **above**
+the WhiteLevel already written, and every converter then crushes that entire band of genuine
+sensor data to flat white. That one is unrecoverable, which is why the control is held both ways
+rather than in the direction that looks dangerous.
+
+Stop recording to change ISO. SDR is unaffected — nothing there latches a measured WhiteLevel.
+
 ## Live knobs
 
 The merge behaviour is tunable while streaming. Each command writes a Redis key that cinepi-raw applies to the sensor as a V4L2 control.

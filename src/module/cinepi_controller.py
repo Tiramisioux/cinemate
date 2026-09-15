@@ -2704,6 +2704,17 @@ class CinePiController:
     # cannot be read (see _clearhdr_default_iso_ceiling).
     CLEARHDR_ISO_MAX_DEFAULT = CLEARHDR_ISO_MAX_16BIT
 
+    def _clearhdr_engaged(self):
+        """True while a ClearHDR mode is the live capture.
+
+        Separate from _clearhdr_iso_ceiling() on purpose. That one returns None
+        both for SDR and for an operator who lifted the cap with
+        `iso_max: null`, which is the right answer for "how high may ISO go"
+        and the wrong one for "is a measured WhiteLevel latched right now".
+        Lifting the cap is a choice about highlight range; it is not consent to
+        destroy the highlights of a take already in progress."""
+        return str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
+
     def _clearhdr_default_iso_ceiling(self):
         """The measured ceiling for the ClearHDR family currently engaged.
 
@@ -2735,8 +2746,7 @@ class CinePiController:
         operator who sets it is saying "this is my ceiling", and splitting it
         would mean the camera silently used a number they did not write. The
         per-family defaults apply only when they have not."""
-        hdr_on = str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
-        if not hdr_on:
+        if not self._clearhdr_engaged():
             return None
 
         hdr_cfg = (self.settings.get('image_capture', {}) or {}).get('hdr', {}) or {}
@@ -2793,6 +2803,50 @@ class CinePiController:
 
     def set_iso(self, value):
         if not self.iso_lock:
+            # ── ISO is frozen for the duration of a ClearHDR take ────────────
+            #
+            # cinepi-raw measures where the ClearHDR merge clamps on the take's
+            # FIRST frame and writes that as the DNG's WhiteLevel, constant for
+            # the whole take -- it has to be constant, because WhiteLevel is the
+            # normalisation denominator and a per-frame value would step the
+            # exposure mid-clip.
+            #
+            # But the clamp itself moves with analogue gain, and it moves the
+            # way round that catches people out. MORE gain means a LOWER
+            # ceiling -- measured 2026-09-14 at full res, analogue code 71 gave
+            # a plateau of 54100 and code 80 gave 48600; in 12-bit HD the same
+            # sweep ran 4095 (codes 20-60), 3188 (code 71), 2408 (code 80).
+            #
+            # So the dangerous direction is DOWN, not up:
+            #
+            #   ISO UP   -- the real clamp falls BELOW the WhiteLevel already
+            #               written. Nothing reaches the declared white, so the
+            #               highlight goes magenta again. That is exactly the
+            #               pre-fix behaviour: unpleasant, not destructive.
+            #   ISO DOWN -- the real clamp rises ABOVE it. Every frame after the
+            #               change then carries genuine sensor data that the
+            #               file declares to be past white, and every converter
+            #               crushes that whole band to flat white. Highlight
+            #               separation that survived (magenta, but intact) is
+            #               destroyed, and unrecoverably.
+            #
+            # That asymmetry is the argument for holding the control rather
+            # than allowing one direction: the safe-looking move is the harmful
+            # one, and an ISO knob that goes up but not down would teach exactly
+            # the wrong instinct.
+            #
+            # So the control is held rather than made asymmetric. An ISO knob
+            # that moves one way and not the other is harder to explain than one
+            # that plainly does not move while the camera is rolling.
+            #
+            # SDR is untouched: nothing there latches a measured WhiteLevel.
+            if self._is_recording() and self._clearhdr_engaged():
+                logging.info(
+                    f"ISO {value} ignored: ClearHDR holds ISO for the length of a take. "
+                    f"WhiteLevel was measured on this take's first frame and changing "
+                    f"analogue gain now would move the sensor's clamp away from it. "
+                    f"Stop recording to change ISO.")
+                return
             with self.parameters_lock_obj:
                 steps = self.effective_iso_steps()
                 safe_value = max(min(value, max(steps)), min(steps))

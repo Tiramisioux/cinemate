@@ -49,8 +49,9 @@ from module.redis_controller import ParameterKey
 
 
 class FakeRedis:
-    def __init__(self, hdr, bit_depth=None):
-        self.values = {ParameterKey.HDR.value: hdr}
+    def __init__(self, hdr, bit_depth=None, recording="0"):
+        self.values = {ParameterKey.HDR.value: hdr,
+                       ParameterKey.IS_RECORDING.value: recording}
         if bit_depth is not None:
             self.values[ParameterKey.BIT_DEPTH.value] = bit_depth
         self.sets = []
@@ -76,9 +77,10 @@ class _Lock:
 SHIPPED_STEPS = [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200]
 
 
-def controller(hdr="1", iso_max=1585, steps=None, omit_key=False, bit_depth=None):
+def controller(hdr="1", iso_max=1585, steps=None, omit_key=False, bit_depth=None,
+               recording="0"):
     c = CinePiController.__new__(CinePiController)
-    c.redis_controller = FakeRedis(hdr, bit_depth)
+    c.redis_controller = FakeRedis(hdr, bit_depth, recording)
     c.iso_steps = list(SHIPPED_STEPS if steps is None else steps)
     c.iso_lock = False
     c.parameters_lock_obj = _Lock()
@@ -222,6 +224,51 @@ class ClearHdrIsoCeilingTests(unittest.TestCase):
             c = controller(hdr="0", omit_key=True, bit_depth=depth)
             self.assertIsNone(c._clearhdr_iso_ceiling())
             self.assertEqual(c.effective_iso_steps(), SHIPPED_STEPS)
+
+    # ── ISO is frozen for the length of a ClearHDR take ──────────────────
+    #
+    # cinepi-raw latches a measured WhiteLevel on the take's first frame, and
+    # the sensor's clamp moves with analogue gain -- the wrong way round from
+    # what people expect. More gain means a LOWER ceiling, so lowering ISO
+    # mid-take raises the real clamp ABOVE the WhiteLevel already written and
+    # every converter crushes the band between them to flat white.
+
+    def test_iso_is_held_while_recording_in_clearhdr(self):
+        c = controller(recording="1")
+        c.set_iso(400)
+        self.assertIsNone(c.redis_controller.get_value(ParameterKey.ISO.value))
+        self.assertEqual(c.redis_controller.sets, [])
+
+    def test_the_held_direction_is_both(self):
+        """Lowering ISO is the destructive one, but the control is held both
+        ways: a knob that moves up and not down would teach the opposite of
+        the truth."""
+        for value in (100, 3200):
+            c = controller(recording="1")
+            c.set_iso(value)
+            self.assertIsNone(c.redis_controller.get_value(ParameterKey.ISO.value),
+                              f"iso {value} should have been held")
+
+    def test_recording_in_sdr_is_not_held(self):
+        """Nothing latches a measured WhiteLevel in SDR, so there is nothing
+        to protect and no reason to take the control away."""
+        c = controller(hdr="0", recording="1")
+        c.set_iso(3200)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 3200)
+
+    def test_not_recording_in_clearhdr_is_not_held(self):
+        c = controller(recording="0")
+        c.set_iso(400)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 400)
+
+    def test_lifting_the_cap_does_not_lift_the_recording_hold(self):
+        """`iso_max: null` is a choice about how much highlight range to
+        trade for sensitivity. It is not consent to destroy the highlights of
+        a take already in progress, so the two are gated separately."""
+        c = controller(iso_max=None, recording="1")
+        self.assertIsNone(c._clearhdr_iso_ceiling())      # cap really is lifted
+        c.set_iso(3200)
+        self.assertIsNone(c.redis_controller.get_value(ParameterKey.ISO.value))
 
     def test_iso_lock_still_wins(self):
         """The cap must not become a way round the lock."""

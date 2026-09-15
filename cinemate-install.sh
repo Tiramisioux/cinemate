@@ -1029,7 +1029,11 @@ resolve_sensor_overlay() {
 }
 
 configure_boot_config() {
-    local config_txt=/boot/firmware/config.txt
+    # Overridable so scripts/make-release-image.sh can render the stock block
+    # to a scratch path and diff it, rather than keeping its own copy of this
+    # file's contents -- a second copy is exactly the kind of duplicated truth
+    # that drifts. An install never sets it and gets /boot/firmware/config.txt.
+    local config_txt="${CONFIG_TXT_PATH:-/boot/firmware/config.txt}"
     local temp
 
     resolve_sensor_overlay "$CAM_PORT"
@@ -2107,4 +2111,9 @@ main() {
     fi
 }
 
-main "$@"
+# Guarded so this file can be sourced as a library of installer functions
+# without running an install. scripts/make-release-image.sh sources it to call
+# configure_boot_config() -- the single definition of "the stock config.txt".
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

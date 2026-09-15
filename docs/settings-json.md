@@ -536,7 +536,9 @@ This section writes no keys of its own. It applies what the rest of the page sav
 
 <a id="https"></a>
 
-Edit these by hand, or leave them at the defaults.
+Edit these by hand, or leave them at the defaults. A save from the settings editor merges over the
+file rather than replacing it, so these keep whatever you set — see
+[Save & restart](settings-editor.md#save-restart).
 
 | Key | What it does |
 |---|---|
@@ -548,6 +550,7 @@ Edit these by hand, or leave them at the defaults.
 | `system.storage.recognized_ssds` | Recognised SSD identifiers. Empty by default. |
 | `sensors.raw_buffer_count` | Frames `cinepi-raw` buffers in RAM against write bursts. Leave at `0`; the active storage profile sets the depth. |
 | `sensors.cam1.camera_name` · `override_camera_name` · `geometry.horizontal_flip` · `geometry.vertical_flip` | Camera 1 has fewer page fields than Camera 0; set these by hand for a second sensor. |
+| `input_peripherals.pots` | Grove HAT analogue pots: one `{channel, setting}` entry each. The **Grove HAT potentiometers** pane on the settings editor is a mock-up — it neither reads nor writes this key, so its channel menus are not what the camera is using. |
 | `arrays.hdr_threshold_low` · `hdr_threshold_high` · `hdr_blend` · `hdr_gain_adder` | Click-stop tables (`steps`, `free`, `free_increment`) a pot or encoder steps through. Startup values: [Resolution & sensor](#resolution-sensor). |
 | `arrays.shutter_a.sync_increment` | Granularity in shutter-angle sync mode only. Default `0.1`°, independent of the shutter angle's own free increment. |
 | `image_capture.hdr.self_heal` | Auto-recovery for the flat-pedestal ClearHDR startup defect. Off by default, [details](clear-hdr.md#flat-black-pedestal-frames). |

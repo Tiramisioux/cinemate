@@ -519,6 +519,62 @@ def _backup_settings(dest: Path) -> Path | None:
     return target
 
 
+# Subtrees the page builds in full, where a member the payload does not
+# mention has been deleted rather than left out: image_capture.custom_modes is
+# keyed by camera and drops a camera whose overrides are all gone, and the quad
+# rotary's encoders object drops an encoder set back to "none". Merging those
+# would resurrect what the operator just removed, so they are taken as sent.
+EDITOR_OWNED_SUBTREES = frozenset({
+    ("image_capture", "custom_modes"),
+    ("input_peripherals", "quad_rotary_controller", "encoders"),
+})
+
+
+def _settings_on_disk(dest: Path) -> dict:
+    """The live settings.jsonc as written, with no defaults applied.
+
+    Returns {} when there is nothing to merge over -- a first write, or a file
+    the operator has already broken. Either way the payload stands alone, and
+    _backup_settings() has kept whatever text was there.
+    """
+    try:
+        parsed = json.loads(strip_jsonc(dest.read_text(encoding="utf-8")))
+    except (OSError, ValueError) as exc:
+        logger.info("Saving %s without merging over the old file (%s)", dest, exc)
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _merge_saved_settings(existing: dict, payload: dict, path: tuple = ()) -> dict:
+    """Overlay *payload* on *existing*, keeping keys the payload never mentions.
+
+    The editor's buildState() walks document.querySelectorAll('[data-path]')
+    and builds the object it saves from exactly those elements, so a
+    settings.jsonc key with no control on the page was simply absent from the
+    save and _apply_settings_defaults() decided it instead -- the operator's
+    value replaced by the stock one, or by whatever a missing key means. That
+    is how a camera lost image_capture.hdr.imx585_clear_hdr_12bit on
+    2026-09-15 and had 12-bit ClearHDR switched back on underneath it.
+
+    A page is a view of the file, not the file. So the payload defines the
+    values it carries and the rest of the file stays as it was. Dicts merge
+    recursively; lists and scalars are replaced whole, because a chip removed
+    from a steps list or a pin removed from rec_out_pin has to disappear. The
+    page still owns EDITOR_OWNED_SUBTREES outright.
+    """
+    if path in EDITOR_OWNED_SUBTREES:
+        return payload
+    if not isinstance(existing, dict) or not isinstance(payload, dict):
+        return payload
+    merged = dict(existing)
+    for key, value in payload.items():
+        merged[key] = (
+            _merge_saved_settings(merged[key], value, path + (key,))
+            if key in merged else value
+        )
+    return merged
+
+
 def _render_settings(dest: Path, settings: dict) -> tuple[str, bool]:
     """Produce the text to write, keeping the file's comments where possible.
 
@@ -556,13 +612,15 @@ def put_settings():
     if not isinstance(body, dict):
         return jsonify({"ok": False, "message": "Request body must be a JSON object"}), 400
 
+    dest = Path(SETTINGS_FILE)
     try:
-        settings = _apply_settings_defaults(body)
+        settings = _apply_settings_defaults(
+            _merge_saved_settings(_settings_on_disk(dest), body)
+        )
     except Exception as exc:  # pragma: no cover - defensive, mirrors load_settings' own catch-all
         logger.exception("Rejected settings save: failed to normalize payload")
         return jsonify({"ok": False, "message": f"Invalid settings payload: {exc}"}), 400
 
-    dest = Path(SETTINGS_FILE)
     backup = _backup_settings(dest)
     text, comments_kept = _render_settings(dest, settings)
     try:

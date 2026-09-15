@@ -3263,11 +3263,32 @@
       entry.button = buildButtonLikeObject(prefix);
       encoders[sel.value] = entry;
     });
-    return { enabled: true, encoders: encoders };
+    /* `enabled` has no control on this page, so it is carried through rather
+       than invented: hardcoding true here turned an operator's explicit
+       "enabled": false back on with the first unrelated save, and the board
+       is not always fitted. Absent from the file it stays true, which is what
+       it has always defaulted to. */
+    var prev = (lastLoadedSettings && lastLoadedSettings.input_peripherals
+      && lastLoadedSettings.input_peripherals.quad_rotary_controller) || {};
+    return { enabled: prev.enabled === undefined ? true : prev.enabled, encoders: encoders };
   }
 
   function buildState(){
-    var state = {};
+    /* Start from the settings this page was last loaded with, not from an
+       empty object. The walk below only knows the keys that have a control,
+       so every other key in settings.jsonc -- input_peripherals.pots, the
+       arrays.hdr_* blocks, image_capture.hdr.iso_max, $schema -- used to be
+       absent from the payload, and config_loader's setdefault then decided
+       it. That is how a camera lost image_capture.hdr.imx585_clear_hdr_12bit
+       and had 12-bit ClearHDR switched back on underneath the operator.
+       The server merges the payload over the live file as well (see
+       _merge_saved_settings in settings_editor.py), which is what protects a
+       save posted from a stale page or by anything that is not this page.
+       Doing it here too is what makes Upload and "revert to defaults" mean
+       the whole file: both replace lastLoadedSettings with the file the
+       operator chose, so its unrendered keys travel with the save instead of
+       silently keeping the live camera's. */
+    var state = lastLoadedSettings ? JSON.parse(JSON.stringify(lastLoadedSettings)) : {};
     document.querySelectorAll('[data-path]').forEach(function(el){
       setPath(state, el.getAttribute('data-path'), readControlValue(el));
     });

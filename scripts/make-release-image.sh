@@ -164,6 +164,21 @@ ri_as_pi() { sudo -u "$PI_USER" -- "$@"; }
 
 ri_rev() { ri_as_pi git -C "$1" rev-parse HEAD 2>/dev/null || printf 'unknown'; }
 
+# Owner and mode of a file. GNU stat first (the Pi), BSD second so the test
+# suite can exercise this code on a Mac rather than stubbing past it, and a
+# caller-supplied default last -- failing to read a mode is not a reason to
+# abandon a release.
+ri_owner() {
+    stat -c '%U:%G' "$1" 2>/dev/null \
+        || stat -f '%Su:%Sg' "$1" 2>/dev/null \
+        || printf '%s' "$2"
+}
+ri_mode() {
+    stat -c '%a' "$1" 2>/dev/null \
+        || stat -f '%Lp' "$1" 2>/dev/null \
+        || printf '%s' "$2"
+}
+
 # ── Stash ────────────────────────────────────────────────────────────────────
 RI_STASH_DIR="$IMAGE_DEST_DIR/.cinemate-release-image"
 RI_STATE="$RI_STASH_DIR/state.env"
@@ -178,6 +193,8 @@ ri_restore() {
     ri_step "Restoring your configuration"
 
     local RI_CINEMATE_WAS_ACTIVE=0
+    local RI_SETTINGS_OWNER="$PI_USER:$PI_GROUP" RI_SETTINGS_MODE=644
+    local RI_CONFIG_OWNER="root:root" RI_CONFIG_MODE=644
     # shellcheck source=/dev/null
     source "$RI_STATE"
 
@@ -191,7 +208,8 @@ ri_restore() {
 
     if [[ -f "$RI_STASH_DIR/settings.jsonc" ]]; then
         ri_detail "settings.jsonc -> $CINEMATE_DIR/settings.jsonc"
-        install -o "$PI_USER" -g "$PI_GROUP" -m 644 \
+        install -o "${RI_SETTINGS_OWNER%%:*}" -g "${RI_SETTINGS_OWNER##*:}" \
+            -m "$RI_SETTINGS_MODE" \
             "$RI_STASH_DIR/settings.jsonc" "$CINEMATE_DIR/settings.jsonc" || {
             ri_warn "Could not restore settings.jsonc -- your copy is still at $RI_STASH_DIR/settings.jsonc"
             ri_failed=1
@@ -200,7 +218,8 @@ ri_restore() {
 
     if [[ -f "$RI_STASH_DIR/config.txt" ]]; then
         ri_detail "config.txt -> $BOOT_CONFIG"
-        install -m 644 "$RI_STASH_DIR/config.txt" "$BOOT_CONFIG" || {
+        install -o "${RI_CONFIG_OWNER%%:*}" -g "${RI_CONFIG_OWNER##*:}" \
+            -m "$RI_CONFIG_MODE" "$RI_STASH_DIR/config.txt" "$BOOT_CONFIG" || {
             ri_warn "Could not restore config.txt -- your copy is still at $RI_STASH_DIR/config.txt"
             ri_failed=1
         }
@@ -294,16 +313,43 @@ fi
 # ── Capture, then swap ───────────────────────────────────────────────────────
 ri_step "Saving your configuration to $RI_STASH_DIR"
 mkdir -p "$RI_STASH_DIR"
-chmod 700 "$RI_STASH_DIR"
+# The stash holds the operator's settings.jsonc, hotspot password included, so
+# it wants to be private. On a filesystem with no permission bits (the exFAT
+# case above) chmod cannot deliver that -- say so once and carry on rather than
+# failing the release over the mode of a directory that is deleted at the end.
+chmod 700 "$RI_STASH_DIR" 2>/dev/null || \
+    ri_warn "$IMAGE_DEST_DIR has no permission bits, so $RI_STASH_DIR cannot be made private. It is removed when the run finishes."
 
 RI_CINEMATE_WAS_ACTIVE=0
 if ri_is_true "$STOP_CINEMATE" && systemctl is-active --quiet cinemate-autostart; then
     RI_CINEMATE_WAS_ACTIVE=1
 fi
 
-cp -a "$CINEMATE_DIR/settings.jsonc" "$RI_STASH_DIR/settings.jsonc"
-cp -a "$BOOT_CONFIG" "$RI_STASH_DIR/config.txt"
-printf 'RI_CINEMATE_WAS_ACTIVE=%q\n' "$RI_CINEMATE_WAS_ACTIVE" > "$RI_STATE"
+# Plain cp, not `cp -a`. The stash lives on the destination volume, and on the
+# Pi that is an exFAT SSD with no concept of ownership -- `cp -a` there fails
+# outright ("failed to preserve ownership", confirmed on hardware 2026-09-15),
+# taking the whole run with it before a single byte was imaged.
+#
+# Preserving attributes on the stash copy was never the point anyway: what has
+# to survive is the attributes of the ORIGINALS, so record those and reapply
+# them on the way back. That also drops this script's previous assumption that
+# config.txt is 644 root:root and settings.jsonc 644 pi:pi -- it now restores
+# whatever was actually there.
+# state.env is written FIRST, before either copy. It is the marker the next
+# run looks for, so writing it last would make a crash mid-stash invisible --
+# a stash directory holding the operator's files that nothing would ever
+# replay. Restoring a file the state names but the stash does not hold is
+# already a no-op, so the early write costs nothing.
+{
+    printf 'RI_CINEMATE_WAS_ACTIVE=%q\n' "$RI_CINEMATE_WAS_ACTIVE"
+    printf 'RI_SETTINGS_OWNER=%q\n' "$(ri_owner "$CINEMATE_DIR/settings.jsonc" "$PI_USER:$PI_GROUP")"
+    printf 'RI_SETTINGS_MODE=%q\n'  "$(ri_mode  "$CINEMATE_DIR/settings.jsonc" 644)"
+    printf 'RI_CONFIG_OWNER=%q\n'   "$(ri_owner "$BOOT_CONFIG" "root:root")"
+    printf 'RI_CONFIG_MODE=%q\n'    "$(ri_mode  "$BOOT_CONFIG" 644)"
+} > "$RI_STATE"
+
+cp "$CINEMATE_DIR/settings.jsonc" "$RI_STASH_DIR/settings.jsonc"
+cp "$BOOT_CONFIG" "$RI_STASH_DIR/config.txt"
 
 # Armed as soon as anything is stashed: from here every exit path restores.
 # INT/TERM exit explicitly -- a bare handler would return and let the script
@@ -334,9 +380,16 @@ fi
 # (imx477 on cam0) unless the environment overrides them: that is what a
 # release ships with.
 ri_detail "config.txt -> stock block from cinemate-install.sh ($SENSOR_MODEL on $CAM_PORT)"
-BACKUP_DIR="$RI_STASH_DIR/installer-backup"
-mkdir -p "$BACKUP_DIR"
+
+# configure_boot_config() calls the installer's backup_file(), which is another
+# `cp -a` -- so BACKUP_DIR cannot live on the destination volume either, for
+# the same exFAT reason as the stash. It goes to a scratch directory instead,
+# removed immediately so it is not sitting on the card when dd reads it. The
+# stash already holds a byte-for-byte copy of config.txt, so this backup is
+# redundant; it exists only because the installer's function insists on one.
+BACKUP_DIR="$(mktemp -d)"
 CONFIG_TXT_PATH="$BOOT_CONFIG" configure_boot_config
+rm -rf "$BACKUP_DIR"
 
 # ── Image ────────────────────────────────────────────────────────────────────
 RI_TS="$(date +%F_%H-%M-%S)"

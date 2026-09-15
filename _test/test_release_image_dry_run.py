@@ -101,6 +101,39 @@ STUBS = {
     "numfmt": '#!/bin/sh\nfor a in "$@"; do last="$a"; done\necho "$last"\n',
     "df": "#!/bin/sh\necho Avail\necho 200000000000\n",
     "systemctl": "#!/bin/sh\nexit 1\n",
+    # exFAT has no ownership, so `cp -a` onto /media/RAW fails outright --
+    # confirmed on the Pi, 2026-09-15. Reproduce that here so the script can
+    # never quietly go back to preserving attributes it cannot preserve.
+    # Only onto the destination volume -- the rest of the Pi is ext4 and copes
+    # with -a perfectly well. A stub that failed everywhere would model a
+    # machine that does not exist and hide where the real boundary is.
+    "cp": (
+        "#!/bin/sh\n"
+        "preserve=0; ondest=0\n"
+        'for a in "$@"; do\n'
+        '  case "$a" in\n'
+        "    -a|-p|--preserve*|--archive) preserve=1 ;;\n"
+        '    "$RI_TEST_DEST"*) ondest=1 ;;\n'
+        "  esac\n"
+        "done\n"
+        'if [ "$preserve" = 1 ] && [ "$ondest" = 1 ]; then\n'
+        '  echo "cp: failed to preserve ownership: Operation not permitted" >&2\n'
+        "  exit 1\n"
+        "fi\n"
+        'exec /bin/cp "$@"\n'
+    ),
+    # chmod on a filesystem with no permission bits, likewise scoped.
+    "chmod": (
+        "#!/bin/sh\n"
+        'for a in "$@"; do\n'
+        '  case "$a" in\n'
+        '    "$RI_TEST_DEST"*)\n'
+        '      echo "chmod: Operation not permitted" >&2\n'
+        "      exit 1 ;;\n"
+        "  esac\n"
+        "done\n"
+        'exec /bin/chmod "$@"\n'
+    ),
     # dd: write a small stand-in "card image" at of=<path>.
     "dd": (
         "#!/bin/sh\n"
@@ -163,6 +196,11 @@ class TestReleaseImageDryRun(unittest.TestCase):
 
         self.boot_config = self.tmp / "config.txt"
         self.boot_config.write_text(OPERATOR_CONFIG)
+
+        # Deliberately not 644: the script used to hardcode that on restore,
+        # which silently changed the mode of whatever was actually there.
+        self.settings.chmod(0o640)
+        self.boot_config.chmod(0o600)
 
         self.dest = self.tmp / "RAW"
         self.dest.mkdir()
@@ -258,7 +296,17 @@ class TestReleaseImageDryRun(unittest.TestCase):
         stash.mkdir()
         (stash / "settings.jsonc").write_text(OPERATOR_SETTINGS)
         (stash / "config.txt").write_text(OPERATOR_CONFIG)
-        (stash / "state.env").write_text("RI_CINEMATE_WAS_ACTIVE=0\n")
+        # Exactly what a real run writes, so the restore path is exercised as
+        # it would be rather than falling back to defaults.
+        owner = f"{grp.getgrgid(os.getgid()).gr_name}"
+        user = os.environ.get("USER", "runner")
+        (stash / "state.env").write_text(
+            "RI_CINEMATE_WAS_ACTIVE=0\n"
+            f"RI_SETTINGS_OWNER={user}:{owner}\n"
+            "RI_SETTINGS_MODE=640\n"
+            f"RI_CONFIG_OWNER={user}:{owner}\n"
+            "RI_CONFIG_MODE=600\n"
+        )
 
         self.settings.write_text(TRACKED_SETTINGS)
         self.boot_config.write_text("# stock, mid-release\n")
@@ -318,6 +366,34 @@ class TestReleaseImageDryRun(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         for marker in ("__RELEASE_IMAGE__=", "__RELEASE_MANIFEST__="):
             self.assertIn(marker, result.stdout)
+
+    def test_restore_reproduces_the_original_modes(self):
+        # The stash lives on a filesystem that may carry no attributes at all,
+        # so the attributes have to be recorded and reapplied, not inherited
+        # from the copy.
+        result = self.run_script("--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            oct(self.settings.stat().st_mode & 0o777), oct(0o640),
+            "settings.jsonc came back with a different mode than it had",
+        )
+        self.assertEqual(
+            oct(self.boot_config.stat().st_mode & 0o777), oct(0o600),
+            "config.txt came back with a different mode than it had",
+        )
+
+    def test_it_survives_a_destination_with_no_ownership_or_permissions(self):
+        # cp and chmod are stubbed to fail the way exFAT does. The run must
+        # still complete and still put both files back.
+        result = self.run_script("--dry-run")
+        self.assertEqual(
+            result.returncode, 0,
+            f"a destination without permission bits broke the run\n"
+            f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}",
+        )
+        self.assertIn("has no permission bits", result.stderr)
+        self.assertEqual(self.settings.read_text(), OPERATOR_SETTINGS)
+        self.assertEqual(self.boot_config.read_text(), OPERATOR_CONFIG)
 
 if __name__ == "__main__":
     unittest.main()

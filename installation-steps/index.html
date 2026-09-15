@@ -868,7 +868,15 @@ redis-cli<span class="w"> </span>SETNX<span class="w"> </span>sensor_mode<span c
 <span class="nb">alias</span><span class="w"> </span><span class="nv">editboot</span><span class="o">=</span><span class="s1">'sudo nano /boot/firmware/config.txt'</span>
 <span class="nb">alias</span><span class="w"> </span><span class="nv">editcmdline</span><span class="o">=</span><span class="s1">'sudo nano /boot/firmware/cmdline.txt'</span>
 <span class="nb">alias</span><span class="w"> </span><span class="nv">editsettings</span><span class="o">=</span><span class="s1">'sudo nano /home/pi/cinemate/settings.jsonc'</span>
+<span class="nb">alias</span><span class="w"> </span>make-release-image<span class="o">=</span><span class="s1">'sudo /home/pi/cinemate/scripts/make-release-image.sh'</span>
 </code></pre></div>
+<p><code>make-release-image</code> is a maintainer tool, not part of using the camera. It builds a
+distributable image: it puts <code>settings.jsonc</code> and <code>config.txt</code> back to their stock
+values, images the card the way <a href="../backing-up-sd-card/">Backing up the SD card</a>
+describes, and then restores both files as they were — so the image does not ship
+with one operator's sensor, hotspot and GPIO setup baked in. <code>make-release-image
+--help</code> lists the options, and <code>--dry-run</code> does the swap and restore without the
+hour of imaging.</p>
 <p>Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.</p>
 <p>Reload .bashrc</p>
 <div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>~/.bashrc

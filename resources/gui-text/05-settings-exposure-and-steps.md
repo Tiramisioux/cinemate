@@ -85,12 +85,12 @@ Show the sensor's non‑HDR modes on the resolution control.
 ### Enable IMX585 ClearHDR 16‑bit
 <!-- key: card.image_capture.hdr.imx585_clear_hdr_16bit -->
 
-The sensor's single‑frame HDR, delivered linear with no compander in the path. **Resolutions** above decides which sizes you get — 4K (3840×2200), HD (1920×1100, binned), or both. **ISO is capped at 1585.** The driver stops raising analogue gain at code 80, which the ISO steps reach at about 1585, so past it the recording does not get brighter — only the preview does, via ISP digital gain, which would have you judging exposure off light the file never received. The 1600 step stays selectable and lands on 1585, shown green; 2500 and 3200 are dropped. Blown highlights still render pink in the preview and the DNG thumbnail — the recorded DNG no longer does, since its WhiteLevel is now measured per take. Turn 2K off in Resolutions to be offered 4K only.
+The sensor's single‑frame HDR, linear, no compander in the path. **Resolutions** above decides the sizes. **ISO is capped at 1585.**
 
 ### Enable IMX585 ClearHDR 12‑bit
 <!-- key: card.image_capture.hdr.imx585_clear_hdr_12bit -->
 
-The companded ClearHDR capture — cinepi‑raw applies the CCMP decompand. **Resolutions** above decides which sizes you get, the same as for 16‑bit. **ISO is capped at 799 here — a full stop lower than 16‑bit's 1585, and for a different reason.** The sensor only combines its high‑ and low‑gain reads while GAIN + EXP_GAIN stays inside 9.6–29.1 dB, and ClearHDR's +12 dB gain adder puts that limit at gain code 57: ISO 799 is the last step inside the window, 800 the first outside. Past it the merge collapses and this mode returns *less* highlight range than SDR while still paying the compander for it. The 800 step stays selectable and lands on 799, shown green; everything above is dropped. Off by default for the same reason.
+The companded ClearHDR capture — cinepi‑raw applies the CCMP decompand. **Resolutions** above decides the sizes, as for 16‑bit. **ISO is capped at 799.** Off by default.
 
 ### ClearHDR startup knobs
 <!-- key: card.image_capture.hdr.threshold_low -->

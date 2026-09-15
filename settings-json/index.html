@@ -639,8 +639,12 @@ imx585 ClearHDR.</p>
 <td>Shows the sensor's non-HDR modes alongside ClearHDR. Default on; off leaves only ClearHDR.</td>
 </tr>
 <tr>
-<td>Expose 16-bit ClearHDR modes</td>
-<td>Offers the linear ClearHDR capture, with no compander in the path. Default on. Turn both off to keep the sensor SDR-only.</td>
+<td>Enable IMX585 ClearHDR 16-bit</td>
+<td>Offers the linear ClearHDR capture, with no compander in the path. Default on.</td>
+</tr>
+<tr>
+<td>Enable IMX585 ClearHDR 12-bit</td>
+<td>Offers the companded ClearHDR capture, which cinepi-raw decompands (CCMP). Default off — above analogue gain code ~60 (about ISO 800) the sensor's merge stops reaching the top of the container, so highlight range collapses at ordinary shooting ISOs while 16-bit holds across the range. Turn both off to keep the sensor SDR-only.</td>
 </tr>
 <tr>
 <td>ClearHDR startup knobs</td>
@@ -673,9 +677,22 @@ imx585 ClearHDR.</p>
 <p>Both blank keeps the driver's own pair. Setting the two to the same value clamps every HDR frame near black. Never set just one of the pair.</p>
 </div>
 <div class="admonition note">
+<p class="admonition-title">The two ClearHDR switches choose captures, not frame sizes</p>
+<p>Each switch says whether that ClearHDR <em>capture</em> exists. <strong>Resolutions offered</strong> then says
+at which frame sizes, for ClearHDR exactly as it does for SDR: with <code>2</code> and <code>4</code> both on,
+16-bit ClearHDR gives you HD (1920×1100, binned) and 4K (3840×2200); turn <code>2</code> off and you
+are offered 4K only.</p>
+<p>There used to be a third switch, <code>imx585_clear_hdr_16bit_hd</code>, for the binned 16-bit mode on
+its own. It gated every binned ClearHDR mode regardless of bit depth, so turning it on for
+16-bit HD also handed back 12-bit HD. It was removed in favour of the two switches plus
+<strong>Resolutions offered</strong>.</p>
+</div>
+<div class="admonition note">
 <p class="admonition-title">Why the ClearHDR depths are not just Bit depths offered</p>
 <p><strong>Bit depths offered</strong> is global: it applies to every mode. On an IMX585 every SDR mode is
-The two switches above ask the other question — which ClearHDR <em>captures</em> to offer — and</p>
+12-bit, so turning <code>12</code> off there to drop 12-bit ClearHDR would empty the sensor of SDR
+modes as well. The two switches above ask the other question — which ClearHDR <em>captures</em>
+to offer — and only they can tell 12-bit ClearHDR from 12-bit SDR.</p>
 <p>A <code>settings.jsonc</code> written before the split carries a single <code>imx585_clear_hdr</code>. It is
 still honoured, as the default for both: one that turned ClearHDR off keeps both depths
 off.</p>
@@ -1094,7 +1111,9 @@ it is hidden on Boot config, where Save changes enables on any edit.</p>
 <code>settings.jsonc</code>.</p>
 <h2 id="settings-with-no-field-on-this-page">Settings with no field on this page<a class="headerlink" href="#settings-with-no-field-on-this-page" title="Permanent link">#</a></h2>
 <p><a id="https"></a></p>
-<p>Edit these by hand, or leave them at the defaults.</p>
+<p>Edit these by hand, or leave them at the defaults. A save from the settings editor merges over the
+file rather than replacing it, so these keep whatever you set — see
+<a href="../settings-editor/#save-restart">Save &amp; restart</a>.</p>
 <table>
 <thead>
 <tr>
@@ -1134,6 +1153,10 @@ it is hidden on Boot config, where Save changes enables on any edit.</p>
 <tr>
 <td><code>sensors.cam1.camera_name</code> · <code>override_camera_name</code> · <code>geometry.horizontal_flip</code> · <code>geometry.vertical_flip</code></td>
 <td>Camera 1 has fewer page fields than Camera 0; set these by hand for a second sensor.</td>
+</tr>
+<tr>
+<td><code>input_peripherals.pots</code></td>
+<td>Grove HAT analogue pots: one <code>{channel, setting}</code> entry each. The <strong>Grove HAT potentiometers</strong> pane on the settings editor is a mock-up — it neither reads nor writes this key, so its channel menus are not what the camera is using.</td>
 </tr>
 <tr>
 <td><code>arrays.hdr_threshold_low</code> · <code>hdr_threshold_high</code> · <code>hdr_blend</code> · <code>hdr_gain_adder</code></td>

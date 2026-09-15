@@ -3,8 +3,8 @@
 ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-gain (HG) and a low-gain (LG) readout internally and outputs one 16-bit linear Bayer frame. CineMate records it as true 16-bit CinemaDNGs — BlackLevel 3200, WhiteLevel 65535.
 
 - Frame rates are lower than the plain modes. Per-mode figures are on the [sensors page](sensors.md#imx585-starlight-eye), measured at 1039.5 MHz with the stock and overclocked pixel-rate ceilings side by side; the [changelog](changelog.md#imx585-driver) is where those measurements were first recorded.
-- Analogue gain caps at code 80 ≈ 15.8× (ISO 1580), which is why CineMate caps ClearHDR ISO — see
-  [ISO is capped at 1585](#iso-is-capped-at-1585).
+- CineMate caps ClearHDR ISO, at a different value per depth — **799** in 12-bit, **1585** in
+  16-bit. See [ISO is capped, and not at the same place](#iso-is-capped-and-not-at-the-same-place).
 - Each 3840×2200 16-bit DNG is ≈ 16.9 MB.
 - Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.
 - Highlights near the HG→LG hand-off can render magenta in flat greys. This is sensor-side merge
@@ -38,20 +38,38 @@ the whole range. The 12-bit modes also carry the compander and a full-frame CPU 
 re-render. Every line of code that serves them is still here — turn the switch on to get them
 back.
 
-!!! note "Pink highlights in the binned (HD) ClearHDR modes"
+!!! note "Pink highlights: fixed in the DNG, still present in the preview"
 
-    In the binned modes, blown highlights render pink in the HDMI/web preview and in the
-    embedded DNG thumbnail: CineMate ships without the preview-side correction for the sensor's
-    HG/LG merge clamp. **The recorded DNG is unaffected.** Drop `2` from **Resolutions offered**
-    if you would rather not be offered them.
+    Where the merge clamps, the colour channels converge on one code well below the container's
+    top. With WhiteLevel declared at the container's full scale, no converter saw a clipped
+    pixel, white balance drove red and blue past white while green stayed short, and the
+    highlight rendered magenta — in the **recorded DNG**, not only the preview.
 
-## ISO is capped at 1585
+    **The DNG is now correct.** cinepi-raw measures where the data actually stops on each take's
+    first frame and writes that as WhiteLevel, so blown highlights render neutral white.
+    Confirmed on hardware 2026-09-15 in all four ClearHDR modes; see
+    `cinemate-handbook/lessons/hardware-log.md`.
 
-In a ClearHDR mode CineMate stops offering ISO above **1585**. SDR modes are never capped.
+    **The HDMI/web preview and the embedded DNG thumbnail still render pink.** They are a
+    separate path that does not read the tag, and CineMate ships without the preview-side
+    correction. The effect is strongest in the binned (HD) modes, whose clamp sits lowest —
+    54.8% of the container against 83-89% at full res.
 
-**Why.** The driver caps analogue gain in ClearHDR at code 80 (`IMX585_ANA_GAIN_MAX_HDR`), and
-CineMate's ISO steps reach that code at about ISO 1585. Measured on the camera, reading the
-driver's own `ANALOG_GAIN` log lines in 16-bit ClearHDR:
+## ISO is capped, and not at the same place
+
+In a ClearHDR mode CineMate stops offering ISO above a ceiling that depends on the **sensor's**
+bit depth, not on the depth the file is stored at:
+
+| ClearHDR mode | cap | what stops |
+|---|---|---|
+| **12-bit** (CCMP) | **799** | the sensor stops *combining* — the mode stops being HDR |
+| **16-bit** | **1585** | the sensor stops *amplifying* — the recording stops getting brighter |
+
+SDR modes are never capped, at either depth.
+
+**Why 1585 in 16-bit.** The driver caps analogue gain in ClearHDR at code 80
+(`IMX585_ANA_GAIN_MAX_HDR`), and CineMate's ISO steps reach that code at about ISO 1585.
+Measured on the camera, reading the driver's own `ANALOG_GAIN` log lines:
 
 | ISO | 800 | 1600 | 2500 | 3200 |
 |---|---|---|---|---|
@@ -62,12 +80,31 @@ preview: libcamera's AGC makes up the shortfall as ISP digital gain on the displ
 monitor brightens while the DNG does not. Judging exposure off that monitor would have you
 believe in light the file never received, which is worse than a control that simply stops.
 
-**What you see.** The 1600 step stays selectable and lands on 1585, with ISO shown **green** in
-both the HDMI overlay and the web GUI — the same tint they already use for a shutter angle that
-sync mode is driving, meaning "the camera is holding this, not you". 2500 and 3200 are dropped.
+**Why 799 in 12-bit — a full stop lower, and a different failure.** The sensor only performs
+built-in combination while `9.6dB ≤ GAIN + EXP_GAIN ≤ 29.1dB` (`imx585.c` line 167). ClearHDR's
+default `EXP_GAIN` is +12 dB, which caps analogue gain at 17.1 dB — code 57:
 
-**Lifting it.** `image_capture.hdr.iso_max` takes any ISO, or `null` to remove the cap. Nothing
-stops you shooting at 3200; you simply get the 1585 recording with a brighter preview.
+| ISO | 640 | 700 | 799 | 800 | 900 | 1000 |
+|---|---|---|---|---|---|---|
+| analogue gain code | 51 | 56 | 56 | **60** | 63 | 66 |
+
+ISO 799 is the last step inside the window; 800 is the first outside it. Past it the HG/LG merge
+collapses — the measured ceiling falls to 3188 of 4095 at gain code 71 and 2408 at code 80 — so
+12-bit ClearHDR hands back **less** highlight range than the SDR mode would have, while still
+paying the compander and the full-frame CPU preview re-render for it. Lowering `EXP_GAIN` to stay
+inside the window does not rescue it: that removes the HG/LG ratio, and with no ratio there is
+nothing to merge (adder 0 at gain code 80 measures a ceiling of 1452 — worse again).
+
+**What you see.** The first step above the cap stays selectable and lands *on* the cap — 800 →
+799 in 12-bit, 1600 → 1585 in 16-bit — with ISO shown **green** in both the HDMI overlay and the
+web GUI, the same tint they already use for a shutter angle that sync mode is driving, meaning
+"the camera is holding this, not you". Steps beyond that one are dropped. Keeping the first one
+matters: withholding every step above the cap would strand 12-bit at ISO 640 and throw away a
+third of a stop the sensor really does deliver, since 700 and 799 both sit on code 56.
+
+**Lifting it.** `image_capture.hdr.iso_max` takes any ISO, or `null` to remove the cap. It stays
+a single override for both depths: an operator who writes a ceiling gets that ceiling, whichever
+mode is engaged, rather than the camera quietly substituting a number they never wrote.
 
 ## Live knobs
 

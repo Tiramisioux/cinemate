@@ -2666,26 +2666,89 @@ class CinePiController:
     # (2500, 3200) are genuinely meaningless and are dropped.
     #
     # SDR is never capped: the gain ceiling is a ClearHDR combination limit.
-    CLEARHDR_ISO_MAX_DEFAULT = 1585
+    #
+    # ── TWO CEILINGS, BECAUSE THERE ARE TWO DIFFERENT LIMITS ─────────────────
+    #
+    # The 1585 above is the 16-bit story: the driver's own analogue-gain cap.
+    # The 12-bit ClearHDR modes hit a DIFFERENT and much lower wall first, and
+    # capping both at 1585 leaves 12-bit running a full stop past the point
+    # where it stops being an HDR mode at all.
+    #
+    #   12-bit (CCMP): imx585.c line 167 documents the sensor's own constraint
+    #   for built-in combination, 9.6dB <= GAIN + EXP_GAIN <= 29.1dB. ClearHDR's
+    #   default EXP_GAIN is +12 dB, which caps analogue gain at 17.1 dB -- code
+    #   57. Measured on the rig 2026-09-14 against the driver's ANALOG_GAIN
+    #   journal lines:
+    #
+    #       ISO        640  700  799 | 800  900  1000
+    #       gain code   51   56   56 |  60   63    66
+    #
+    #   ISO 799 is the last value inside the window; 800 is the first outside.
+    #   Past it the HG/LG merge collapses -- measured ceiling falls to 3188 of
+    #   4095 at gain code 71 and 2408 at code 80 -- so ClearHDR returns LESS
+    #   highlight range than the SDR mode would have, while still paying the
+    #   compander and the CPU for it. Lowering EXP_GAIN to stay inside the
+    #   window does not help: it removes the HG/LG ratio, and with no ratio
+    #   there is no HDR (adder 0 at code 80 measured a ceiling of 1452, worse).
+    #
+    #   16-bit: no compander, and the limit is simply IMX585_ANA_GAIN_MAX_HDR
+    #   -- gain code 80, reached at about ISO 1585, as described above.
+    #
+    # Both numbers are measured, neither is derivable from the other, and the
+    # split is by SENSOR bit depth (Redis BIT_DEPTH, the mode's native depth),
+    # not by the log-encode target the file happens to be stored at.
+    CLEARHDR_ISO_MAX_12BIT = 799
+    CLEARHDR_ISO_MAX_16BIT = 1585
+    # Kept as the name the settings fallback and the tests already use; it is
+    # the 16-bit ceiling because that is the one that applies when the depth
+    # cannot be read (see _clearhdr_default_iso_ceiling).
+    CLEARHDR_ISO_MAX_DEFAULT = CLEARHDR_ISO_MAX_16BIT
+
+    def _clearhdr_default_iso_ceiling(self):
+        """The measured ceiling for the ClearHDR family currently engaged.
+
+        Keys on the SENSOR mode's native bit depth from Redis -- the same value
+        _sensor_mode_from_stored_shape() matches on -- because the wall is a
+        property of the sensor's combination path, not of the log-encode target
+        the frames are stored at. A 12-bit ClearHDR mode log-encoded to 10 bits
+        is still a 12-bit ClearHDR mode and still hits code 57.
+
+        An unreadable depth falls back to the 16-bit ceiling, which is what this
+        code did before the split existed. That case means HDR is on with no
+        resolution applied, which set_resolution() makes unreachable in practice
+        -- it writes BIT_DEPTH and HDR together -- so this is a don't-change-
+        behaviour-in-an-impossible-path choice, not a judgement that 1585 is the
+        safer of the two."""
+        try:
+            bit_depth = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value))
+        except (TypeError, ValueError):
+            return self.CLEARHDR_ISO_MAX_16BIT
+        return (self.CLEARHDR_ISO_MAX_12BIT if bit_depth <= 12
+                else self.CLEARHDR_ISO_MAX_16BIT)
 
     def _clearhdr_iso_ceiling(self):
         """Highest usable ISO while a ClearHDR mode is engaged, or None when
         the cap does not apply -- SDR modes, or `iso_max` set to null by an
-        operator who would rather have the range than the highlights."""
+        operator who would rather have the range than the highlights.
+
+        `iso_max` stays a SINGLE override rather than one per bit depth: an
+        operator who sets it is saying "this is my ceiling", and splitting it
+        would mean the camera silently used a number they did not write. The
+        per-family defaults apply only when they have not."""
         hdr_on = str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
         if not hdr_on:
             return None
 
         hdr_cfg = (self.settings.get('image_capture', {}) or {}).get('hdr', {}) or {}
         if 'iso_max' not in hdr_cfg:
-            return self.CLEARHDR_ISO_MAX_DEFAULT
+            return self._clearhdr_default_iso_ceiling()
         ceiling = hdr_cfg.get('iso_max')
         if ceiling is None:
             return None
         try:
             ceiling = int(ceiling)
         except (TypeError, ValueError):
-            return self.CLEARHDR_ISO_MAX_DEFAULT
+            return self._clearhdr_default_iso_ceiling()
         return ceiling if ceiling > 0 else None
 
     def effective_iso_steps(self):
@@ -2735,7 +2798,8 @@ class CinePiController:
                 safe_value = max(min(value, max(steps)), min(steps))
                 ceiling = self._clearhdr_iso_ceiling()
                 if ceiling is not None and safe_value > ceiling:
-                    # The kept step above the cap (800) lands here, on 799.
+                    # The kept step above the cap lands here: 800 -> 799 in
+                    # 12-bit ClearHDR, 1600 -> 1585 in 16-bit.
                     # Say why: an ISO that reads back as a number nobody
                     # selected is otherwise indistinguishable from a bug.
                     logging.info(

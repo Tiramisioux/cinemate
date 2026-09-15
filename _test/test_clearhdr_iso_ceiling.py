@@ -17,6 +17,20 @@ So the cap withholds the steps above it rather than warning about them. These
 tests pin the three things that can go wrong: capping when it should not (an
 SDR mode, or an operator who lifted it), failing to cap when it should, and
 capping so hard that no ISO is selectable at all.
+
+THERE ARE TWO CEILINGS, NOT ONE. The 1585 above is the 16-bit story. The 12-bit
+CCMP modes hit a different and much lower wall first -- the sensor only combines
+its two reads while GAIN + EXP_GAIN stays inside 9.6-29.1 dB (imx585.c:167), and
+ClearHDR's +12 dB adder puts that at gain code 57, i.e. ISO 799. Measured
+2026-09-14:
+
+    ISO        640  700  799 | 800  900  1000
+    gain code   51   56   56 |  60   63    66
+
+Past it the merge collapses and 12-bit ClearHDR returns LESS highlight range
+than SDR. So the cap is per sensor bit depth, and the last block of tests below
+exists because collapsing the two numbers back into one is the obvious tidy-up
+and is silently destructive.
 """
 
 import sys
@@ -35,8 +49,10 @@ from module.redis_controller import ParameterKey
 
 
 class FakeRedis:
-    def __init__(self, hdr):
+    def __init__(self, hdr, bit_depth=None):
         self.values = {ParameterKey.HDR.value: hdr}
+        if bit_depth is not None:
+            self.values[ParameterKey.BIT_DEPTH.value] = bit_depth
         self.sets = []
 
     def get_value(self, key, default=None):
@@ -60,9 +76,9 @@ class _Lock:
 SHIPPED_STEPS = [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200]
 
 
-def controller(hdr="1", iso_max=1585, steps=None, omit_key=False):
+def controller(hdr="1", iso_max=1585, steps=None, omit_key=False, bit_depth=None):
     c = CinePiController.__new__(CinePiController)
-    c.redis_controller = FakeRedis(hdr)
+    c.redis_controller = FakeRedis(hdr, bit_depth)
     c.iso_steps = list(SHIPPED_STEPS if steps is None else steps)
     c.iso_lock = False
     c.parameters_lock_obj = _Lock()
@@ -138,6 +154,74 @@ class ClearHdrIsoCeilingTests(unittest.TestCase):
     def test_a_non_numeric_cap_falls_back_to_the_default(self):
         c = controller(iso_max="nonsense")
         self.assertEqual(max(c.effective_iso_steps()), 1600)
+
+    # ── the two families, two measured ceilings ──────────────────────────
+    #
+    # These all omit `iso_max` on purpose: the per-family defaults are only
+    # consulted when the operator has NOT written a ceiling of their own, and
+    # a test that passes one would never reach the code it means to check.
+
+    def test_12bit_clearhdr_caps_at_799(self):
+        """The CCMP modes hit the combination window (GAIN + EXP_GAIN <=
+        29.1 dB) at gain code 57 long before the driver's own gain cap."""
+        c = controller(omit_key=True, bit_depth="12")
+        self.assertEqual(c._clearhdr_iso_ceiling(), 799)
+        c.set_iso(3200)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 799)
+
+    def test_16bit_clearhdr_caps_at_1585(self):
+        """No compander, so the only limit is IMX585_ANA_GAIN_MAX_HDR."""
+        c = controller(omit_key=True, bit_depth="16")
+        self.assertEqual(c._clearhdr_iso_ceiling(), 1585)
+        c.set_iso(3200)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 1585)
+
+    def test_12bit_keeps_the_800_step_and_lands_it_on_799(self):
+        """Same shape as 16-bit's 1600 -> 1585: the step above the cap stays
+        selectable so the operator is not stranded at 640, and the GUI tints
+        it green to say the camera is holding it."""
+        c = controller(omit_key=True, bit_depth="12")
+        self.assertEqual(c.effective_iso_steps(), [100, 200, 400, 640, 800])
+        c.set_iso(800)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 799)
+        self.assertTrue(c.iso_is_capped())
+
+    def test_the_two_ceilings_are_different_numbers(self):
+        """A guard, not a tautology. Collapsing these back to one constant is
+        the obvious 'simplification', and it silently runs 12-bit ClearHDR a
+        full stop past the point where its merge stops delivering HDR at all
+        -- which looks like nothing in the picture until the highlights are
+        already gone."""
+        c12 = controller(omit_key=True, bit_depth="12")
+        c16 = controller(omit_key=True, bit_depth="16")
+        self.assertLess(c12._clearhdr_iso_ceiling(), c16._clearhdr_iso_ceiling())
+
+    def test_an_unreadable_bit_depth_falls_back_to_the_16bit_ceiling(self):
+        """HDR on with no resolution applied is not reachable through
+        set_resolution(), which writes both keys. This pins the behaviour
+        anyway, and pins it to what the code did before the split."""
+        for bogus in (None, "", "nonsense"):
+            c = controller(omit_key=True, bit_depth=bogus)
+            self.assertEqual(c._clearhdr_iso_ceiling(), 1585, f"bit_depth={bogus!r}")
+
+    def test_iso_max_stays_one_override_for_both_families(self):
+        """An operator who writes a ceiling gets that ceiling, whichever mode
+        is engaged. Splitting the override per depth would mean the camera
+        quietly used a number they never wrote."""
+        for depth in ("12", "16"):
+            c = controller(iso_max=1000, bit_depth=depth)
+            self.assertEqual(c._clearhdr_iso_ceiling(), 1000, f"bit_depth={depth}")
+        for depth in ("12", "16"):
+            c = controller(iso_max=None, bit_depth=depth)
+            self.assertIsNone(c._clearhdr_iso_ceiling(), f"bit_depth={depth}")
+
+    def test_sdr_is_uncapped_at_either_depth(self):
+        """The cap is a ClearHDR combination limit; a 12-bit SDR mode is not
+        subject to it just for being 12-bit."""
+        for depth in ("12", "16"):
+            c = controller(hdr="0", omit_key=True, bit_depth=depth)
+            self.assertIsNone(c._clearhdr_iso_ceiling())
+            self.assertEqual(c.effective_iso_steps(), SHIPPED_STEPS)
 
     def test_iso_lock_still_wins(self):
         """The cap must not become a way round the lock."""

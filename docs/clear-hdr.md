@@ -19,8 +19,8 @@ Two switches, one per capture, in the settings editor's **Resolution & sensor** 
 
 | Switch | Key | Default | Capture |
 |---|---|---|---|
-| Enable IMX585 ClearHDR 16-bit | `imx585_clear_hdr_16bit` | on | Linear, no compander in the path |
 | Enable IMX585 ClearHDR 12-bit | `imx585_clear_hdr_12bit` | off | Companded on-sensor (CCMP); cinepi-raw decompands |
+| Enable IMX585 ClearHDR 16-bit | `imx585_clear_hdr_16bit` | on | Linear, no compander in the path |
 
 They decide **which captures exist**, not which frame sizes. **Resolutions offered**
 (`image_capture.k_steps`) does that, for ClearHDR exactly as it does for SDR — so with `2` and

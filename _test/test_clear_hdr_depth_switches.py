@@ -134,6 +134,28 @@ class WiringTests(unittest.TestCase):
         self.assertIn('data-path="image_capture.hdr.imx585_clear_hdr_16bit"', html)
         self.assertNotIn('data-path="image_capture.hdr.imx585_clear_hdr_16bit_hd"', html)
 
+    def test_twelve_bit_comes_first_on_the_page_and_in_the_copy(self):
+        """12-bit before 16-bit, in the template and in the copy that
+        describes it.
+
+        Order is a deliberate choice here, not an accident of which card was
+        added last -- and it is the kind of thing a later edit flips back
+        without noticing, because nothing about the page breaks when it does.
+        The copy is checked alongside the template because the 16-bit help
+        says "as for 12-bit": that back-reference only reads correctly while
+        12-bit is the one above it."""
+        html = (ROOT / "src/module/app/templates/settings_editor.html").read_text(encoding="utf-8")
+        twelve = html.index('data-path="image_capture.hdr.imx585_clear_hdr_12bit"')
+        sixteen = html.index('data-path="image_capture.hdr.imx585_clear_hdr_16bit"')
+        self.assertLess(twelve, sixteen, "the 16-bit ClearHDR card is above the 12-bit one again")
+
+        md = (ROOT / "resources/gui-text/05-settings-exposure-and-steps.md").read_text(
+            encoding="utf-8")
+        md_twelve = md.index("card.image_capture.hdr.imx585_clear_hdr_12bit")
+        md_sixteen = md.index("card.image_capture.hdr.imx585_clear_hdr_16bit")
+        self.assertLess(md_twelve, md_sixteen, "the copy no longer follows the page order")
+        self.assertIn("as for 12\u2011bit", md)
+
     def test_the_hd_switch_is_gone_from_settings_and_schema(self):
         import json  # noqa: PLC0415
         from module.config_loader import load_settings  # noqa: PLC0415

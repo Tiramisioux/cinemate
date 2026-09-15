@@ -1768,15 +1768,6 @@
              (imx585_clear_hdr_16bit_hd) is gone: it gated every binned
              ClearHDR mode regardless of depth, so turning it on for 16-bit HD
              also handed back 12-bit HD. -->
-        <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear 4k hd binned">
-          <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-hdr-clearhdr" data-path="image_capture.hdr.imx585_clear_hdr_16bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
-          </div>
-        </div>
         <div class="card" data-search="clearhdr imx585 12 bit modes exposed companded ccmp">
           <div class="card-main">
             <label class="card-label" for="f-hdr-clearhdr-12">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.label') }}</label>
@@ -1784,6 +1775,15 @@
           </div>
           <div class="card-control">
             <button class="toggle" id="f-hdr-clearhdr-12" data-path="image_capture.hdr.imx585_clear_hdr_12bit" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
+          </div>
+        </div>
+        <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear 4k hd binned">
+          <div class="card-main">
+            <label class="card-label" for="f-hdr-clearhdr">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.help') }}</p>
+          </div>
+          <div class="card-control">
+            <button class="toggle" id="f-hdr-clearhdr" data-path="image_capture.hdr.imx585_clear_hdr_16bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
         <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">

@@ -82,15 +82,15 @@ When the requested frame rate is higher than the selected mode can sustain, drop
 
 Show the sensor's non‑HDR modes on the resolution control.
 
-### Enable IMX585 ClearHDR 16‑bit
-<!-- key: card.image_capture.hdr.imx585_clear_hdr_16bit -->
-
-The sensor's single‑frame HDR, linear, no compander in the path. **Resolutions** above decides the sizes. **ISO is capped at 1585, and held while recording.**
-
 ### Enable IMX585 ClearHDR 12‑bit
 <!-- key: card.image_capture.hdr.imx585_clear_hdr_12bit -->
 
-The companded ClearHDR capture — cinepi‑raw applies the CCMP decompand. **Resolutions** above decides the sizes, as for 16‑bit. **ISO is capped at 799, and held while recording.** Off by default.
+The companded ClearHDR capture — cinepi‑raw applies the CCMP decompand. **Resolutions** above decides the sizes. **ISO is capped at 799, and held while recording.** Off by default.
+
+### Enable IMX585 ClearHDR 16‑bit
+<!-- key: card.image_capture.hdr.imx585_clear_hdr_16bit -->
+
+The sensor's single‑frame HDR, linear, no compander in the path. **Resolutions** above decides the sizes, as for 12‑bit. **ISO is capped at 1585, and held while recording.**
 
 ### ClearHDR startup knobs
 <!-- key: card.image_capture.hdr.threshold_low -->

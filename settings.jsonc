@@ -242,29 +242,37 @@
       // image_capture.bit_depths is the wrong lever for this: it applies to
       // every mode, so dropping 12 there would take the 12-bit SDR modes too.
       // Both default to whatever "imx585_clear_hdr" above says.
-      // 12-bit ClearHDR is HIDDEN by default. The modes still exist in the
-      // driver and every line of code that serves them is still here -- flip
-      // this to true to get them back for experiment. They are hidden because
-      // on this sensor they do not earn their place: the HG/LG merge stops
-      // reaching the top of the container above analogue gain code ~60 (about
-      // ISO 800), so highlight range collapses at the ISOs people actually
-      // shoot, while 16-bit ClearHDR holds up across the whole ISO range. The
-      // 12-bit modes also carry the compander, a full-frame CPU preview
-      // re-render, and the clamp artefacts that come with both.
       //
-      // NOTE: hiding them RENUMBERS the remaining modes -- 16-bit ClearHDR HD
-      // and 4K move from 5 and 6 to 3 and 4. A sensor_mode saved in Redis is
-      // re-resolved by what it actually was, not by its index, so a camera
-      // does not silently wake up in a different capture.
+      // These two switches decide WHICH CLEARHDR CAPTURES EXIST. They say
+      // nothing about frame size: "k_steps" above does that, for ClearHDR
+      // exactly as it does for SDR. So 16-bit on with k_steps [1.5, 2, 3, 4]
+      // gives you 16-bit ClearHDR at both 4K and HD; drop 2 from k_steps and
+      // you keep 4K only. (There used to be a third switch,
+      // "imx585_clear_hdr_16bit_hd", for the binned 16-bit mode alone. It
+      // gated every binned ClearHDR mode regardless of depth, so turning it on
+      // also handed back 12-bit HD. Removed 2026-09-15.)
+      //
+      // 12-bit ClearHDR is OFF by default. The modes still exist in the driver
+      // and every line of code that serves them is still here -- flip this to
+      // true to get them back. They are off because on this sensor they do not
+      // earn their place: the HG/LG merge stops reaching the top of the
+      // container above analogue gain code ~60 (about ISO 800), so highlight
+      // range collapses at the ISOs people actually shoot, while 16-bit
+      // ClearHDR holds up across the whole ISO range. The 12-bit modes also
+      // carry the compander, a full-frame CPU preview re-render, and the clamp
+      // artefacts that come with both.
+      //
+      // NOTE: either switch RENUMBERS the modes that remain. A sensor_mode
+      // saved in Redis is re-resolved by what it actually was, not by its
+      // index, so a camera does not silently wake up in a different capture.
+      //
+      // NOTE: in the binned (HD) ClearHDR modes, blown highlights render pink
+      // in the preview and the DNG thumbnail -- CineMate ships without the
+      // preview-side correction for the sensor's HG/LG merge clamp. The
+      // recorded DNG is unaffected. Drop 2 from "k_steps" if you would rather
+      // not be offered them.
       "imx585_clear_hdr_12bit": false,
       "imx585_clear_hdr_16bit": true,
-      // Adds the HD (1920x1100, binned) 16-bit ClearHDR mode. OFF by default:
-      // its blown highlights render pink, because CineMate ships without the
-      // preview-side correction for the sensor's HG/LG merge clamp. Turn it on
-      // if you want the mode and can live with that -- the recorded DNG is the
-      // same either way, it is the preview and the DNG thumbnail that go pink.
-      // The 4K ClearHDR mode is unaffected and stays on.
-      "imx585_clear_hdr_16bit_hd": false,
       // Startup values for the ClearHDR live knobs (0-4095 / 0-8 / 0-5).
       // Applied when a ClearHDR mode is selected; adjust live afterwards
       // with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain

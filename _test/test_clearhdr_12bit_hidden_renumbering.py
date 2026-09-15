@@ -122,31 +122,45 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class BinnedClearHdrSwitchTests(unittest.TestCase):
-    """The HD (binned) ClearHDR mode is opt-in, not gone.
+class BinnedClearHdrIsAResolutionTests(unittest.TestCase):
+    """The binned (HD) ClearHDR mode is chosen by k_steps, not its own switch.
 
-    It renders pink in blown highlights because CineMate ships without the
-    preview-side clamp correction, so it is off by default -- but the operator
-    can turn it on and accept that. The 4K ClearHDR mode must not be affected
-    either way, and the binned SDR mode must survive both settings, which is
-    why this is not image_capture.k_steps.
+    It used to have one -- imx585_clear_hdr_16bit_hd -- which gated every
+    binned ClearHDR mode regardless of bit depth, so an operator turning it on
+    for 16-bit HD silently got 12-bit HD back as well. It is gone. The depth
+    switches say which ClearHDR captures exist and k_steps says at which frame
+    sizes, exactly the way it already worked for SDR.
     """
 
-    def _modes(self, binned_on):
+    # imx585 16-bit ClearHDR at both sizes, plus the binned SDR mode that must
+    # not be collateral damage of either answer.
+    MODES = [
+        {"width": 1920, "height": 1080, "bit_depth": 12, "hdr": False, "fps_max": 69},
+        {"width": 1920, "height": 1100, "bit_depth": 16, "hdr": True, "fps_max": 30},
+        {"width": 3840, "height": 2200, "bit_depth": 16, "hdr": True, "fps_max": 25},
+    ]
+
+    def _surviving(self, k_steps):
         from module.sensor_detect import SensorDetect
         d = SensorDetect.__new__(SensorDetect)
         d.clear_hdr_depths = {16}
-        d.clear_hdr_binned = binned_on
         d.bit_depths = []
-        d.k_steps = []
+        d.k_steps = k_steps
         d.hdr_modes = set()
-        return d
+        d.custom_modes = {}
+        pruned = d._finalize_modes({"imx585": [dict(m) for m in self.MODES]})
+        return sorted((m["width"], bool(m.get("hdr")))
+                      for m in pruned["imx585"].values())
 
-    def test_binned_clearhdr_is_off_by_default(self):
-        d = self._modes(False)
-        self.assertFalse(d.clear_hdr_binned)
+    def test_2k_in_k_steps_offers_the_binned_clearhdr_mode(self):
+        self.assertIn((1920, True), self._surviving([2.0, 4.0]))
 
-    def test_the_switch_is_what_gates_it(self):
-        self.assertTrue(self._modes(True).clear_hdr_binned)
+    def test_dropping_2k_drops_the_binned_modes_and_keeps_4k_clearhdr(self):
+        got = self._surviving([4.0])
+        self.assertEqual(got, [(3840, True)])
+
+    def test_the_old_hd_switch_no_longer_exists(self):
+        text = (ROOT / "src/module/sensor_detect.py").read_text(encoding="utf-8")
+        self.assertNotIn("clear_hdr_binned", text)
 
 

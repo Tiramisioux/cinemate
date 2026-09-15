@@ -1762,13 +1762,13 @@
             <button class="toggle" id="f-hdr-sdr" data-path="image_capture.hdr.sdr" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
-        <!-- "Expose 12-bit ClearHDR modes" is deliberately NOT offered here. The
-             setting still exists (image_capture.hdr.imx585_clear_hdr_12bit) and
-             still works over SSH for anyone experimenting, but the 12-bit
-             ClearHDR modes lose their highlight range above analogue gain code
-             ~60 and are not something to hand an operator a switch for. See
-             docs/clear-hdr.md, "12-bit ClearHDR is hidden". -->
-        <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear">
+        <!-- The two ClearHDR captures, one switch each. They decide WHICH
+             captures exist; Resolutions above decides their frame sizes, for
+             ClearHDR exactly as for SDR. The old third switch
+             (imx585_clear_hdr_16bit_hd) is gone: it gated every binned
+             ClearHDR mode regardless of depth, so turning it on for 16-bit HD
+             also handed back 12-bit HD. -->
+        <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear 4k hd binned">
           <div class="card-main">
             <label class="card-label" for="f-hdr-clearhdr">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.label') }}</label>
             <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.help') }}</p>
@@ -1777,13 +1777,13 @@
             <button class="toggle" id="f-hdr-clearhdr" data-path="image_capture.hdr.imx585_clear_hdr_16bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
-        <div class="card" data-search="clearhdr imx585 16 bit hd binned 1920 pink highlights">
+        <div class="card" data-search="clearhdr imx585 12 bit modes exposed companded ccmp">
           <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr-16-hd">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit_hd.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit_hd.help') }}</p>
+            <label class="card-label" for="f-hdr-clearhdr-12">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.label') }}</label>
+            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.help') }}</p>
           </div>
           <div class="card-control">
-            <button class="toggle" id="f-hdr-clearhdr-16-hd" data-path="image_capture.hdr.imx585_clear_hdr_16bit_hd" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
+            <button class="toggle" id="f-hdr-clearhdr-12" data-path="image_capture.hdr.imx585_clear_hdr_12bit" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
           </div>
         </div>
         <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">

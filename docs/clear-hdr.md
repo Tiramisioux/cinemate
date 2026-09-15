@@ -12,6 +12,39 @@ ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-ga
   code and the white balance then drives them apart.
 - A launch can record a flat black-level pedestal instead of real image data, on any ClearHDR mode. CineMate's shipped `blend` default of 5 avoids the sensor condition that causes it, so a stock camera does not hit this. See [Flat black-pedestal frames](#flat-black-pedestal-frames) if you have overridden `blend`.
 
+## Which ClearHDR modes you are offered
+
+Two switches, one per capture, in the settings editor's **Resolution & sensor** section
+(`image_capture.hdr` in [settings.jsonc](settings-json.md#resolution--sensor)):
+
+| Switch | Key | Default | Capture |
+|---|---|---|---|
+| Enable IMX585 ClearHDR 16-bit | `imx585_clear_hdr_16bit` | on | Linear, no compander in the path |
+| Enable IMX585 ClearHDR 12-bit | `imx585_clear_hdr_12bit` | off | Companded on-sensor (CCMP); cinepi-raw decompands |
+
+They decide **which captures exist**, not which frame sizes. **Resolutions offered**
+(`image_capture.k_steps`) does that, for ClearHDR exactly as it does for SDR — so with `2` and
+`4` both on, 16-bit ClearHDR gives you HD (1920×1100, binned) and 4K (3840×2200); turn `2` off
+and you are offered 4K only.
+
+Turning either switch on or off **renumbers** the modes that remain. That is safe: a
+`sensor_mode` saved in Redis is re-resolved by what the capture actually was, not by its index,
+so the camera does not wake up in a different mode.
+
+12-bit ClearHDR is off by default because on this sensor it does not earn its place: the HG/LG
+merge stops reaching the top of the container above analogue gain code ~60 (about ISO 800), so
+highlight range collapses at the ISOs people actually shoot, while 16-bit ClearHDR holds across
+the whole range. The 12-bit modes also carry the compander and a full-frame CPU preview
+re-render. Every line of code that serves them is still here — turn the switch on to get them
+back.
+
+!!! note "Pink highlights in the binned (HD) ClearHDR modes"
+
+    In the binned modes, blown highlights render pink in the HDMI/web preview and in the
+    embedded DNG thumbnail: CineMate ships without the preview-side correction for the sensor's
+    HG/LG merge clamp. **The recorded DNG is unaffected.** Drop `2` from **Resolutions offered**
+    if you would rather not be offered them.
+
 ## ISO is capped at 1585
 
 In a ClearHDR mode CineMate stops offering ISO above **1585**. SDR modes are never capped.
@@ -55,6 +88,8 @@ The merge behaviour is tunable while streaming. Each command writes a Redis key 
 "hdr": {
   "sdr": true,
   "imx585_clear_hdr": true,
+  "imx585_clear_hdr_12bit": false,
+  "imx585_clear_hdr_16bit": true,
   "threshold_low": null,
   "threshold_high": null,
   "blend": 5,

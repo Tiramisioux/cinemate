@@ -318,14 +318,16 @@ class SensorDetect:
         # SDR/ClearHDR class above. image_capture.bit_depths cannot express
         # this: it is global, so switching 12 off there to drop 12-bit
         # ClearHDR would take the 12-bit SDR modes with it.
+        #
+        # These two switches are the whole ClearHDR answer: they say which
+        # ClearHDR *captures* exist, and image_capture.k_steps then says which
+        # frame sizes of them are offered, exactly as it does for SDR. There
+        # used to be a third switch, imx585_clear_hdr_16bit_hd, adding the
+        # binned 16-bit mode on its own -- it gated every binned ClearHDR mode
+        # regardless of depth, so turning it on for 16-bit HD also handed back
+        # 12-bit HD. Dropped 2026-09-15; drop 2K from k_steps to lose the
+        # binned modes instead.
         self.clear_hdr_depths = self._clear_hdr_depths(res_cfg.get("hdr", {}))
-        # Opt-in: the binned (HD) ClearHDR mode. Off by default because its
-        # blown highlights render pink -- see the setting's own comment. The
-        # 4K ClearHDR mode is not affected by this.
-        _hdr_cfg = res_cfg.get("hdr", {})
-        self.clear_hdr_binned = bool(
-            _hdr_cfg.get("imx585_clear_hdr_16bit_hd", False)
-        ) if isinstance(_hdr_cfg, dict) else False
         sensor_cfg = self.settings.get("sensors", {})
         self.sensor_database_file = sensor_cfg.get(
             "database_file",
@@ -740,14 +742,6 @@ class SensorDetect:
                 clear_hdr_depths = getattr(self, "clear_hdr_depths", None)
                 if bool(m.get("hdr")) and clear_hdr_depths is not None:
                     if int(m.get("bit_depth") or 0) not in clear_hdr_depths:
-                        continue
-                # The binned ClearHDR mode is off by default and opt-in: its
-                # blown highlights render pink, because CineMate ships without
-                # the preview-side clamp correction. 4K is unaffected and stays
-                # on. Not image_capture.k_steps: that is global, and would take
-                # the binned SDR modes with it.
-                if bool(m.get("hdr")) and int(m.get("width") or 0) < 3840:
-                    if not getattr(self, "clear_hdr_binned", False):
                         continue
                 # settings.jsonc → image_capture.hdr: {sdr, imx585_clear_hdr}
                 # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.

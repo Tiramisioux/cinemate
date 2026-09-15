@@ -59,6 +59,20 @@ class DepthSwitchTests(unittest.TestCase):
         self.assertIn((True, 12), got)
         self.assertIn((True, 16), got)
 
+    def test_a_depth_switch_says_nothing_about_frame_size(self):
+        """Both sizes of a depth come through together: k_steps is what
+        narrows them, for ClearHDR exactly as for SDR."""
+        detector = SensorDetect.__new__(SensorDetect)
+        detector.bit_depths = []
+        detector.k_steps = []
+        detector.custom_modes = {}
+        detector.hdr_modes = SensorDetect._hdr_whitelist({"sdr": True})
+        detector.clear_hdr_depths = {16}
+        pruned = detector._finalize_modes({"imx585": [dict(m) for m in MODES]})
+        sizes = sorted(m["width"] for m in pruned["imx585"].values()
+                       if m.get("hdr"))
+        self.assertEqual(sizes, [1928, 3856])
+
     def test_16bit_off_leaves_12bit_clearhdr_and_every_sdr_mode(self):
         got = surviving({"sdr": True, "imx585_clear_hdr_12bit": True,
                          "imx585_clear_hdr_16bit": False})
@@ -107,14 +121,36 @@ class LegacyKeyTests(unittest.TestCase):
 
 
 class WiringTests(unittest.TestCase):
-    def test_the_page_offers_the_16bit_switch_only(self):
-        """12-bit ClearHDR is not a switch an operator should be handed: the
-        modes lose their highlight range above analogue gain code ~60. The
-        setting still exists and still works from settings.jsonc for anyone
-        experimenting -- it just is not on the page."""
+    def test_the_page_offers_one_switch_per_depth(self):
+        """Both depths get a switch, and the frame size is a separate
+        question that Resolutions already answers.
+
+        The page used to offer 16-bit plus a third switch for the binned
+        16-bit HD mode alone. That switch gated every binned ClearHDR mode
+        regardless of depth, so turning it on also handed back 12-bit HD --
+        which is exactly what it claimed not to do."""
         html = (ROOT / "src/module/app/templates/settings_editor.html").read_text(encoding="utf-8")
-        self.assertNotIn('data-path="image_capture.hdr.imx585_clear_hdr_12bit"', html)
+        self.assertIn('data-path="image_capture.hdr.imx585_clear_hdr_12bit"', html)
         self.assertIn('data-path="image_capture.hdr.imx585_clear_hdr_16bit"', html)
+        self.assertNotIn('data-path="image_capture.hdr.imx585_clear_hdr_16bit_hd"', html)
+
+    def test_the_hd_switch_is_gone_from_settings_and_schema(self):
+        import json  # noqa: PLC0415
+        from module.config_loader import load_settings  # noqa: PLC0415
+        for path in ("settings.jsonc", "resources/settings/settings_default.jsonc"):
+            with self.subTest(path=path):
+                hdr = load_settings(str(ROOT / path))["image_capture"]["hdr"]
+                self.assertNotIn("imx585_clear_hdr_16bit_hd", hdr)
+        props = json.loads((ROOT / "settings.schema.json").read_text())[
+            "properties"]["image_capture"]["properties"]["hdr"]["properties"]
+        self.assertNotIn("imx585_clear_hdr_16bit_hd", props)
+
+    def test_the_gui_copy_has_a_card_for_each_depth(self):
+        md = (ROOT / "resources/gui-text/05-settings-exposure-and-steps.md").read_text(
+            encoding="utf-8")
+        self.assertIn("card.image_capture.hdr.imx585_clear_hdr_12bit", md)
+        self.assertIn("card.image_capture.hdr.imx585_clear_hdr_16bit -->", md)
+        self.assertNotIn("card.image_capture.hdr.imx585_clear_hdr_16bit_hd", md)
 
     def test_settings_and_schema_carry_both(self):
         import json  # noqa: PLC0415

@@ -306,7 +306,7 @@
         },
         "hdr": {
           "type": "object",
-          "description": "ClearHDR (imx585) whitelist plus startup values for the live knobs. sdr/imx585_clear_hdr both true exposes the plain and the HDR modes; set imx585_clear_hdr false to hide the HDR modes. threshold_low/high (0-4095), blend (0-8), gain_adder (0-5) seed the ClearHDR knobs when a ClearHDR mode is selected -- adjust live afterwards with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel.",
+          "description": "ClearHDR (imx585) whitelist plus startup values for the live knobs. sdr/imx585_clear_hdr both true exposes the plain and the HDR modes; set imx585_clear_hdr false to hide the HDR modes. imx585_clear_hdr_12bit/_16bit choose WHICH ClearHDR captures exist; image_capture.k_steps then chooses their frame sizes, exactly as it does for SDR. threshold_low/high (0-4095), blend (0-8), gain_adder (0-5) seed the ClearHDR knobs when a ClearHDR mode is selected -- adjust live afterwards with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel.",
           "properties": {
             "sdr": {
               "type": "boolean",
@@ -320,17 +320,12 @@
             "imx585_clear_hdr_12bit": {
               "type": "boolean",
               "default": false,
-              "description": "Hidden by default. The 12-bit ClearHDR modes still exist in the driver and in CineMate's code; this only keeps them out of the selectable mode list. They are hidden because the sensor's HG/LG merge stops reaching the top of the container above analogue gain code ~60 (about ISO 800), so highlight range collapses at ordinary shooting ISOs, while 16-bit ClearHDR holds across the range. Setting this true restores them for experiment -- and renumbers the remaining modes, which the startup mode resolution handles by identity rather than index."
+              "description": "Offer the 12-bit ClearHDR captures, at every frame size image_capture.k_steps allows. Off by default: the 12-bit modes still exist in the driver and in CineMate's code, this only keeps them out of the selectable mode list. They are off because the sensor's HG/LG merge stops reaching the top of the container above analogue gain code ~60 (about ISO 800), so highlight range collapses at ordinary shooting ISOs, while 16-bit ClearHDR holds across the range. Setting this true restores them -- and renumbers the remaining modes, which the startup mode resolution handles by identity rather than index."
             },
             "imx585_clear_hdr_16bit": {
               "type": "boolean",
               "default": true,
-              "description": "Offer the 16-bit ClearHDR modes. Delivered linear, with no compander in the path."
-            },
-            "imx585_clear_hdr_16bit_hd": {
-              "type": "boolean",
-              "default": false,
-              "description": "Adds the HD (1920x1100, binned) 16-bit ClearHDR mode. Off by default: its blown highlights render pink, because CineMate ships without the preview-side correction for the sensor's HG/LG merge clamp. The recorded DNG is unaffected -- it is the preview and the DNG thumbnail that go pink. The 4K ClearHDR mode is not affected by this switch."
+              "description": "Offer the 16-bit ClearHDR captures, at every frame size image_capture.k_steps allows. Delivered linear, with no compander in the path. Note that in the binned (HD) ClearHDR modes blown highlights render pink in the preview and the DNG thumbnail -- CineMate ships without the preview-side correction for the sensor's HG/LG merge clamp; the recorded DNG is unaffected. Drop 2 from image_capture.k_steps to be offered 4K only."
             },
             "threshold_low": {
               "type": [

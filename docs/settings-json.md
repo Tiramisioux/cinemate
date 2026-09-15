@@ -240,7 +240,8 @@ imx585 ClearHDR.
 | Dynamic resolution | Startup default for the automatic FPS-driven mode substitution described under [Dynamic resolution](sensors.md#dynamic-resolution). On by default. `set dynamic resolution` overrides it live, and that override outlives a reboot. |
 | Dynamic resolution priority | Which axis of quality that substitution gives up first once the selected mode's own class runs out -- `mode` (hold bit depth + ClearHDR, drop resolution), `resolution` (hold frame size, drop class) or `none` (never leave the class). `mode` by default; see [Priority](sensors.md#priority-which-half-of-the-picture-goes-first). `set dynamic resolution priority` overrides it live, and that override outlives a reboot. |
 | Expose plain (SDR) modes | Shows the sensor's non-HDR modes alongside ClearHDR. Default on; off leaves only ClearHDR. |
-| Expose 16-bit ClearHDR modes | Offers the linear ClearHDR capture, with no compander in the path. Default on. Turn both off to keep the sensor SDR-only. |
+| Enable IMX585 ClearHDR 16-bit | Offers the linear ClearHDR capture, with no compander in the path. Default on. |
+| Enable IMX585 ClearHDR 12-bit | Offers the companded ClearHDR capture, which cinepi-raw decompands (CCMP). Default off — above analogue gain code ~60 (about ISO 800) the sensor's merge stops reaching the top of the container, so highlight range collapses at ordinary shooting ISOs while 16-bit holds across the range. Turn both off to keep the sensor SDR-only. |
 | ClearHDR startup knobs | The four fields below, applied whenever a ClearHDR mode is selected. |
 | Threshold low | Raw level below which the sensor reads pure high-gain. Range 0–4095. Blank by default (field reads `driver`), keeping the driver's 0. |
 | Threshold high | Raw level above which it reads pure low-gain. Range 0–4095. Blank by default (field reads `driver`), keeping the driver's 4095. |
@@ -252,10 +253,24 @@ imx585 ClearHDR.
 
     Both blank keeps the driver's own pair. Setting the two to the same value clamps every HDR frame near black. Never set just one of the pair.
 
+!!! note "The two ClearHDR switches choose captures, not frame sizes"
+
+    Each switch says whether that ClearHDR *capture* exists. **Resolutions offered** then says
+    at which frame sizes, for ClearHDR exactly as it does for SDR: with `2` and `4` both on,
+    16-bit ClearHDR gives you HD (1920×1100, binned) and 4K (3840×2200); turn `2` off and you
+    are offered 4K only.
+
+    There used to be a third switch, `imx585_clear_hdr_16bit_hd`, for the binned 16-bit mode on
+    its own. It gated every binned ClearHDR mode regardless of bit depth, so turning it on for
+    16-bit HD also handed back 12-bit HD. It was removed in favour of the two switches plus
+    **Resolutions offered**.
+
 !!! note "Why the ClearHDR depths are not just Bit depths offered"
 
     **Bit depths offered** is global: it applies to every mode. On an IMX585 every SDR mode is
-    The two switches above ask the other question — which ClearHDR *captures* to offer — and
+    12-bit, so turning `12` off there to drop 12-bit ClearHDR would empty the sensor of SDR
+    modes as well. The two switches above ask the other question — which ClearHDR *captures*
+    to offer — and only they can tell 12-bit ClearHDR from 12-bit SDR.
 
     A `settings.jsonc` written before the split carries a single `imx585_clear_hdr`. It is
     still honoured, as the default for both: one that turned ClearHDR off keeps both depths

@@ -82,20 +82,15 @@ When the requested frame rate is higher than the selected mode can sustain, drop
 
 Show the sensor's non‑HDR modes on the resolution control.
 
-### Expose 12‑bit ClearHDR modes
-<!-- key: card.image_capture.hdr.imx585_clear_hdr_12bit -->
-
-Companded capture — cinepi‑raw applies the CCMP decompand.
-
-### Enable IMX585 ClearHDR 16‑bit 4K
+### Enable IMX585 ClearHDR 16‑bit
 <!-- key: card.image_capture.hdr.imx585_clear_hdr_16bit -->
 
-Adds the 3840×2200 16‑bit ClearHDR mode — the sensor's single‑frame HDR, delivered linear with no compander in the path. Off keeps the sensor SDR‑only.
+The sensor's single‑frame HDR, delivered linear with no compander in the path. **Resolutions** above decides which sizes you get — 4K (3840×2200), HD (1920×1100, binned), or both. In the binned HD mode blown highlights render pink in the preview and the DNG thumbnail; the recorded DNG is unaffected. Turn 2K off in Resolutions to be offered 4K only.
 
-### Enable IMX585 ClearHDR 16‑bit HD
-<!-- key: card.image_capture.hdr.imx585_clear_hdr_16bit_hd -->
+### Enable IMX585 ClearHDR 12‑bit
+<!-- key: card.image_capture.hdr.imx585_clear_hdr_12bit -->
 
-Adds the 1920×1100 binned ClearHDR mode. Off by default: its blown highlights render pink in the preview and the DNG thumbnail. The recorded DNG is unaffected.
+The companded ClearHDR capture — cinepi‑raw applies the CCMP decompand. **Resolutions** above decides which sizes you get, the same as for 16‑bit. Off by default: above analogue gain code ~60 (about ISO 800) the sensor's merge stops reaching the top of the container, so highlight range collapses at ordinary shooting ISOs while 16‑bit holds across the range.
 
 ### ClearHDR startup knobs
 <!-- key: card.image_capture.hdr.threshold_low -->

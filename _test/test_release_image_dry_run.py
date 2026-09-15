@@ -21,6 +21,7 @@ Only hardware settles those; see the handbook's lessons/what-the-pi-taught-us.md
 
 import grp
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -100,7 +101,25 @@ STUBS = {
     "numfmt": '#!/bin/sh\nfor a in "$@"; do last="$a"; done\necho "$last"\n',
     "df": "#!/bin/sh\necho Avail\necho 200000000000\n",
     "systemctl": "#!/bin/sh\nexit 1\n",
+    # dd: write a small stand-in "card image" at of=<path>.
+    "dd": (
+        "#!/bin/sh\n"
+        'for a in "$@"; do\n'
+        '  case "$a" in of=*) out="${a#of=}" ;; esac\n'
+        "done\n"
+        'echo "stand-in card image" > "$out"\n'
+        'echo "4194304 bytes copied" >&2\n'
+    ),
 }
+
+# PiShrink: shrink is a no-op here, but the .xz it leaves beside the raw image
+# is what the script keys the whole finish sequence off.
+PISHRINK_STUB = (
+    "#!/bin/sh\n"
+    'for a in "$@"; do last="$a"; done\n'
+    'echo "pishrink: compressing $last"\n'
+    'cp "$last" "$last.xz"\n'
+)
 
 
 class TestReleaseImageDryRun(unittest.TestCase):
@@ -155,6 +174,10 @@ class TestReleaseImageDryRun(unittest.TestCase):
             stub.write_text(body)
             stub.chmod(0o755)
 
+        self.pishrink = self.tmp / "pishrink.sh"
+        self.pishrink.write_text(PISHRINK_STUB)
+        self.pishrink.chmod(0o755)
+
     def run_script(self, *args):
         env = {
             **os.environ,
@@ -168,6 +191,7 @@ class TestReleaseImageDryRun(unittest.TestCase):
             "CINEPI_RAW_DIR": str(self.tmp / "cinepi-raw"),
             "IMAGE_DEST_DIR": str(self.dest),
             "BOOT_CONFIG": str(self.boot_config),
+            "PISHRINK": str(self.pishrink),
             "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
             "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
         }
@@ -248,6 +272,52 @@ class TestReleaseImageDryRun(unittest.TestCase):
         self.assertEqual(self.boot_config.read_text(), OPERATOR_CONFIG)
         self.assertFalse(stash.exists())
 
+    def test_a_full_run_names_the_image_lowercase_and_deletes_the_raw_one(self):
+        # Not a dry run: dd and PiShrink are stubbed, so the finish sequence --
+        # which file is kept, which is deleted, what is printed -- runs for real.
+        result = self.run_script()
+        self.assertEqual(
+            result.returncode, 0,
+            f"script failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}",
+        )
+
+        images = sorted(p.name for p in self.dest.iterdir())
+        xz = [n for n in images if n.endswith(".img.xz")]
+        raw = [n for n in images if n.endswith(".img")]
+
+        self.assertEqual(len(xz), 1, f"expected exactly one compressed image, got {images}")
+        self.assertTrue(
+            xz[0].startswith("cinemate_"),
+            f"the compressed image is {xz[0]!r}; it must be lowercase cinemate_",
+        )
+        self.assertEqual(
+            raw, [], f"the uncompressed image was left behind: {raw}",
+        )
+
+        # The operator's files still came back, and nothing was left in a stash.
+        self.assertEqual(self.settings.read_text(), OPERATOR_SETTINGS)
+        self.assertEqual(self.boot_config.read_text(), OPERATOR_CONFIG)
+        self.assertFalse((self.dest / ".cinemate-release-image").exists())
+
+    def test_a_full_run_prints_the_copy_command_for_the_desktop(self):
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        xz = next(p for p in self.dest.iterdir() if p.name.endswith(".img.xz"))
+        self.assertIn("Copy it to your desktop computer with:", result.stdout)
+        self.assertRegex(
+            result.stdout,
+            r"scp \S+@\S+\.local:" + re.escape(str(xz)) + r" ~/Downloads/",
+            "the printed scp command does not name the image that was just built",
+        )
+
+    def test_a_full_run_reports_the_paths_the_mac_driver_parses(self):
+        # pi_release_image_to_mac.sh greps these two markers to know what to
+        # copy back; losing them breaks the Mac side silently.
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for marker in ("__RELEASE_IMAGE__=", "__RELEASE_MANIFEST__="):
+            self.assertIn(marker, result.stdout)
 
 if __name__ == "__main__":
     unittest.main()

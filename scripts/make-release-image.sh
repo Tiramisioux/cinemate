@@ -52,10 +52,12 @@ PI_HOME="${PI_HOME:-/home/$PI_USER}"
 CINEMATE_DIR="${CINEMATE_DIR:-$PI_HOME/cinemate}"
 CINEPI_RAW_DIR="${CINEPI_RAW_DIR:-$PI_HOME/cinepi-raw}"
 IMAGE_DEST_DIR="${IMAGE_DEST_DIR:-/media/RAW}"
-# Overridable only so _test/test_release_image_dry_run.py can point the whole
-# swap at a scratch tree and prove the files come back byte for byte. A real
-# run never sets it.
+# BOOT_CONFIG and PISHRINK are overridable only so
+# _test/test_release_image_dry_run.py can point the whole run at a scratch tree
+# and prove the files come back byte for byte, and that a full imaging pass
+# deletes the uncompressed image. A real run never sets either.
 BOOT_CONFIG="${BOOT_CONFIG:-/boot/firmware/config.txt}"
+PISHRINK="${PISHRINK:-/usr/local/bin/pishrink.sh}"
 IMAGE_DEVICE="${IMAGE_DEVICE:-}"          # empty => detect the disk holding /
 STOP_CINEMATE="${STOP_CINEMATE:-0}"       # 1 => stop cinemate-autostart while imaging
 ALLOW_STASH_ON_IMAGED_DISK="${ALLOW_STASH_ON_IMAGED_DISK:-0}"
@@ -242,7 +244,7 @@ id "$PI_USER" >/dev/null 2>&1 || ri_die "User $PI_USER does not exist"
 mountpoint -q "$IMAGE_DEST_DIR" || ri_warn "$IMAGE_DEST_DIR is a plain directory, not a mount point"
 
 if (( ! DRY_RUN )); then
-    [[ -x /usr/local/bin/pishrink.sh ]] || ri_die "Missing /usr/local/bin/pishrink.sh on this Pi"
+    [[ -x "$PISHRINK" ]] || ri_die "Missing $PISHRINK on this Pi"
 fi
 
 # The disk to image: whatever backs /, unless told otherwise.
@@ -338,8 +340,12 @@ CONFIG_TXT_PATH="$BOOT_CONFIG" configure_boot_config
 
 # ── Image ────────────────────────────────────────────────────────────────────
 RI_TS="$(date +%F_%H-%M-%S)"
-RI_RAW="$IMAGE_DEST_DIR/Cinemate_${RI_TS}.img"
-RI_FINAL="$IMAGE_DEST_DIR/cinemate_${RI_TS}.img.xz"
+# Lowercase throughout. The manual procedure in the docs images to Cinemate_*
+# and renames on the way to cinemate_*, which only existed to tell the working
+# file from the finished one; naming the raw image lowercase too means PiShrink
+# already writes the final name and there is no rename step to get wrong.
+RI_RAW="$IMAGE_DEST_DIR/cinemate_${RI_TS}.img"
+RI_FINAL="${RI_RAW}.xz"
 RI_MANIFEST="$IMAGE_DEST_DIR/cinemate_${RI_TS}.txt"
 
 {
@@ -359,8 +365,8 @@ sed 's/^/[release-image]      | /' "$RI_MANIFEST"
 if (( DRY_RUN )); then
     ri_log "--dry-run: skipping the image itself. Would have run:"
     ri_detail "dd if=$IMAGE_DEVICE of=$RI_RAW bs=4M conv=noerror,sync,sparse status=progress"
-    ri_detail "/usr/local/bin/pishrink.sh -s -v -Z -a $RI_RAW"
-    ri_detail "mv ${RI_RAW}.xz $RI_FINAL && rm -f $RI_RAW"
+    ri_detail "$PISHRINK -s -v -Z -a $RI_RAW"
+    ri_detail "rm -f $RI_RAW   # the uncompressed image, once $RI_FINAL exists"
     rm -f "$RI_MANIFEST"
     exit 0
 fi
@@ -374,14 +380,25 @@ dd if="$IMAGE_DEVICE" of="$RI_RAW" bs=4M conv=noerror,sync,sparse status=progres
 ri_step "Shrinking and compressing with PiShrink"
 ri_detail "PiShrink shrinks the filesystem, then xz compresses it across all cores."
 ri_detail "The xz pass is the slowest part and prints nothing until it finishes."
-/usr/local/bin/pishrink.sh -s -v -Z -a "$RI_RAW"
+"$PISHRINK" -s -v -Z -a "$RI_RAW"
 
-mv "${RI_RAW}.xz" "$RI_FINAL"
+[[ -f "$RI_FINAL" ]] || ri_die "PiShrink did not produce $RI_FINAL"
+
+# The uncompressed image is the size of the whole card. Nothing needs it once
+# the .xz exists, and leaving it behind fills the volume for the next run.
+ri_detail "Removing the uncompressed $(basename "$RI_RAW") ($(du -h "$RI_RAW" | cut -f1))"
 rm -f "$RI_RAW"
 
 ri_step_done
 ri_log "Release image ready: $RI_FINAL ($(du -h "$RI_FINAL" | cut -f1))"
 ri_log "Manifest: $RI_MANIFEST"
+
+# Printed rather than assumed: the whole point is to paste it on the desktop
+# computer without having to reconstruct the timestamped filename by hand.
+ri_log "Copy it to your desktop computer with:"
+printf '\n    scp %s@%s.local:%s ~/Downloads/\n\n' \
+    "$PI_USER" "$(hostname -s 2>/dev/null || hostname)" "$RI_FINAL"
+
 printf '__RELEASE_IMAGE__=%s\n' "$RI_FINAL"
 printf '__RELEASE_MANIFEST__=%s\n' "$RI_MANIFEST"
 

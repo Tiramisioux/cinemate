@@ -178,6 +178,48 @@ ri_mode() {
         || stat -f '%Lp' "$1" 2>/dev/null \
         || printf '%s' "$2"
 }
+# MTIME IS LOAD-BEARING ON config.txt. Not obvious, and it cost an hour on
+# 2026-09-15 before anyone looked here.
+#
+# cinemate's rp1_regime.py decides the camera's pixel-rate ceiling -- 380 MPix/s
+# stock, 580 with the rp1-overclock overlay -- by comparing config.txt's mtime
+# against boot time. It has to: on kernel 6.12.93 clk_sys reads ~333 MHz in BOTH
+# regimes, so the live clock can no longer tell them apart, and the only signal
+# left is whether the file has been touched since the boot that would have
+# applied it. Modified at or after boot means "not yet acted on", so the ceiling
+# falls back to stock.
+#
+# This script restored config.txt with plain `install`, which stamps the current
+# time. Byte-identical content, fresh mtime -- so every completed image build
+# left the board looking edited-since-boot, dropped the ceiling to 380 MPix/s,
+# and silently removed 3840x2200 16-bit from the resolution ladder at 25 fps
+# until the next reboot. Nothing in the GUI said so; the whole explanation was
+# one line in the journal.
+#
+# So mtime joins owner and mode as an attribute of the ORIGINAL that has to
+# survive the round trip. Seconds since epoch, which is what `touch -d @` takes.
+ri_mtime() {
+    stat -c '%Y' "$1" 2>/dev/null \
+        || stat -f '%m' "$1" 2>/dev/null \
+        || printf '%s' "$2"
+}
+# Reapply one recorded mtime. A blank value means the stash predates this --
+# an older interrupted run replayed with --restore-only -- and there the
+# restored file's fresh timestamp is simply the old behaviour, which costs a
+# reboot and never correctness. Do not invent a timestamp to fill the gap.
+ri_set_mtime() {
+    local path="$1" when="$2" stamp=''
+    [[ -n "$when" ]] || return 0
+    # GNU touch takes @epoch directly. BSD touch does not, and while this script
+    # only ever runs on the Pi, the fallback is three lines and it is what lets
+    # the behaviour be TESTED off-hardware -- which is the whole reason this bug
+    # survived as long as it did.
+    touch -d "@$when" "$path" 2>/dev/null && return 0
+    stamp=$(date -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null \
+            || date -r "$when" +%Y%m%d%H%M.%S 2>/dev/null) || stamp=''
+    [[ -n "$stamp" ]] && touch -t "$stamp" "$path" 2>/dev/null && return 0
+    ri_warn "Could not restore $path's timestamp -- reboot before using wide 16-bit modes"
+}
 
 # ── Stash ────────────────────────────────────────────────────────────────────
 RI_STASH_DIR="$IMAGE_DEST_DIR/.cinemate-release-image"
@@ -195,6 +237,9 @@ ri_restore() {
     local RI_CINEMATE_WAS_ACTIVE=0
     local RI_SETTINGS_OWNER="$PI_USER:$PI_GROUP" RI_SETTINGS_MODE=644
     local RI_CONFIG_OWNER="root:root" RI_CONFIG_MODE=644
+    # Empty, not "now": a stash written before mtimes were recorded has to
+    # fall through to the old behaviour rather than fabricate a timestamp.
+    local RI_SETTINGS_MTIME='' RI_CONFIG_MTIME=''
     # shellcheck source=/dev/null
     source "$RI_STATE"
 
@@ -214,6 +259,7 @@ ri_restore() {
             ri_warn "Could not restore settings.jsonc -- your copy is still at $RI_STASH_DIR/settings.jsonc"
             ri_failed=1
         }
+        ri_set_mtime "$CINEMATE_DIR/settings.jsonc" "$RI_SETTINGS_MTIME"
     fi
 
     if [[ -f "$RI_STASH_DIR/config.txt" ]]; then
@@ -223,6 +269,9 @@ ri_restore() {
             ri_warn "Could not restore config.txt -- your copy is still at $RI_STASH_DIR/config.txt"
             ri_failed=1
         }
+        # See ri_mtime(): without this the board silently loses its wide
+        # 16-bit modes until the next reboot, having changed not one byte.
+        ri_set_mtime "$BOOT_CONFIG" "$RI_CONFIG_MTIME"
     fi
 
     if ri_is_true "$RI_CINEMATE_WAS_ACTIVE"; then
@@ -346,6 +395,8 @@ fi
     printf 'RI_SETTINGS_MODE=%q\n'  "$(ri_mode  "$CINEMATE_DIR/settings.jsonc" 644)"
     printf 'RI_CONFIG_OWNER=%q\n'   "$(ri_owner "$BOOT_CONFIG" "root:root")"
     printf 'RI_CONFIG_MODE=%q\n'    "$(ri_mode  "$BOOT_CONFIG" 644)"
+    printf 'RI_SETTINGS_MTIME=%q\n' "$(ri_mtime "$CINEMATE_DIR/settings.jsonc" '')"
+    printf 'RI_CONFIG_MTIME=%q\n'   "$(ri_mtime "$BOOT_CONFIG" '')"
 } > "$RI_STATE"
 
 cp "$CINEMATE_DIR/settings.jsonc" "$RI_STASH_DIR/settings.jsonc"

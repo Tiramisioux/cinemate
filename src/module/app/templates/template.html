@@ -100,7 +100,15 @@
             height: 100%;
             display: grid;
             grid-template-rows: auto 1fr auto;
-            padding: calc(var(--gap) * 0.6) var(--gap);
+            /* viewport-fit=cover lets a fullscreen/PWA page use the whole
+               iPhone display.  Keep the HUD out of the camera island and
+               rounded-corner/home-indicator cut-outs while still using the
+               extra space on rectangular displays (where these are 0). */
+            padding:
+                calc(var(--gap) * 0.6 + env(safe-area-inset-top, 0px))
+                calc(var(--gap) + env(safe-area-inset-right, 0px))
+                calc(var(--gap) * 0.6 + env(safe-area-inset-bottom, 0px))
+                calc(var(--gap) + env(safe-area-inset-left, 0px));
             gap: calc(var(--gap) * 0.5);
         }
         /* A grid item's automatic minimum size is its CONTENT size, so a row
@@ -269,6 +277,10 @@
            against this height instead of the row's, so the boxes scale to the
            picture the way they do at 1080p. */
         @media (orientation: portrait) and (max-width: 900px) {
+            /* Portrait has vertical room, so keep every camera setting
+               reachable by flowing the HUD groups onto successive lines
+               instead of squeezing a reading beyond the right edge. */
+            #top-row { justify-content: flex-start; }
             /* align-self on the rails, NOT align-items on #stage: that stops
                the preview column stretching too, so #preview-wrap collapses
                to whatever --preview-h last said and sizePreview() then
@@ -528,12 +540,38 @@
             flex-direction: column;
             gap: calc(var(--gap) * 0.45);
         }
-        /* The cog is an <a>; give it the row's button shape so it does not
-           read as a stray link among buttons. */
+        /* The settings link remains a real <a>, so long-press and
+           open-in-new-tab work on phones.  It is deliberately taken out of
+           the crowded action row: the green floating control matches the
+           Live-view affordance and remains reachable after that row wraps. */
         #button-row .btn-link {
-            display: inline-flex; align-items: center; justify-content: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             text-decoration: none;
         }
+        #btn-settings {
+            position: fixed;
+            right: max(14px, calc(env(safe-area-inset-right, 0px) + 10px));
+            bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 10px));
+            width: 52px;
+            height: 52px;
+            min-width: 52px;
+            min-height: 52px;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            color: #000;
+            /* Do not use --sync-tint here: inverse mode changes that token
+               to black for readouts, while this navigation affordance must
+               remain visibly green in either skin. */
+            background: lightgreen;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            z-index: 15;
+        }
+        #btn-settings:hover { filter: brightness(1.08); }
+        #btn-settings:active { background: lightgreen; color: #000; transform: scale(0.96); }
+        #btn-settings svg { width: 22px; height: 22px; }
         #button-row {
             display: flex;
             flex-wrap: wrap;
@@ -581,22 +619,6 @@
            smaller picture. The one restack in this file is the width-driven
            media query at the end, which is a different screen, not a
            different mode of the same screen. */
-        /* Embedded in the settings editor's Live view pane (?xp=1), where the
-           drawer is the point of the pane rather than something opened over a
-           shot, so it is given a much taller cap than the shooting screen's.
-
-           The cap has to stay a definite length. Handing the drawer a flexible
-           row and letting it size itself does not work: a grid item's
-           automatic minimum is its content, so the row grows to the full
-           height of the controls, #stage is squeezed to 0 -- the preview
-           vanishes outright -- and overflow-y never engages because the box is
-           already as tall as its content. min-height:0 alone does not save it.
-           Measured on the camera: rows-and-fr gave stage 0px and 125px of
-           overflow, this gives stage 170px, drawer 527px and a drawer that
-           actually scrolls.
-
-           #stage keeps a floor for the same reason -- whatever else happens,
-           the picture does not disappear. */
         /* The rails carry legibility floors -- max(31px, ...) and friends --
            so fitRails() cannot always shrink them into the height it has. On
            the shooting screen that is the right trade: the operator ruling is
@@ -620,34 +642,6 @@
         @media (max-height: 820px) {
             .rail { --floor-gap: 2px; --floor-label: 8px; --floor-box: 18px; --floor-height: 13px; }
         }
-        /* The embedded pane is short whatever the window does -- the drawer
-           always takes a share -- so it takes the lower floors outright. */
-        #app.xp-fill .rail { --floor-gap: 2px; --floor-label: 8px; --floor-box: 18px; --floor-height: 13px; }
-
-        /* Opening the drawer in this pane must not cost the picture any size.
-           The shooting screen deliberately trades the other way -- there the
-           page never scrolls and the drawer eats into the preview, because a
-           layout that grows under the operator mid-shot is worse than a
-           smaller picture. This pane is a desk tool, so it grows instead: the
-           stage is pinned to the height it had with the drawer closed, the
-           drawer runs to its full natural height, and the pane scrolls. */
-        #app.xp-fill.xp-open { height: auto; min-height: 100%; }
-        #app.xp-fill.xp-open #experiment { max-height: none; overflow-y: visible; }
-        html.xp-scroll, html.xp-scroll body { overflow: auto; height: auto; min-height: 100%; }
-        #app.xp-fill { grid-template-rows: auto minmax(240px, 1fr) auto auto; }
-        #app.xp-fill #experiment {
-            /* The picture comes first. An earlier cap let the drawer take
-               whatever it wanted, which pinned #stage at its floor and left a
-               302x170 preview inside a 1266px-wide pane -- and dragged the
-               rails down with it, since fitRails() sizes them off the stage's
-               height and their max() floors stop the shrink short, so the
-               badges stayed large beside a tiny picture. Measured on the
-               camera at 1400x900: this cap gives a 791x442 preview against
-               298x166 before, with the drawer still 240px and scrolling. */
-            max-height: min(28vh, 260px);
-            min-height: 0;
-        }
-
         #experiment {
             max-height: min(46vh, 460px);
             overflow-y: auto;
@@ -2422,46 +2416,56 @@
         cmd(truthy(V.is_mounted) ? 'unmount' : 'mount');
     });
 
+    // The settings editor hosts this page in a fixed-width iframe. The
+    // EXPERIMENT drawer is deliberately open there, so its natural height can
+    // exceed the old 16:10 iframe box -- especially on a portrait phone.
+    // Report the document height to the host whenever layout changes so the
+    // host extends the frame instead of clipping controls below its edge.
+    let embedHeightQueued = false;
+    function reportEmbedHeight() {
+        if (window.parent === window || !embedHeightQueued) { return; }
+        embedHeightQueued = false;
+        const app = $('app');
+        const height = Math.ceil(Math.max(
+            app.getBoundingClientRect().height,
+            document.documentElement.scrollHeight,
+            document.body.scrollHeight
+        ));
+        window.parent.postMessage({ type: 'cinemate-live-height', height }, window.location.origin);
+    }
+    function scheduleEmbedHeight() {
+        if (window.parent === window || embedHeightQueued) { return; }
+        embedHeightQueued = true;
+        requestAnimationFrame(reportEmbedHeight);
+    }
+    if (window.parent !== window) {
+        window.addEventListener('load', scheduleEmbedHeight);
+        if (window.ResizeObserver) { new ResizeObserver(scheduleEmbedHeight).observe($('app')); }
+    }
+
     // Built on first open rather than at load: a camera that never opens the
     // drawer pays nothing for it, and renderExperiment() no-ops while it is
     // closed instead of touching ~30 widgets on every state push.
     function setExperimentOpen(open) {
         const panel = $('experiment');
         if (open && !xpBuilt) { buildExperiment(); }
-        const app = $('app');
-        if (app.classList.contains('xp-fill')) {
-            const stage = $('stage');
-            if (open) {
-                // Measured before the drawer is shown, so this is the height
-                // the picture has with it closed -- pin that, and the drawer
-                // takes new space below rather than taking the picture's.
-                const h = Math.round(stage.getBoundingClientRect().height);
-                if (h > 0) { stage.style.height = h + 'px'; }
-                app.classList.add('xp-open');
-                document.documentElement.classList.add('xp-scroll');
-            } else {
-                app.classList.remove('xp-open');
-                document.documentElement.classList.remove('xp-scroll');
-                stage.style.height = '';
-            }
-        }
         panel.classList.toggle('hidden', !open);
         $('btn-experiment').classList.toggle('on', open);
         render();
         noteExperimentOverflow();
+        scheduleEmbedHeight();
     }
 
     $('btn-experiment').addEventListener('click', () => {
         setExperimentOpen($('experiment').classList.contains('hidden'));
     });
 
-    // The settings editor embeds this page in its Live view pane with ?xp=1,
-    // where having every remaining control to hand is the point of the pane.
-    // The bare page on :5000 is the shooting screen and stays closed -- the
-    // drawer is ~30 widgets touched on every state push, which is exactly what
-    // the build-on-first-open above exists to avoid paying for.
+    // The settings editor embeds this page in its Live view pane with ?xp=1.
+    // It opens the drawer but intentionally uses the exact same layout rules
+    // as the direct :5000 live page, so responsive rows and preview fitting
+    // behave identically in both places. The bare page stays closed because
+    // the drawer is ~30 widgets touched on every state push.
     if (new URLSearchParams(window.location.search).get('xp') === '1') {
-        document.getElementById('app').classList.add('xp-fill');
         setExperimentOpen(true);
     }
 

@@ -891,13 +891,19 @@
      responsive (viewport width=device-width, no fixed intrinsic canvas
      size, see src/module/app/templates/template.html), so constraining the
      iframe's own box to this column's width is enough for it to reflow to
-     a smaller layout on its own, the same way it does on a small HDMI
-     display. No transform:scale trick needed. */
+     a smaller layout on its own. The embedded page reports its rendered
+     height, which lets this wrapper grow with the open EXPERIMENT drawer
+     instead of cropping the lower controls. */
   .live-embed-wrap{
-    width:100%; max-width: 980px; aspect-ratio: 16 / 10; margin: 0 auto;
+    width:100%; max-width: 980px; height: var(--live-embed-height, min(62vw, 612px)); margin: 0 auto;
     border-radius: var(--radius-lg); overflow:hidden; border: 1px solid #1c1c1c; background:#000;
   }
   .live-embed-frame{ width:100%; height:100%; border:0; display:block; }
+  @media (orientation: portrait) and (max-width: 640px){
+    /* Start tall enough that the live HUD can lay out before its first height
+       report; a 16:10 phone-width frame was only ~244px high. */
+    .live-embed-wrap{ height: var(--live-embed-height, 720px); }
+  }
 
   .live-stage{
     background: #000; border-radius: var(--radius-lg); overflow:hidden;
@@ -6206,6 +6212,24 @@
       frame.removeAttribute('src');
     }
   }
+
+  /* The child owns the live HUD's height: its drawer is open by default
+     in this view and may grow after a socket update or an orientation change.
+     Accept only the iframe's same-origin messages and ignore sub-pixel churn
+     so setting the height cannot cause a resize-message loop. */
+  window.addEventListener('message', function(event){
+    var frame = document.getElementById('liveEmbedFrame');
+    var wrap = frame && frame.parentElement;
+    var data = event.data;
+    if (!frame || !wrap || event.origin !== window.location.origin ||
+        event.source !== frame.contentWindow || !data ||
+        data.type !== 'cinemate-live-height') return;
+    var height = Math.ceil(Number(data.height));
+    if (!Number.isFinite(height) || height < 240) return;
+    var previous = Number.parseFloat(wrap.style.getPropertyValue('--live-embed-height')) || 0;
+    if (Math.abs(previous - height) < 2) return;
+    wrap.style.setProperty('--live-embed-height', height + 'px');
+  });
 
   /* ---------- i2c pane ---------- */
   /* Probed per request rather than cached: AnalogControls and SsdMonitor each

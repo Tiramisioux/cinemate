@@ -6491,12 +6491,6 @@
        rather than once at load. */
     if (page === 'i2c'){ i2cRefresh(); i2cStartTicking(); }
     else { i2cStopTicking(); }
-    /* The Live tab embeds the shooting screen in an iframe, and hiding an
-       iframe does not stop it: its MJPEG stream and its Socket.IO connection
-       stay live behind every other tab for the rest of the session. That is
-       the same Wi-Fi link playback needs, so drop the src on the way out and
-       put it back on the way in. */
-    syncLiveEmbed(page);
     activePage = page;
     rememberPage(page);
     pageTabButtons.forEach(function(b){
@@ -6509,6 +6503,19 @@
       rg.style.display = rg.getAttribute('data-page') === page ? '' : 'none';
     });
     updateGroupVisibility();
+    /* The Live tab embeds the shooting screen in an iframe, and hiding an
+       iframe does not stop it: its MJPEG stream and its Socket.IO connection
+       stay live behind every other tab for the rest of the session. That is
+       the same Wi-Fi link playback needs, so drop the src on the way out and
+       put it back on the way in.
+
+       This must run *after* updateGroupVisibility(). The frame is lazy-loaded;
+       restoring src while its parent is display:none lets browsers defer the
+       document and its click handlers. The pane then looks ready, but the
+       first taps only wake the embedded page and its controls need another
+       tap. Making the pane visible before assigning src starts the live page
+       as soon as the operator opens this tab. */
+    syncLiveEmbed(page);
     syncTopbarForPage();
     /* pushState, not replaceState: the rail's anchors push real history
        entries, so replacing here would silently destroy the deep-link the

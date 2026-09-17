@@ -269,6 +269,10 @@
            against this height instead of the row's, so the boxes scale to the
            picture the way they do at 1080p. */
         @media (orientation: portrait) and (max-width: 900px) {
+            /* Portrait has vertical room, so keep every camera setting
+               reachable by flowing the HUD groups onto successive lines
+               instead of squeezing a reading beyond the right edge. */
+            #top-row { justify-content: flex-start; }
             /* align-self on the rails, NOT align-items on #stage: that stops
                the preview column stretching too, so #preview-wrap collapses
                to whatever --preview-h last said and sizePreview() then
@@ -2422,6 +2426,33 @@
         cmd(truthy(V.is_mounted) ? 'unmount' : 'mount');
     });
 
+    // The settings editor hosts this page in a fixed-width iframe. The
+    // EXPERIMENT drawer is deliberately open there, so its natural height can
+    // exceed the old 16:10 iframe box -- especially on a portrait phone.
+    // Report the document height to the host whenever layout changes so the
+    // host extends the frame instead of clipping controls below its edge.
+    let embedHeightQueued = false;
+    function reportEmbedHeight() {
+        if (window.parent === window || !embedHeightQueued) { return; }
+        embedHeightQueued = false;
+        const app = $('app');
+        const height = Math.ceil(Math.max(
+            app.getBoundingClientRect().height,
+            document.documentElement.scrollHeight,
+            document.body.scrollHeight
+        ));
+        window.parent.postMessage({ type: 'cinemate-live-height', height }, window.location.origin);
+    }
+    function scheduleEmbedHeight() {
+        if (window.parent === window || embedHeightQueued) { return; }
+        embedHeightQueued = true;
+        requestAnimationFrame(reportEmbedHeight);
+    }
+    if (window.parent !== window) {
+        window.addEventListener('load', scheduleEmbedHeight);
+        if (window.ResizeObserver) { new ResizeObserver(scheduleEmbedHeight).observe($('app')); }
+    }
+
     // Built on first open rather than at load: a camera that never opens the
     // drawer pays nothing for it, and renderExperiment() no-ops while it is
     // closed instead of touching ~30 widgets on every state push.
@@ -2449,6 +2480,7 @@
         $('btn-experiment').classList.toggle('on', open);
         render();
         noteExperimentOverflow();
+        scheduleEmbedHeight();
     }
 
     $('btn-experiment').addEventListener('click', () => {

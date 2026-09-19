@@ -727,6 +727,24 @@ class SensorDetect:
         return depths
 
     @staticmethod
+    def _mode_timing_key(mode: Dict) -> tuple:
+        """Identity of a mode including its reported timing ceiling.
+
+        Unlike _mode_key(), this deliberately excludes the SDR/ClearHDR state.
+        It is used only to compare the HDR probe with the plain probe when the
+        human-readable formatter does not expose a reliable state separator.
+        """
+        return (
+            int(mode.get("width") or 0),
+            int(mode.get("height") or 0),
+            int(mode.get("bit_depth") or 0),
+            mode.get("fps_max"),
+            mode.get("crop_x"), mode.get("crop_y"),
+            mode.get("crop_width"), mode.get("crop_height"),
+            mode.get("binning_x"), mode.get("binning_y"),
+        )
+
+    @staticmethod
     def _mode_key(mode: Dict) -> tuple:
         """Identity of a sensor readout state.
 
@@ -1199,6 +1217,32 @@ class SensorDetect:
 
             base_modes = self._parse_cinepi_output(out, hdr=False)
             hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True) if hdr_out.strip() else {}
+
+            # The --hdr probe has appeared in two formatter variants:
+            #   1. an explicit SDR section followed by a ClearHDR section;
+            #   2. the same two states without a reliable separator/header.
+            #
+            # The parser handles the explicit state markers, but we can make
+            # the result deterministic even when those markers are absent:
+            # an entry from the HDR probe that has the exact same readout,
+            # geometry, binning *and timing* as the plain probe is the plain
+            # mode being repeated; an entry with the same readout geometry but
+            # a different timing ceiling is the ClearHDR state. A mode already
+            # marked HDR by the parser remains HDR.
+            #
+            # This is deliberately done before _merge_mode_lists(), so the
+            # merge never has to guess whether a lower-FPS HDR timing belongs
+            # to SDR or ClearHDR.
+            for cam, modes in hdr_modes.items():
+                base_timing_keys = {
+                    self._mode_timing_key(m) for m in base_modes.get(cam, [])
+                }
+                for mode in modes:
+                    if bool(mode.get("hdr")):
+                        continue
+                    if self._mode_timing_key(mode) not in base_timing_keys:
+                        mode["hdr"] = True
+
             merged = self._merge_mode_lists(base_modes, hdr_modes)
 
             # The two states of the IMX585 probe should carry identical driver

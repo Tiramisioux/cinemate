@@ -1033,21 +1033,6 @@ class SensorDetect:
                     )
                 )
 
-        # Every mode this camera reported, before the settings.jsonc filters
-        # take anything away. sensor_resolutions is the filtered table, so it
-        # cannot answer "does this sensor have any 3K mode?" -- switching 3K
-        # off would make the answer no, and the settings page would grey out
-        # the very switch that did it. Kept per camera, merged rather than
-        # replaced, for the same hot-plug reason sensor_resolutions is.
-        # getattr, and reassigned rather than mutated: _finalize_modes is
-        # reachable on an instance built with __new__ (several tests do
-        # exactly that, setting only the filter attributes it reads), and a
-        # class-level default dict would be shared across instances.
-        self.sensor_modes_unfiltered = dict(
-            getattr(self, "sensor_modes_unfiltered", {}),
-            **{cam: [dict(m) for m in modes] for cam, modes in sensors.items()},
-        )
-
         # Deduplicate modes after the plain/HDR probes and custom-mode
         # expansion. Some libcamera/cinepi-raw combinations report the same
         # mode more than once (often with the same geometry but a slightly
@@ -1088,6 +1073,16 @@ class SensorDetect:
                     except (TypeError, ValueError):
                         pass
             sensors[cam] = list(unique.values())
+
+        # Keep the raw sensor mode inventory before settings filters, but
+        # after structural deduplication. The settings editor/API uses this
+        # inventory to show every detected mode. Publishing it before dedup
+        # made repeated probe timings (for example 67 fps + 30 fps for the
+        # same 3840x2160 SDR readout) appear as duplicate rows.
+        self.sensor_modes_unfiltered = dict(
+            getattr(self, "sensor_modes_unfiltered", {}),
+            **{cam: [dict(m) for m in modes] for cam, modes in sensors.items()},
+        )
 
         # ── filter & index (k-steps / bit depths / hdr) ─────────────
         pruned: Dict[str, Dict[int, Dict]] = {}

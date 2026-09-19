@@ -76,6 +76,7 @@ class ParameterKey(Enum):
     REC               = "rec"
     SENSOR            = "sensor"
     SENSOR_MODE       = "sensor_mode"
+    SENSOR_MODE_MEMORY = "sensor_mode_memory"  # JSON map of last selected mode per sensor model
     SHUTTER_A         = "shutter_a"
 
     SPACE_LEFT        = "space_left"

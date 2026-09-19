@@ -3308,21 +3308,38 @@
   function modeGroupKey(mode){
     var bx=mode.binning_x == null ? '' : mode.binning_x;
     var by=mode.binning_y == null ? '' : mode.binning_y;
-    return (mode.hdr?'hdr':'sdr')+'|'+mode.bit_depth+'|'+bx+'x'+by;
+    return (mode.hdr?'Clear HDR':'SDR')+'|'+mode.bit_depth+'|'+bx+'x'+by;
+  }
+
+  function modeClassRank(mode){
+    var depth=mode.bit_depth||0;
+    if(mode.hdr && depth===16) return 0;
+    if(mode.hdr && depth===12) return 2;
+    if(!mode.hdr && depth===12) return 4;
+    if(!mode.hdr && depth===10) return 6;
+    return 8;
   }
 
   function modeSort(a,b){
-    // Highest recording class first: Clear HDR, then bit depth, then source
-    // resolution. Within a binning group, native/full modes precede crops.
-    if (!!a.hdr !== !!b.hdr) return a.hdr ? -1 : 1;
-    if ((b.bit_depth||0)!==(a.bit_depth||0)) return (b.bit_depth||0)-(a.bit_depth||0);
-    var aa=(a.width||0)*(a.height||0), bb=(b.width||0)*(b.height||0);
-    if (bb!==aa) return bb-aa;
-    var af=a.full?0:1, bf=b.full?0:1;
-    if (af!==bf) return af-bf;
-    var ab=(a.binning_x||1)*(a.binning_y||1), bb2=(b.binning_x||1)*(b.binning_y||1);
-    if (bb2!==ab) return bb2-ab;
-    return String(a.crop_width||'').localeCompare(String(b.crop_width||''));
+    // Exact operator order requested for the IMX585:
+    // 16 HDR 1x1, 16 HDR 2x2, 12 HDR 1x1, 12 HDR 2x2,
+    // 12 SDR 1x1, 12 SDR 2x2, 10 SDR 1x1, 10 SDR 2x2.
+    var ar=modeClassRank(a), br=modeClassRank(b);
+    if(ar!==br) return ar-br;
+
+    var ab=(a.binning_x||1)*(a.binning_y||1);
+    var bb=(b.binning_x||1)*(b.binning_y||1);
+    if(ab!==bb) return ab-bb;
+
+    var af=a.full?0:(a.crop_known?1:2);
+    var bf=b.full?0:(b.crop_known?1:2);
+    if(af!==bf) return af-bf;
+
+    var aa=(a.crop_width||a.width||0)*(a.crop_height||a.height||0);
+    var ba=(b.crop_width||b.width||0)*(b.crop_height||b.height||0);
+    if(ba!==aa) return ba-aa;
+
+    return (a.crop_x||0)-(b.crop_x||0) || (a.crop_y||0)-(b.crop_y||0);
   }
 
   function renderRecordingModes(sensors){
@@ -3380,7 +3397,9 @@
         var toggleTd=td;
         td=document.createElement('td');
         var title=document.createElement('div'); title.className='mode-title';
-        title.textContent=mode.width+'×'+mode.height+(mode.hdr?' · Clear HDR':'');
+        var displayW=mode.active_width || mode.crop_width || mode.width;
+        var displayH=mode.active_height || mode.crop_height || mode.height;
+        title.textContent=displayW+'×'+displayH+(mode.hdr?' · Clear HDR':'');
         var sub=document.createElement('div'); sub.className='mode-sub';
         sub.textContent=mode.crop_known
           ? (mode.full ? 'Full frame' : 'Cropped')

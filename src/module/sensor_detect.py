@@ -920,6 +920,36 @@ class SensorDetect:
             **{cam: [dict(m) for m in modes] for cam, modes in sensors.items()},
         )
 
+        # Deduplicate modes after the plain/HDR probes and custom-mode
+        # expansion. Some libcamera/cinepi-raw combinations report the same
+        # mode more than once (often with the same geometry but a slightly
+        # different advertised FPS). FPS is not part of mode identity: a
+        # single sensor mode must not become two operator choices just because
+        # the probe returned two timing ceilings.
+        for cam, modes in list(sensors.items()):
+            unique = {}
+            for m in modes:
+                key = self._mode_identity(m) + (
+                    self._mode_binning(m),
+                )
+                existing = unique.get(key)
+                if existing is None:
+                    unique[key] = m
+                    continue
+                # Preserve the higher detected ceiling, unless one side has
+                # no FPS value. All other mode metadata remains from the first
+                # occurrence so the UI cannot acquire duplicate geometry.
+                a = existing.get("fps_max")
+                b = m.get("fps_max")
+                if a is None and b is not None:
+                    existing["fps_max"] = b
+                elif a is not None and b is not None:
+                    try:
+                        existing["fps_max"] = max(float(a), float(b))
+                    except (TypeError, ValueError):
+                        pass
+            sensors[cam] = list(unique.values())
+
         # ── filter & index (k-steps / bit depths / hdr) ─────────────
         pruned: Dict[str, Dict[int, Dict]] = {}
         for cam, modes in sensors.items():

@@ -3368,7 +3368,8 @@
         tog.className='toggle mode-toggle'; tog.type='button'; tog.setAttribute('role','switch');
         tog.setAttribute('aria-checked',mode.selected?'true':'false');
         tog.setAttribute('aria-label','Offer '+camera+' '+mode.width+'×'+mode.height+' '+mode.bit_depth+'-bit');
-        td.appendChild(tog);\n        var toggleTd=td;
+        td.appendChild(tog);
+        var toggleTd=td;
         td=document.createElement('td');
         var title=document.createElement('div'); title.className='mode-title';
         title.textContent=mode.width+'×'+mode.height+(mode.hdr?' · Clear HDR':'');

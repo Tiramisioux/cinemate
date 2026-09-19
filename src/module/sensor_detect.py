@@ -535,7 +535,13 @@ class SensorDetect:
             # and prints the ClearHDR state after this separator. The old
             # parser tagged the entire --hdr invocation as HDR, which caused
             # ordinary modes from the first half to be duplicated/misclassified.
-            if hdr and re.search(r"CLEAR\s+HDR\s*/\s*SENSOR\s+HDR", line, re.IGNORECASE):
+            if hdr and (
+                re.search(r"CLEAR\s+HDR\s*/\s*SENSOR\s+HDR", line, re.IGNORECASE)
+                or re.search(r"\bCLEAR\s+HDR\b", line, re.IGNORECASE)
+            ):
+                # The IMX585 probe switches from its normal SDR state to the
+                # ClearHDR sensor state. Keep this state even when the driver
+                # repeats the camera header afterwards.
                 current_hdr = True
                 parsing_modes = False
                 current_bit_depth = None
@@ -620,6 +626,12 @@ class SensorDetect:
                 bx, by = map(int, binning.groups())
                 mode_extra["binning_x"] = bx
                 mode_extra["binning_y"] = by
+            # RAW16 is a ClearHDR-only IMX585 format. If a probe
+            # formatter ever emits it while the parser is still in the SDR
+            # state, do not expose it as a false "STANDARD · 16-BIT" mode.
+            if current_bit_depth == 16 and not current_hdr:
+                continue
+
             last_mode = self._mode_from_metadata_or_detected(
                 camera_name=current_cam, width=width, height=height,
                 bit_depth=current_bit_depth, fps_max=fps_max, hdr=current_hdr,

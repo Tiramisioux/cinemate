@@ -734,13 +734,77 @@ class SensorDetect:
         only ClearHDR modes, none match and all are promoted.
         """
         for cam, modes in hdr_modes.items():
+            base = base_modes.get(cam, [])
+
+            # First handle the unambiguous case: a timing/geometry that the
+            # plain probe never reported is a ClearHDR-only mode.
             base_timing_keys = {
-                cls._mode_timing_key(m) for m in base_modes.get(cam, [])
+                cls._mode_timing_key(m) for m in base
             }
+
+            # The IMX585 formatter used by cinepi-raw can also expose both
+            # timing ceilings without printing a state separator. In that
+            # case the HDR probe may contain the same readout twice, e.g.
+            # 3840x2160 RAW12 at 67 fps (SDR) and 30 fps (ClearHDR).
+            #
+            # Comparing complete timing keys is insufficient when the plain
+            # probe itself also contains both ceilings: the 30-fps entry is
+            # then already present in base_timing_keys. The useful invariant
+            # is that, for the same physical readout, ClearHDR runs at a
+            # lower timing ceiling than the corresponding SDR state.
+            #
+            # Keep this deliberately conservative: only an unmarked HDR-probe
+            # timing below the highest plain-probe timing for the *same
+            # readout geometry* is promoted. A mode with a different crop or
+            # binning remains covered by the exact-key rule above.
+            readout_base_fps = {}
+            for base_mode in base:
+                readout_key = (
+                    int(base_mode.get("width") or 0),
+                    int(base_mode.get("height") or 0),
+                    int(base_mode.get("bit_depth") or 0),
+                    base_mode.get("crop_x"), base_mode.get("crop_y"),
+                    base_mode.get("crop_width"), base_mode.get("crop_height"),
+                    base_mode.get("binning_x"), base_mode.get("binning_y"),
+                )
+                fps = base_mode.get("fps_max")
+                if fps is None:
+                    continue
+                try:
+                    fps = float(fps)
+                except (TypeError, ValueError):
+                    continue
+                readout_base_fps[readout_key] = max(
+                    fps, readout_base_fps.get(readout_key, float("-inf"))
+                )
+
             for mode in modes:
                 if bool(mode.get("hdr")):
                     continue
-                if cls._mode_timing_key(mode) not in base_timing_keys:
+
+                timing_key = cls._mode_timing_key(mode)
+                if timing_key not in base_timing_keys:
+                    mode["hdr"] = True
+                    continue
+
+                readout_key = (
+                    int(mode.get("width") or 0),
+                    int(mode.get("height") or 0),
+                    int(mode.get("bit_depth") or 0),
+                    mode.get("crop_x"), mode.get("crop_y"),
+                    mode.get("crop_width"), mode.get("crop_height"),
+                    mode.get("binning_x"), mode.get("binning_y"),
+                )
+                base_fps = readout_base_fps.get(readout_key)
+                fps = mode.get("fps_max")
+                if base_fps is None or fps is None:
+                    continue
+                try:
+                    fps = float(fps)
+                except (TypeError, ValueError):
+                    continue
+
+                if fps < base_fps:
                     mode["hdr"] = True
 
     @staticmethod

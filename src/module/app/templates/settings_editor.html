@@ -3353,6 +3353,7 @@
         tr.setAttribute('data-crop-y',mode.crop_y==null?'':mode.crop_y);
         tr.setAttribute('data-crop-width',mode.crop_width==null?'':mode.crop_width);
         tr.setAttribute('data-crop-height',mode.crop_height==null?'':mode.crop_height);
+        tr.setAttribute('data-detected',mode.fps_max_detected==null?'':mode.fps_max_detected);
         if(!mode.selected) tr.classList.add('mode-off');
         var td=document.createElement('td');
         var tog=document.createElement('button');
@@ -3450,7 +3451,7 @@
     var existing = (lastLoadedSettings && lastLoadedSettings.image_capture && lastLoadedSettings.image_capture.enabled_modes) || {};
     Object.keys(existing).forEach(function(camera){ out[camera] = (existing[camera] || []).slice(); });
     var cameras = {};
-    document.querySelectorAll('#recordingModesBody [data-mode-row]').forEach(function(row){
+    document.querySelectorAll('.camera-mode-list [data-mode-row]').forEach(function(row){
       var camera=row.getAttribute('data-camera');
       (cameras[camera] || (cameras[camera]=[])).push(row);
     });
@@ -3480,7 +3481,7 @@
       && lastLoadedSettings.image_capture.custom_modes) || {};
     Object.keys(customModes).forEach(function(camera){ out[camera] = (customModes[camera] || []).slice(); });
 
-    document.querySelectorAll('#recordingModesBody [data-mode-row]').forEach(function(row){
+    document.querySelectorAll('.camera-mode-list [data-mode-row]').forEach(function(row){
       var camera=row.getAttribute('data-camera');
       var w=parseInt(row.getAttribute('data-width'),10), h=parseInt(row.getAttribute('data-height'),10);
       var bd=parseInt(row.getAttribute('data-bit-depth'),10), hdr=row.getAttribute('data-hdr')==='true';
@@ -4382,7 +4383,7 @@
       container.querySelectorAll('.step-chip').forEach(function(c){ arr.push(c.firstChild.textContent.trim()); });
       container.setAttribute('data-chip-original', JSON.stringify(arr));
     });
-    document.querySelectorAll('#recordingModesBody [data-mode-row]').forEach(function(row){
+    document.querySelectorAll('.camera-mode-list [data-mode-row]').forEach(function(row){
       var tog=row.querySelector('.mode-toggle');
       var inp=row.querySelector('.mode-fps-input');
       if(tog) tog.setAttribute('data-original-selected', tog.getAttribute('aria-checked'));

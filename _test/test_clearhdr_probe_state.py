@@ -48,6 +48,24 @@ CLEAR HDR / SENSOR HDR
         modes = self._detector()._parse_cinepi_output(output, hdr=True)["imx585"]
         self.assertEqual([m["hdr"] for m in modes], [False, True])
 
+    def test_unmarked_probe_classifies_new_lower_fps_timings_as_hdr(self):
+        d = self._detector()
+        base = {"imx585": [{
+            "width": 3840, "height": 2160, "bit_depth": 12,
+            "fps_max": 67, "hdr": False,
+            "crop_x": 0, "crop_y": 0, "crop_width": 3856, "crop_height": 2180,
+            "binning_x": 1, "binning_y": 1,
+        }]}
+        # This is the problematic formatter shape: the HDR probe contains
+        # the normal timing and the lower ClearHDR timing, but no state marker.
+        hdr = {"imx585": [
+            {**base["imx585"][0]},
+            {**base["imx585"][0], "fps_max": 30},
+        ]}
+        d._normalize_hdr_probe_modes(base, hdr)
+        self.assertEqual([bool(m["hdr"]) for m in hdr["imx585"]], [False, True])
+
+
     def test_sdr_and_hdr_same_readout_are_distinct_even_when_fps_differs(self):
         d = self._detector()
         base = {"imx585": [{

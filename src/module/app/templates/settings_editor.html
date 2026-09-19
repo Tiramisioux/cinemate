@@ -1753,7 +1753,6 @@
   <header class="group-head">
     <h2>{{ t('pane.resolution.heading') }}</h2>
     <p class="group-sub">Driver modes, recording bandwidth and per-mode frame-rate limits.</p>
-    <p class="hw-note" id="modeAvailabilityNote" hidden></p>
   </header>
   <div class="cards">
     <div class="card" data-search="recording modes resolution bit depth binning crop sensor fps throughput storage fps user max">
@@ -3389,7 +3388,6 @@
       if (!res.ok) return;
       renderRecordingModes(res.sensors || {}, res);
       renderConfigModes(res.sensors || {});
-      applyModeAvailability(res.available);
     }).catch(function(){ /* non-fatal -- the rest of the page still works */ });
   }
 

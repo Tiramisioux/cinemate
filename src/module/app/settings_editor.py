@@ -875,7 +875,13 @@ def get_sensor_modes():
                 "sensor_height": mode.get("sensor_height"),
                 "diagram_sensor_width": diagram_w,
                 "diagram_sensor_height": diagram_h,
-                "crop_known": mode.get("crop_width") is not None,
+                # crop_known is true only when the driver supplied the
+                # complete crop tuple.  Do not use sensor database metadata as a
+                # substitute: the mode table is specifically a readout of the
+                # current cinepi-raw probe.
+                "crop_known": all(mode.get(k) is not None for k in (
+                    "crop_x", "crop_y", "crop_width", "crop_height",
+                )),
                 "full": SensorDetect._mode_is_full(mode),
                 "selected": selected_for(camera_name, mode),
             })

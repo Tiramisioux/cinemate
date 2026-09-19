@@ -520,6 +520,12 @@
   }
   .recording-mode-table tr[data-mode-row]{ cursor:pointer; transition:background-color .12s ease, box-shadow .12s ease; }
   .recording-mode-table tr[data-mode-row]:hover{ background:var(--panel-2); }
+  /* Every settings card gets a clear hover target. Cards with a single
+     control are also actionable from the surrounding card surface. */
+  .card{ transition:background-color .12s ease, box-shadow .12s ease; }
+  .card:hover{ background:var(--panel-2); }
+  .card.card-clickable{ cursor:pointer; }
+  .card.card-clickable:hover{ box-shadow:inset 3px 0 0 var(--accent); }
   /* Cards whose only control is a single flip switch get the same quiet
      hover affordance as the recording-mode rows. Cards with a switch plus
      another control are deliberately left unchanged. */
@@ -3817,6 +3823,43 @@
     else cur = String(el.value);
     markDirty(el, cur !== orig);
   }
+
+  /* ---------- card-level control affordance ----------
+     A card with one interactive control can be operated from anywhere on the
+     card. With several controls, the surrounding card activates the switch
+     when there is one, while direct clicks on the other controls are left to
+     those controls themselves. This keeps dense settings usable on a phone
+     without stealing clicks from dropdowns, inputs or upload controls. */
+  function cardPrimaryControl(card){
+    var controls = Array.from(card.querySelectorAll('button.toggle[data-path], select.field-input, input.field-input'));
+    return controls.length === 1 ? controls[0] : null;
+  }
+  function focusCardControl(control){
+    if (!control) return;
+    control.focus({preventScroll:true});
+    if (control.tagName === 'SELECT' && typeof control.showPicker === 'function') {
+      try { control.showPicker(); } catch (_) {}
+    } else if (control.tagName === 'INPUT' && typeof control.select === 'function' &&
+               control.type !== 'number' && control.type !== 'file') {
+      control.select();
+    }
+  }
+  document.querySelectorAll('.card').forEach(function(card){
+    var controls = Array.from(card.querySelectorAll('button.toggle[data-path], select.field-input, input.field-input'));
+    if (!controls.length) return;
+    var toggle = controls.find(function(el){ return el.classList.contains('toggle'); });
+    var primary = controls.length === 1 ? controls[0] : toggle;
+    if (!primary) return;
+    card.classList.add('card-clickable');
+    card.addEventListener('click', function(e){
+      if (e.target.closest('button, select, input, textarea, a, label')) return;
+      if (primary.classList.contains('toggle')) {
+        primary.click();
+      } else {
+        focusCardControl(primary);
+      }
+    });
+  });
 
   /* ---------- toggles ---------- */
   document.querySelectorAll('.toggle[data-path]').forEach(function(t){

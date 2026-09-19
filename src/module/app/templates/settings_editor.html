@@ -3366,7 +3366,7 @@
         var title=document.createElement('div'); title.className='mode-title';
         title.textContent=mode.width+'×'+mode.height+(mode.hdr?' · Clear HDR':'');
         var sub=document.createElement('div'); sub.className='mode-sub';
-        sub.textContent=(mode.full?'Full sensor':(mode.crop_known?'Cropped':'Mode'))+' · '+(mode.packing||'');
+        sub.textContent=mode.crop_known?'Cropped':'Full frame';
         title.appendChild(sub); td.appendChild(title); tr.appendChild(td);
         td=document.createElement('td'); td.textContent=(mode.aspect||0).toFixed(2)+':1'; tr.appendChild(td);
         td=document.createElement('td'); td.textContent=(mode.binning_x&&mode.binning_y)?mode.binning_x+'×'+mode.binning_y:'—'; tr.appendChild(td);

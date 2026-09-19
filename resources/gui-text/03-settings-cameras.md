@@ -9,7 +9,7 @@ they are what the GUI looks each string up by when CineMate starts.
 ## Camera 0
 <!-- key: pane.cam0 -->
 
-Sensor mounted on connector `cam0`. Geometry, HDMI routing, and the name it reports over USB.
+Sensor mounted on connector `cam0`.
 
 ### Rotate 180°
 <!-- key: card.sensors.cam0.geometry.rotate_180 -->

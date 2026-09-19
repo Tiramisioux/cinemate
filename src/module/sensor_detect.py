@@ -1543,7 +1543,6 @@ class SensorDetect:
             group = (
                 bool(info.get('hdr')),
                 int(info.get('bit_depth') or 0),
-                binning,
             )
             resolution = f"{info['width']} : {info['height']} : {info['bit_depth']}b"
             # imx585 ClearHDR modes are tagged in the web GUI dropdown so the
@@ -1556,8 +1555,7 @@ class SensorDetect:
                 'group': group,
                 'group_label': (
                     ("Clear HDR" if info.get('hdr') else "Standard")
-                    + f" · {info['bit_depth']}-bit"
-                    + (f" · {binning}" if binning else ""),
+                    + f" · {info['bit_depth']}-bit",
                 ),
             })
         return resolutions

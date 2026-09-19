@@ -472,7 +472,11 @@
                 },
                 "packing": {
                   "type": "string"
-                }
+                },
+                "crop_x": {"type": "integer", "minimum": 0},
+                "crop_y": {"type": "integer", "minimum": 0},
+                "crop_width": {"type": "integer", "minimum": 1},
+                "crop_height": {"type": "integer", "minimum": 1}
               },
               "required": [
                 "width",

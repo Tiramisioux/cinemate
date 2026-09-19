@@ -483,7 +483,12 @@
   .recording-mode-table{ width:100%; min-width:760px; border-collapse:collapse; font-size:12px; line-height:1.25; }
   .recording-mode-table th{ padding:7px 8px; text-align:left; color:var(--muted); border-bottom:1px solid var(--line); font-size:10px; text-transform:uppercase; letter-spacing:.045em; white-space:nowrap; }
   .recording-mode-table td{ padding:7px 8px; border-bottom:1px solid var(--line); color:var(--ink); white-space:nowrap; vertical-align:middle; }
+  .recording-mode-table tr[data-mode-row]{ cursor:pointer; transition:background-color .12s ease, box-shadow .12s ease; }
+  .recording-mode-table tr[data-mode-row]:hover{ background:var(--panel-2); }
+  .recording-mode-table tr[data-mode-row]:focus-within{ background:var(--panel-2); }
+  .recording-mode-table tr[data-mode-row].mode-on{ box-shadow:inset 3px 0 0 var(--accent); }
   .recording-mode-table tr.mode-off td{ opacity:.38; }
+  .recording-mode-table tr.mode-off:hover{ background:var(--panel-2); }
   .recording-mode-table .mode-toggle{ margin:0; }
   .recording-mode-table .mode-fps-input{ width:64px; box-sizing:border-box; padding:5px 6px; text-align:right; font-variant-numeric:tabular-nums; }
   .recording-mode-table .mode-fps-input.invalid{ border-color:var(--danger); }
@@ -3435,9 +3440,39 @@
         td.appendChild(input); td.appendChild(document.createTextNode(' fps')); tr.appendChild(td);
         tr.appendChild(toggleTd);
 
-        function syncRow(){ tr.classList.toggle('mode-off',tog.getAttribute('aria-checked')!=='true'); }
-        tog.addEventListener('click',function(){
+        function syncRow(){
           var on=tog.getAttribute('aria-checked')==='true';
+          tr.classList.toggle('mode-off',!on);
+          tr.classList.toggle('mode-on',on);
+        }
+        function toggleModeFromRow(){
+          var on=tog.getAttribute('aria-checked')==='true';
+          if(on){
+            var sameCamera=host.querySelectorAll('tr[data-mode-row] .mode-toggle'), count=0;
+            sameCamera.forEach(function(t){if(t.getAttribute('aria-checked')==='true')count++;});
+            if(count<=1){showToast('Keep at least one recording mode enabled for '+camera);return;}
+          }
+          tog.setAttribute('aria-checked',String(!on)); syncRow();
+          markDirty(tog,!on!==(String(mode.selected)==='true'));
+        }
+        tog.addEventListener('click',function(e){
+          e.stopPropagation();
+          toggleModeFromRow();
+        });
+        tr.addEventListener('click',function(e){
+          if(e.target.closest('input,button,select,textarea,a')) return;
+          toggleModeFromRow();
+        });
+        tog.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();tog.click();}});
+        input.addEventListener('input',function(){
+          var v=input.value.trim(),n=parseFloat(v),sensor=parseFloat(mode.fps_max_detected);
+          if(v!==''&&(!isFinite(n)||n<0||n>sensor)) input.classList.add('invalid'); else input.classList.remove('invalid');
+          markDirty(input,v!==String(mode.fps_max_effective==null?'':mode.fps_max_effective));
+        });
+        syncRow();
+        body.appendChild(tr);
+      });
+      table.appendChild(body);
           if(on){
             var sameCamera=host.querySelectorAll('tr[data-mode-row] .mode-toggle'), count=0;
             sameCamera.forEach(function(t){if(t.getAttribute('aria-checked')==='true')count++;});

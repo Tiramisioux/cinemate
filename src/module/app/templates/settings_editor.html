@@ -3283,7 +3283,7 @@
     if(hasCrop){
       var sx=mode.crop_x || 0, sy=mode.crop_y || 0;
       var sw=mode.crop_width, sh=mode.crop_height;
-      var sensorW=Math.max(mode.width || sw, sx+sw), sensorH=Math.max(mode.height || sh, sy+sh);
+      var sensorW=mode.sensor_width || Math.max(mode.width || sw, sx+sw), sensorH=mode.sensor_height || Math.max(mode.height || sh, sy+sh);
       crop.style.left=(sx/sensorW*100)+'%';
       crop.style.top=(sy/sensorH*100)+'%';
       crop.style.width=(sw/sensorW*100)+'%';

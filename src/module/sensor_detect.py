@@ -463,6 +463,16 @@ class SensorDetect:
             "fps_max": fps_max_value,
             "gui_layout": extra.get("gui_layout", metadata.get("gui_layout", 0)),
             "file_size": file_size,
+            # Keep crop and binning as driver-discovered mode metadata.  Crop
+            # geometry comes directly from cinepi-raw --list-cameras; binning
+            # is parsed from the driver's mode description and is never
+            # reconstructed from output dimensions.
+            "crop_x": extra.get("crop_x"),
+            "crop_y": extra.get("crop_y"),
+            "crop_width": extra.get("crop_width"),
+            "crop_height": extra.get("crop_height"),
+            "binning_x": extra.get("binning_x", metadata.get("binning_x")),
+            "binning_y": extra.get("binning_y", metadata.get("binning_y")),
             # ClearHDR flag (imx585). A mode is HDR when it is reported only
             # by `cinepi-raw --list-cameras --hdr sensor`; selecting it makes
             # cinepi-raw launch with --hdr sensor. See detect_camera_model().
@@ -531,6 +541,18 @@ class SensorDetect:
             if crop:
                 cx, cy, cw, ch = map(int, crop.groups())
                 mode_extra.update({"crop_x": cx, "crop_y": cy, "crop_width": cw, "crop_height": ch})
+
+            # The driver describes binned modes explicitly.  Prefer that
+            # declaration over inferring binning from crop/output geometry:
+            # a crop is not a binning operation, and the two must remain
+            # independent in the mode database.
+            binning = re.search(
+                r"\b(\d+)\s*[x×]\s*(\d+)\s*(?:binning|binned)\b",
+                line, re.IGNORECASE,
+            )
+            if binning:
+                bx, by = map(int, binning.groups())
+                mode_extra.update({"binning_x": bx, "binning_y": by})
             sensors[current_cam].append(
                 self._mode_from_metadata_or_detected(
                     camera_name=current_cam, width=width, height=height,

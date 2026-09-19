@@ -488,7 +488,7 @@
   .recording-mode-table .mode-fps-input{ width:64px; box-sizing:border-box; padding:5px 6px; text-align:right; font-variant-numeric:tabular-nums; }
   .recording-mode-table .mode-fps-input.invalid{ border-color:var(--danger); }
   .mode-group-row td{ padding:7px 8px; background:var(--panel-2); color:var(--muted); font-family:'DIN2014',sans-serif; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-top:1px solid var(--line); }
-  .mode-subgroup-row td{ padding:4px 8px 3px 18px; color:var(--muted); font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-bottom:0; }
+  .mode-subgroup-row td{ padding:2px 8px; color:var(--muted); font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-bottom:0; background:transparent; }
   .mode-cropped td:first-child{ padding-left:30px; }
   .mode-cropped .mode-title{ font-weight:600; }
   .mode-title{ font-weight:700; }
@@ -498,6 +498,9 @@
   .mode-crop-frame{ position:relative; width:78px; height:48px; border:1px solid var(--muted); background:var(--panel-2); overflow:hidden; box-sizing:border-box; }
   .mode-crop-window{ position:absolute; box-sizing:border-box; border:2px solid var(--accent); background:rgba(120,220,150,.13); min-width:2px; min-height:2px; }
   .mode-crop-window.mode-crop-full{ background:rgba(120,220,150,.08); }
+  .mode-crop-window.mode-crop-unknown{
+    border-style:dashed; border-color:var(--muted); background:transparent;
+  }
   .recording-mode-table tr.mode-off .mode-crop-window{ opacity:.55; }
   .camera-recording-mode-table td:last-child{ text-align:right; width:54px; }
   .camera-recording-mode-table td:last-child .mode-toggle{ margin-left:auto; }
@@ -3283,12 +3286,17 @@
     if(hasCrop){
       var sx=mode.crop_x || 0, sy=mode.crop_y || 0;
       var sw=mode.crop_width, sh=mode.crop_height;
-      var sensorW=mode.sensor_width || Math.max(mode.width || sw, sx+sw), sensorH=mode.sensor_height || Math.max(mode.height || sh, sy+sh);
+      var sensorW=mode.diagram_sensor_width || mode.sensor_width || Math.max(mode.width || sw, sx+sw);
+      var sensorH=mode.diagram_sensor_height || mode.sensor_height || Math.max(mode.height || sh, sy+sh);
       crop.style.left=(sx/sensorW*100)+'%';
       crop.style.top=(sy/sensorH*100)+'%';
       crop.style.width=(sw/sensorW*100)+'%';
       crop.style.height=(sh/sensorH*100)+'%';
       crop.title='Crop '+sw+'×'+sh+' at '+sx+','+sy;
+    } else if(!mode.crop_known){
+      crop.style.left='0'; crop.style.top='0'; crop.style.width='100%'; crop.style.height='100%';
+      crop.classList.add('mode-crop-unknown');
+      crop.title='Sensor driver did not report crop geometry';
     } else {
       crop.style.left='0'; crop.style.top='0'; crop.style.width='100%'; crop.style.height='100%';
       crop.classList.add('mode-crop-full');
@@ -3343,11 +3351,11 @@
         if(group!==lastGroup){
           var gr=document.createElement('tr'); gr.className='mode-group-row';
           var gd=document.createElement('td'); gd.colSpan=7;
-          gd.textContent=(mode.hdr?'Clear HDR':'Standard')+' · '+mode.bit_depth+'-bit · '+((mode.binning_x&&mode.binning_y)?mode.binning_x+'×'+mode.binning_y:'native');
+          var binLabel=(mode.binning_x!=null && mode.binning_y!=null)
+            ? mode.binning_x+'×'+mode.binning_y
+            : 'BINNING NOT REPORTED';
+          gd.textContent=(mode.hdr?'Clear HDR':'Standard')+' · '+mode.bit_depth+'-bit · '+binLabel;
           gr.appendChild(gd); body.appendChild(gr); lastGroup=group;
-          var ng=document.createElement('tr'); ng.className='mode-subgroup-row';
-          var nd=document.createElement('td'); nd.colSpan=7; nd.textContent='NON-CROPPED MODES';
-          ng.appendChild(nd); body.appendChild(ng);
         }
         var tr=document.createElement('tr');
         tr.setAttribute('data-mode-row','1');
@@ -3374,7 +3382,9 @@
         var title=document.createElement('div'); title.className='mode-title';
         title.textContent=mode.width+'×'+mode.height+(mode.hdr?' · Clear HDR':'');
         var sub=document.createElement('div'); sub.className='mode-sub';
-        sub.textContent=mode.crop_known?'Cropped':'Full frame';
+        sub.textContent=mode.crop_known
+          ? (mode.full ? 'Full frame' : 'Cropped')
+          : 'Geometry not reported';
         title.appendChild(sub); td.appendChild(title); tr.appendChild(td);
         td=document.createElement('td'); td.textContent=(mode.aspect||0).toFixed(2)+':1'; tr.appendChild(td);
         td=document.createElement('td'); td.textContent=(mode.binning_x&&mode.binning_y)?mode.binning_x+'×'+mode.binning_y:'—'; tr.appendChild(td);

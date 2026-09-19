@@ -48,7 +48,12 @@ from module.config_loader import (
 from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
 from module.redis_controller import ParameterKey, smpte_frame_base
-from module.sensor_detect import thumbnail_choice_labels
+from module.sensor_detect import (
+    thumbnail_choice_labels,
+    compute_frame_size_mb,
+    thumbnail_plane_bytes,
+    SensorDetect,
+)
 from module.tuning_files import tuning_json_problem
 from module.web_api_settings import web_api_settings
 
@@ -772,65 +777,133 @@ def get_actions():
 
 @settings_editor_bp.route("/api/sensor-modes", methods=["GET"])
 def get_sensor_modes():
-    """Detected modes per camera model, for the fps-ceiling override pane
-    (F-298). sensor_detect.res_modes/sensor_resolutions already carry any
-    settings.jsonc custom_modes override merged in (that's the *effective*
-    fps_max cinepi-raw actually launches with); fps_max_detected is only
-    present on a mode _finalize_modes() overrode, and is what the sensor
-    itself reported before that override was applied -- see
-    sensor_detect.py's _finalize_modes(). Absent means "not overridden",
-    i.e. fps_max itself is the detected value.
+    """Return every currently detected driver mode for the dynamic mode table.
+
+    This endpoint deliberately reads sensor_modes_unfiltered. The old
+    k_steps/bit_depths settings are now only a backwards-compatible fallback;
+    the new editor needs to see the complete driver catalogue so an operator
+    can select individual modes.
     """
     sensor_detect = current_app.config.get("SENSOR_DETECT")
     if sensor_detect is None:
-        return jsonify({"ok": True, "sensors": {}})
+        return jsonify({"ok": True, "sensors": {}, "storage": {}})
+
+    settings = current_app.config.get("SETTINGS") or {}
+    image = settings.get("image_capture") or {}
+    redis = current_app.config.get("REDIS_CONTROLLER")
+
+    def redis_value(key, default=None):
+        if redis is None:
+            return default
+        try:
+            value = redis.get_value(key, default)
+            return default if value is None else value
+        except Exception:
+            return default
+
+    try:
+        conform = smpte_frame_base(float(image.get("conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)))
+    except (TypeError, ValueError):
+        conform = DEFAULT_CONFORM_FRAME_RATE
+
+    # The thumbnail is part of every DNG frame, so it belongs in the mode
+    # throughput calculation. Prefer the live Redis values because thumbnail
+    # mode can be changed without restarting the camera.
+    thumb_raw = redis_value(ParameterKey.THUMBNAIL.value, image.get("thumbnail", "jpeg"))
+    thumb_size_raw = redis_value(ParameterKey.THUMBNAIL_SIZE.value, image.get("thumbnail_size", 1))
+    lores_w_raw = redis_value(ParameterKey.LORES_WIDTH.value, 1280)
+    lores_h_raw = redis_value(ParameterKey.LORES_HEIGHT.value, 720)
+    try:
+        thumb_size = max(0, min(12, int(float(thumb_size_raw))))
+    except (TypeError, ValueError):
+        thumb_size = 1
+    thumb_map = {"off": 0, "mono": 1, "colour": 2, "color": 2, "jpeg": 3}
+    try:
+        thumb_mode = int(thumb_raw)
+    except (TypeError, ValueError):
+        thumb_mode = thumb_map.get(str(thumb_raw).strip().lower(), 3)
+    try:
+        lores_w, lores_h = int(float(lores_w_raw)), int(float(lores_h_raw))
+    except (TypeError, ValueError):
+        lores_w, lores_h = 1280, 720
+    thumb_bytes = thumbnail_plane_bytes(lores_w, lores_h, thumb_mode, thumb_size)
+
+    storage_speed_raw = redis_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value, 0)
+    try:
+        storage_speed = float(storage_speed_raw or 0)
+    except (TypeError, ValueError):
+        storage_speed = 0.0
+    storage_type = str(redis_value(ParameterKey.STORAGE_TYPE.value, "none") or "none")
+    storage_fs = str(redis_value(ParameterKey.STORAGE_FILESYSTEM.value, "unknown") or "unknown")
+    storage_max_available = storage_speed > 0.0
+
+    enabled_modes = getattr(sensor_detect, "enabled_modes", {}) or {}
+    legacy_k = image.get("k_steps", []) or []
+    legacy_depths = image.get("bit_depths", []) or []
+    use_individual = isinstance(enabled_modes, dict) and bool(enabled_modes)
+
+    def selected_for(camera, mode):
+        entries = enabled_modes.get(camera) if isinstance(enabled_modes, dict) else None
+        if isinstance(entries, list) and entries:
+            return SensorDetect._mode_matches_enabled(mode, entries)
+        # First visit of an old settings file: preserve its existing filters,
+        # but otherwise default to the explicitly known full/native modes.
+        if legacy_k and round((mode.get("width", 0) / 1000) * 2) / 2 not in legacy_k:
+            return False
+        if legacy_depths and mode.get("bit_depth") not in legacy_depths:
+            return False
+        return SensorDetect._mode_is_full(mode) or mode.get("crop_width") is None
 
     sensors = {}
-    for camera_name, modes in (sensor_detect.sensor_resolutions or {}).items():
+    source = getattr(sensor_detect, "sensor_modes_unfiltered", {}) or {}
+    for camera_name, modes in source.items():
         entries = []
-        for mode in modes.values():
-            detected_fps = mode.get("fps_max_detected", mode.get("fps_max"))
+        for mode in sorted(modes, key=SensorDetect._mode_sort_key):
+            width, height = mode.get("width"), mode.get("height")
+            depth = mode.get("bit_depth")
+            if not width or not height or not depth:
+                continue
+            frame_mb = compute_frame_size_mb(width, height, depth, thumbnail_bytes=thumb_bytes)
+            throughput = frame_mb * conform
+            storage_fps = int(storage_speed * 1_000_000 / (frame_mb * 1_000_000)) if storage_max_available and frame_mb > 0 else None
+            bx, by = SensorDetect._mode_binning(mode)
+            full = SensorDetect._mode_is_full(mode)
             entries.append({
-                "width": mode.get("width"),
-                "height": mode.get("height"),
-                "bit_depth": mode.get("bit_depth"),
+                "width": width, "height": height, "bit_depth": depth,
                 "hdr": bool(mode.get("hdr", False)),
-                "fps_max_detected": detected_fps,
+                "fps_max_detected": mode.get("fps_max_detected", mode.get("fps_max")),
                 "fps_max_effective": mode.get("fps_max"),
+                "packing": mode.get("packing"),
+                "binning_x": bx, "binning_y": by,
+                "crop_x": mode.get("crop_x"), "crop_y": mode.get("crop_y"),
+                "crop_width": mode.get("crop_width"), "crop_height": mode.get("crop_height"),
+                "crop_known": mode.get("crop_width") is not None,
+                "full": full,
+                "frame_size_mb": frame_mb,
+                "throughput_mb_s": round(throughput, 2),
+                "storage_max_fps": storage_fps,
+                "selected": selected_for(camera_name, mode),
             })
-        # Same order the rest of CineMate lists modes in -- the mode table, the
-        # GUI mode index, docs/sensors.md -- which is SensorDetect._order_modes()'s
-        # (hdr, bit_depth, width, height), ascending. This pane used to sort by
-        # pixel count descending, so the same five modes appeared here in a
-        # different order from everywhere else and nothing said why.
-        entries.sort(key=lambda m: (
-            bool(m["hdr"]),
-            m["bit_depth"] or 0,
-            m["width"] or 0,
-            m["height"] or 0,
-        ))
         sensors[camera_name] = entries
 
     return jsonify({
         "ok": True,
         "sensors": sensors,
+        "conform_frame_rate": conform,
+        "thumbnail_bytes": thumb_bytes,
+        "thumbnail_mode": thumb_mode,
+        "storage": {
+            "type": storage_type,
+            "filesystem": storage_fs,
+            "measured_write_mb_s": round(storage_speed, 2) if storage_max_available else None,
+            "measured": storage_max_available,
+        },
         "available": _available_mode_categories(sensor_detect),
     })
 
 
 def _available_mode_categories(sensor_detect) -> dict:
-    """Which K categories and bit depths the attached sensors actually have.
-
-    Read from sensor_modes_unfiltered, NOT sensor_resolutions: the latter is
-    what survived the settings.jsonc filters, so asking it whether a 3K mode
-    exists would answer "no" the moment 3K was switched off -- and the
-    settings page would grey out the switch that did it.
-
-    The K category is round(width/1000*2)/2, the same expression
-    _finalize_modes filters on. Restating it is deliberate: this endpoint has
-    to answer for a mode the filter has already rejected, which is exactly the
-    case the filter itself never sees.
-    """
+    """Legacy availability metadata retained for older editor code."""
     k_values, bit_depths = set(), set()
     for modes in (getattr(sensor_detect, "sensor_modes_unfiltered", None) or {}).values():
         for mode in modes:
@@ -840,14 +913,7 @@ def _available_mode_categories(sensor_detect) -> dict:
             depth = mode.get("bit_depth")
             if depth:
                 bit_depths.add(int(depth))
-    return {
-        "k_steps": sorted(k_values),
-        "bit_depths": sorted(bit_depths),
-        # No camera detected at all is not the same as a camera with no 3K
-        # mode. The page greys nothing rather than greying everything.
-        "known": bool(k_values or bit_depths),
-    }
-
+    return {"k_steps": sorted(k_values), "bit_depths": sorted(bit_depths), "known": bool(k_values or bit_depths)}
 
 @settings_editor_bp.route("/api/playback/clips", methods=["GET"])
 def get_playback_clips():

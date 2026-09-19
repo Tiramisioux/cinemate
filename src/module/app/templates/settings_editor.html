@@ -496,7 +496,8 @@
   .mode-crop-window{ position:absolute; box-sizing:border-box; border:2px solid var(--accent); background:rgba(120,220,150,.13); min-width:2px; min-height:2px; }
   .mode-crop-window.mode-crop-full{ background:rgba(120,220,150,.08); }
   .recording-mode-table tr.mode-off .mode-crop-window{ opacity:.55; }
-  .camera-recording-mode-table td:last-child{ text-align:right; }
+  .camera-recording-mode-table td:last-child{ text-align:right; width:54px; }
+  .camera-recording-mode-table td:last-child .mode-toggle{ margin-left:auto; }
 
   .mode-empty{ color:var(--muted); padding:14px 8px !important; }
   /* Detected-modes readout on the Boot config page. */
@@ -3331,7 +3332,7 @@
       host.innerHTML='';
       var table=document.createElement('table');
       table.className='recording-mode-table camera-recording-mode-table';
-      table.innerHTML='<thead><tr><th>Enable</th><th>Mode</th><th>Aspect</th><th>Binning</th><th>Crop</th><th>FPS</th><th></th></tr></thead>';
+      table.innerHTML='<thead><tr><th>Mode</th><th>Aspect</th><th>Binning</th><th>Crop</th><th>FPS</th><th>User Max FPS</th><th>Enable</th></tr></thead>';
       var body=document.createElement('tbody');
       var lastGroup='';
       modes.forEach(function(mode){
@@ -3360,7 +3361,7 @@
         tog.className='toggle mode-toggle'; tog.type='button'; tog.setAttribute('role','switch');
         tog.setAttribute('aria-checked',mode.selected?'true':'false');
         tog.setAttribute('aria-label','Offer '+camera+' '+mode.width+'×'+mode.height+' '+mode.bit_depth+'-bit');
-        td.appendChild(tog); tr.appendChild(td);
+        var toggleTd=td;
         td=document.createElement('td');
         var title=document.createElement('div'); title.className='mode-title';
         title.textContent=mode.width+'×'+mode.height+(mode.hdr?' · Clear HDR':'');
@@ -3379,6 +3380,7 @@
         input.setAttribute('data-mode-fps','1'); input.setAttribute('data-original',String(mode.fps_max_effective==null?'':mode.fps_max_effective));
         input.title='User ceiling; blank uses sensor maximum';
         td.appendChild(input); td.appendChild(document.createTextNode(' fps')); tr.appendChild(td);
+        tr.appendChild(toggleTd);
 
         function syncRow(){ tr.classList.toggle('mode-off',tog.getAttribute('aria-checked')!=='true'); }
         tog.addEventListener('click',function(){

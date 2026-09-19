@@ -525,10 +525,15 @@
      hover targets. */
   .camera-modes-card:hover,
   .camera-modes-card.card-clickable:hover,
-  .camera-modes-card:focus-within{
+  .camera-modes-card:focus-within,
+  .camera-mode-panel .card:hover:has(.camera-modes-card),
+  .camera-mode-panel .card.card-clickable:hover:has(.camera-modes-card){
     background:transparent;
     box-shadow:none;
   }
+  /* The mode list can sit inside a generic settings card. Suppress the
+     parent card hover treatment as well; only individual mode rows are
+     interactive hover targets. */
   /* Every settings card gets a clear hover target. Cards with a single
      control are also actionable from the surrounding card surface. */
   .card{ transition:background-color .12s ease, box-shadow .12s ease; }

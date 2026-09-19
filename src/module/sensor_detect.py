@@ -1236,12 +1236,32 @@ class SensorDetect:
                 logging.info("cinepi-raw --hdr sensor output:\n%s", hdr_out)
 
             base_modes = self._parse_cinepi_output(out, hdr=False)
-            hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True) if hdr_out.strip() else {}
+            hdr_modes = {}
 
-            # The plain probe is SDR and the dedicated --hdr sensor probe is
-            # ClearHDR. Preserve that semantic state directly; FPS is only a
-            # timing ceiling and is never used to classify HDR.
-            self._normalize_hdr_probe_modes(base_modes, hdr_modes)
+            if hdr_out.strip():
+                # cinepi-raw --hdr sensor has an explicit state boundary in
+                # the IMX585 formatter. Everything after that boundary is
+                # the ClearHDR sensor state. Parse that section independently
+                # so the HDR state cannot be lost through camera-header
+                # repetition or any other formatter detail.
+                hdr_marker = re.compile(
+                    r"^\s*CLEAR\s+HDR\s*/\s*SENSOR\s+HDR\s*$",
+                    re.IGNORECASE | re.MULTILINE,
+                )
+                marker = hdr_marker.search(hdr_out)
+                if marker:
+                    hdr_section = hdr_out[marker.end():]
+                    hdr_modes = self._parse_cinepi_output(hdr_section, hdr=False)
+                    for modes in hdr_modes.values():
+                        for mode in modes:
+                            mode["hdr"] = True
+                else:
+                    # A dedicated --hdr sensor invocation with no explicit
+                    # boundary is itself the HDR probe. Trust the invocation
+                    # rather than inferring state from FPS.
+                    hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True)
+                    self._normalize_hdr_probe_modes(base_modes, hdr_modes)
+
             merged = self._merge_mode_lists(base_modes, hdr_modes)
 
             # The two states of the IMX585 probe should carry identical driver

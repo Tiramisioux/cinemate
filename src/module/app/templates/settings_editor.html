@@ -6440,12 +6440,6 @@
        rather than once at load. */
     if (page === 'i2c'){ i2cRefresh(); i2cStartTicking(); }
     else { i2cStopTicking(); }
-    /* The Live tab embeds the shooting screen in an iframe, and hiding an
-       iframe does not stop it: its MJPEG stream and its Socket.IO connection
-       stay live behind every other tab for the rest of the session. That is
-       the same Wi-Fi link playback needs, so drop the src on the way out and
-       put it back on the way in. */
-    syncLiveEmbed(page);
     activePage = page;
     rememberPage(page);
     pageTabButtons.forEach(function(b){

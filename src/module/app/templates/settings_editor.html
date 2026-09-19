@@ -3284,15 +3284,21 @@
     crop.className='mode-crop-window';
     var hasCrop=mode.crop_known && mode.crop_width && mode.crop_height;
     if(hasCrop){
-      var sx=mode.crop_x || 0, sy=mode.crop_y || 0;
-      var sw=mode.crop_width, sh=mode.crop_height;
+      // Crop coordinates are reported in the mode's output domain. The
+      // diagram uses the largest 1x1 active sensor domain (3840×2160 on
+      // IMX585), so scale binned crop geometry back into that domain before
+      // drawing. Without this, a centred 2x2 crop such as 1440×1080 at
+      // (240,0) is incorrectly drawn near the upper-left instead of centred.
+      var bx=mode.binning_x || 1, by=mode.binning_y || 1;
+      var sx=(mode.crop_x || 0)*bx, sy=(mode.crop_y || 0)*by;
+      var sw=mode.crop_width*bx, sh=mode.crop_height*by;
       var sensorW=mode.diagram_sensor_width || mode.sensor_width || Math.max(mode.width || sw, sx+sw);
       var sensorH=mode.diagram_sensor_height || mode.sensor_height || Math.max(mode.height || sh, sy+sh);
       crop.style.left=(sx/sensorW*100)+'%';
       crop.style.top=(sy/sensorH*100)+'%';
       crop.style.width=(sw/sensorW*100)+'%';
       crop.style.height=(sh/sensorH*100)+'%';
-      crop.title='Crop '+sw+'×'+sh+' at '+sx+','+sy;
+      crop.title='Crop '+mode.crop_width+'×'+mode.crop_height+' at '+mode.crop_x+','+mode.crop_y+' ('+bx+'×'+by+' readout)';
     } else if(!mode.crop_known){
       crop.style.left='0'; crop.style.top='0'; crop.style.width='100%'; crop.style.height='100%';
       crop.classList.add('mode-crop-unknown');

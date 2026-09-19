@@ -485,6 +485,11 @@
   .recording-mode-table td{ padding:7px 8px; border-bottom:1px solid var(--line); color:var(--ink); white-space:nowrap; vertical-align:middle; }
   .recording-mode-table tr[data-mode-row]{ cursor:pointer; transition:background-color .12s ease, box-shadow .12s ease; }
   .recording-mode-table tr[data-mode-row]:hover{ background:var(--panel-2); }
+  /* Cards whose only control is a single flip switch get the same quiet
+     hover affordance as the recording-mode rows. Cards with a switch plus
+     another control are deliberately left unchanged. */
+  .card:has(> .card-control > .toggle:only-child){ transition:background-color .12s ease, box-shadow .12s ease; }
+  .card:has(> .card-control > .toggle:only-child):hover{ background:var(--panel-2); }
   .recording-mode-table tr[data-mode-row]:focus-within{ background:var(--panel-2); }
   .recording-mode-table tr[data-mode-row].mode-on{ box-shadow:inset 3px 0 0 var(--accent); }
   .recording-mode-table tr.mode-off td{ opacity:.38; }

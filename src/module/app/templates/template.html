@@ -1065,6 +1065,7 @@
     const API = '/api/v1/cmd';
     const TOKEN = {{ api_token | tojson }};
     const CAM1_STREAM = {{ stream_url_cam1 | tojson }};
+    const requestedPreview = new URLSearchParams(window.location.search).get('preview');
 
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
@@ -1404,6 +1405,12 @@
             : source === 'pip_cam0'
                 ? 'Combined view: camera 0 full + camera 1 PIP — click for PIP camera 1'
                 : 'Combined view: camera 1 full + camera 0 PIP — click for side-by-side';
+    }
+
+    function applyRequestedPreview(){
+        if (!V.sensor_cam1 || !requestedPreview) return;
+        if (requestedPreview === 'cam0' || requestedPreview === 'cam1') setPreviewSource(requestedPreview);
+        else if (requestedPreview === 'combined') setPreviewSource('both');
     }
 
     function setPreviewSource(source) {
@@ -2331,6 +2338,7 @@
         steps.ranges = { zoom: ranges.zoom };
         steps.defaults = ranges.defaults || {};
         render();
+        applyRequestedPreview();
     });
 
     socket.on('gui_data_change', (data) => {

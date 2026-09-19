@@ -209,6 +209,40 @@
   .btn-ghost{ background: transparent; }
   .btn-danger-outline{ border-color: var(--danger); color: var(--danger); background:transparent; }
 
+  /* Keep the live camera control one tap away while editing settings.
+     This is the same green circular live-view affordance used by the
+     shooting page; the expand glyph makes it clear that it returns to the
+     live control surface. */
+  .cinepi-launch{
+    position:fixed;
+    right:max(18px, env(safe-area-inset-right));
+    bottom:max(18px, env(safe-area-inset-bottom));
+    z-index:40;
+    width:52px;
+    height:52px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--accent-ink);
+    background:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:50%;
+    box-shadow:0 4px 16px rgba(0,0,0,.42);
+    transition:filter .12s ease, transform .05s ease;
+  }
+  .cinepi-launch:hover{ filter:brightness(1.08); }
+  .cinepi-live-launcher .cinepi-launch{ position:relative; right:auto; bottom:auto; }
+  .cinepi-live-launcher{ position:fixed; right:max(18px, calc(env(safe-area-inset-right, 0px) + 10px)); bottom:max(18px, calc(env(safe-area-inset-bottom, 0px) + 10px)); z-index:40; display:flex; gap:8px; align-items:center; }
+  .cinepi-live-source{ display:none; width:46px; height:46px; align-items:center; justify-content:center; border:1px solid var(--accent); border-radius:50%; color:var(--accent-ink); background:var(--accent); box-shadow:0 4px 16px rgba(0,0,0,.42); font-family:'DIN2014',Arial,sans-serif; font-weight:700; font-size:12px; text-decoration:none; }
+  .cinepi-live-launcher.dual .cinepi-launch{ display:none; }
+  .cinepi-live-launcher.dual .cinepi-live-source{ display:flex; }
+  .cinepi-live-source.active{ filter:brightness(1.1); box-shadow:0 0 0 2px var(--accent-ink),0 4px 16px rgba(0,0,0,.42); }
+  .cinepi-live-source:hover{ filter:brightness(1.08); }
+
+  .cinepi-launch:active{ transform:translateY(1px); }
+  .cinepi-launch:focus-visible{ outline:none; box-shadow:var(--focus); }
+  .cinepi-launch svg{ width:24px; height:24px; }
+
   /* ---------- Rail ---------- */
   .rail{
     grid-area: rail;
@@ -327,7 +361,7 @@
     font-family: Iowan Old Style, Palatino Linotype, Georgia, serif;
   }
   .card-help{ margin: 0; color: var(--muted); font-size: 12.8px; max-width: 46ch; }
-  .card-control{ display:flex; align-items:center; gap: 10px; justify-self: end; }
+  .card-control{ display:flex; align-items:center; gap: 10px; justify-self: end; ; justify-self:end;}
   .card-meta{
     grid-column: 1 / -1;
     display:flex; align-items:center; gap:8px; flex-wrap: wrap;
@@ -396,8 +430,14 @@
      per row so the switch column lines up with every other toggle on the
      page rather than reading as a second kind of control. */
   .switchset{ display:flex; flex-direction:column; align-items:stretch; gap:8px; min-width:118px; }
-  .switchrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; cursor:pointer; }
+  .switchrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; cursor:pointer; transition:opacity .15s ease; }
   .switchrow > span{ font-size:13px; color: var(--ink); white-space:nowrap; }
+  /* An offered item that the operator has switched off remains visible, but
+     is visually muted. This is distinct from .hw-absent: the latter means the
+     attached sensor cannot provide the item at all; this rule means the item
+     is available but deliberately not selected. */
+  .switchrow.is-off{ opacity:.42; }
+  .switchrow.is-off .toggle{ opacity:.9; }
   .step-chip{
     font-family: ui-monospace, monospace; font-size: 12px; font-variant-numeric: tabular-nums;
     background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
@@ -436,6 +476,33 @@
   }
   .filepath svg{ opacity:.6; flex:none; }
 
+  .mode-table-wrap{ width:100%; overflow-x:auto; margin-top:14px; }
+  .camera-mode-panel{ margin-bottom:18px; }
+  .camera-modes-card{ margin-top:0; }
+  .camera-mode-list{ width:100%; overflow-x:auto; }
+  .recording-mode-table{ width:100%; min-width:760px; border-collapse:collapse; font-size:12px; line-height:1.25; }
+  .recording-mode-table th{ padding:7px 8px; text-align:left; color:var(--muted); border-bottom:1px solid var(--line); font-size:10px; text-transform:uppercase; letter-spacing:.045em; white-space:nowrap; }
+  .recording-mode-table td{ padding:7px 8px; border-bottom:1px solid var(--line); color:var(--ink); white-space:nowrap; vertical-align:middle; }
+  .recording-mode-table tr.mode-off td{ opacity:.38; }
+  .recording-mode-table .mode-toggle{ margin:0; }
+  .recording-mode-table .mode-fps-input{ width:64px; box-sizing:border-box; padding:5px 6px; text-align:right; font-variant-numeric:tabular-nums; }
+  .recording-mode-table .mode-fps-input.invalid{ border-color:var(--danger); }
+  .mode-group-row td{ padding:7px 8px; background:var(--panel-2); color:var(--muted); font-family:'DIN2014',sans-serif; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-top:1px solid var(--line); }
+  .mode-subgroup-row td{ padding:4px 8px 3px 18px; color:var(--muted); font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-bottom:0; }
+  .mode-cropped td:first-child{ padding-left:30px; }
+  .mode-cropped .mode-title{ font-weight:600; }
+  .mode-title{ font-weight:700; }
+  .mode-sub{ margin-top:2px; color:var(--muted); font-size:10px; }
+  .mode-crop-cell{ width:110px; }
+  .mode-crop-diagram{ width:86px; height:54px; display:flex; align-items:center; justify-content:center; }
+  .mode-crop-frame{ position:relative; width:78px; height:48px; border:1px solid var(--muted); background:var(--panel-2); overflow:hidden; box-sizing:border-box; }
+  .mode-crop-window{ position:absolute; box-sizing:border-box; border:2px solid var(--accent); background:rgba(120,220,150,.13); min-width:2px; min-height:2px; }
+  .mode-crop-window.mode-crop-full{ background:rgba(120,220,150,.08); }
+  .recording-mode-table tr.mode-off .mode-crop-window{ opacity:.55; }
+  .camera-recording-mode-table td:last-child{ text-align:right; width:54px; }
+  .camera-recording-mode-table td:last-child .mode-toggle{ margin-left:auto; }
+
+  .mode-empty{ color:var(--muted); padding:14px 8px !important; }
   /* Detected-modes readout on the Boot config page. */
   .mode-table{ width:100%; border-collapse:collapse; font-size:12.5px; line-height:1.3; margin:2px 0 6px; }
   /* line-height pinned: in quirks mode (pre-doctype) the UA table quirk reset it to
@@ -1147,6 +1214,17 @@
     <button class="btn btn-primary" id="saveBtn" disabled>Save changes</button>
   </header>
 
+  <div class="cinepi-live-launcher" id="cinepiLiveLauncher" aria-label="Open CinePi live view">
+    <a class="cinepi-launch" id="cinepiLiveDefault" href="http://cinepi.local:5000" aria-label="Open CinePi live view" title="Open CinePi live view">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square" aria-hidden="true">
+        <path d="M9 3H3v6M15 3h6v6M21 15v6h-6M3 15v6h6"/>
+      </svg>
+    </a>
+    <a class="cinepi-live-source" data-preview="cam0" href="http://cinepi.local:5000/?preview=cam0" aria-label="Open camera 0 live view" title="Camera 0">0</a>
+    <a class="cinepi-live-source" data-preview="cam1" href="http://cinepi.local:5000/?preview=cam1" aria-label="Open camera 1 live view" title="Camera 1">1</a>
+    <a class="cinepi-live-source" data-preview="combined" href="http://cinepi.local:5000/?preview=combined" aria-label="Open combined live view" title="Combined view">C</a>
+  </div>
+
   <div class="rail-scrim" id="railScrim"></div>
   <nav class="rail" id="rail" aria-label="Settings sections">
     <div class="rail-group" data-page="config">
@@ -1171,7 +1249,6 @@
       <div class="rail-title eyebrow">{{ t('rail.exposure-and-steps.title') }}</div>
       <a href="#steps" data-nav>{{ t('raillink.steps.label') }}</a>
       <a href="#resolution" data-nav>{{ t('raillink.resolution.label') }}</a>
-      <a href="#fpsceilings" data-nav>{{ t('raillink.fpsceilings.label') }}</a>
     </div>
     <div class="rail-group" data-page="settings">
       <div class="rail-title eyebrow">{{ t('rail.recording.title') }}</div>
@@ -1202,10 +1279,6 @@
       <div class="rail-title eyebrow">{{ t('rail.playback.title') }}</div>
       <p class="rail-blurb">{{ t('rail.playback.blurb') }}</p>
     </div>
-    <div class="rail-group" data-page="live">
-      <div class="rail-title eyebrow">{{ t('rail.live-view.title') }}</div>
-      <p class="rail-blurb">{{ t('rail.live-view.blurb') }}</p>
-    </div>
   </nav>
 
   <main class="main" id="main">
@@ -1213,14 +1286,12 @@
       <button type="button" data-page-tab="config" role="tab">{{ t('tab.config.label') }}<span class="tab-hint">{{ t('tab.config.hint') }}</span></button>
       <button type="button" data-page-tab="i2c" role="tab">{{ t('tab.i2c.label') }}<span class="tab-hint">{{ t('tab.i2c.hint') }}</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">{{ t('tab.settings.label') }}<span class="tab-hint">{{ t('tab.settings.hint') }}</span></button>
-      <button type="button" data-page-tab="live" role="tab">{{ t('tab.live.label') }}<span class="tab-hint">{{ t('tab.live.hint') }}</span></button>
       <button type="button" data-page-tab="playback" role="tab">{{ t('tab.playback.label') }}<span class="tab-hint">{{ t('tab.playback.hint') }}</span></button>
       <button type="button" data-page-tab="raw" role="tab">{{ t('tab.raw.label') }}<span class="tab-hint">{{ t('tab.raw.hint') }}</span></button>
     </div>
     <p class="lede" data-page-lede="config" hidden></p>
     <p class="lede" data-page-lede="settings" hidden></p>
     <p class="lede" data-page-lede="i2c" hidden></p>
-    <p class="lede" data-page-lede="live" hidden></p>
     <p class="lede" data-page-lede="playback" hidden></p>
     <p class="lede" data-page-lede="raw" hidden></p>
 
@@ -1315,6 +1386,15 @@
         <h2>{{ t('pane.cam0.heading') }}</h2>
         <p class="group-sub">{{ t('pane.cam0.sub') }}</p>
       </header>
+      <div class="camera-mode-panel" id="cam0-mode-panel" hidden>
+        <div class="card camera-modes-card" data-search="cam0 recording modes resolution bit depth binning crop aspect clear hdr fps">
+          <div class="card-main">
+            <label class="card-label">RECORDING MODES</label>
+            <p class="card-help">Modes reported by the connected sensor driver. Clear HDR is shown explicitly when the driver exposes it. Crop geometry and binning come from the detected mode metadata.</p>
+          </div>
+          <div class="camera-mode-list" id="cam0-modes-list"><p class="card-help">Loading detected modes…</p></div>
+        </div>
+      </div>
       <div class="cards">
         <div class="card" data-search="cam0 rotate 180 upside down">
           <div class="card-main">
@@ -1417,6 +1497,15 @@
         <h2>{{ t('pane.cam1.heading') }}</h2>
         <p class="group-sub">{{ t('pane.cam1.sub') }}</p>
       </header>
+      <div class="camera-mode-panel" id="cam1-mode-panel" hidden>
+        <div class="card camera-modes-card" data-search="cam1 recording modes resolution bit depth binning crop aspect clear hdr fps">
+          <div class="card-main">
+            <label class="card-label">RECORDING MODES</label>
+            <p class="card-help">Modes reported by the connected sensor driver. Clear HDR is shown explicitly when the driver exposes it. Crop geometry and binning come from the detected mode metadata.</p>
+          </div>
+          <div class="camera-mode-list" id="cam1-modes-list"><p class="card-help">Loading detected modes…</p></div>
+        </div>
+      </div>
       <div class="cards">
         <div class="card" data-search="cam1 rotate 180 upside down">
           <div class="card-main">
@@ -1698,184 +1787,22 @@
       </div>
     </section>
     <section class="group" id="resolution" data-page="settings">
-      <header class="group-head">
-        <h2>{{ t('pane.resolution.heading') }}</h2>
-        <p class="group-sub">{{ t('pane.resolution.sub') }}</p>
-        <p class="hw-note" id="modeAvailabilityNote" hidden></p>
-      </header>
-      <div class="cards">
-        <!-- Switches, not editable chips. The catalogue is closed by the
-             sensor database, not by taste: a mode's K category is
-             round(width/1000*2)/2, and across every sensor in
-             resources/sensors.json that yields exactly 1.5, 2, 3, 4 and 5.5
-             (5.5 being the imx283's 5568-wide modes, which is why it is here
-             and off by default -- it is absent from the shipped k_steps).
-             Typing a number no sensor reports never added a mode; it only
-             narrowed the filter to nothing. So the question is which of the
-             known categories to offer: a row of on/off answers. -->
-        <div class="card" data-search="resolutions offered 1.5k 2k 3k 4k k steps">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.resolution.0.label') }}</label>
-            <p class="card-help">{{ t('card.resolution.0.help') }}</p>
-          </div>
-          <div class="card-control switchset" data-set-path="image_capture.k_steps" data-set-type="number">
-            <label class="switchrow"><span>1.5K</span><button class="toggle" data-set-item="1.5" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 1.5K"></button></label>
-            <label class="switchrow"><span>2K</span><button class="toggle" data-set-item="2" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 2K"></button></label>
-            <label class="switchrow"><span>3K</span><button class="toggle" data-set-item="3" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 3K"></button></label>
-            <label class="switchrow"><span>4K</span><button class="toggle" data-set-item="4" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 4K"></button></label>
-            <label class="switchrow"><span>5.5K</span><button class="toggle" data-set-item="5.5" data-type="bool" data-original="false" role="switch" aria-checked="false" aria-label="Offer 5.5K"></button></label>
-          </div>
-        </div>
-        <div class="card" data-search="bit depths offered 10 12 16 raw">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.resolution.1.label') }}</label>
-            <p class="card-help">{{ t('card.resolution.1.help') }}</p>
-          </div>
-          <div class="card-control switchset" data-set-path="image_capture.bit_depths" data-set-type="number">
-            <label class="switchrow"><span>10‑bit</span><button class="toggle" data-set-item="10" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 10-bit"></button></label>
-            <label class="switchrow"><span>12‑bit</span><button class="toggle" data-set-item="12" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 12-bit"></button></label>
-            <label class="switchrow"><span>16‑bit</span><button class="toggle" data-set-item="16" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 16-bit"></button></label>
-          </div>
-        </div>
-        <div class="card" data-search="dynamic resolution fps substitute automatic mode">
-          <div class="card-main">
-            <label class="card-label" for="f-dynres">{{ t('card.image_capture.dynamic_resolution.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.dynamic_resolution.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-dynres" data-path="image_capture.dynamic_resolution" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
-          </div>
-        </div>
-        <div class="card" data-search="dynamic resolution priority ladder hdr sdr bit depth class follow mode follow resolution">
-          <div class="card-main">
-            <label class="card-label" for="f-dynres-priority">{{ t('card.image_capture.dynamic_resolution_priority.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.dynamic_resolution_priority.help') }}</p>
-          </div>
-          <div class="card-control">
-            <select class="field-input" id="f-dynres-priority" data-path="image_capture.dynamic_resolution_priority" data-type="string" data-original="mode" style="min-width:180px">
-              <option value="mode" selected>Follow mode</option>
-              <option value="resolution">Follow resolution</option>
-              <option value="none">Never leave the mode</option>
-            </select>
-          </div>
-        </div>
-        <div class="card" data-search="hdr sdr modes exposed resolution control">
-          <div class="card-main">
-            <label class="card-label" for="f-hdr-sdr">{{ t('card.image_capture.hdr.sdr.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.sdr.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-hdr-sdr" data-path="image_capture.hdr.sdr" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
-          </div>
-        </div>
-        <!-- The two ClearHDR captures, one switch each. They decide WHICH
-             captures exist; Resolutions above decides their frame sizes, for
-             ClearHDR exactly as for SDR. The old third switch
-             (imx585_clear_hdr_16bit_hd) is gone: it gated every binned
-             ClearHDR mode regardless of depth, so turning it on for 16-bit HD
-             also handed back 12-bit HD. -->
-        <div class="card" data-search="clearhdr imx585 12 bit modes exposed companded ccmp">
-          <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr-12">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-hdr-clearhdr-12" data-path="image_capture.hdr.imx585_clear_hdr_12bit" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
-          </div>
-        </div>
-        <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear 4k hd binned">
-          <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-hdr-clearhdr" data-path="image_capture.hdr.imx585_clear_hdr_16bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
-          </div>
-        </div>
-        <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.image_capture.hdr.threshold_low.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.threshold_low.help') }}</p>
-          </div>
-          <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.0') }}</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
-            </label>
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.1') }}</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
-            </label>
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.2') }}</span>
-              <input class="field-input num-input" type="number" id="f-hdr-blend" data-path="image_capture.hdr.blend" data-type="number" data-original="0" value="0" style="width:56px">
-            </label>
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.3') }}</span>
-              <input class="field-input num-input" type="number" id="f-hdr-gainadder" data-path="image_capture.hdr.gain_adder" data-type="number" data-original="1" value="1" style="width:56px">
-            </label>
-          </div>
-        </div>
-        <div class="card" data-search="dng thumbnail embedded preview playback mono colour color jpeg greyscale off">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.image_capture.thumbnail.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.thumbnail.help') }}</p>
-            <!-- What "on" costs, in this camera's own numbers rather than a
-                 figure restated by hand: rendered from thumbnail_choice_labels()
-                 (sensor_detect.py), the same function and the same byte formula
-                 file_size uses, so it cannot drift from what a take costs. Only
-                 the on position needs a figure -- off is 0 B. -->
-            <p class="card-help" id="thumb-cost" style="color:var(--muted)">{{ thumbnail_on_label }}</p>
-            <p class="card-help">{{ t('caption.image_capture.thumbnail.0') }}</p>
-          </div>
-          <div class="card-control">
-            <!-- One toggle, not a mode picker and a size picker (operator
-                 decision 2026-09-13). All four modes and every size still
-                 work and are still reachable -- by hand in settings.jsonc or
-                 live with `set thumbnail` -- but this page offers the choice
-                 that is actually a choice: a preview in the Playback pane, or
-                 nothing.
-
-                 The toggle carries no data-path of its own, so buildState()
-                 ignores it; the hidden inputs below are what the save reads
-                 and what populateSimpleFields() hydrates, exactly like every
-                 other field on this page. thumbnail_size is hidden rather
-                 than absent for the reason B-2 recorded: a key the form does
-                 not carry is dropped from settings.jsonc on the next save,
-                 and that drop is a structural change, which costs the file
-                 every comment in it. -->
-            <button class="toggle" id="f-thumb-toggle" role="switch" aria-checked="true"
-                    aria-label="Embedded DNG thumbnail"></button>
-            <input type="hidden" id="f-thumb-value" data-path="image_capture.thumbnail" data-type="string" data-original="jpeg" value="jpeg">
-            <input type="hidden" id="f-thumb-size-value" data-path="image_capture.thumbnail_size" data-type="number" data-original="1" value="1">
-          </div>
-        </div>
-        <div class="card" data-search="sensor database file resources sensors json advanced">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.sensors.database_file.label') }}</label>
-            <p class="card-help">{{ t('card.sensors.database_file.help') }}</p>
-          </div>
-          <div class="card-control">
-            <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>{{ sensor_db_path }}</span>
-            <!-- The card is read-only, but the key still has to round-trip:
-                 buildState() only collects [data-path] elements, so without
-                 this field a Save posts no sensors.database_file at all and
-                 _apply_settings_defaults setdefaults it back to the stock
-                 "resources/sensors.json" -- silently discarding an
-                 operator's override. -->
-            <input type="hidden" data-path="sensors.database_file">
-          </div>
-        </div>
-      </div>
-    </section>
-    <section class="group" id="fpsceilings" data-page="settings">
-      <header class="group-head">
-        <h2>{{ t('pane.fpsceilings.heading') }}</h2>
-        <p class="group-sub">{{ t('pane.fpsceilings.sub') }}</p>
-      </header>
-      <div class="cards" id="fpsCeilingsList"><p class="card-help">{{ t('help.fpsceilings.0.body') }}</p></div>
-    </section>
-    <section class="group" id="audio" data-page="settings">
+  <header class="group-head">
+    <h2>{{ t('pane.resolution.heading') }}</h2>
+    <p class="group-sub">Automatic resolution behaviour.</p>
+  </header>
+  <div class="cards">
+    <div class="card" data-search="dynamic resolution fps substitute automatic mode">
+      <div class="card-main"><label class="card-label" for="f-dynres">{{ t('card.image_capture.dynamic_resolution.label') }}</label><p class="card-help">{{ t('card.image_capture.dynamic_resolution.help') }}</p></div>
+      <div class="card-control"><button class="toggle" id="f-dynres" data-path="image_capture.dynamic_resolution" data-type="bool" data-original="true" role="switch" aria-checked="true"></button></div>
+    </div>
+    <div class="card" data-search="dynamic resolution priority ladder hdr sdr bit depth class follow mode follow resolution">
+      <div class="card-main"><label class="card-label" for="f-dynres-priority">{{ t('card.image_capture.dynamic_resolution_priority.label') }}</label><p class="card-help">{{ t('card.image_capture.dynamic_resolution_priority.help') }}</p></div>
+      <div class="card-control"><select class="field-input" id="f-dynres-priority" data-path="image_capture.dynamic_resolution_priority" data-type="string" data-original="mode"><option value="mode">Mode first</option><option value="resolution">Resolution first</option><option value="none">Never leave class</option></select></div>
+    </div>
+  </div>
+</section>
+<section class="group" id="audio" data-page="settings">
       <header class="group-head">
         <h2>{{ t('pane.audio.heading') }}</h2>
         <p class="group-sub">{{ t('pane.audio.sub') }}</p>
@@ -2494,13 +2421,6 @@
           </div>
         </div>
 
-        <div class="card" id="cfg-modes-card" data-search="detected modes list-cameras resolution bit depth frame rate fps sensor live">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.bootconfig.5.label') }}</label>
-            <p class="card-help">{{ t('card.bootconfig.5.help') }}</p>
-            <div id="cfg-modes-list"><p class="card-help">Loading detected modes…</p></div>
-          </div>
-        </div>
 
         <div class="card" data-search="i2c bus quad rotary controller oled accessories">
           <div class="card-main">
@@ -2603,14 +2523,7 @@
       </div>
     </section>
 
-    <section class="group" id="live" data-page="live">
-      <header class="group-head">
-        <h2>{{ t('pane.live.heading') }}</h2>
-      </header>
-      <div class="live-embed-wrap">
-        <iframe id="liveEmbedFrame" class="live-embed-frame" src="/?xp=1" title="CineMate live camera preview" loading="lazy"></iframe>
-      </div>
-    </section>
+
 
   </main>
 </div>
@@ -2658,6 +2571,20 @@
     return fetch('/api/v1/cmd', { method: 'POST', headers: headers, body: line })
       .then(function(res){ return res.text().then(function(body){ return { ok: res.ok, body: body.trim() }; }); })
       .catch(function(err){ return { ok: false, body: err.message }; });
+  }
+
+  function refreshLiveViewLauncher(){
+    var launcher=document.getElementById('cinepiLiveLauncher');
+    if(!launcher) return;
+    fetch('/settings-editor/api/sensor-modes',{cache:'no-store'}).then(function(r){return r.json();}).then(function(res){
+      if(!res.ok) return;
+      var dual=Object.keys(res.sensors||{}).length>=2;
+      launcher.classList.toggle('dual',dual);
+      var source=res.preview_source||'both';
+      launcher.querySelectorAll('.cinepi-live-source').forEach(function(a){
+        a.classList.toggle('active',a.getAttribute('data-preview')===source || (a.getAttribute('data-preview')==='combined' && ['both','pip_cam0','pip_cam1'].indexOf(source)>=0));
+      });
+    }).catch(function(){});
   }
 
   /* ---------- state / dirty tracking ---------- */
@@ -3322,6 +3249,7 @@
     if (!state.input_peripherals) state.input_peripherals = {};
     state.input_peripherals.quad_rotary_controller = buildQuadRotaryState();
     if (!state.image_capture) state.image_capture = {};
+    state.image_capture.enabled_modes = buildEnabledModesState();
     state.image_capture.custom_modes = buildCustomModesState();
     applyGpioOutToState(state);
     return state;
@@ -3338,123 +3266,157 @@
      by hand) is left completely untouched -- same reasoning as B11.5's
      hardware_controls fix: a pane must never silently drop what it
      doesn't itself represent. */
-  function renderFpsCeilings(sensors){
-    var list = document.getElementById('fpsCeilingsList');
-    list.innerHTML = '';
-    var customModes = (lastLoadedSettings && lastLoadedSettings.image_capture
-      && lastLoadedSettings.image_capture.custom_modes) || {};
-    var any = false;
-    Object.keys(sensors).forEach(function(camera){
-      (sensors[camera] || []).forEach(function(mode){
-        any = true;
-        var override = (customModes[camera] || []).find(function(entry){
-          return Number(entry.width) === mode.width && Number(entry.height) === mode.height
-            && Number(entry.bit_depth) === mode.bit_depth && !!entry.hdr === !!mode.hdr;
-        });
-
-        var row = document.createElement('div');
-        row.className = 'card';
-        row.setAttribute('data-fps-row', '1');
-        row.setAttribute('data-camera', camera);
-        row.setAttribute('data-width', mode.width);
-        row.setAttribute('data-height', mode.height);
-        row.setAttribute('data-bit-depth', mode.bit_depth);
-        row.setAttribute('data-hdr', mode.hdr ? 'true' : 'false');
-        row.setAttribute('data-detected', mode.fps_max_detected);
-        row.setAttribute('data-search', 'fps ceiling ' + camera + ' ' + mode.width + ' ' + mode.height);
-
-        var main = document.createElement('div');
-        main.className = 'card-main';
-        var label = document.createElement('label');
-        label.className = 'card-label';
-        label.textContent = camera + ' ' + mode.width + '×' + mode.height + ' · ' + mode.bit_depth + '-bit' + (mode.hdr ? ' HDR' : '');
-        var help = document.createElement('p');
-        help.className = 'card-help';
-        help.textContent = 'Sensor reports ' + mode.fps_max_detected + ' fps.';
-        main.appendChild(label);
-        main.appendChild(help);
-
-        var control = document.createElement('div');
-        control.className = 'card-control';
-        var input = document.createElement('input');
-        input.type = 'number';
-        input.className = 'field-input num-input fps-ceiling-input';
-        input.placeholder = String(mode.fps_max_detected);
-        input.min = '0';
-        input.step = 'any';
-        if (override) input.value = override.fps_max;
-        input.addEventListener('change', function(){ markDirty(input, true); });
-        control.appendChild(input);
-        var unit = document.createTextNode(' fps');
-        control.appendChild(unit);
-
-        row.appendChild(main);
-        row.appendChild(control);
-        list.appendChild(row);
-      });
-    });
-    if (!any) list.innerHTML = '<p class="card-help">No detected sensor modes yet -- reconnect the camera or check cinepi-raw --list-cameras.</p>';
+  function modeKey(mode){
+    return [mode.width, mode.height, mode.bit_depth, !!mode.hdr,
+      mode.crop_x, mode.crop_y, mode.crop_width, mode.crop_height].join(':');
   }
 
-  /* Read-only mirror of the same detection on the Boot config page. The
-     selects there describe what the *next* boot will load; this says what is
-     attached right now, which is the question you actually have when the two
-     disagree. Shares one fetch with the fps-ceiling pane. */
-  function renderConfigModes(sensors){
-    var host = document.getElementById('cfg-modes-list');
-    if (!host) return;
-    var cameras = Object.keys(sensors || {});
-    if (!cameras.length) {
-      host.innerHTML = '<p class="card-help">No camera detected. Check the ribbon and <code class="mono">cinepi-raw --list-cameras</code>.</p>';
-      return;
+  function cropDiagram(mode){
+    var outer=document.createElement('div');
+    outer.className='mode-crop-diagram';
+    outer.setAttribute('aria-hidden','true');
+    var frame=document.createElement('div');
+    frame.className='mode-crop-frame';
+    var crop=document.createElement('div');
+    crop.className='mode-crop-window';
+    var hasCrop=mode.crop_known && mode.crop_width && mode.crop_height;
+    if(hasCrop){
+      var sx=mode.crop_x || 0, sy=mode.crop_y || 0;
+      var sw=mode.crop_width, sh=mode.crop_height;
+      var sensorW=mode.sensor_width || Math.max(mode.width || sw, sx+sw), sensorH=mode.sensor_height || Math.max(mode.height || sh, sy+sh);
+      crop.style.left=(sx/sensorW*100)+'%';
+      crop.style.top=(sy/sensorH*100)+'%';
+      crop.style.width=(sw/sensorW*100)+'%';
+      crop.style.height=(sh/sensorH*100)+'%';
+      crop.title='Crop '+sw+'×'+sh+' at '+sx+','+sy;
+    } else {
+      crop.style.left='0'; crop.style.top='0'; crop.style.width='100%'; crop.style.height='100%';
+      crop.classList.add('mode-crop-full');
+      crop.title='Full sensor area';
     }
-    host.innerHTML = '';
-    cameras.forEach(function(camera){
-      var modes = sensors[camera] || [];
-      var head = document.createElement('p');
-      head.className = 'card-help';
-      head.style.marginTop = '10px';
-      head.innerHTML = '<strong>' + camera + '</strong> — ' + modes.length + ' mode' + (modes.length === 1 ? '' : 's');
-      host.appendChild(head);
+    frame.appendChild(crop); outer.appendChild(frame); return outer;
+  }
 
-      if (!modes.length) return;
-      var table = document.createElement('table');
-      table.className = 'mode-table';
-      table.style.width = '100%';
-      table.style.borderCollapse = 'collapse';
-      table.innerHTML = '<thead><tr>'
-        + '<th style="text-align:left">Resolution</th>'
-        + '<th style="text-align:left">Depth</th>'
-        + '<th style="text-align:right">Max fps</th>'
-        + '</tr></thead>';
-      var body = document.createElement('tbody');
+  function modeGroupKey(mode){
+    var bx=mode.binning_x == null ? '' : mode.binning_x;
+    var by=mode.binning_y == null ? '' : mode.binning_y;
+    return (mode.hdr?'hdr':'sdr')+'|'+mode.bit_depth+'|'+bx+'x'+by;
+  }
+
+  function modeSort(a,b){
+    // Highest recording class first: Clear HDR, then bit depth, then source
+    // resolution. Within a binning group, native/full modes precede crops.
+    if (!!a.hdr !== !!b.hdr) return a.hdr ? -1 : 1;
+    if ((b.bit_depth||0)!==(a.bit_depth||0)) return (b.bit_depth||0)-(a.bit_depth||0);
+    var aa=(a.width||0)*(a.height||0), bb=(b.width||0)*(b.height||0);
+    if (bb!==aa) return bb-aa;
+    var af=a.full?0:1, bf=b.full?0:1;
+    if (af!==bf) return af-bf;
+    var ab=(a.binning_x||1)*(a.binning_y||1), bb2=(b.binning_x||1)*(b.binning_y||1);
+    if (bb2!==ab) return bb2-ab;
+    return String(a.crop_width||'').localeCompare(String(b.crop_width||''));
+  }
+
+  function renderRecordingModes(sensors){
+    var cameraNames=Object.keys(sensors||{}), slots=['cam0','cam1'];
+    slots.forEach(function(slot,index){
+      var section=document.getElementById(slot);
+      var panel=document.getElementById(slot+'-mode-panel');
+      var host=document.getElementById(slot+'-modes-list');
+      if(!section||!panel||!host) return;
+      var camera=cameraNames[index];
+      var modes=camera ? (sensors[camera]||[]).slice().sort(modeSort) : [];
+      var present=!!camera && modes.length>0;
+      section.hidden=!present;
+      panel.hidden=!present;
+      if(!present){ host.innerHTML=''; return; }
+      var head=section.querySelector('.group-head h2');
+      if(head) head.textContent=(slot==='cam0'?'CAMERA 0':'CAMERA 1')+' · '+camera.toUpperCase();
+      host.innerHTML='';
+      var table=document.createElement('table');
+      table.className='recording-mode-table camera-recording-mode-table';
+      table.innerHTML='<thead><tr><th>Mode</th><th>Aspect</th><th>Binning</th><th>Crop</th><th>FPS</th><th>User Max FPS</th><th>Enable</th></tr></thead>';
+      var body=document.createElement('tbody');
+      var lastGroup='';
       modes.forEach(function(mode){
-        var tr = document.createElement('tr');
-        var depth = (mode.bit_depth || '?') + '-bit' + (mode.hdr ? ' HDR' : '');
-        /* fps_max_effective is what cinepi-raw launches with; it differs from
-           fps_max_detected only where a custom_modes ceiling overrides it.
-           Showing just one number would hide that the override exists. */
-        var eff = mode.fps_max_effective, det = mode.fps_max_detected;
-        var fps = (eff === null || eff === undefined) ? '—' : String(eff);
-        if (det !== null && det !== undefined && det !== eff) {
-          fps = eff + ' <span class="card-help" style="opacity:.7">(capped from ' + det + ')</span>';
+        var group=modeGroupKey(mode);
+        if(group!==lastGroup){
+          var gr=document.createElement('tr'); gr.className='mode-group-row';
+          var gd=document.createElement('td'); gd.colSpan=7;
+          gd.textContent=(mode.hdr?'Clear HDR':'Standard')+' · '+mode.bit_depth+'-bit · '+((mode.binning_x&&mode.binning_y)?mode.binning_x+'×'+mode.binning_y:'native');
+          gr.appendChild(gd); body.appendChild(gr); lastGroup=group;
+          var ng=document.createElement('tr'); ng.className='mode-subgroup-row';
+          var nd=document.createElement('td'); nd.colSpan=7; nd.textContent='NON-CROPPED MODES';
+          ng.appendChild(nd); body.appendChild(ng);
         }
-        tr.innerHTML = '<td>' + (mode.width || '?') + '×' + (mode.height || '?') + '</td>'
-          + '<td>' + depth + '</td>'
-          + '<td style="text-align:right">' + fps + '</td>';
+        var tr=document.createElement('tr');
+        tr.setAttribute('data-mode-row','1');
+        tr.setAttribute('data-camera',camera);
+        tr.setAttribute('data-width',mode.width);
+        tr.setAttribute('data-height',mode.height);
+        tr.setAttribute('data-bit-depth',mode.bit_depth);
+        tr.setAttribute('data-hdr',mode.hdr?'true':'false');
+        tr.setAttribute('data-crop-x',mode.crop_x==null?'':mode.crop_x);
+        tr.setAttribute('data-crop-y',mode.crop_y==null?'':mode.crop_y);
+        tr.setAttribute('data-crop-width',mode.crop_width==null?'':mode.crop_width);
+        tr.setAttribute('data-crop-height',mode.crop_height==null?'':mode.crop_height);
+        tr.setAttribute('data-detected',mode.fps_max_detected==null?'':mode.fps_max_detected);
+        if(!mode.selected) tr.classList.add('mode-off');
+        if(mode.crop_known) tr.classList.add('mode-cropped');
+        var td=document.createElement('td');
+        var tog=document.createElement('button');
+        tog.className='toggle mode-toggle'; tog.type='button'; tog.setAttribute('role','switch');
+        tog.setAttribute('aria-checked',mode.selected?'true':'false');
+        tog.setAttribute('aria-label','Offer '+camera+' '+mode.width+'×'+mode.height+' '+mode.bit_depth+'-bit');
+        td.appendChild(tog);\n        var toggleTd=td;
+        td=document.createElement('td');
+        var title=document.createElement('div'); title.className='mode-title';
+        title.textContent=mode.width+'×'+mode.height+(mode.hdr?' · Clear HDR':'');
+        var sub=document.createElement('div'); sub.className='mode-sub';
+        sub.textContent=mode.crop_known?'Cropped':'Full frame';
+        title.appendChild(sub); td.appendChild(title); tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=(mode.aspect||0).toFixed(2)+':1'; tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=(mode.binning_x&&mode.binning_y)?mode.binning_x+'×'+mode.binning_y:'—'; tr.appendChild(td);
+        td=document.createElement('td'); td.className='mode-crop-cell'; td.appendChild(cropDiagram(mode)); tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.fps_max_detected==null?'—':mode.fps_max_detected+' fps'; tr.appendChild(td);
+        td=document.createElement('td');
+        var input=document.createElement('input'); input.type='number'; input.step='any'; input.min='0';
+        input.className='field-input num-input mode-fps-input';
+        input.value=(mode.fps_max_effective==null?'':mode.fps_max_effective);
+        input.placeholder=(mode.fps_max_detected==null?'':String(mode.fps_max_detected));
+        input.setAttribute('data-mode-fps','1'); input.setAttribute('data-original',String(mode.fps_max_effective==null?'':mode.fps_max_effective));
+        input.title='User ceiling; blank uses sensor maximum';
+        td.appendChild(input); td.appendChild(document.createTextNode(' fps')); tr.appendChild(td);
+        tr.appendChild(toggleTd);
+
+        function syncRow(){ tr.classList.toggle('mode-off',tog.getAttribute('aria-checked')!=='true'); }
+        tog.addEventListener('click',function(){
+          var on=tog.getAttribute('aria-checked')==='true';
+          if(on){
+            var sameCamera=host.querySelectorAll('tr[data-mode-row] .mode-toggle'), count=0;
+            sameCamera.forEach(function(t){if(t.getAttribute('aria-checked')==='true')count++;});
+            if(count<=1){showToast('Keep at least one recording mode enabled for '+camera);return;}
+          }
+          tog.setAttribute('aria-checked',String(!on)); syncRow();
+          markDirty(tog,!on!==(String(mode.selected)==='true'));
+        });
+        tog.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();tog.click();}});
+        input.addEventListener('input',function(){
+          var v=input.value.trim(),n=parseFloat(v),sensor=parseFloat(mode.fps_max_detected);
+          if(v!==''&&(!isFinite(n)||n<0||n>sensor)) input.classList.add('invalid'); else input.classList.remove('invalid');
+          markDirty(input,v!==String(mode.fps_max_effective==null?'':mode.fps_max_effective));
+        });
         body.appendChild(tr);
       });
-      table.appendChild(body);
-      host.appendChild(table);
+      table.appendChild(body); host.appendChild(table);
     });
   }
+
 
   function loadFpsCeilings(){
     return fetch('/settings-editor/api/sensor-modes').then(function(r){ return r.json(); }).then(function(res){
       if (!res.ok) return;
-      renderFpsCeilings(res.sensors || {});
-      renderConfigModes(res.sensors || {});
-      applyModeAvailability(res.available);
+      renderRecordingModes(res.sensors || {});
     }).catch(function(){ /* non-fatal -- the rest of the page still works */ });
   }
 
@@ -3493,41 +3455,67 @@
     }
   }
 
+  function buildEnabledModesState(){
+    var out = {};
+    var existing = (lastLoadedSettings && lastLoadedSettings.image_capture && lastLoadedSettings.image_capture.enabled_modes) || {};
+    Object.keys(existing).forEach(function(camera){ out[camera] = (existing[camera] || []).slice(); });
+    var cameras = {};
+    document.querySelectorAll('.camera-mode-list [data-mode-row]').forEach(function(row){
+      var camera=row.getAttribute('data-camera');
+      (cameras[camera] || (cameras[camera]=[])).push(row);
+    });
+    Object.keys(cameras).forEach(function(camera){
+      var selected=[];
+      cameras[camera].forEach(function(row){
+        var tog=row.querySelector('.mode-toggle');
+        if(!tog || tog.getAttribute('aria-checked')!=='true') return;
+        var entry={
+          width:Number(row.getAttribute('data-width')), height:Number(row.getAttribute('data-height')),
+          bit_depth:Number(row.getAttribute('data-bit-depth')), hdr:row.getAttribute('data-hdr')==='true'
+        };
+        ['x','y','width','height'].forEach(function(k){
+          var v=row.getAttribute('data-crop-'+k);
+          if(v!=='') entry['crop_'+k]=Number(v);
+        });
+        selected.push(entry);
+      });
+      if(selected.length) out[camera]=selected;
+    });
+    return out;
+  }
+
   function buildCustomModesState(){
     var out = {};
     var customModes = (lastLoadedSettings && lastLoadedSettings.image_capture
       && lastLoadedSettings.image_capture.custom_modes) || {};
-    // Start from every existing entry, so a genuinely custom (undetected)
-    // mode this pane has no row for survives untouched.
-    Object.keys(customModes).forEach(function(camera){
-      out[camera] = (customModes[camera] || []).slice();
-    });
+    Object.keys(customModes).forEach(function(camera){ out[camera] = (customModes[camera] || []).slice(); });
 
-    document.querySelectorAll('#fpsCeilingsList [data-fps-row]').forEach(function(row){
-      var camera = row.getAttribute('data-camera');
-      var w = parseInt(row.getAttribute('data-width'), 10);
-      var h = parseInt(row.getAttribute('data-height'), 10);
-      var bd = parseInt(row.getAttribute('data-bit-depth'), 10);
-      var hdr = row.getAttribute('data-hdr') === 'true';
-      var detected = parseFloat(row.getAttribute('data-detected'));
-      var input = row.querySelector('.fps-ceiling-input');
-      var raw = (input.value || '').trim();
-
-      out[camera] = (out[camera] || []).filter(function(entry){
-        return !(Number(entry.width) === w && Number(entry.height) === h
-          && Number(entry.bit_depth) === bd && !!entry.hdr === hdr);
+    document.querySelectorAll('.camera-mode-list [data-mode-row]').forEach(function(row){
+      var camera=row.getAttribute('data-camera');
+      var w=parseInt(row.getAttribute('data-width'),10), h=parseInt(row.getAttribute('data-height'),10);
+      var bd=parseInt(row.getAttribute('data-bit-depth'),10), hdr=row.getAttribute('data-hdr')==='true';
+      var detected=parseFloat(row.getAttribute('data-detected') || '0');
+      var input=row.querySelector('.mode-fps-input'); if(!input) return;
+      var raw=(input.value || '').trim();
+      out[camera]=(out[camera] || []).filter(function(entry){
+        var sameCrop=['x','y','width','height'].every(function(k){
+          var rv=row.getAttribute('data-crop-'+k), ev=entry['crop_'+k];
+          return rv==='' ? ev==null : Number(ev)===Number(rv);
+        });
+        return !(Number(entry.width)===w && Number(entry.height)===h && Number(entry.bit_depth)===bd && !!entry.hdr===hdr && sameCrop);
       });
-
-      if (raw === '') return; // blank -- use the detected value, no entry
-      var val = parseFloat(raw);
-      if (isNaN(val) || val === detected) return; // matches detected -- redundant, no entry
-
-      var entry = { width: w, height: h, bit_depth: bd, fps_max: val };
-      if (hdr) entry.hdr = true;
+      if(raw==='') return;
+      var val=parseFloat(raw);
+      if(!isFinite(val) || val===detected) return;
+      var entry={width:w,height:h,bit_depth:bd,fps_max:val};
+      if(hdr) entry.hdr=true;
+      ['x','y','width','height'].forEach(function(k){
+        var v=row.getAttribute('data-crop-'+k);
+        if(v!=='') entry['crop_'+k]=Number(v);
+      });
       out[camera].push(entry);
     });
-
-    Object.keys(out).forEach(function(camera){ if (out[camera].length === 0) delete out[camera]; });
+    Object.keys(out).forEach(function(camera){ if(out[camera].length===0) delete out[camera]; });
     return out;
   }
 
@@ -3723,6 +3711,7 @@
     t.addEventListener('click', function(){
       var checked = t.getAttribute('aria-checked') === 'true';
       t.setAttribute('aria-checked', String(!checked));
+      t.closest('.switchrow')?.classList.toggle('is-off', checked);
       checkDirty(t);
     });
     t.addEventListener('keydown', function(e){
@@ -4115,6 +4104,7 @@
         var isOn = on.indexOf(isFinite(n) ? String(n) : raw) !== -1;
         t.setAttribute('aria-checked', String(isOn));
         t.setAttribute('data-original', String(isOn));
+        t.closest('.switchrow')?.classList.toggle('is-off', !isOn);
         markDirty(t, false);
       });
     });
@@ -4402,6 +4392,12 @@
       container.querySelectorAll('.step-chip').forEach(function(c){ arr.push(c.firstChild.textContent.trim()); });
       container.setAttribute('data-chip-original', JSON.stringify(arr));
     });
+    document.querySelectorAll('.camera-mode-list [data-mode-row]').forEach(function(row){
+      var tog=row.querySelector('.mode-toggle');
+      var inp=row.querySelector('.mode-fps-input');
+      if(tog) tog.setAttribute('data-original-selected', tog.getAttribute('aria-checked'));
+      if(inp) inp.setAttribute('data-original', inp.value);
+    });
     document.querySelectorAll('.action-slot').forEach(function(slot){
       slot.setAttribute('data-original-method', slot.getAttribute('data-method') || '');
       slot.setAttribute('data-original-args', slot.getAttribute('data-args') || '');
@@ -4553,6 +4549,7 @@
     fetch('/settings-editor/api/settings/default').then(function(r){ return r.json(); }).then(function(res){
       if (!res.ok){ showToast('Could not load defaults: ' + res.message); return; }
       populateSettingsForm(res.settings);
+      loadFpsCeilings();
       dirtyEls.add(document.body); // force the dirty pill on: it now differs from the live file
       updateDirtyPill();
       showToast('Loaded stock settings.jsonc defaults — not saved yet');
@@ -6184,7 +6181,7 @@
     var saveBtn = document.getElementById('saveBtn');
     var openJsonBtn = document.getElementById('openJson');
     var openJsonLabel = document.getElementById('openJsonLabel');
-    var noFilePage = activePage === 'live' || activePage === 'raw' || activePage === 'playback' || activePage === 'i2c';
+    var noFilePage = activePage === 'raw' || activePage === 'playback' || activePage === 'i2c';
     saveBtn.hidden = noFilePage;
     openJsonBtn.hidden = noFilePage;
     document.getElementById('revertBtn').hidden = noFilePage;
@@ -6195,42 +6192,6 @@
   }
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');
-  /* Live-view iframe lifecycle. Kept next to setActivePage because that is
-     the only thing that calls it, and the src it restores is the one the
-     markup shipped with rather than a second copy of the URL. */
-  var liveEmbedSrc = null;
-  function syncLiveEmbed(page){
-    var frame = document.getElementById('liveEmbedFrame');
-    if (!frame) return;
-    if (liveEmbedSrc === null) liveEmbedSrc = frame.getAttribute('src') || '/';
-    if (page === 'live'){
-      if (frame.getAttribute('src') !== liveEmbedSrc) frame.setAttribute('src', liveEmbedSrc);
-    } else if (frame.getAttribute('src')){
-      /* removeAttribute rather than src='': an empty src re-resolves to the
-         current document in some browsers, which reloads this page inside
-         its own iframe instead of stopping anything. */
-      frame.removeAttribute('src');
-    }
-  }
-
-  /* The child owns the live HUD's height: its drawer is open by default
-     in this view and may grow after a socket update or an orientation change.
-     Accept only the iframe's same-origin messages and ignore sub-pixel churn
-     so setting the height cannot cause a resize-message loop. */
-  window.addEventListener('message', function(event){
-    var frame = document.getElementById('liveEmbedFrame');
-    var wrap = frame && frame.parentElement;
-    var data = event.data;
-    if (!frame || !wrap || event.origin !== window.location.origin ||
-        event.source !== frame.contentWindow || !data ||
-        data.type !== 'cinemate-live-height') return;
-    var height = Math.ceil(Number(data.height));
-    if (!Number.isFinite(height) || height < 240) return;
-    var previous = Number.parseFloat(wrap.style.getPropertyValue('--live-embed-height')) || 0;
-    if (Math.abs(previous - height) < 2) return;
-    wrap.style.setProperty('--live-embed-height', height + 'px');
-  });
-
   /* ---------- i2c pane ---------- */
   /* Probed per request rather than cached: AnalogControls and SsdMonitor each
      decide once at startup and never look again, so a device plugged in later
@@ -6429,6 +6390,7 @@
           showToast(res.message || (res.ok ? 'RTC set from system time' : 'Could not set the RTC'));
           if (res.rtc) i2cRenderClocks({ system: null, rtc: res.rtc });
           i2cRefresh();
+  refreshLiveViewLauncher();
         })
         .catch(function(err){ showToast('Could not reach the server: ' + err); })
         .finally(function(){ i2cSyncBtn.disabled = false; });
@@ -6446,7 +6408,7 @@
      never contradict a hash -- it is consulted when there is nothing else to
      go on. Storage can throw outright (Safari private mode, site data blocked),
      so every access is guarded and simply falls back to the default. */
-  var PAGE_LANDING = { config: 'bootconfig', i2c: 'i2cbus', settings: 'welcome', raw: 'clips', live: 'live', playback: 'playback' };
+  var PAGE_LANDING = { config: 'bootconfig', i2c: 'i2cbus', settings: 'welcome', raw: 'clips', playback: 'playback' };
   var DEFAULT_PAGE = 'settings';
   var LAST_PAGE_KEY = 'cinemate.settingsEditor.lastPage';
   function rememberPage(page){
@@ -6484,12 +6446,6 @@
        rather than once at load. */
     if (page === 'i2c'){ i2cRefresh(); i2cStartTicking(); }
     else { i2cStopTicking(); }
-    /* The Live tab embeds the shooting screen in an iframe, and hiding an
-       iframe does not stop it: its MJPEG stream and its Socket.IO connection
-       stay live behind every other tab for the rest of the session. That is
-       the same Wi-Fi link playback needs, so drop the src on the way out and
-       put it back on the way in. */
-    syncLiveEmbed(page);
     activePage = page;
     rememberPage(page);
     pageTabButtons.forEach(function(b){

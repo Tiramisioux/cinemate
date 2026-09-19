@@ -309,6 +309,9 @@ class SensorDetect:
         self.k_steps = res_cfg.get("k_steps", [])
         self.bit_depths = res_cfg.get("bit_depths", [])
         self.custom_modes = res_cfg.get("custom_modes", {})
+        # Per-mode operator selection. An absent camera entry preserves the
+        # legacy k_steps/bit_depths filters for backward compatibility.
+        self.enabled_modes = res_cfg.get("enabled_modes", {})
         # Optional ClearHDR (imx585) whitelist. settings.jsonc → resolutions.hdr
         # is {"sdr": bool, "imx585_clear_hdr": bool}; both true (default)
         # exposes plain and ClearHDR modes, turn a flag off to hide that class
@@ -460,6 +463,18 @@ class SensorDetect:
             "fps_max": fps_max_value,
             "gui_layout": extra.get("gui_layout", metadata.get("gui_layout", 0)),
             "file_size": file_size,
+            # Keep crop and binning as driver-discovered mode metadata.  Crop
+            # geometry comes directly from cinepi-raw --list-cameras; binning
+            # is parsed from the driver's mode description and is never
+            # reconstructed from output dimensions.
+            "crop_x": extra.get("crop_x"),
+            "crop_y": extra.get("crop_y"),
+            "crop_width": extra.get("crop_width"),
+            "crop_height": extra.get("crop_height"),
+            "sensor_width": extra.get("sensor_width"),
+            "sensor_height": extra.get("sensor_height"),
+            "binning_x": extra.get("binning_x", metadata.get("binning_x")),
+            "binning_y": extra.get("binning_y", metadata.get("binning_y")),
             # ClearHDR flag (imx585). A mode is HDR when it is reported only
             # by `cinepi-raw --list-cameras --hdr sensor`; selecting it makes
             # cinepi-raw launch with --hdr sensor. See detect_camera_model().
@@ -481,6 +496,8 @@ class SensorDetect:
         sensors: Dict[str, List[Dict]] = {}
         current_cam = None
         current_bit_depth = None
+        sensor_width = None
+        sensor_height = None
         parsing_modes = False                     # inside a “Modes:” block?
 
         for raw in output.splitlines():
@@ -495,6 +512,11 @@ class SensorDetect:
                     current_cam += "_mono"
                 sensors.setdefault(current_cam, [])
                 current_bit_depth = None
+                sensor_width = None
+                sensor_height = None
+                header_size = re.search(r"\[\s*(\d+)x(\d+)", line)
+                if header_size:
+                    sensor_width, sensor_height = map(int, header_size.groups())
                 parsing_modes = False
                 continue
 
@@ -523,14 +545,32 @@ class SensorDetect:
             width, height = map(int, res.groups())
             fps = re.search(r"\[(\d+(?:\.\d+)?)\s*fps", line)
             fps_max = int(float(fps.group(1))) if fps else None
+            mode_extra = {}
+            crop = re.search(
+                r"mode-crop\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)",
+                line, re.IGNORECASE,
+            )
+            if crop:
+                cx, cy, cw, ch = map(int, crop.groups())
+                mode_extra.update({
+                    "crop_x": cx, "crop_y": cy,
+                    "crop_width": cw, "crop_height": ch,
+                    "sensor_width": sensor_width,
+                    "sensor_height": sensor_height,
+                })
+
+            binning = re.search(
+                r"\bbinning\s*(\d+)\s*[x×]\s*(\d+)\b",
+                line, re.IGNORECASE,
+            )
+            if binning:
+                bx, by = map(int, binning.groups())
+                mode_extra.update({"binning_x": bx, "binning_y": by})
             sensors[current_cam].append(
                 self._mode_from_metadata_or_detected(
-                    camera_name=current_cam,
-                    width=width,
-                    height=height,
-                    bit_depth=current_bit_depth,
-                    fps_max=fps_max,
-                    hdr=hdr,
+                    camera_name=current_cam, width=width, height=height,
+                    bit_depth=current_bit_depth, fps_max=fps_max, hdr=hdr,
+                    extra=mode_extra,
                 )
             )
 
@@ -611,27 +651,59 @@ class SensorDetect:
                 merged.setdefault(cam, []).append(mode)
         return merged
 
-    def _order_modes(self, selected: List[Dict]) -> List[Dict]:
-        """Order a camera's filtered modes for the GUI mode table.
+    @staticmethod
+    def _mode_identity(mode: Dict) -> tuple:
+        return (
+            int(mode.get("width") or 0), int(mode.get("height") or 0),
+            int(mode.get("bit_depth") or 0), bool(mode.get("hdr")),
+            mode.get("crop_x"), mode.get("crop_y"),
+            mode.get("crop_width"), mode.get("crop_height"),
+        )
 
-        Sensors that expose ClearHDR modes use the HDR-aware hierarchy the
-        operator sees on an imx585: the plain modes first (12-bit, ascending
-        resolution), then the 12-bit HDR modes, then the 16-bit HDR modes —
-        i.e. ordered by (hdr, bit_depth, resolution). Sensors without HDR keep
-        their long-standing order (reversed detection order) so imx477 / imx283
-        / imx296 mode indices are unchanged.
-        """
-        if any(m.get("hdr") for m in selected):
-            return sorted(
-                selected,
-                key=lambda m: (
-                    bool(m.get("hdr")),
-                    int(m.get("bit_depth") or 0),
-                    int(m.get("width") or 0),
-                    int(m.get("height") or 0),
-                ),
+    @classmethod
+    def _mode_matches_enabled(cls, mode: Dict, entries: List[Dict]) -> bool:
+        ident = cls._mode_identity(mode)
+        return any(isinstance(e, dict) and cls._mode_identity(e) == ident for e in (entries or []))
+
+    @staticmethod
+    def _mode_binning(mode: Dict) -> tuple:
+        bx, by = mode.get("binning_x"), mode.get("binning_y")
+        if all(isinstance(v, (int, float)) and v > 0 for v in (bx, by)):
+            return (int(bx), int(by))
+        return (None, None)
+
+    @classmethod
+    def _mode_is_full(cls, mode: Dict) -> bool:
+        cw, ch = mode.get("crop_width"), mode.get("crop_height")
+        if cw is None or ch is None:
+            return True
+        sw, sh = mode.get("sensor_width"), mode.get("sensor_height")
+        if sw and sh:
+            return (
+                int(mode.get("crop_x") or 0) == 0 and
+                int(mode.get("crop_y") or 0) == 0 and
+                int(cw) == int(sw) and int(ch) == int(sh)
             )
-        return list(reversed(selected))
+        return False
+
+    @classmethod
+    def _mode_sort_key(cls, mode: Dict) -> tuple:
+        bx, by = cls._mode_binning(mode)
+        bin_factor = (bx or 1) * (by or 1)
+        known_crop = mode.get("crop_width") is not None
+        full = cls._mode_is_full(mode)
+        return (
+            -(int(mode.get("width") or 0) * int(mode.get("height") or 0)),
+            -(int(mode.get("bit_depth") or 0)),
+            -bin_factor,
+            0 if full else (1 if known_crop else 2),
+            int(mode.get("crop_x") or 0), int(mode.get("crop_y") or 0),
+        )
+
+    def _order_modes(self, selected: List[Dict]) -> List[Dict]:
+        """Order dynamic recording modes: resolution/depth, then binning,
+        with crop variants following the corresponding binning group."""
+        return sorted(selected, key=self._mode_sort_key)
 
     def _finalize_modes(
         self,
@@ -669,16 +741,12 @@ class SensorDetect:
                 bd   = int(extra["bit_depth"])
                 fps  = extra.get("fps_max")
                 hdr_flag = bool(extra.get("hdr", False))
-                existing = next(
-                    (
-                        m for m in sensors[cam]
-                        if int(m.get("width") or 0) == w
-                        and int(m.get("height") or 0) == h
-                        and int(m.get("bit_depth") or 0) == bd
-                        and bool(m.get("hdr")) == hdr_flag
-                    ),
-                    None,
-                )
+                identity = {
+                    "width": w, "height": h, "bit_depth": bd, "hdr": hdr_flag,
+                    "crop_x": extra.get("crop_x"), "crop_y": extra.get("crop_y"),
+                    "crop_width": extra.get("crop_width"), "crop_height": extra.get("crop_height"),
+                }
+                existing = next((m for m in sensors[cam] if self._mode_identity(m) == self._mode_identity(identity)), None)
                 if existing is not None:
                     if fps is not None:
                         detected_fps = existing.get("fps_max")
@@ -728,8 +796,13 @@ class SensorDetect:
         pruned: Dict[str, Dict[int, Dict]] = {}
         for cam, modes in sensors.items():
             selected = []
+            mode_entries = (getattr(self, "enabled_modes", {}) or {}).get(cam)
+            use_individual_selection = isinstance(mode_entries, list) and len(mode_entries) > 0
             for m in modes:
-                if self.bit_depths and m["bit_depth"] not in self.bit_depths:
+                if use_individual_selection:
+                    if not self._mode_matches_enabled(m, mode_entries):
+                        continue
+                elif self.bit_depths and m["bit_depth"] not in self.bit_depths:
                     continue
                 # A ClearHDR mode also has to pass its own depth switch. The
                 # two are separate questions -- "expose ClearHDR at all" and
@@ -740,15 +813,15 @@ class SensorDetect:
                 # the filter attributes they care about), and a missing switch
                 # must mean "no opinion", not an exception.
                 clear_hdr_depths = getattr(self, "clear_hdr_depths", None)
-                if bool(m.get("hdr")) and clear_hdr_depths is not None:
+                if not use_individual_selection and bool(m.get("hdr")) and clear_hdr_depths is not None:
                     if int(m.get("bit_depth") or 0) not in clear_hdr_depths:
                         continue
                 # settings.jsonc → image_capture.hdr: {sdr, imx585_clear_hdr}
                 # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.
-                if self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
+                if not use_individual_selection and self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
                     continue
                 k_val = round(m["width"] / 1000 * 2) / 2
-                if self.k_steps and k_val not in self.k_steps:
+                if not use_individual_selection and self.k_steps and k_val not in self.k_steps:
                     continue
                 selected.append(m)
 

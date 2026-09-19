@@ -290,7 +290,7 @@
     },
     "image_capture": {
       "type": "object",
-      "description": "Resolution / bit-depth / HDR filters offered by `set resolution`. A filter, not the mode list itself -- see sensors.database_file.",
+      "description": "Recording-mode selection and legacy resolution/bit-depth filters. enabled_modes is the per-camera mode list used by the dynamic recording-mode table; k_steps/bit_depths remain as the backward-compatible fallback when no enabled_modes entry exists for a detected camera.",
       "properties": {
         "k_steps": {
           "type": "array",
@@ -413,6 +413,28 @@
           "default": "mode",
           "description": "Which axis of quality dynamic resolution gives up first once the selected mode's own class (bit depth + SDR/ClearHDR) runs out of modes that can sustain the frame rate. `mode` holds the class and drops resolution first (16-bit 4K -> 16-bit HD -> 4K SDR -> HD SDR); `resolution` holds the frame size and drops the class first (16-bit 4K -> 4K SDR -> HD SDR); `none` never leaves the class, so resolution is the only thing that ever changes and fps is capped at what the class can do. A substitute is never larger or richer than the selected mode under any policy. `set dynamic resolution priority mode|resolution|none` overrides this live and the override persists in Redis, which a later boot reads back in preference to this value."
         },
+        "enabled_modes": {
+          "type": "object",
+          "description": "Per-camera list of the individual driver modes offered by the recording-mode table. When present for a camera, this replaces the legacy k_steps/bit_depths filters for that camera. Each entry identifies a mode by width/height/bit depth/HDR and, when the driver reported it, its sensor crop window.",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "width": {"type": "integer", "minimum": 1},
+                "height": {"type": "integer", "minimum": 1},
+                "bit_depth": {"type": "integer", "minimum": 1},
+                "hdr": {"type": "boolean", "default": false},
+                "crop_x": {"type": "integer", "minimum": 0},
+                "crop_y": {"type": "integer", "minimum": 0},
+                "crop_width": {"type": "integer", "minimum": 1},
+                "crop_height": {"type": "integer", "minimum": 1}
+              },
+              "required": ["width", "height", "bit_depth"],
+              "additionalProperties": false
+            }
+          }
+        },
         "custom_modes": {
           "type": "object",
           "description": "Per-camera-name list of mode overrides/additions (F-298). An entry whose width/height/bit_depth/hdr matches an already-detected mode overrides that mode's fps_max in place; a non-matching entry adds a brand-new mode.",
@@ -450,7 +472,11 @@
                 },
                 "packing": {
                   "type": "string"
-                }
+                },
+                "crop_x": {"type": "integer", "minimum": 0},
+                "crop_y": {"type": "integer", "minimum": 0},
+                "crop_width": {"type": "integer", "minimum": 1},
+                "crop_height": {"type": "integer", "minimum": 1}
               },
               "required": [
                 "width",

@@ -165,6 +165,10 @@
     // Right-shift of the lores plane before the thumbnail is written --
     // see settings.jsonc's comment.
     "thumbnail_size": 1,
+    // Individual recording-mode selection. An empty object means the
+    // legacy k_steps/bit_depths filters remain in force until the new table
+    // is saved for a detected camera.
+    "enabled_modes": {},
     "custom_modes": {}
   },
   "audio_capture": {

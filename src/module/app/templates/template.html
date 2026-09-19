@@ -444,6 +444,44 @@
             cursor: pointer;
             display: flex;
         }
+        #preview-switcher {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 8;
+            display: flex;
+            gap: 7px;
+            align-items: center;
+            padding: 5px;
+            border-radius: 30px;
+            background: rgba(0,0,0,.48);
+            backdrop-filter: blur(4px);
+        }
+        #preview-switcher button {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            min-height: 38px;
+            padding: 0;
+            border: 1px solid rgba(255,255,255,.35);
+            border-radius: 50%;
+            background: rgba(0,0,0,.65);
+            color: #fff;
+            font-family: 'DIN2014', Arial, sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+        }
+        #preview-switcher button.active {
+            background: lightgreen;
+            border-color: lightgreen;
+            color: #000;
+        }
+        #preview-switcher button:hover { filter: brightness(1.1); }
+        #preview-switcher button:active { transform: scale(.95); }
+        #preview-switcher button[hidden] { display:none; }
+        #preview-frame:not(.dual) #preview-switcher { display:none; }
         #preview-frame.dual { gap: 2px; }
         #preview-frame img {
             flex: 1 1 0;
@@ -455,6 +493,20 @@
             background: #000;
         }
         #preview-frame img.hidden { display: none; }
+        #preview-frame.pip { display:block; }
+        #preview-frame.pip img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+        #preview-frame.pip-cam0 #stream-cam1,
+        #preview-frame.pip-cam1 #stream {
+            inset:auto;
+            width:28%; height:28%;
+            right:2.5%; bottom:2.5%; left:auto; top:auto;
+            object-fit:cover;
+            border:1px solid rgba(255,255,255,.65);
+            box-shadow:0 2px 10px rgba(0,0,0,.6);
+            z-index:3;
+        }
+        #preview-frame.pip-cam1 #stream { right:auto; left:2.5%; }
+
 
         /* No live stream to sit on top of while no camera is detected --
            the preview area is otherwise just black. Mirrors simple_gui's
@@ -550,7 +602,7 @@
             justify-content: center;
             text-decoration: none;
         }
-        #btn-settings {
+        #button-row #btn-settings {
             position: fixed;
             right: max(14px, calc(env(safe-area-inset-right, 0px) + 10px));
             bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 10px));
@@ -569,9 +621,9 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
             z-index: 15;
         }
-        #btn-settings:hover { filter: brightness(1.08); }
-        #btn-settings:active { background: lightgreen; color: #000; transform: scale(0.96); }
-        #btn-settings svg { width: 22px; height: 22px; }
+        #button-row #btn-settings:hover { filter: brightness(1.08); }
+        #button-row #btn-settings:active { background: lightgreen; color: #000; transform: scale(0.96); }
+        #button-row #btn-settings svg { width: 22px; height: 22px; }
         #button-row {
             display: flex;
             flex-wrap: wrap;
@@ -933,6 +985,11 @@
         <div class="rail" id="rail-left"></div>
         <div id="preview-wrap">
             <div id="preview-frame" title="Tap to toggle record">
+                <div id="preview-switcher" aria-label="Live view camera selection">
+                    <button type="button" id="preview-cam0-btn" data-preview-source="cam0" aria-label="Show camera 0" title="Camera 0">0</button>
+                    <button type="button" id="preview-cam1-btn" data-preview-source="cam1" aria-label="Show camera 1" title="Camera 1">1</button>
+                    <button type="button" id="preview-combined-btn" data-preview-source="combined" aria-label="Combined live view" title="Combined view — click to cycle side-by-side and picture-in-picture">C</button>
+                </div>
                 <img id="stream" src="{{ stream_url }}" alt="Camera preview">
                 <img id="stream-cam1" class="hidden" alt="Camera 1 preview">
                 <div id="no-cam-overlay" class="hidden">
@@ -983,7 +1040,9 @@
             <button id="btn-experiment" title="Show every remaining CLI control as a live widget">EXPERIMENT</button>
             <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
             <button id="btn-unmount" title="unmount">UNMOUNT</button>
-            <button id="btn-fullscreen">FULLSCREEN</button>
+            <button id="btn-fullscreen" title="Live view fullscreen" aria-label="Open live view fullscreen">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 20h10"/><path d="M12 8v6"/><path d="m9 11 3 3 3-3"/></svg>
+            </button>
         </div>
 
         <!-- Built from the spec tables in the script below, not written out
@@ -1006,6 +1065,7 @@
     const API = '/api/v1/cmd';
     const TOKEN = {{ api_token | tojson }};
     const CAM1_STREAM = {{ stream_url_cam1 | tojson }};
+    const requestedPreview = new URLSearchParams(window.location.search).get('preview');
 
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
@@ -1323,19 +1383,87 @@
         scheduleFit();
     }
 
+    const COMBINED_PREVIEW_SOURCES = ['both', 'pip_cam0', 'pip_cam1'];
+
+    function renderPreviewSwitcher() {
+        const dual = Boolean(V.sensor_cam1);
+        const switcher = $('preview-switcher');
+        const cam0Btn = $('preview-cam0-btn');
+        const cam1Btn = $('preview-cam1-btn');
+        const combinedBtn = $('preview-combined-btn');
+        if (!switcher) return;
+        show(switcher, dual);
+        if (!dual) return;
+        const source = V.hdmi_preview_source || 'both';
+        const combined = COMBINED_PREVIEW_SOURCES.includes(source);
+        cam0Btn.classList.toggle('active', source === 'cam0');
+        cam1Btn.classList.toggle('active', source === 'cam1');
+        combinedBtn.classList.toggle('active', combined);
+        combinedBtn.textContent = source === 'pip_cam0' ? 'C0' : source === 'pip_cam1' ? 'C1' : 'C';
+        combinedBtn.title = source === 'both'
+            ? 'Combined view: side-by-side — click for PIP camera 0'
+            : source === 'pip_cam0'
+                ? 'Combined view: camera 0 full + camera 1 PIP — click for PIP camera 1'
+                : 'Combined view: camera 1 full + camera 0 PIP — click for side-by-side';
+    }
+
+    function applyRequestedPreview(){
+        if (!V.sensor_cam1 || !requestedPreview) return;
+        if (requestedPreview === 'cam0' || requestedPreview === 'cam1') setPreviewSource(requestedPreview);
+        else if (requestedPreview === 'combined') setPreviewSource('both');
+    }
+
+    function setPreviewSource(source) {
+        if (!V.sensor_cam1) return;
+        cmd('set preview ' + source);
+    }
+
+    $('preview-cam0-btn').addEventListener('click', (event) => {
+        event.stopPropagation();
+        setPreviewSource('cam0');
+    });
+    $('preview-cam1-btn').addEventListener('click', (event) => {
+        event.stopPropagation();
+        setPreviewSource('cam1');
+    });
+    $('preview-combined-btn').addEventListener('click', (event) => {
+        event.stopPropagation();
+        const current = V.hdmi_preview_source || 'both';
+        const i = COMBINED_PREVIEW_SOURCES.indexOf(current);
+        setPreviewSource(COMBINED_PREVIEW_SOURCES[(i + 1) % COMBINED_PREVIEW_SOURCES.length]);
+    });
+
     function renderPreview() {
         const frame = $('preview-frame');
         const dual = Boolean(V.sensor_cam1);
+        const source = V.hdmi_preview_source || (dual ? 'both' : 'cam0');
         const cam1 = $('stream-cam1');
-        frame.classList.toggle('dual', dual);
-        show(cam1, dual);
+        const stream0 = $('stream');
+        frame.classList.toggle('dual', dual && source !== 'cam0' && source !== 'cam1');
+        frame.classList.toggle('pip', source === 'pip_cam0' || source === 'pip_cam1');
+        show(cam1, dual && source !== 'cam0');
+        show(stream0, !dual || source !== 'cam1');
         if (dual && !cam1.src) { cam1.src = CAM1_STREAM; }
         show($('no-cam-overlay'), Boolean(V.camera_missing));
+
+        // The browser preview follows the same five source states as the HDMI
+        // compositor: single cam0, single cam1, side-by-side, or either PIP
+        // arrangement. The three-button UI exposes the first two directly and
+        // cycles the three combined arrangements from the C button.
+        if (source === 'pip_cam0') {
+            frame.classList.add('pip-cam0'); frame.classList.remove('pip-cam1');
+        } else if (source === 'pip_cam1') {
+            frame.classList.add('pip-cam1'); frame.classList.remove('pip-cam0');
+        } else {
+            frame.classList.remove('pip-cam0','pip-cam1');
+        }
+        renderPreviewSwitcher();
 
         const aspect = parseFloat(V.aspect);
         const ana = parseFloat(String(V.anamorphic_factor || '1').replace(/[^0-9.]/g, ''));
         if (aspect > 0) {
-            previewAspect = aspect * (ana > 0 ? ana : 1) * (dual ? 2 : 1);
+            const combined = dual && source !== 'cam0' && source !== 'cam1';
+            previewAspect = aspect * (ana > 0 ? ana : 1) * (combined ? 2 : 1);
         }
         frame.style.borderColor = V.zoom_is_default === false
             ? 'var(--zoom-hi)' : 'var(--guide)';
@@ -2210,6 +2338,7 @@
         steps.ranges = { zoom: ranges.zoom };
         steps.defaults = ranges.defaults || {};
         render();
+        applyRequestedPreview();
     });
 
     socket.on('gui_data_change', (data) => {
@@ -2521,7 +2650,8 @@
         // the label permanently stuck on 'FULLSCREEN' there.
         ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => {
             document.addEventListener(ev, () => {
-                fsBtn.textContent = fsActive() ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+                fsBtn.setAttribute('aria-label', fsActive() ? 'Exit live view fullscreen' : 'Open live view fullscreen');
+                fsBtn.setAttribute('title', fsActive() ? 'Exit live view fullscreen' : 'Live view fullscreen');
             });
         });
     }

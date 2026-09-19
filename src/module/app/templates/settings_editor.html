@@ -3471,7 +3471,11 @@
       var input=row.querySelector('.mode-fps-input'); if(!input) return;
       var raw=(input.value || '').trim();
       out[camera]=(out[camera] || []).filter(function(entry){
-        return !(Number(entry.width)===w && Number(entry.height)===h && Number(entry.bit_depth)===bd && !!entry.hdr===hdr);
+        var sameCrop=['x','y','width','height'].every(function(k){
+          var rv=row.getAttribute('data-crop-'+k), ev=entry['crop_'+k];
+          return rv==='' ? ev==null : Number(ev)===Number(rv);
+        });
+        return !(Number(entry.width)===w && Number(entry.height)===h && Number(entry.bit_depth)===bd && !!entry.hdr===hdr && sameCrop);
       });
       if(raw==='') return;
       var val=parseFloat(raw);

@@ -481,6 +481,10 @@
   .recording-mode-table .mode-meta{ color:var(--muted); font-size:10px; }
   .mode-storage-summary{ margin-top:12px; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
   .mode-storage-summary strong{ color:var(--ink); }
+  .mode-camera-head{ margin-top:18px; margin-bottom:6px; font-family:'DIN2014',Arial,sans-serif; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink); }
+  .config-recording-mode-table{ min-width:940px; }
+  .config-recording-mode-table .mode-toggle{ cursor:default; }
+
   .mode-empty{ color:var(--muted); padding:14px 8px !important; }
   /* Detected-modes readout on the Boot config page. */
   .mode-table{ width:100%; border-collapse:collapse; font-size:12.5px; line-height:1.3; margin:2px 0 6px; }
@@ -1223,7 +1227,6 @@
       <div class="rail-title eyebrow">{{ t('rail.exposure-and-steps.title') }}</div>
       <a href="#steps" data-nav>{{ t('raillink.steps.label') }}</a>
       <a href="#resolution" data-nav>{{ t('raillink.resolution.label') }}</a>
-      <a href="#fpsceilings" data-nav>{{ t('raillink.fpsceilings.label') }}</a>
     </div>
     <div class="rail-group" data-page="settings">
       <div class="rail-title eyebrow">{{ t('rail.recording.title') }}</div>
@@ -1254,10 +1257,6 @@
       <div class="rail-title eyebrow">{{ t('rail.playback.title') }}</div>
       <p class="rail-blurb">{{ t('rail.playback.blurb') }}</p>
     </div>
-    <div class="rail-group" data-page="live">
-      <div class="rail-title eyebrow">{{ t('rail.live-view.title') }}</div>
-      <p class="rail-blurb">{{ t('rail.live-view.blurb') }}</p>
-    </div>
   </nav>
 
   <main class="main" id="main">
@@ -1265,14 +1264,12 @@
       <button type="button" data-page-tab="config" role="tab">{{ t('tab.config.label') }}<span class="tab-hint">{{ t('tab.config.hint') }}</span></button>
       <button type="button" data-page-tab="i2c" role="tab">{{ t('tab.i2c.label') }}<span class="tab-hint">{{ t('tab.i2c.hint') }}</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">{{ t('tab.settings.label') }}<span class="tab-hint">{{ t('tab.settings.hint') }}</span></button>
-      <button type="button" data-page-tab="live" role="tab">{{ t('tab.live.label') }}<span class="tab-hint">{{ t('tab.live.hint') }}</span></button>
       <button type="button" data-page-tab="playback" role="tab">{{ t('tab.playback.label') }}<span class="tab-hint">{{ t('tab.playback.hint') }}</span></button>
       <button type="button" data-page-tab="raw" role="tab">{{ t('tab.raw.label') }}<span class="tab-hint">{{ t('tab.raw.hint') }}</span></button>
     </div>
     <p class="lede" data-page-lede="config" hidden></p>
     <p class="lede" data-page-lede="settings" hidden></p>
     <p class="lede" data-page-lede="i2c" hidden></p>
-    <p class="lede" data-page-lede="live" hidden></p>
     <p class="lede" data-page-lede="playback" hidden></p>
     <p class="lede" data-page-lede="raw" hidden></p>
 
@@ -2506,14 +2503,7 @@
       </div>
     </section>
 
-    <section class="group" id="live" data-page="live">
-      <header class="group-head">
-        <h2>{{ t('pane.live.heading') }}</h2>
-      </header>
-      <div class="live-embed-wrap">
-        <iframe id="liveEmbedFrame" class="live-embed-frame" src="/?xp=1" title="CineMate live camera preview" loading="lazy"></iframe>
-      </div>
-    </section>
+
 
   </main>
 </div>
@@ -3334,52 +3324,58 @@
      selects there describe what the *next* boot will load; this says what is
      attached right now, which is the question you actually have when the two
      disagree. Shares one fetch with the fps-ceiling pane. */
-  function renderConfigModes(sensors){
+  function renderConfigModes(sensors, meta){
     var host = document.getElementById('cfg-modes-list');
     if (!host) return;
+    meta = meta || {};
+    var storage = meta.storage || {};
+    host.innerHTML = '';
     var cameras = Object.keys(sensors || {});
     if (!cameras.length) {
       host.innerHTML = '<p class="card-help">No camera detected. Check the ribbon and <code class="mono">cinepi-raw --list-cameras</code>.</p>';
       return;
     }
-    host.innerHTML = '';
+    var summary = document.createElement('div');
+    summary.className = 'mode-storage-summary';
+    summary.innerHTML = 'Conform: <strong>' + (meta.conform_frame_rate || '—') + ' fps</strong>'
+      + ' · ' + (storage.measured ? '<strong>' + (storage.type || 'storage') + '</strong> · measured write '
+      + Number(storage.measured_write_mb_s).toFixed(1) + ' MB/s' : '<strong>' + (storage.type || 'No storage') + '</strong> · write capability not measured')
+      + ' · thumbnail included in throughput';
+    host.appendChild(summary);
+
     cameras.forEach(function(camera){
       var modes = sensors[camera] || [];
-      var head = document.createElement('p');
-      head.className = 'card-help';
-      head.style.marginTop = '10px';
-      head.innerHTML = '<strong>' + camera + '</strong> — ' + modes.length + ' mode' + (modes.length === 1 ? '' : 's');
+      var head = document.createElement('div');
+      head.className = 'mode-camera-head';
+      head.textContent = camera + ' — ' + modes.length + ' mode' + (modes.length === 1 ? '' : 's');
       host.appendChild(head);
-
       if (!modes.length) return;
       var table = document.createElement('table');
-      table.className = 'mode-table';
-      table.style.width = '100%';
-      table.style.borderCollapse = 'collapse';
+      table.className = 'recording-mode-table config-recording-mode-table';
       table.innerHTML = '<thead><tr>'
-        + '<th style="text-align:left">Resolution</th>'
-        + '<th style="text-align:left">Depth</th>'
-        + '<th style="text-align:right">Max fps</th>'
+        + '<th>Enable</th><th>Resolution</th><th>Bit</th><th>Binning</th><th>Crop</th>'
+        + '<th>Sensor Max FPS</th><th>Throughput @ Conform</th><th>Storage Max FPS</th><th>User Max FPS</th>'
         + '</tr></thead>';
       var body = document.createElement('tbody');
       modes.forEach(function(mode){
-        var tr = document.createElement('tr');
-        var depth = (mode.bit_depth || '?') + '-bit' + (mode.hdr ? ' HDR' : '');
-        /* fps_max_effective is what cinepi-raw launches with; it differs from
-           fps_max_detected only where a custom_modes ceiling overrides it.
-           Showing just one number would hide that the override exists. */
-        var eff = mode.fps_max_effective, det = mode.fps_max_detected;
-        var fps = (eff === null || eff === undefined) ? '—' : String(eff);
-        if (det !== null && det !== undefined && det !== eff) {
-          fps = eff + ' <span class="card-help" style="opacity:.7">(capped from ' + det + ')</span>';
-        }
-        tr.innerHTML = '<td>' + (mode.width || '?') + '×' + (mode.height || '?') + '</td>'
-          + '<td>' + depth + '</td>'
-          + '<td style="text-align:right">' + fps + '</td>';
+        var tr=document.createElement('tr');
+        if(!mode.selected) tr.classList.add('mode-off');
+        var td=document.createElement('td');
+        var toggle=document.createElement('button');
+        toggle.className='toggle mode-toggle'; toggle.type='button'; toggle.disabled=true;
+        toggle.setAttribute('role','switch'); toggle.setAttribute('aria-checked',mode.selected?'true':'false');
+        toggle.setAttribute('aria-label','Recording mode selected'); td.appendChild(toggle); tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.width+'×'+mode.height+(mode.hdr?' HDR':''); tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.bit_depth+'-bit'; tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=(mode.binning_x&&mode.binning_y)?mode.binning_x+'×'+mode.binning_y:'—'; tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.full?'FULL':(mode.crop_known?(mode.crop_width+'×'+mode.crop_height):'—'); tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.fps_max_detected==null?'—':mode.fps_max_detected; tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=Number(mode.throughput_mb_s||0).toFixed(1)+' MB/s'; tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.storage_max_fps==null?'—':mode.storage_max_fps+' fps'; tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.fps_max_effective==null?'—':mode.fps_max_effective+' fps'; tr.appendChild(td);
         body.appendChild(tr);
       });
-      table.appendChild(body);
-      host.appendChild(table);
+      table.appendChild(body); host.appendChild(table);
     });
   }
 
@@ -3387,7 +3383,7 @@
     return fetch('/settings-editor/api/sensor-modes').then(function(r){ return r.json(); }).then(function(res){
       if (!res.ok) return;
       renderRecordingModes(res.sensors || {}, res);
-      renderConfigModes(res.sensors || {});
+      renderConfigModes(res.sensors || {}, res);
     }).catch(function(){ /* non-fatal -- the rest of the page still works */ });
   }
 
@@ -6152,7 +6148,7 @@
     var saveBtn = document.getElementById('saveBtn');
     var openJsonBtn = document.getElementById('openJson');
     var openJsonLabel = document.getElementById('openJsonLabel');
-    var noFilePage = activePage === 'live' || activePage === 'raw' || activePage === 'playback' || activePage === 'i2c';
+    var noFilePage = activePage === 'raw' || activePage === 'playback' || activePage === 'i2c';
     saveBtn.hidden = noFilePage;
     openJsonBtn.hidden = noFilePage;
     document.getElementById('revertBtn').hidden = noFilePage;
@@ -6163,42 +6159,6 @@
   }
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');
-  /* Live-view iframe lifecycle. Kept next to setActivePage because that is
-     the only thing that calls it, and the src it restores is the one the
-     markup shipped with rather than a second copy of the URL. */
-  var liveEmbedSrc = null;
-  function syncLiveEmbed(page){
-    var frame = document.getElementById('liveEmbedFrame');
-    if (!frame) return;
-    if (liveEmbedSrc === null) liveEmbedSrc = frame.getAttribute('src') || '/';
-    if (page === 'live'){
-      if (frame.getAttribute('src') !== liveEmbedSrc) frame.setAttribute('src', liveEmbedSrc);
-    } else if (frame.getAttribute('src')){
-      /* removeAttribute rather than src='': an empty src re-resolves to the
-         current document in some browsers, which reloads this page inside
-         its own iframe instead of stopping anything. */
-      frame.removeAttribute('src');
-    }
-  }
-
-  /* The child owns the live HUD's height: its drawer is open by default
-     in this view and may grow after a socket update or an orientation change.
-     Accept only the iframe's same-origin messages and ignore sub-pixel churn
-     so setting the height cannot cause a resize-message loop. */
-  window.addEventListener('message', function(event){
-    var frame = document.getElementById('liveEmbedFrame');
-    var wrap = frame && frame.parentElement;
-    var data = event.data;
-    if (!frame || !wrap || event.origin !== window.location.origin ||
-        event.source !== frame.contentWindow || !data ||
-        data.type !== 'cinemate-live-height') return;
-    var height = Math.ceil(Number(data.height));
-    if (!Number.isFinite(height) || height < 240) return;
-    var previous = Number.parseFloat(wrap.style.getPropertyValue('--live-embed-height')) || 0;
-    if (Math.abs(previous - height) < 2) return;
-    wrap.style.setProperty('--live-embed-height', height + 'px');
-  });
-
   /* ---------- i2c pane ---------- */
   /* Probed per request rather than cached: AnalogControls and SsdMonitor each
      decide once at startup and never look again, so a device plugged in later
@@ -6414,7 +6374,7 @@
      never contradict a hash -- it is consulted when there is nothing else to
      go on. Storage can throw outright (Safari private mode, site data blocked),
      so every access is guarded and simply falls back to the default. */
-  var PAGE_LANDING = { config: 'bootconfig', i2c: 'i2cbus', settings: 'welcome', raw: 'clips', live: 'live', playback: 'playback' };
+  var PAGE_LANDING = { config: 'bootconfig', i2c: 'i2cbus', settings: 'welcome', raw: 'clips', playback: 'playback' };
   var DEFAULT_PAGE = 'settings';
   var LAST_PAGE_KEY = 'cinemate.settingsEditor.lastPage';
   function rememberPage(page){

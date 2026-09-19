@@ -669,18 +669,12 @@ class SensorDetect:
             )
             sensors[current_cam].append(last_mode)
 
-        # Some cinepi-raw versions implement --hdr sensor as a dedicated HDR
-        # probe and therefore print only the ClearHDR state, without either
-        # the SDR/HDR separator or a repeated camera header. In that form
-        # there is no transition for the parser to observe, but the *entire
-        # invocation* is nevertheless the HDR state. Promote the complete
-        # result only when no state transition was seen; this preserves the
-        # SDR-first/HDR-second format handled above.
-        if hdr and not saw_hdr_transition:
-            for modes in sensors.values():
-                for mode in modes:
-                    mode["hdr"] = True
-
+        # Do not promote the whole --hdr invocation here when no state
+        # marker was seen. Some formatter variants print both SDR and HDR
+        # timings without a separator, and doing that here would incorrectly
+        # mark the repeated SDR timings as ClearHDR. detect_camera_model()
+        # compares the HDR probe against the plain probe before merge and
+        # promotes only timings that are genuinely new to the HDR state.
         return sensors
 
     @staticmethod

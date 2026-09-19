@@ -3387,7 +3387,7 @@
       modes.forEach(function(mode){
         var group=modeGroupKey(mode);
         if(group!==lastGroup){
-          var gr=document.createElement('tr'); gr.className='mode-group-row';
+          var gr=document.createElement('tr'); gr.className='mode-group-row'; gr.setAttribute('data-mode-group','1');
           var gd=document.createElement('td'); gd.colSpan=7;
           var binLabel=(mode.binning_x!=null && mode.binning_y!=null)
             ? mode.binning_x+'×'+mode.binning_y
@@ -3461,7 +3461,18 @@
         });
         body.appendChild(tr);
       });
-      table.appendChild(body); host.appendChild(table);
+      table.appendChild(body);
+      if(!showSmaller){
+        body.querySelectorAll('tr[data-mode-group]').forEach(function(groupRow){
+          var hasVisible=false, node=groupRow.nextElementSibling;
+          while(node && !node.hasAttribute('data-mode-group')){
+            if(node.hasAttribute('data-mode-row') && !node.hidden){ hasVisible=true; break; }
+            node=node.nextElementSibling;
+          }
+          groupRow.hidden=!hasVisible;
+        });
+      }
+      host.appendChild(table);
 
       var smallCount=host.querySelectorAll('tr[data-mode-row][data-small-mode="1"]').length;
       if(smallCount){

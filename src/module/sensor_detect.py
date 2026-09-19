@@ -454,8 +454,24 @@ class SensorDetect:
         # dynamically in cinepi_controller instead.
         file_size = compute_frame_size_mb(width, height, bit_depth) if bit_depth else None
         fps_max_value = fps_max if fps_max is not None else extra.get("fps_max", metadata.get("max_fps"))
+        # Aspect ratio is an image property, not a transport-frame
+        # property.  In particular, IMX585 ClearHDR RAW16 modes include
+        # optical-black rows (e.g. 3840×2200 carrying a 3840×2160 active
+        # image), and some modes have binned/cropped transport geometry.
+        # The settings table must therefore use the reported active crop
+        # dimensions whenever geometry is known.  Falling back to width/height
+        # keeps this correct for drivers that do not report crop metadata.
+        aspect_width = extra.get("crop_width") or width
+        aspect_height = extra.get("crop_height") or height
+        detected_aspect = (
+            round(float(aspect_width) / float(aspect_height), 2)
+            if aspect_height else None
+        )
+
         mode = {
-            "aspect": extra.get("aspect", metadata.get("aspect", round(width / height, 2))),
+            "aspect": detected_aspect if detected_aspect is not None else (
+                extra.get("aspect", metadata.get("aspect", round(width / height, 2)))
+            ),
             "width": width,
             "height": height,
             "bit_depth": bit_depth,

@@ -701,16 +701,12 @@ class SensorDetect:
                 bd   = int(extra["bit_depth"])
                 fps  = extra.get("fps_max")
                 hdr_flag = bool(extra.get("hdr", False))
-                existing = next(
-                    (
-                        m for m in sensors[cam]
-                        if int(m.get("width") or 0) == w
-                        and int(m.get("height") or 0) == h
-                        and int(m.get("bit_depth") or 0) == bd
-                        and bool(m.get("hdr")) == hdr_flag
-                    ),
-                    None,
-                )
+                identity = {
+                    "width": w, "height": h, "bit_depth": bd, "hdr": hdr_flag,
+                    "crop_x": extra.get("crop_x"), "crop_y": extra.get("crop_y"),
+                    "crop_width": extra.get("crop_width"), "crop_height": extra.get("crop_height"),
+                }
+                existing = next((m for m in sensors[cam] if self._mode_identity(m) == self._mode_identity(identity)), None)
                 if existing is not None:
                     if fps is not None:
                         detected_fps = existing.get("fps_max")

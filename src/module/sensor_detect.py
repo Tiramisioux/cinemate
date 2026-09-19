@@ -515,6 +515,7 @@ class SensorDetect:
                 current_bit_depth = None
                 sensor_width = None
                 sensor_height = None
+                last_mode = None
                 header_size = re.search(r"\[\s*(\d+)x(\d+)", line)
                 if header_size:
                     sensor_width, sensor_height = map(int, header_size.groups())
@@ -542,8 +543,24 @@ class SensorDetect:
             res = re.search(r"(\d+)x(\d+)", line)
             if not res:
                 # Some drivers print mode geometry on a continuation line.
-                # Attach an explicitly reported binning value to the most
-                # recently parsed mode; never infer it from dimensions.
+                # Attach explicitly reported crop/binning metadata to the
+                # most recently parsed mode; never infer either from output
+                # dimensions. rpicam's normal --list-cameras formatter keeps
+                # the crop on the same line, but cinepi-raw variants that
+                # probe a mode can emit it separately.
+                crop_only = re.search(
+                    r"(?:mode-crop\s*)?\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)\s*(?:crop)?",
+                    line, re.IGNORECASE,
+                )
+                if crop_only and last_mode is not None:
+                    cx, cy, cw, ch = map(int, crop_only.groups())
+                    last_mode["crop_x"] = cx
+                    last_mode["crop_y"] = cy
+                    last_mode["crop_width"] = cw
+                    last_mode["crop_height"] = ch
+                    last_mode["sensor_width"] = sensor_width
+                    last_mode["sensor_height"] = sensor_height
+
                 binning_only = re.search(
                     r"\bbinning\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
                     line, re.IGNORECASE,

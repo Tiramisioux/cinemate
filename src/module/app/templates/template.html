@@ -493,6 +493,20 @@
             background: #000;
         }
         #preview-frame img.hidden { display: none; }
+        #preview-frame.pip { display:block; }
+        #preview-frame.pip img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+        #preview-frame.pip-cam0 #stream-cam1,
+        #preview-frame.pip-cam1 #stream {
+            inset:auto;
+            width:28%; height:28%;
+            right:2.5%; bottom:2.5%; left:auto; top:auto;
+            object-fit:cover;
+            border:1px solid rgba(255,255,255,.65);
+            box-shadow:0 2px 10px rgba(0,0,0,.6);
+            z-index:3;
+        }
+        #preview-frame.pip-cam1 #stream { right:auto; left:2.5%; }
+
 
         /* No live stream to sit on top of while no camera is detected --
            the preview area is otherwise just black. Mirrors simple_gui's

@@ -209,6 +209,32 @@
   .btn-ghost{ background: transparent; }
   .btn-danger-outline{ border-color: var(--danger); color: var(--danger); background:transparent; }
 
+  /* Keep the live camera control one tap away while editing settings.
+     This is the same green circular live-view affordance used by the
+     shooting page; the expand glyph makes it clear that it returns to the
+     live control surface. */
+  .cinepi-launch{
+    position:fixed;
+    right:max(18px, env(safe-area-inset-right));
+    bottom:max(18px, env(safe-area-inset-bottom));
+    z-index:40;
+    width:52px;
+    height:52px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--accent-ink);
+    background:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:50%;
+    box-shadow:0 4px 16px rgba(0,0,0,.42);
+    transition:filter .12s ease, transform .05s ease;
+  }
+  .cinepi-launch:hover{ filter:brightness(1.08); }
+  .cinepi-launch:active{ transform:translateY(1px); }
+  .cinepi-launch:focus-visible{ outline:none; box-shadow:var(--focus); }
+  .cinepi-launch svg{ width:24px; height:24px; }
+
   /* ---------- Rail ---------- */
   .rail{
     grid-area: rail;
@@ -1146,6 +1172,12 @@
     <span class="pill" id="dirtyPill" hidden><span class="dot"></span><span id="dirtyCount">0</span> unsaved</span>
     <button class="btn btn-primary" id="saveBtn" disabled>Save changes</button>
   </header>
+
+  <a class="cinepi-launch" href="http://cinepi.local:5000" aria-label="Open CinePi live view" title="Open CinePi live view">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square" aria-hidden="true">
+      <path d="M9 3H3v6M15 3h6v6M21 15v6h-6M3 15v6h6"/>
+    </svg>
+  </a>
 
   <div class="rail-scrim" id="railScrim"></div>
   <nav class="rail" id="rail" aria-label="Settings sections">

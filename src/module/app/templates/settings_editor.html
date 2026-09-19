@@ -3415,7 +3415,7 @@
         var title=document.createElement('div'); title.className='mode-title';
         var displayW=mode.active_width || mode.crop_width || mode.width;
         var displayH=mode.active_height || mode.crop_height || mode.height;
-        title.textContent=displayW+'×'+displayH+(mode.hdr?' · Clear HDR':'');
+        title.textContent=displayW+'×'+displayH+' · '+(mode.hdr?'Clear HDR':'Standard');
         var sub=document.createElement('div'); sub.className='mode-sub';
         sub.textContent=mode.crop_known
           ? (mode.full ? 'Full frame' : 'Cropped')

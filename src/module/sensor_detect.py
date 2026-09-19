@@ -578,8 +578,8 @@ class SensorDetect:
                     last_mode["sensor_height"] = sensor_height
 
                 binning_only = re.search(
-                    r"(?:\bbinning|binning\s*factor|binning\s*mode)"
-                    r"\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
+                    r"\bbinning(?:\s+(?:factor|mode))?\s*[:=]?\s*"
+                    r"(\d+)\s*[x×]\s*(\d+)\b",
                     line, re.IGNORECASE,
                 )
                 if binning_only and last_mode is not None:
@@ -604,14 +604,22 @@ class SensorDetect:
                     "sensor_height": sensor_height,
                 })
 
+            # The driver annotation is authoritative. Keep this parser deliberately
+            # permissive because the human-readable libcamera/rpicam formatter has
+            # appeared in several equivalent forms:
+            #   "binning 2x2", "binning: 2x2", "binning factor 2x2",
+            #   "binning mode 2×2".
+            # Never derive binning from the output resolution: 1920x1080 can
+            # legitimately be either 1x1 or 2x2 on IMX585.
             binning = re.search(
-                r"(?:\bbinning|binning\s*factor|binning\s*mode)"
-                r"\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
+                r"\bbinning(?:\s+(?:factor|mode))?\s*[:=]?\s*"
+                r"(\d+)\s*[x×]\s*(\d+)\b",
                 line, re.IGNORECASE,
             )
             if binning:
                 bx, by = map(int, binning.groups())
-                mode_extra.update({"binning_x": bx, "binning_y": by})
+                mode_extra["binning_x"] = bx
+                mode_extra["binning_y"] = by
             last_mode = self._mode_from_metadata_or_detected(
                 camera_name=current_cam, width=width, height=height,
                 bit_depth=current_bit_depth, fps_max=fps_max, hdr=current_hdr,

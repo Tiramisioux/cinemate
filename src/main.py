@@ -94,6 +94,18 @@ def camera_present_from_cameras_value(raw) -> bool:
     return raw not in (None, "[]")
 
 
+def resolve_default_hdmi_source(configured_source: str, camera_count: int) -> str:
+    """Resolve the configured HDMI source against physical camera count."""
+    if camera_count <= 0:
+        return "cam0"
+    if camera_count == 1:
+        # "both", cam1 and either PIP mode require a second physical sensor.
+        return "cam0"
+    if configured_source in ("both", "cam0", "cam1", "pip_cam0", "pip_cam1"):
+        return configured_source
+    return "both"
+
+
 def _release_run_lock() -> None:
     try:
         os.remove(CINEMATE_LOCKFILE)
@@ -800,11 +812,17 @@ def run_application(args, log_queue):
         settings.get("hdmi_display", {}).get("preview", {}).get("default_zoom", 1.0)
 )
 
-    # Default dual-sensor HDMI preview source (both / cam0 / cam1)
+    # Seed a safe provisional source. After cinepi.start_all() discovers
+    # the physical cameras, the source is resolved against the actual count.
+    configured_hdmi_source = (
+        settings.get("hdmi_display", {})
+        .get("preview", {})
+        .get("default_hdmi_source", "both")
+    )
     redis_controller.set_value(
         ParameterKey.HDMI_PREVIEW_SOURCE.value,
-        settings.get("hdmi_display", {}).get("preview", {}).get("default_hdmi_source", "both")
-)
+        resolve_default_hdmi_source(configured_hdmi_source, 1)
+    )
 
     # ClearHDR live-knob startup values (image_capture.hdr). Cinepi-raw
     # re-applies these from Redis once a ClearHDR mode is actually selected;
@@ -858,8 +876,30 @@ def run_application(args, log_queue):
     
     cinepi.start_all()
 
-    camera_present = camera_present_from_cameras_value(
-        redis_controller.get_value(ParameterKey.CAMERAS.value)
+    cameras_raw = redis_controller.get_value(ParameterKey.CAMERAS.value)
+    try:
+        discovered_cameras = json.loads(cameras_raw) if cameras_raw else []
+        camera_count = len(discovered_cameras) if isinstance(discovered_cameras, list) else 0
+    except (TypeError, ValueError):
+        camera_count = 0
+
+    camera_present = camera_present_from_cameras_value(cameras_raw)
+
+    # The sensors.cam0/cam1 entries in settings.jsonc are logical slots, not
+    # proof that both physical sensors are connected.
+    resolved_hdmi_source = resolve_default_hdmi_source(
+        configured_hdmi_source,
+        camera_count,
+    )
+    redis_controller.set_value(
+        ParameterKey.HDMI_PREVIEW_SOURCE.value,
+        resolved_hdmi_source,
+    )
+    logging.info(
+        "HDMI preview source: configured=%s, detected_cameras=%d, using=%s",
+        configured_hdmi_source,
+        camera_count,
+        resolved_hdmi_source,
     )
 
     # cinepi.set_log_level('INFO')

@@ -547,7 +547,7 @@ class SensorDetect:
             fps_max = int(float(fps.group(1))) if fps else None
             mode_extra = {}
             crop = re.search(
-                r"mode-crop\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)",
+                r"(?:mode-crop\s*)?\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)\s*(?:crop)?",
                 line, re.IGNORECASE,
             )
             if crop:
@@ -560,7 +560,7 @@ class SensorDetect:
                 })
 
             binning = re.search(
-                r"\bbinning\s*(\d+)\s*[x×]\s*(\d+)\b",
+                r"\bbinning\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
                 line, re.IGNORECASE,
             )
             if binning:
@@ -674,16 +674,47 @@ class SensorDetect:
 
     @classmethod
     def _mode_is_full(cls, mode: Dict) -> bool:
+        """
+        True only when the driver supplied crop geometry that identifies the
+        mode as the full active sensor window.
+
+        A missing crop annotation is deliberately *unknown*, not full frame.
+        This matters for stock drivers such as IMX477 which do not expose the
+        optional geometry metadata. For binned modes, the crop is expressed in
+        the binned output domain, so a zero-origin crop is the full active
+        window even though it is smaller than the native sensor dimensions.
+        """
         cw, ch = mode.get("crop_width"), mode.get("crop_height")
         if cw is None or ch is None:
+            return False
+
+        cx = int(mode.get("crop_x") or 0)
+        cy = int(mode.get("crop_y") or 0)
+        if cx != 0 or cy != 0:
+            return False
+
+        bx, by = cls._mode_binning(mode)
+        if bx is not None and by is not None:
+            sw, sh = mode.get("sensor_width"), mode.get("sensor_height")
+            if sw and sh:
+                # Permit the small optical-black/native-array margins present
+                # on sensors such as IMX585 (3856x2180 native, 3840x2160 active).
+                active_w = int(cw) * bx
+                active_h = int(ch) * by
+                native_w, native_h = int(sw), int(sh)
+                return (
+                    active_w <= native_w and active_h <= native_h and
+                    native_w - active_w <= max(32, bx * 16) and
+                    native_h - active_h <= max(32, by * 16)
+                )
+            # No native dimensions, but the driver explicitly says zero-origin
+            # and gives binning: treat it as a full sensor window.
             return True
+
         sw, sh = mode.get("sensor_width"), mode.get("sensor_height")
         if sw and sh:
-            return (
-                int(mode.get("crop_x") or 0) == 0 and
-                int(mode.get("crop_y") or 0) == 0 and
-                int(cw) == int(sw) and int(ch) == int(sh)
-            )
+            return int(cw) == int(sw) and int(ch) == int(sh)
+
         return False
 
     @classmethod
@@ -746,7 +777,46 @@ class SensorDetect:
                     "crop_x": extra.get("crop_x"), "crop_y": extra.get("crop_y"),
                     "crop_width": extra.get("crop_width"), "crop_height": extra.get("crop_height"),
                 }
-                existing = next((m for m in sensors[cam] if self._mode_identity(m) == self._mode_identity(identity)), None)
+                def custom_match(m):
+                    if (
+                        int(m.get("width") or 0) != w or
+                        int(m.get("height") or 0) != h or
+                        int(m.get("bit_depth") or 0) != bd or
+                        bool(m.get("hdr")) != hdr_flag
+                    ):
+                        return False
+
+                    # A custom entry that does not specify geometry is an FPS
+                    # override for the detected mode. If geometry is supplied,
+                    # require it to match so a genuinely distinct windowed
+                    # mode can still be added intentionally.
+                    geometry_fields = ("crop_x", "crop_y", "crop_width", "crop_height")
+                    if any(extra.get(k) is not None for k in geometry_fields):
+                        for k in geometry_fields:
+                            if extra.get(k) is not None and m.get(k) != extra.get(k):
+                                return False
+
+                    if extra.get("binning_x") is not None and m.get("binning_x") != extra.get("binning_x"):
+                        return False
+                    if extra.get("binning_y") is not None and m.get("binning_y") != extra.get("binning_y"):
+                        return False
+                    return True
+
+                candidates = [m for m in sensors[cam] if custom_match(m)]
+                if candidates:
+                    # Prefer a fully described full-frame mode for a geometry-
+                    # unspecified FPS override; this keeps legacy custom_modes
+                    # deterministic when a driver exposes both a native mode
+                    # and a windowed mode at the same output size.
+                    existing = sorted(
+                        candidates,
+                        key=lambda m: (
+                            0 if self._mode_is_full(m) else 1,
+                            0 if self._mode_binning(m)[0] is not None else 1,
+                        ),
+                    )[0]
+                else:
+                    existing = None
                 if existing is not None:
                     if fps is not None:
                         detected_fps = existing.get("fps_max")

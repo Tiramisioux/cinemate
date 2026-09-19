@@ -471,6 +471,8 @@ class SensorDetect:
             "crop_y": extra.get("crop_y"),
             "crop_width": extra.get("crop_width"),
             "crop_height": extra.get("crop_height"),
+            "sensor_width": extra.get("sensor_width"),
+            "sensor_height": extra.get("sensor_height"),
             "binning_x": extra.get("binning_x", metadata.get("binning_x")),
             "binning_y": extra.get("binning_y", metadata.get("binning_y")),
             # ClearHDR flag (imx585). A mode is HDR when it is reported only
@@ -494,6 +496,8 @@ class SensorDetect:
         sensors: Dict[str, List[Dict]] = {}
         current_cam = None
         current_bit_depth = None
+        sensor_width = None
+        sensor_height = None
         parsing_modes = False                     # inside a “Modes:” block?
 
         for raw in output.splitlines():
@@ -508,6 +512,11 @@ class SensorDetect:
                     current_cam += "_mono"
                 sensors.setdefault(current_cam, [])
                 current_bit_depth = None
+                sensor_width = None
+                sensor_height = None
+                header_size = re.search(r"\[\s*(\d+)x(\d+)", line)
+                if header_size:
+                    sensor_width, sensor_height = map(int, header_size.groups())
                 parsing_modes = False
                 continue
 
@@ -537,17 +546,21 @@ class SensorDetect:
             fps = re.search(r"\[(\d+(?:\.\d+)?)\s*fps", line)
             fps_max = int(float(fps.group(1))) if fps else None
             mode_extra = {}
-            crop = re.search(r"\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)\s+crop", line, re.IGNORECASE)
+            crop = re.search(
+                r"mode-crop\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)",
+                line, re.IGNORECASE,
+            )
             if crop:
                 cx, cy, cw, ch = map(int, crop.groups())
-                mode_extra.update({"crop_x": cx, "crop_y": cy, "crop_width": cw, "crop_height": ch})
+                mode_extra.update({
+                    "crop_x": cx, "crop_y": cy,
+                    "crop_width": cw, "crop_height": ch,
+                    "sensor_width": sensor_width,
+                    "sensor_height": sensor_height,
+                })
 
-            # The driver describes binned modes explicitly.  Prefer that
-            # declaration over inferring binning from crop/output geometry:
-            # a crop is not a binning operation, and the two must remain
-            # independent in the mode database.
             binning = re.search(
-                r"\b(\d+)\s*[x×]\s*(\d+)\s*(?:binning|binned)\b",
+                r"\bbinning\s*(\d+)\s*[x×]\s*(\d+)\b",
                 line, re.IGNORECASE,
             )
             if binning:
@@ -654,31 +667,24 @@ class SensorDetect:
 
     @staticmethod
     def _mode_binning(mode: Dict) -> tuple:
-        # Binning is a sensor/driver property, not something that should be
-        # inferred from the crop rectangle. cinepi-raw --list-cameras is the
-        # authoritative source for the runtime mode catalogue.
         bx, by = mode.get("binning_x"), mode.get("binning_y")
         if all(isinstance(v, (int, float)) and v > 0 for v in (bx, by)):
             return (int(bx), int(by))
-        # Legacy database entries may not have explicit binning yet. Keep the
-        # old geometric fallback only for those entries so existing sensors do
-        # not disappear; newly discovered driver modes always carry explicit
-        # binning when the driver reports it.
-        cw, ch = mode.get("crop_width"), mode.get("crop_height")
-        w, h = mode.get("width"), mode.get("height")
-        if not all(isinstance(v, (int, float)) and v > 0 for v in (cw, ch, w, h)):
-            return (None, None)
-        bx, by = cw / w, ch / h
-        if abs(bx - round(bx)) > 1e-6 or abs(by - round(by)) > 1e-6:
-            return (None, None)
-        return (int(round(bx)), int(round(by)))
+        return (None, None)
 
     @classmethod
     def _mode_is_full(cls, mode: Dict) -> bool:
-        # Full/native is orthogonal to binning. A 2x1 or 2x2 binned mode can
-        # still cover the complete sensor. The driver/list-cameras crop tuple
-        # is therefore the only thing used to decide whether a mode is cropped.
-        return mode.get("crop_width") is None or mode.get("crop_height") is None
+        cw, ch = mode.get("crop_width"), mode.get("crop_height")
+        if cw is None or ch is None:
+            return True
+        sw, sh = mode.get("sensor_width"), mode.get("sensor_height")
+        if sw and sh:
+            return (
+                int(mode.get("crop_x") or 0) == 0 and
+                int(mode.get("crop_y") or 0) == 0 and
+                int(cw) == int(sw) and int(ch) == int(sh)
+            )
+        return False
 
     @classmethod
     def _mode_sort_key(cls, mode: Dict) -> tuple:

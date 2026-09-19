@@ -654,6 +654,16 @@ class SensorDetect:
 
     @staticmethod
     def _mode_binning(mode: Dict) -> tuple:
+        # Binning is a sensor/driver property, not something that should be
+        # inferred from the crop rectangle. cinepi-raw --list-cameras is the
+        # authoritative source for the runtime mode catalogue.
+        bx, by = mode.get("binning_x"), mode.get("binning_y")
+        if all(isinstance(v, (int, float)) and v > 0 for v in (bx, by)):
+            return (int(bx), int(by))
+        # Legacy database entries may not have explicit binning yet. Keep the
+        # old geometric fallback only for those entries so existing sensors do
+        # not disappear; newly discovered driver modes always carry explicit
+        # binning when the driver reports it.
         cw, ch = mode.get("crop_width"), mode.get("crop_height")
         w, h = mode.get("width"), mode.get("height")
         if not all(isinstance(v, (int, float)) and v > 0 for v in (cw, ch, w, h)):

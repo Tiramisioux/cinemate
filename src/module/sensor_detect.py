@@ -524,13 +524,24 @@ class SensorDetect:
             # ── camera header  e.g.  “0 : imx283 [5472x3648 …] (…)”
             m = re.match(r"^\s*\d+\s*:\s*([^\s]+)(?:\s*\[.*?(MONO)?\])?", line)
             if m:
-                # flush state & start a new camera section. In --hdr sensor
-                # output the camera header may be printed again when the
-                # sensor switches into ClearHDR; that repeated header must
-                # not reset current_hdr.
-                current_cam = m.group(1)
+                # --hdr sensor normally prints an explicit CLEAR HDR marker,
+                # but some cinepi-raw/libcamera formatter combinations repeat
+                # the camera header when switching sensor state without
+                # printing that marker. If the same camera header appears
+                # again during the --hdr probe, that second section is the
+                # ClearHDR state. This is deliberately scoped to the HDR
+                # probe; a normal --list-cameras run never promotes a repeated
+                # header to HDR.
+                next_cam = m.group(1)
                 if m.group(2) == "MONO":
-                    current_cam += "_mono"
+                    next_cam += "_mono"
+                if hdr and next_cam in sensors and sensors.get(next_cam):
+                    current_hdr = True
+
+                # flush state & start a new camera section. Keep current_hdr
+                # across the repeated header so the modes following it remain
+                # tagged as ClearHDR.
+                current_cam = next_cam
                 sensors.setdefault(current_cam, [])
                 current_bit_depth = None
                 sensor_width = None

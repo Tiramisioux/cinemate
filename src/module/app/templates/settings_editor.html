@@ -468,6 +468,20 @@
   }
   .filepath svg{ opacity:.6; flex:none; }
 
+  .mode-table-wrap{ width:100%; overflow-x:auto; margin-top:14px; }
+  .recording-mode-table{ width:100%; min-width:940px; border-collapse:collapse; font-size:12px; line-height:1.25; }
+  .recording-mode-table th{ padding:7px 8px; text-align:left; color:var(--muted); border-bottom:1px solid var(--line); font-size:10px; text-transform:uppercase; letter-spacing:.045em; white-space:nowrap; }
+  .recording-mode-table td{ padding:7px 8px; border-bottom:1px solid var(--line); color:var(--ink); white-space:nowrap; vertical-align:middle; }
+  .recording-mode-table tr:last-child td{ border-bottom:0; }
+  .recording-mode-table tr.mode-off td{ opacity:.38; }
+  .recording-mode-table tr.mode-off .mode-fps-input{ opacity:.85; }
+  .recording-mode-table .mode-toggle{ margin:0; }
+  .recording-mode-table .mode-fps-input{ width:64px; box-sizing:border-box; padding:5px 6px; text-align:right; font-variant-numeric:tabular-nums; }
+  .recording-mode-table .mode-fps-input.invalid{ border-color:var(--danger); }
+  .recording-mode-table .mode-meta{ color:var(--muted); font-size:10px; }
+  .mode-storage-summary{ margin-top:12px; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+  .mode-storage-summary strong{ color:var(--ink); }
+  .mode-empty{ color:var(--muted); padding:14px 8px !important; }
   /* Detected-modes readout on the Boot config page. */
   .mode-table{ width:100%; border-collapse:collapse; font-size:12.5px; line-height:1.3; margin:2px 0 6px; }
   /* line-height pinned: in quirks mode (pre-doctype) the UA table quirk reset it to
@@ -1736,184 +1750,36 @@
       </div>
     </section>
     <section class="group" id="resolution" data-page="settings">
-      <header class="group-head">
-        <h2>{{ t('pane.resolution.heading') }}</h2>
-        <p class="group-sub">{{ t('pane.resolution.sub') }}</p>
-        <p class="hw-note" id="modeAvailabilityNote" hidden></p>
-      </header>
-      <div class="cards">
-        <!-- Switches, not editable chips. The catalogue is closed by the
-             sensor database, not by taste: a mode's K category is
-             round(width/1000*2)/2, and across every sensor in
-             resources/sensors.json that yields exactly 1.5, 2, 3, 4 and 5.5
-             (5.5 being the imx283's 5568-wide modes, which is why it is here
-             and off by default -- it is absent from the shipped k_steps).
-             Typing a number no sensor reports never added a mode; it only
-             narrowed the filter to nothing. So the question is which of the
-             known categories to offer: a row of on/off answers. -->
-        <div class="card" data-search="resolutions offered 1.5k 2k 3k 4k k steps">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.resolution.0.label') }}</label>
-            <p class="card-help">{{ t('card.resolution.0.help') }}</p>
-          </div>
-          <div class="card-control switchset" data-set-path="image_capture.k_steps" data-set-type="number">
-            <label class="switchrow"><span>1.5K</span><button class="toggle" data-set-item="1.5" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 1.5K"></button></label>
-            <label class="switchrow"><span>2K</span><button class="toggle" data-set-item="2" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 2K"></button></label>
-            <label class="switchrow"><span>3K</span><button class="toggle" data-set-item="3" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 3K"></button></label>
-            <label class="switchrow"><span>4K</span><button class="toggle" data-set-item="4" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 4K"></button></label>
-            <label class="switchrow"><span>5.5K</span><button class="toggle" data-set-item="5.5" data-type="bool" data-original="false" role="switch" aria-checked="false" aria-label="Offer 5.5K"></button></label>
-          </div>
-        </div>
-        <div class="card" data-search="bit depths offered 10 12 16 raw">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.resolution.1.label') }}</label>
-            <p class="card-help">{{ t('card.resolution.1.help') }}</p>
-          </div>
-          <div class="card-control switchset" data-set-path="image_capture.bit_depths" data-set-type="number">
-            <label class="switchrow"><span>10‑bit</span><button class="toggle" data-set-item="10" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 10-bit"></button></label>
-            <label class="switchrow"><span>12‑bit</span><button class="toggle" data-set-item="12" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 12-bit"></button></label>
-            <label class="switchrow"><span>16‑bit</span><button class="toggle" data-set-item="16" data-type="bool" data-original="true" role="switch" aria-checked="true" aria-label="Offer 16-bit"></button></label>
-          </div>
-        </div>
-        <div class="card" data-search="dynamic resolution fps substitute automatic mode">
-          <div class="card-main">
-            <label class="card-label" for="f-dynres">{{ t('card.image_capture.dynamic_resolution.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.dynamic_resolution.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-dynres" data-path="image_capture.dynamic_resolution" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
-          </div>
-        </div>
-        <div class="card" data-search="dynamic resolution priority ladder hdr sdr bit depth class follow mode follow resolution">
-          <div class="card-main">
-            <label class="card-label" for="f-dynres-priority">{{ t('card.image_capture.dynamic_resolution_priority.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.dynamic_resolution_priority.help') }}</p>
-          </div>
-          <div class="card-control">
-            <select class="field-input" id="f-dynres-priority" data-path="image_capture.dynamic_resolution_priority" data-type="string" data-original="mode" style="min-width:180px">
-              <option value="mode" selected>Follow mode</option>
-              <option value="resolution">Follow resolution</option>
-              <option value="none">Never leave the mode</option>
-            </select>
-          </div>
-        </div>
-        <div class="card" data-search="hdr sdr modes exposed resolution control">
-          <div class="card-main">
-            <label class="card-label" for="f-hdr-sdr">{{ t('card.image_capture.hdr.sdr.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.sdr.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-hdr-sdr" data-path="image_capture.hdr.sdr" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
-          </div>
-        </div>
-        <!-- The two ClearHDR captures, one switch each. They decide WHICH
-             captures exist; Resolutions above decides their frame sizes, for
-             ClearHDR exactly as for SDR. The old third switch
-             (imx585_clear_hdr_16bit_hd) is gone: it gated every binned
-             ClearHDR mode regardless of depth, so turning it on for 16-bit HD
-             also handed back 12-bit HD. -->
-        <div class="card" data-search="clearhdr imx585 12 bit modes exposed companded ccmp">
-          <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr-12">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_12bit.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-hdr-clearhdr-12" data-path="image_capture.hdr.imx585_clear_hdr_12bit" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
-          </div>
-        </div>
-        <div class="card" data-search="clearhdr imx585 16 bit modes exposed linear 4k hd binned">
-          <div class="card-main">
-            <label class="card-label" for="f-hdr-clearhdr">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.imx585_clear_hdr_16bit.help') }}</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="f-hdr-clearhdr" data-path="image_capture.hdr.imx585_clear_hdr_16bit" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
-          </div>
-        </div>
-        <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.image_capture.hdr.threshold_low.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.hdr.threshold_low.help') }}</p>
-          </div>
-          <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.0') }}</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
-            </label>
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.1') }}</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
-            </label>
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.2') }}</span>
-              <input class="field-input num-input" type="number" id="f-hdr-blend" data-path="image_capture.hdr.blend" data-type="number" data-original="0" value="0" style="width:56px">
-            </label>
-            <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-              <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.3') }}</span>
-              <input class="field-input num-input" type="number" id="f-hdr-gainadder" data-path="image_capture.hdr.gain_adder" data-type="number" data-original="1" value="1" style="width:56px">
-            </label>
-          </div>
-        </div>
-        <div class="card" data-search="dng thumbnail embedded preview playback mono colour color jpeg greyscale off">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.image_capture.thumbnail.label') }}</label>
-            <p class="card-help">{{ t('card.image_capture.thumbnail.help') }}</p>
-            <!-- What "on" costs, in this camera's own numbers rather than a
-                 figure restated by hand: rendered from thumbnail_choice_labels()
-                 (sensor_detect.py), the same function and the same byte formula
-                 file_size uses, so it cannot drift from what a take costs. Only
-                 the on position needs a figure -- off is 0 B. -->
-            <p class="card-help" id="thumb-cost" style="color:var(--muted)">{{ thumbnail_on_label }}</p>
-            <p class="card-help">{{ t('caption.image_capture.thumbnail.0') }}</p>
-          </div>
-          <div class="card-control">
-            <!-- One toggle, not a mode picker and a size picker (operator
-                 decision 2026-09-13). All four modes and every size still
-                 work and are still reachable -- by hand in settings.jsonc or
-                 live with `set thumbnail` -- but this page offers the choice
-                 that is actually a choice: a preview in the Playback pane, or
-                 nothing.
-
-                 The toggle carries no data-path of its own, so buildState()
-                 ignores it; the hidden inputs below are what the save reads
-                 and what populateSimpleFields() hydrates, exactly like every
-                 other field on this page. thumbnail_size is hidden rather
-                 than absent for the reason B-2 recorded: a key the form does
-                 not carry is dropped from settings.jsonc on the next save,
-                 and that drop is a structural change, which costs the file
-                 every comment in it. -->
-            <button class="toggle" id="f-thumb-toggle" role="switch" aria-checked="true"
-                    aria-label="Embedded DNG thumbnail"></button>
-            <input type="hidden" id="f-thumb-value" data-path="image_capture.thumbnail" data-type="string" data-original="jpeg" value="jpeg">
-            <input type="hidden" id="f-thumb-size-value" data-path="image_capture.thumbnail_size" data-type="number" data-original="1" value="1">
-          </div>
-        </div>
-        <div class="card" data-search="sensor database file resources sensors json advanced">
-          <div class="card-main">
-            <label class="card-label">{{ t('card.sensors.database_file.label') }}</label>
-            <p class="card-help">{{ t('card.sensors.database_file.help') }}</p>
-          </div>
-          <div class="card-control">
-            <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>{{ sensor_db_path }}</span>
-            <!-- The card is read-only, but the key still has to round-trip:
-                 buildState() only collects [data-path] elements, so without
-                 this field a Save posts no sensors.database_file at all and
-                 _apply_settings_defaults setdefaults it back to the stock
-                 "resources/sensors.json" -- silently discarding an
-                 operator's override. -->
-            <input type="hidden" data-path="sensors.database_file">
-          </div>
-        </div>
+  <header class="group-head">
+    <h2>{{ t('pane.resolution.heading') }}</h2>
+    <p class="group-sub">Driver modes, recording bandwidth and per-mode frame-rate limits.</p>
+    <p class="hw-note" id="modeAvailabilityNote" hidden></p>
+  </header>
+  <div class="cards">
+    <div class="card" data-search="recording modes resolution bit depth binning crop sensor fps throughput storage fps user max">
+      <div class="card-main" style="max-width:none">
+        <label class="card-label">RECORDING MODES</label>
+        <p class="card-help">Every mode currently exposed by the attached sensor is listed here. Select the modes you want CineMate to offer. Full/native modes are enabled by default; cropped modes remain available but start disabled. User Max FPS is a per-mode ceiling and is never raised automatically.</p>
+        <div id="modeStorageSummary" class="mode-storage-summary"></div>
       </div>
-    </section>
-    <section class="group" id="fpsceilings" data-page="settings">
-      <header class="group-head">
-        <h2>{{ t('pane.fpsceilings.heading') }}</h2>
-        <p class="group-sub">{{ t('pane.fpsceilings.sub') }}</p>
-      </header>
-      <div class="cards" id="fpsCeilingsList"><p class="card-help">{{ t('help.fpsceilings.0.body') }}</p></div>
-    </section>
-    <section class="group" id="audio" data-page="settings">
+      <div class="mode-table-wrap">
+        <table class="recording-mode-table" id="recordingModesTable">
+          <thead><tr><th>Enable</th><th>Resolution</th><th>Bit</th><th>Binning</th><th>Crop</th><th>Sensor Max FPS</th><th>Throughput @ Conform</th><th>Storage Max FPS</th><th>User Max FPS</th></tr></thead>
+          <tbody id="recordingModesBody"><tr><td colspan="9" class="mode-empty">Loading detected sensor modes…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" data-search="dynamic resolution fps substitute automatic mode">
+      <div class="card-main"><label class="card-label" for="f-dynres">{{ t('card.image_capture.dynamic_resolution.label') }}</label><p class="card-help">{{ t('card.image_capture.dynamic_resolution.help') }}</p></div>
+      <div class="card-control"><button class="toggle" id="f-dynres" data-path="image_capture.dynamic_resolution" data-type="bool" data-original="true" role="switch" aria-checked="true"></button></div>
+    </div>
+    <div class="card" data-search="dynamic resolution priority ladder hdr sdr bit depth class follow mode follow resolution">
+      <div class="card-main"><label class="card-label" for="f-dynres-priority">{{ t('card.image_capture.dynamic_resolution_priority.label') }}</label><p class="card-help">{{ t('card.image_capture.dynamic_resolution_priority.help') }}</p></div>
+      <div class="card-control"><select class="field-input" id="f-dynres-priority" data-path="image_capture.dynamic_resolution_priority" data-type="string" data-original="mode"><option value="mode">Mode first</option><option value="resolution">Resolution first</option><option value="none">Never leave class</option></select></div>
+    </div>
+  </div>
+</section>
+<section class="group" id="audio" data-page="settings">
       <header class="group-head">
         <h2>{{ t('pane.audio.heading') }}</h2>
         <p class="group-sub">{{ t('pane.audio.sub') }}</p>

@@ -487,7 +487,10 @@
   .recording-mode-table .mode-toggle{ margin:0; }
   .recording-mode-table .mode-fps-input{ width:64px; box-sizing:border-box; padding:5px 6px; text-align:right; font-variant-numeric:tabular-nums; }
   .recording-mode-table .mode-fps-input.invalid{ border-color:var(--danger); }
-  .mode-group-row td{ padding:5px 8px; background:var(--panel-2); color:var(--muted); font-family:'DIN2014',sans-serif; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-top:1px solid var(--line); }
+  .mode-group-row td{ padding:7px 8px; background:var(--panel-2); color:var(--muted); font-family:'DIN2014',sans-serif; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-top:1px solid var(--line); }
+  .mode-subgroup-row td{ padding:4px 8px 3px 18px; color:var(--muted); font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-bottom:0; }
+  .mode-cropped td:first-child{ padding-left:30px; }
+  .mode-cropped .mode-title{ font-weight:600; }
   .mode-title{ font-weight:700; }
   .mode-sub{ margin-top:2px; color:var(--muted); font-size:10px; }
   .mode-crop-cell{ width:110px; }
@@ -3342,6 +3345,9 @@
           var gd=document.createElement('td'); gd.colSpan=7;
           gd.textContent=(mode.hdr?'Clear HDR':'Standard')+' · '+mode.bit_depth+'-bit · '+((mode.binning_x&&mode.binning_y)?mode.binning_x+'×'+mode.binning_y:'native');
           gr.appendChild(gd); body.appendChild(gr); lastGroup=group;
+          var ng=document.createElement('tr'); ng.className='mode-subgroup-row';
+          var nd=document.createElement('td'); nd.colSpan=7; nd.textContent='NON-CROPPED MODES';
+          ng.appendChild(nd); body.appendChild(ng);
         }
         var tr=document.createElement('tr');
         tr.setAttribute('data-mode-row','1');
@@ -3356,12 +3362,13 @@
         tr.setAttribute('data-crop-height',mode.crop_height==null?'':mode.crop_height);
         tr.setAttribute('data-detected',mode.fps_max_detected==null?'':mode.fps_max_detected);
         if(!mode.selected) tr.classList.add('mode-off');
+        if(mode.crop_known) tr.classList.add('mode-cropped');
         var td=document.createElement('td');
         var tog=document.createElement('button');
         tog.className='toggle mode-toggle'; tog.type='button'; tog.setAttribute('role','switch');
         tog.setAttribute('aria-checked',mode.selected?'true':'false');
         tog.setAttribute('aria-label','Offer '+camera+' '+mode.width+'×'+mode.height+' '+mode.bit_depth+'-bit');
-        var toggleTd=td;
+        td.appendChild(tog);\n        var toggleTd=td;
         td=document.createElement('td');
         var title=document.createElement('div'); title.className='mode-title';
         title.textContent=mode.width+'×'+mode.height+(mode.hdr?' · Clear HDR':'');

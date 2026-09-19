@@ -3867,12 +3867,26 @@
     if (!primary) return;
     card.classList.add('card-clickable');
     card.addEventListener('click', function(e){
-      if (e.target.closest('button, select, input, textarea, a, label')) return;
+      if (e.target.closest('button, select, input, textarea, a, label, .step-chip')) return;
       if (primary.classList.contains('toggle')) {
         primary.click();
       } else {
         focusCardControl(primary);
       }
+    });
+  });
+
+  /* Steplists are custom controls rather than .field-inputs. Clicking the
+     card surface should therefore open the add field, while clicking an
+     existing chip remains reserved for its own remove/drag behaviour. */
+  document.querySelectorAll('.card [data-chip-path]').forEach(function(container){
+    var card = container.closest('.card');
+    var add = container.querySelector('.step-add');
+    if (!card || !add) return;
+    card.classList.add('card-clickable');
+    card.addEventListener('click', function(e){
+      if (e.target.closest('.step-chip, button, input, select, textarea, a, label')) return;
+      add.focus();
     });
   });
 
@@ -4040,14 +4054,10 @@
     });
   });
 
-  /* ---------- step chip lists (add / remove) ---------- */
-  /* Numeric step lists are held in ascending order at all times, in both
-     stepping modes. The stops are a range, and inc/dec walk the list in the
-     order it is stored, so a list out of order makes the control jump about.
-     Shutter angle was already re-sorted on load controller-side; this makes
-     every numeric list behave the same, and in the editor rather than only
-     after a round trip. String lists (the OLED fields) keep author order --
-     there the sequence is the content. */
+  /* ---------- step chip lists (add / remove / reorder) ---------- */
+  /* Chip order is meaningful for the settings arrays. Numeric lists must not
+     be silently sorted: ISO, shutter, FPS, WB, etc. can be rearranged by
+     dragging their chips, just like the string lists. */
   function chipsAreNumeric(container){
     return container.getAttribute('data-chip-type') === 'number';
   }
@@ -4055,19 +4065,9 @@
     return chip.firstChild ? parseFloat(chip.firstChild.textContent.trim()) : NaN;
   }
   function sortChipContainer(container){
-    if (!chipsAreNumeric(container)) return;
-    var addEl = container.querySelector('.step-add');
-    var chips = Array.prototype.slice.call(container.querySelectorAll('.step-chip'));
-    chips.sort(function(a, b){
-      var av = chipValue(a), bv = chipValue(b);
-      if (!isFinite(av) && !isFinite(bv)) return 0;
-      if (!isFinite(av)) return 1;          // anything unparseable sinks to the end
-      if (!isFinite(bv)) return -1;
-      return av - bv;
-    });
-    chips.forEach(function(chip){
-      if (addEl) container.insertBefore(chip, addEl); else container.appendChild(chip);
-    });
+    // Kept as a compatibility no-op for older callers. Array order is now
+    // explicitly controlled by the operator and must never be rewritten.
+    return;
   }
 
   function makeChipDraggable(chip, container){
@@ -4091,9 +4091,8 @@
   function wireChipContainer(container){
     container.querySelectorAll('.step-chip').forEach(function(chip){
       wireRemove(chip.querySelector('[data-remove]'));
-      // A numeric list sorts itself, so offering a drag handle would promise a
-      // reorder that is undone the moment it lands.
-      if (!chipsAreNumeric(container)) makeChipDraggable(chip, container);
+      // Numeric and string lists are both operator-ordered arrays.
+      makeChipDraggable(chip, container);
     });
     container.addEventListener('dragover', function(e){
       var dragging = container.querySelector('.step-chip.dragging');
@@ -4118,7 +4117,7 @@
           chip.appendChild(rm);
           container.insertBefore(chip, add);
           wireRemove(rm);
-          if (!chipsAreNumeric(container)) makeChipDraggable(chip, container);
+          makeChipDraggable(chip, container);
           add.value = '';
           onChipsChanged(container);
         }

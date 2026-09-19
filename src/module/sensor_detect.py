@@ -1010,13 +1010,10 @@ class SensorDetect:
             mode_entries = (getattr(self, "enabled_modes", {}) or {}).get(cam)
             use_individual_selection = isinstance(mode_entries, list) and len(mode_entries) > 0
             for m in modes:
-                # Cinematic camera policy: keep the sensor/libcamera discovery
-                # complete in sensor_modes_unfiltered, but do not expose tiny
-                # modes in the operator-facing mode table.  1280x720 is the
-                # minimum useful recording mode; anything smaller is hidden
-                # regardless of bit depth, HDR state, binning or selection.
-                if int(m.get("width") or 0) < 1280:
-                    continue
+                # Individual mode selection is authoritative.  Do not
+                # impose a separate resolution floor here: small sensor modes
+                # are valid modes and must reach the resolution picker when the
+                # operator enables them in settings.jsonc.
                 if use_individual_selection:
                     if not self._mode_matches_enabled(m, mode_entries):
                         continue
@@ -1538,11 +1535,29 @@ class SensorDetect:
 
     def get_available_resolutions(self):
         resolutions = []
+        last_group = None
         for mode, info in self.res_modes.items():
+            bx = info.get('binning_x')
+            by = info.get('binning_y')
+            binning = f"{bx}×{by}" if bx is not None and by is not None else ""
+            group = (
+                bool(info.get('hdr')),
+                int(info.get('bit_depth') or 0),
+                binning,
+            )
             resolution = f"{info['width']} : {info['height']} : {info['bit_depth']}b"
             # imx585 ClearHDR modes are tagged in the web GUI dropdown so the
             # 12-bit HDR modes are distinguishable from the plain 12-bit ones.
             if info.get('hdr'):
                 resolution += " :HDR"
-            resolutions.append({'mode': mode, 'resolution': resolution})
+            resolutions.append({
+                'mode': mode,
+                'resolution': resolution,
+                'group': group,
+                'group_label': (
+                    ("Clear HDR" if info.get('hdr') else "Standard")
+                    + f" · {info['bit_depth']}-bit"
+                    + (f" · {binning}" if binning else ""),
+                ),
+            })
         return resolutions

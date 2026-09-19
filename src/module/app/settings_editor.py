@@ -806,36 +806,6 @@ def get_sensor_modes():
     except (TypeError, ValueError):
         conform = DEFAULT_CONFORM_FRAME_RATE
 
-    # The thumbnail is part of every DNG frame, so it belongs in the mode
-    # throughput calculation. Prefer the live Redis values because thumbnail
-    # mode can be changed without restarting the camera.
-    thumb_raw = redis_value(ParameterKey.THUMBNAIL.value, image.get("thumbnail", "jpeg"))
-    thumb_size_raw = redis_value(ParameterKey.THUMBNAIL_SIZE.value, image.get("thumbnail_size", 1))
-    lores_w_raw = redis_value(ParameterKey.LORES_WIDTH.value, 1280)
-    lores_h_raw = redis_value(ParameterKey.LORES_HEIGHT.value, 720)
-    try:
-        thumb_size = max(0, min(12, int(float(thumb_size_raw))))
-    except (TypeError, ValueError):
-        thumb_size = 1
-    thumb_map = {"off": 0, "mono": 1, "colour": 2, "color": 2, "jpeg": 3}
-    try:
-        thumb_mode = int(thumb_raw)
-    except (TypeError, ValueError):
-        thumb_mode = thumb_map.get(str(thumb_raw).strip().lower(), 3)
-    try:
-        lores_w, lores_h = int(float(lores_w_raw)), int(float(lores_h_raw))
-    except (TypeError, ValueError):
-        lores_w, lores_h = 1280, 720
-    thumb_bytes = thumbnail_plane_bytes(lores_w, lores_h, thumb_mode, thumb_size)
-
-    storage_speed_raw = redis_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value, 0)
-    try:
-        storage_speed = float(storage_speed_raw or 0)
-    except (TypeError, ValueError):
-        storage_speed = 0.0
-    storage_type = str(redis_value(ParameterKey.STORAGE_TYPE.value, "none") or "none")
-    storage_fs = str(redis_value(ParameterKey.STORAGE_FILESYSTEM.value, "unknown") or "unknown")
-    storage_max_available = storage_speed > 0.0
 
     enabled_modes = getattr(sensor_detect, "enabled_modes", {}) or {}
     legacy_k = image.get("k_steps", []) or []
@@ -863,25 +833,24 @@ def get_sensor_modes():
             depth = mode.get("bit_depth")
             if not width or not height or not depth:
                 continue
-            frame_mb = compute_frame_size_mb(width, height, depth, thumbnail_bytes=thumb_bytes)
-            throughput = frame_mb * conform
-            storage_fps = int(storage_speed * 1_000_000 / (frame_mb * 1_000_000)) if storage_max_available and frame_mb > 0 else None
-            bx, by = SensorDetect._mode_binning(mode)
-            full = SensorDetect._mode_is_full(mode)
             entries.append({
-                "width": width, "height": height, "bit_depth": depth,
+                "width": width,
+                "height": height,
+                "bit_depth": depth,
+                "aspect": round(float(mode.get("aspect") or (width / height)), 3),
                 "hdr": bool(mode.get("hdr", False)),
+                "label": "Clear HDR" if mode.get("hdr", False) else "Standard",
                 "fps_max_detected": mode.get("fps_max_detected", mode.get("fps_max")),
                 "fps_max_effective": mode.get("fps_max"),
                 "packing": mode.get("packing"),
-                "binning_x": bx, "binning_y": by,
-                "crop_x": mode.get("crop_x"), "crop_y": mode.get("crop_y"),
-                "crop_width": mode.get("crop_width"), "crop_height": mode.get("crop_height"),
+                "binning_x": mode.get("binning_x"),
+                "binning_y": mode.get("binning_y"),
+                "crop_x": mode.get("crop_x"),
+                "crop_y": mode.get("crop_y"),
+                "crop_width": mode.get("crop_width"),
+                "crop_height": mode.get("crop_height"),
                 "crop_known": mode.get("crop_width") is not None,
-                "full": full,
-                "frame_size_mb": frame_mb,
-                "throughput_mb_s": round(throughput, 2),
-                "storage_max_fps": storage_fps,
+                "full": SensorDetect._mode_is_full(mode),
                 "selected": selected_for(camera_name, mode),
             })
         sensors[camera_name] = entries
@@ -893,14 +862,6 @@ def get_sensor_modes():
         "sensors": sensors,
         "preview_source": preview_source,
         "conform_frame_rate": conform,
-        "thumbnail_bytes": thumb_bytes,
-        "thumbnail_mode": thumb_mode,
-        "storage": {
-            "type": storage_type,
-            "filesystem": storage_fs,
-            "measured_write_mb_s": round(storage_speed, 2) if storage_max_available else None,
-            "measured": storage_max_available,
-        },
         "available": _available_mode_categories(sensor_detect),
     })
 

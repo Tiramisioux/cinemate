@@ -1245,7 +1245,7 @@ class SensorDetect:
             hdr_modes = {}
             if hdr_out.strip():
                 marker = re.search(
-                    r"CLEAR\\s+HDR\\s*/\\s*SENSOR\\s+HDR",
+                    r"CLEAR\s+HDR\s*/\s*SENSOR\s+HDR",
                     hdr_out,
                     re.IGNORECASE,
                 )

@@ -504,6 +504,10 @@
   .recording-mode-table tr.mode-off .mode-crop-window{ opacity:.55; }
   .camera-recording-mode-table td:last-child{ text-align:right; width:54px; }
   .camera-recording-mode-table td:last-child .mode-toggle{ margin-left:auto; }
+  .mode-small-controls{ display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:8px; }
+  .mode-small-toggle{ border:1px solid var(--line); background:var(--panel-2); color:var(--muted); padding:5px 9px; font-size:10px; letter-spacing:.04em; cursor:pointer; }
+  .mode-small-toggle:hover{ color:var(--ink); border-color:var(--muted); }
+  .mode-small-note{ color:var(--muted); font-size:10px; }
 
   .mode-empty{ color:var(--muted); padding:14px 8px !important; }
   /* Detected-modes readout on the Boot config page. */
@@ -3348,7 +3352,18 @@
     return (a.crop_x||0)-(b.crop_x||0) || (a.crop_y||0)-(b.crop_y||0);
   }
 
+  var SHOW_SMALLER_MODES_KEY = 'cinemate.show_smaller_sensor_modes';
+  function showSmallerSensorModes(){
+    try { return localStorage.getItem(SHOW_SMALLER_MODES_KEY)==='1'; }
+    catch(e){ return false; }
+  }
+  function setShowSmallerSensorModes(value){
+    try { localStorage.setItem(SHOW_SMALLER_MODES_KEY, value ? '1' : '0'); }
+    catch(e){}
+  }
+
   function renderRecordingModes(sensors){
+    var showSmaller=showSmallerSensorModes();
     var cameraNames=Object.keys(sensors||{}), slots=['cam0','cam1'];
     slots.forEach(function(slot,index){
       var section=document.getElementById(slot);
@@ -3382,6 +3397,8 @@
         }
         var tr=document.createElement('tr');
         tr.setAttribute('data-mode-row','1');
+        tr.setAttribute('data-small-mode',((mode.active_width || mode.crop_width || mode.width || 0) < 1280) ? '1' : '0');
+        if(!showSmaller && ((mode.active_width || mode.crop_width || mode.width || 0) < 1280)) tr.hidden=true;
         tr.setAttribute('data-camera',camera);
         tr.setAttribute('data-width',mode.width);
         tr.setAttribute('data-height',mode.height);
@@ -3445,6 +3462,22 @@
         body.appendChild(tr);
       });
       table.appendChild(body); host.appendChild(table);
+
+      var smallCount=host.querySelectorAll('tr[data-mode-row][data-small-mode="1"]').length;
+      if(smallCount){
+        var controls=document.createElement('div'); controls.className='mode-small-controls';
+        var note=document.createElement('span'); note.className='mode-small-note';
+        note.textContent=smallCount+' smaller mode'+(smallCount===1?'':'s')+' below 1280×720';
+        var button=document.createElement('button'); button.type='button'; button.className='mode-small-toggle';
+        button.textContent=showSmaller ? 'Hide smaller modes' : 'Show smaller modes';
+        button.setAttribute('aria-expanded',showSmaller?'true':'false');
+        button.addEventListener('click',function(){
+          var next=!showSmallerSensorModes();
+          setShowSmallerSensorModes(next);
+          renderRecordingModes(sensors);
+        });
+        controls.appendChild(note); controls.appendChild(button); host.appendChild(controls);
+      }
     });
   }
 

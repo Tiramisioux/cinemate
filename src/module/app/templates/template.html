@@ -1040,9 +1040,7 @@
             <button id="btn-experiment" title="Show every remaining CLI control as a live widget">EXPERIMENT</button>
             <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
             <button id="btn-unmount" title="unmount">UNMOUNT</button>
-            <button id="btn-fullscreen" title="Live view fullscreen" aria-label="Open live view fullscreen">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/></svg>
-            </button>
+            <button id="btn-fullscreen" title="Live view fullscreen" aria-label="Open live view fullscreen">FULL SCREEN</button>
         </div>
 
         <!-- Built from the spec tables in the script below, not written out
@@ -2670,6 +2668,7 @@
         // the label permanently stuck on 'FULLSCREEN' there.
         ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => {
             document.addEventListener(ev, () => {
+                fsBtn.textContent = fsActive() ? 'EXIT FULL SCREEN' : 'FULL SCREEN';
                 fsBtn.setAttribute('aria-label', fsActive() ? 'Exit live view fullscreen' : 'Open live view fullscreen');
                 fsBtn.setAttribute('title', fsActive() ? 'Exit live view fullscreen' : 'Live view fullscreen');
             });

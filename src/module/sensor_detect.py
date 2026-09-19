@@ -578,7 +578,8 @@ class SensorDetect:
                     last_mode["sensor_height"] = sensor_height
 
                 binning_only = re.search(
-                    r"\bbinning\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
+                    r"(?:\bbinning|binning\s*factor|binning\s*mode)"
+                    r"\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
                     line, re.IGNORECASE,
                 )
                 if binning_only and last_mode is not None:

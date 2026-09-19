@@ -773,12 +773,12 @@ class SensorDetect:
                 # the filter attributes they care about), and a missing switch
                 # must mean "no opinion", not an exception.
                 clear_hdr_depths = getattr(self, "clear_hdr_depths", None)
-                if bool(m.get("hdr")) and clear_hdr_depths is not None:
+                if not use_individual_selection and bool(m.get("hdr")) and clear_hdr_depths is not None:
                     if int(m.get("bit_depth") or 0) not in clear_hdr_depths:
                         continue
                 # settings.jsonc → image_capture.hdr: {sdr, imx585_clear_hdr}
                 # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.
-                if self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
+                if not use_individual_selection and self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
                     continue
                 k_val = round(m["width"] / 1000 * 2) / 2
                 if not use_individual_selection and self.k_steps and k_val not in self.k_steps:

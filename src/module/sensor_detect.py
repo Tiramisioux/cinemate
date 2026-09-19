@@ -720,6 +720,29 @@ class SensorDetect:
             depths.add(16)
         return depths
 
+    @classmethod
+    def _normalize_hdr_probe_modes(
+        cls,
+        base_modes: Dict[str, List[Dict]],
+        hdr_modes: Dict[str, List[Dict]],
+    ) -> None:
+        """Assign HDR state to unmarked modes from an ambiguous HDR probe.
+
+        Explicit state markers have already set ``hdr`` in the parser. Without
+        a marker, an exact timing repeat from the plain probe is SDR; a new
+        timing for the same readout is ClearHDR. If the HDR probe contains
+        only ClearHDR modes, none match and all are promoted.
+        """
+        for cam, modes in hdr_modes.items():
+            base_timing_keys = {
+                cls._mode_timing_key(m) for m in base_modes.get(cam, [])
+            }
+            for mode in modes:
+                if bool(mode.get("hdr")):
+                    continue
+                if cls._mode_timing_key(mode) not in base_timing_keys:
+                    mode["hdr"] = True
+
     @staticmethod
     def _mode_timing_key(mode: Dict) -> tuple:
         """Identity of a mode including its reported timing ceiling.
@@ -1227,16 +1250,7 @@ class SensorDetect:
             # This is deliberately done before _merge_mode_lists(), so the
             # merge never has to guess whether a lower-FPS HDR timing belongs
             # to SDR or ClearHDR.
-            for cam, modes in hdr_modes.items():
-                base_timing_keys = {
-                    self._mode_timing_key(m) for m in base_modes.get(cam, [])
-                }
-                for mode in modes:
-                    if bool(mode.get("hdr")):
-                        continue
-                    if self._mode_timing_key(mode) not in base_timing_keys:
-                        mode["hdr"] = True
-
+            self._normalize_hdr_probe_modes(base_modes, hdr_modes)
             merged = self._merge_mode_lists(base_modes, hdr_modes)
 
             # The two states of the IMX585 probe should carry identical driver

@@ -44,6 +44,27 @@ class SensorModeGeometryTests(unittest.TestCase):
         self.assertEqual(by_size[(1920, 1100)]["binning_x"], 2)
         self.assertFalse(SensorDetect._mode_is_full(by_size[(1440, 1100)]))
 
+
+    def test_geometry_on_continuation_line_is_attached_to_previous_mode(self):
+        d = self._detector()
+        out = """
+0 : imx585 [3856x2180] (/base/imx585@1a)
+    Modes: 'SRGGB16_CSI2P' : 3840x2200 [30.00 fps]
+                              (0, 0)/3840x2160 crop binning 1x1
+                              2880x2200 [30.00 fps]
+                              mode-crop (480, 0)/2880x2160 crop
+                              binning: 1x1
+"""
+        modes = d._parse_cinepi_output(out)["imx585"]
+        by_size = {(m["width"], m["height"]): m for m in modes}
+        self.assertEqual(by_size[(3840, 2200)]["crop_width"], 3840)
+        self.assertEqual(by_size[(3840, 2200)]["crop_height"], 2160)
+        self.assertEqual(by_size[(3840, 2200)]["binning_x"], 1)
+        self.assertEqual(by_size[(2880, 2200)]["crop_x"], 480)
+        self.assertEqual(by_size[(2880, 2200)]["crop_width"], 2880)
+        self.assertEqual(by_size[(2880, 2200)]["binning_y"], 1)
+        self.assertFalse(SensorDetect._mode_is_full(by_size[(2880, 2200)]))
+
     def test_missing_geometry_metadata_is_not_called_full_or_binned(self):
         d = self._detector()
         out = """

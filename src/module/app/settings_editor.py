@@ -854,6 +854,10 @@ def get_sensor_modes():
             entries.append({
                 "width": width,
                 "height": height,
+                # RAW16 ClearHDR modes may advertise a padded CSI buffer
+                # height. The editor presents the active recording crop.
+                "active_width": int(mode.get("crop_width") or width),
+                "active_height": int(mode.get("crop_height") or height),
                 "bit_depth": depth,
                 "aspect": round(float(mode.get("aspect") or (width / height)), 3),
                 "hdr": bool(mode.get("hdr", False)),

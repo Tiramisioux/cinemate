@@ -508,7 +508,10 @@ class SensorDetect:
             # ── camera header  e.g.  “0 : imx283 [5472x3648 …] (…)”
             m = re.match(r"^\s*\d+\s*:\s*([^\s]+)(?:\s*\[.*?(MONO)?\])?", line)
             if m:
-                # flush state & start a new camera section
+                # flush state & start a new camera section. In --hdr sensor
+                # output the camera header may be printed again when the
+                # sensor switches into ClearHDR; that repeated header must
+                # not reset current_hdr.
                 current_cam = m.group(1)
                 if m.group(2) == "MONO":
                     current_cam += "_mono"
@@ -532,7 +535,7 @@ class SensorDetect:
             # and prints the ClearHDR state after this separator. The old
             # parser tagged the entire --hdr invocation as HDR, which caused
             # ordinary modes from the first half to be duplicated/misclassified.
-            if hdr and "CLEAR HDR / SENSOR HDR" in line.upper():
+            if hdr and re.search(r"CLEAR\s+HDR\s*/\s*SENSOR\s+HDR", line, re.IGNORECASE):
                 current_hdr = True
                 parsing_modes = False
                 current_bit_depth = None
@@ -601,7 +604,8 @@ class SensorDetect:
                 })
 
             binning = re.search(
-                r"\bbinning\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
+                r"(?:\bbinning|binning\s*factor|binning\s*mode)"
+                r"\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
                 line, re.IGNORECASE,
             )
             if binning:

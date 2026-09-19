@@ -707,6 +707,7 @@ class SensorDetect:
             int(mode.get("width") or 0),
             int(mode.get("height") or 0),
             int(mode.get("bit_depth") or 0),
+            bool(mode.get("hdr")),
             mode.get("fps_max"),
             mode.get("crop_x"), mode.get("crop_y"),
             mode.get("crop_width"), mode.get("crop_height"),

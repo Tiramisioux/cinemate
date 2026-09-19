@@ -962,9 +962,20 @@ class SensorDetect:
                 if existing is None:
                     unique[key] = m
                     continue
-                # Preserve the higher detected ceiling, unless one side has
-                # no FPS value. All other mode metadata remains from the first
-                # occurrence so the UI cannot acquire duplicate geometry.
+                # Preserve the higher detected ceiling, but also merge
+                # driver metadata from a duplicate occurrence. A mode can be
+                # encountered once through a plain probe/custom expansion and
+                # once through a probe that carries the driver's crop annotation.
+                # The mode identity deliberately includes geometry, but legacy
+                # entries without geometry can still collide with a richer
+                # occurrence. Never let the poorer occurrence erase geometry.
+                for field in (
+                    "crop_x", "crop_y", "crop_width", "crop_height",
+                    "sensor_width", "sensor_height", "binning_x", "binning_y",
+                ):
+                    if existing.get(field) is None and m.get(field) is not None:
+                        existing[field] = m[field]
+
                 a = existing.get("fps_max")
                 b = m.get("fps_max")
                 if a is None and b is not None:

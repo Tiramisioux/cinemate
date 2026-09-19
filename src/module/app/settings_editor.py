@@ -886,9 +886,12 @@ def get_sensor_modes():
             })
         sensors[camera_name] = entries
 
+    preview_source = str(redis_value(ParameterKey.HDMI_PREVIEW_SOURCE.value, "both") or "both")
+
     return jsonify({
         "ok": True,
         "sensors": sensors,
+        "preview_source": preview_source,
         "conform_frame_rate": conform,
         "thumbnail_bytes": thumb_bytes,
         "thumbnail_mode": thumb_mode,

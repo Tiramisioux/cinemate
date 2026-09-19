@@ -1117,22 +1117,42 @@
         (typeof v === 'string' && ['true', 'yes', 'on'].includes(v.trim().toLowerCase()));
 
     function fillSelect(sel, options, current) {
-        // The disabled flags are part of the cache key: a free-stepping toggle
-        // can leave the value list identical while changing which entries are
-        // selectable, and without this the list would not repaint.
-        const wanted = options.map((o) => String(o.value) + (o.disabled ? '!' : '')).join(' ');
+        // The disabled/separator flags are part of the cache key. Resolution
+        // groups use disabled dashed rows so the native select keeps the same
+        // visual grouping as the Settings mode table.
+        const wanted = options.map((o) =>
+            String(o.value) + (o.disabled ? '!' : '') + (o.separator ? '|-' : '')
+        ).join(' ');
         if (sel.dataset.filled !== wanted) {
             sel.innerHTML = '';
             options.forEach((o) => {
                 const opt = document.createElement('option');
-                opt.value = o.value;
-                opt.textContent = o.text;
-                if (o.disabled) { opt.disabled = true; }
+                opt.value = o.value == null ? '' : o.value;
+                opt.textContent = o.separator ? '--------------------' : o.text;
+                if (o.disabled || o.separator) { opt.disabled = true; }
                 sel.appendChild(opt);
             });
             sel.dataset.filled = wanted;
         }
         if (current !== undefined && current !== null) { sel.value = String(current); }
+    }
+
+    function resolutionSelectOptions(resolutions) {
+        const options = [];
+        let lastGroup = null;
+        (resolutions || []).forEach((r, index) => {
+            const group = r.group_label || r.group || '';
+            if (index > 0 && group !== lastGroup) {
+                options.push({
+                    value: '__resolution_group_separator_' + index,
+                    text: '--------------------',
+                    separator: true,
+                });
+            }
+            options.push({ value: r.mode, text: r.resolution });
+            lastGroup = group;
+        });
+        return options;
     }
 
     // Free stepping replaces a preset table with a fine grid running between
@@ -1578,7 +1598,7 @@
         fillSelect($('s-fps'), freeStepBounds(steps.fps, truthy(V.fps_free), V.fps), V.fps);
         fillSelect($('s-wb'), steps.wb.map((v) => ({ value: v, text: v + 'K' })), V.wb);
         fillSelect($('s-res'),
-            steps.resolutions.map((r) => ({ value: r.mode, text: r.resolution })),
+            resolutionSelectOptions(steps.resolutions),
             V.selected_resolution_mode);
     }
 

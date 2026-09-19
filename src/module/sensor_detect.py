@@ -1115,6 +1115,35 @@ class SensorDetect:
             hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True) if hdr_out.strip() else {}
             merged = self._merge_mode_lists(base_modes, hdr_modes)
 
+            # The two states of the IMX585 probe should carry identical driver
+            # geometry for an identical transport mode. If a libcamera/rpicam
+            # build omits the optional geometry annotation on one state, copy
+            # it from the matching state rather than presenting a known crop as
+            # "Geometry not reported". Never infer geometry from the output
+            # dimensions: the source must be another explicitly annotated mode.
+            for cam, modes in merged.items():
+                for mode in modes:
+                    if mode.get("crop_width") is not None:
+                        continue
+                    matches = [
+                        other for other in modes
+                        if other is not mode
+                        and bool(other.get("hdr")) == bool(mode.get("hdr"))
+                        and int(other.get("width") or 0) == int(mode.get("width") or 0)
+                        and int(other.get("height") or 0) == int(mode.get("height") or 0)
+                        and int(other.get("bit_depth") or 0) == int(mode.get("bit_depth") or 0)
+                        and other.get("crop_width") is not None
+                    ]
+                    if len(matches) == 1:
+                        source_mode = matches[0]
+                        for key in (
+                            "crop_x", "crop_y", "crop_width", "crop_height",
+                            "sensor_width", "sensor_height",
+                            "binning_x", "binning_y",
+                        ):
+                            if source_mode.get(key) is not None:
+                                mode[key] = source_mode[key]
+
             # The HDR probe "succeeding" (non-empty output) but adding zero new
             # modes means --hdr sensor couldn't actually change what the sensor
             # reports -- most commonly because another process (see

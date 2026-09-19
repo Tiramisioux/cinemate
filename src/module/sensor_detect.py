@@ -751,21 +751,47 @@ class SensorDetect:
 
     @classmethod
     def _mode_sort_key(cls, mode: Dict) -> tuple:
+        """Stable operator-facing mode order.
+
+        Capture classes are grouped exactly as the settings pane presents them:
+        16-bit ClearHDR 1x1 -> 16-bit ClearHDR 2x2 ->
+        12-bit ClearHDR 1x1 -> 12-bit ClearHDR 2x2 ->
+        12-bit SDR 1x1 -> 12-bit SDR 2x2 ->
+        10-bit SDR 1x1 -> 10-bit SDR 2x2.
+
+        Within each class the full active frame comes first, followed by
+        sensor-windowed derivatives, largest crop first.
+        """
         bx, by = cls._mode_binning(mode)
         bin_factor = (bx or 1) * (by or 1)
-        known_crop = mode.get("crop_width") is not None
         full = cls._mode_is_full(mode)
+        known_crop = mode.get("crop_width") is not None
+
+        hdr = bool(mode.get("hdr"))
+        depth = int(mode.get("bit_depth") or 0)
+        if hdr and depth == 16:
+            class_rank = 0
+        elif hdr and depth == 12:
+            class_rank = 2
+        elif not hdr and depth == 12:
+            class_rank = 4
+        elif not hdr and depth == 10:
+            class_rank = 6
+        else:
+            class_rank = 8
+
         return (
-            -(int(mode.get("width") or 0) * int(mode.get("height") or 0)),
-            -(int(mode.get("bit_depth") or 0)),
-            -bin_factor,
+            class_rank,
+            bin_factor,
             0 if full else (1 if known_crop else 2),
-            int(mode.get("crop_x") or 0), int(mode.get("crop_y") or 0),
+            -(int(mode.get("crop_width") or mode.get("width") or 0)
+              * int(mode.get("crop_height") or mode.get("height") or 0)),
+            int(mode.get("crop_x") or 0),
+            int(mode.get("crop_y") or 0),
         )
 
     def _order_modes(self, selected: List[Dict]) -> List[Dict]:
-        """Order dynamic recording modes: resolution/depth, then binning,
-        with crop variants following the corresponding binning group."""
+        """Order recording modes in the same class/geometry order used by the UI."""
         return sorted(selected, key=self._mode_sort_key)
 
     def _finalize_modes(

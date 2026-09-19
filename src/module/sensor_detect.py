@@ -1237,22 +1237,37 @@ class SensorDetect:
 
             base_modes = self._parse_cinepi_output(out, hdr=False)
 
-            # Parse the HDR probe as a complete stateful listing.  The parser
-            # understands the explicit "CLEAR HDR / SENSOR HDR" boundary and
-            # therefore tags the first (SDR) section false and everything after
-            # the boundary true.  Do not split the text before parsing: doing
-            # so removes the camera header and leaves the mode parser without
-            # a current camera.
-            hdr_modes = (
-                self._parse_cinepi_output(hdr_out, hdr=True)
-                if hdr_out.strip()
-                else {}
-            )
-
-            # The dedicated probe is authoritative for ClearHDR state. This
-            # only promotes unmarked entries for formatter variants which emit
-            # an HDR-only listing with no state separator; it never uses FPS.
-            self._normalize_hdr_probe_modes(base_modes, hdr_modes)
+            # Parse the HDR probe by its explicit state boundary. The
+            # output is a two-state listing on IMX585: SDR first, then the
+            # literal "CLEAR HDR / SENSOR HDR" marker, then the ClearHDR
+            # camera header and modes. Splitting here makes the provenance
+            # unambiguous and avoids depending on camera-header repetition.
+            hdr_modes = {}
+            if hdr_out.strip():
+                marker = re.search(
+                    r"CLEAR\\s+HDR\\s*/\\s*SENSOR\\s+HDR",
+                    hdr_out,
+                    re.IGNORECASE,
+                )
+                if marker:
+                    hdr_section = hdr_out[marker.end():]
+                    hdr_modes = self._parse_cinepi_output(
+                        hdr_section, hdr=False
+                    )
+                    for modes in hdr_modes.values():
+                        for mode in modes:
+                            mode["hdr"] = True
+                    logging.info(
+                        "ClearHDR marker found: parsed %d modes across %d cameras",
+                        sum(len(m) for m in hdr_modes.values()),
+                        len(hdr_modes),
+                    )
+                else:
+                    # Some sensors/builds expose only an HDR listing. In that
+                    # case the dedicated invocation itself is the provenance;
+                    # never infer HDR from FPS.
+                    hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True)
+                    self._normalize_hdr_probe_modes(base_modes, hdr_modes)
 
             merged = self._merge_mode_lists(base_modes, hdr_modes)
 

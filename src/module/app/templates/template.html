@@ -550,7 +550,7 @@
             justify-content: center;
             text-decoration: none;
         }
-        #btn-settings {
+        #button-row #btn-settings {
             position: fixed;
             right: max(14px, calc(env(safe-area-inset-right, 0px) + 10px));
             bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 10px));
@@ -569,9 +569,9 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
             z-index: 15;
         }
-        #btn-settings:hover { filter: brightness(1.08); }
-        #btn-settings:active { background: lightgreen; color: #000; transform: scale(0.96); }
-        #btn-settings svg { width: 22px; height: 22px; }
+        #button-row #btn-settings:hover { filter: brightness(1.08); }
+        #button-row #btn-settings:active { background: lightgreen; color: #000; transform: scale(0.96); }
+        #button-row #btn-settings svg { width: 22px; height: 22px; }
         #button-row {
             display: flex;
             flex-wrap: wrap;

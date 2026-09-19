@@ -66,6 +66,29 @@ CLEAR HDR / SENSOR HDR
         self.assertEqual([bool(m["hdr"]) for m in hdr["imx585"]], [False, True])
 
 
+    def test_unmarked_probe_still_marks_lower_fps_when_plain_probe_also_lists_it(self):
+        d = self._detector()
+        common = {
+            "width": 3840, "height": 2160, "bit_depth": 12,
+            "hdr": False,
+            "crop_x": 0, "crop_y": 0, "crop_width": 3856, "crop_height": 2180,
+            "binning_x": 1, "binning_y": 1,
+        }
+        base = {"imx585": [
+            {**common, "fps_max": 67},
+            {**common, "fps_max": 30},
+        ]}
+        hdr = {"imx585": [
+            {**common, "fps_max": 67},
+            {**common, "fps_max": 30},
+        ]}
+        d._normalize_hdr_probe_modes(base, hdr)
+        self.assertEqual(
+            [bool(m["hdr"]) for m in hdr["imx585"]],
+            [False, True],
+        )
+
+
     def test_sdr_and_hdr_same_readout_are_distinct_even_when_fps_differs(self):
         d = self._detector()
         base = {"imx585": [{

@@ -927,6 +927,13 @@ class SensorDetect:
             mode_entries = (getattr(self, "enabled_modes", {}) or {}).get(cam)
             use_individual_selection = isinstance(mode_entries, list) and len(mode_entries) > 0
             for m in modes:
+                # Cinematic camera policy: keep the sensor/libcamera discovery
+                # complete in sensor_modes_unfiltered, but do not expose tiny
+                # modes in the operator-facing mode table.  1280x720 is the
+                # minimum useful recording mode; anything smaller is hidden
+                # regardless of bit depth, HDR state, binning or selection.
+                if int(m.get("width") or 0) < 1280:
+                    continue
                 if use_individual_selection:
                     if not self._mode_matches_enabled(m, mode_entries):
                         continue

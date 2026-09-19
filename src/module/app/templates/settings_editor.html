@@ -3242,62 +3242,92 @@
      by hand) is left completely untouched -- same reasoning as B11.5's
      hardware_controls fix: a pane must never silently drop what it
      doesn't itself represent. */
-  function renderFpsCeilings(sensors){
-    var list = document.getElementById('fpsCeilingsList');
-    list.innerHTML = '';
-    var customModes = (lastLoadedSettings && lastLoadedSettings.image_capture
-      && lastLoadedSettings.image_capture.custom_modes) || {};
-    var any = false;
-    Object.keys(sensors).forEach(function(camera){
+  function modeKey(mode){
+    return [mode.width, mode.height, mode.bit_depth, !!mode.hdr,
+      mode.crop_x, mode.crop_y, mode.crop_width, mode.crop_height].join(':');
+  }
+
+  function renderRecordingModes(sensors, meta){
+    var body = document.getElementById('recordingModesBody');
+    var summary = document.getElementById('modeStorageSummary');
+    if (!body) return;
+    body.innerHTML = '';
+    meta = meta || {};
+    var storage = meta.storage || {};
+    if (summary){
+      var st = storage.measured
+        ? '<strong>' + (storage.type || 'storage') + '</strong> · ' + (storage.filesystem || 'unknown')
+          + ' · measured write ' + Number(storage.measured_write_mb_s).toFixed(1) + ' MB/s'
+        : '<strong>' + (storage.type || 'No storage') + '</strong> · write capability not yet measured';
+      summary.innerHTML = 'Conform: <strong>' + (meta.conform_frame_rate || '—') + ' fps</strong> · ' + st
+        + ' · thumbnail included in throughput';
+    }
+    var cameras = Object.keys(sensors || {}), any = false;
+    cameras.forEach(function(camera){
       (sensors[camera] || []).forEach(function(mode){
         any = true;
-        var override = (customModes[camera] || []).find(function(entry){
-          return Number(entry.width) === mode.width && Number(entry.height) === mode.height
-            && Number(entry.bit_depth) === mode.bit_depth && !!entry.hdr === !!mode.hdr;
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-mode-row','1');
+        tr.setAttribute('data-camera',camera);
+        tr.setAttribute('data-width',mode.width);
+        tr.setAttribute('data-height',mode.height);
+        tr.setAttribute('data-bit-depth',mode.bit_depth);
+        tr.setAttribute('data-hdr',mode.hdr ? 'true' : 'false');
+        tr.setAttribute('data-crop-x',mode.crop_x == null ? '' : mode.crop_x);
+        tr.setAttribute('data-crop-y',mode.crop_y == null ? '' : mode.crop_y);
+        tr.setAttribute('data-crop-width',mode.crop_width == null ? '' : mode.crop_width);
+        tr.setAttribute('data-crop-height',mode.crop_height == null ? '' : mode.crop_height);
+        tr.classList.toggle('mode-off', !mode.selected);
+        var c0=document.createElement('td'), tog=document.createElement('button');
+        tog.className='toggle mode-toggle'; tog.type='button'; tog.setAttribute('role','switch');
+        tog.setAttribute('aria-checked',mode.selected ? 'true' : 'false');
+        tog.setAttribute('aria-label','Offer '+camera+' '+mode.width+'×'+mode.height+' '+mode.bit_depth+'-bit');
+        c0.appendChild(tog); tr.appendChild(c0);
+        var td=document.createElement('td'); td.textContent=mode.width+'×'+mode.height+(mode.hdr?' HDR':''); tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.bit_depth+'-bit'; tr.appendChild(td);
+        td=document.createElement('td');
+        td.textContent=(mode.binning_x && mode.binning_y) ? mode.binning_x+'×'+mode.binning_y : '—';
+        tr.appendChild(td);
+        td=document.createElement('td');
+        if (mode.full) td.textContent='FULL';
+        else if (mode.crop_known) td.textContent=mode.crop_width+'×'+mode.crop_height;
+        else td.textContent='—';
+        tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=(mode.fps_max_detected == null ? '—' : mode.fps_max_detected); tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=Number(mode.throughput_mb_s || 0).toFixed(1)+' MB/s'; tr.appendChild(td);
+        td=document.createElement('td'); td.textContent=mode.storage_max_fps == null ? '—' : mode.storage_max_fps+' fps'; tr.appendChild(td);
+        td=document.createElement('td');
+        var input=document.createElement('input'); input.type='number'; input.step='any'; input.min='0';
+        input.className='field-input num-input mode-fps-input';
+        input.value=(mode.fps_max_effective == null ? '' : mode.fps_max_effective);
+        input.placeholder=(mode.fps_max_detected == null ? '' : String(mode.fps_max_detected));
+        input.setAttribute('data-mode-fps','1'); input.setAttribute('data-original',String(mode.fps_max_effective == null ? '' : mode.fps_max_effective));
+        input.title='User ceiling; blank uses sensor maximum';
+        td.appendChild(input); td.appendChild(document.createTextNode(' fps')); tr.appendChild(td);
+
+        function syncRow(){
+          var on=tog.getAttribute('aria-checked')==='true'; tr.classList.toggle('mode-off',!on);
+        }
+        tog.addEventListener('click',function(){
+          var on=tog.getAttribute('aria-checked')==='true';
+          if(on){
+            var sameCamera=body.querySelectorAll('tr[data-mode-row][data-camera="'+CSS.escape(camera)+'"] .mode-toggle');
+            var count=0; sameCamera.forEach(function(x){if(x.getAttribute('aria-checked')==='true')count++;});
+            if(count<=1){ showToast('Keep at least one recording mode enabled for '+camera); return; }
+          }
+          tog.setAttribute('aria-checked',String(!on)); syncRow(); markDirty(tog, !on !== (String(mode.selected)==='true'));
         });
-
-        var row = document.createElement('div');
-        row.className = 'card';
-        row.setAttribute('data-fps-row', '1');
-        row.setAttribute('data-camera', camera);
-        row.setAttribute('data-width', mode.width);
-        row.setAttribute('data-height', mode.height);
-        row.setAttribute('data-bit-depth', mode.bit_depth);
-        row.setAttribute('data-hdr', mode.hdr ? 'true' : 'false');
-        row.setAttribute('data-detected', mode.fps_max_detected);
-        row.setAttribute('data-search', 'fps ceiling ' + camera + ' ' + mode.width + ' ' + mode.height);
-
-        var main = document.createElement('div');
-        main.className = 'card-main';
-        var label = document.createElement('label');
-        label.className = 'card-label';
-        label.textContent = camera + ' ' + mode.width + '×' + mode.height + ' · ' + mode.bit_depth + '-bit' + (mode.hdr ? ' HDR' : '');
-        var help = document.createElement('p');
-        help.className = 'card-help';
-        help.textContent = 'Sensor reports ' + mode.fps_max_detected + ' fps.';
-        main.appendChild(label);
-        main.appendChild(help);
-
-        var control = document.createElement('div');
-        control.className = 'card-control';
-        var input = document.createElement('input');
-        input.type = 'number';
-        input.className = 'field-input num-input fps-ceiling-input';
-        input.placeholder = String(mode.fps_max_detected);
-        input.min = '0';
-        input.step = 'any';
-        if (override) input.value = override.fps_max;
-        input.addEventListener('change', function(){ markDirty(input, true); });
-        control.appendChild(input);
-        var unit = document.createTextNode(' fps');
-        control.appendChild(unit);
-
-        row.appendChild(main);
-        row.appendChild(control);
-        list.appendChild(row);
+        tog.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();tog.click();}});
+        input.addEventListener('input',function(){
+          var v=input.value.trim(), n=parseFloat(v), sensor=parseFloat(mode.fps_max_detected);
+          if(v!=='' && (!isFinite(n)||n<0||n>sensor)){ input.classList.add('invalid'); }
+          else input.classList.remove('invalid');
+          markDirty(input, v !== String(mode.fps_max_effective == null ? '' : mode.fps_max_effective));
+        });
+        body.appendChild(tr);
       });
     });
-    if (!any) list.innerHTML = '<p class="card-help">No detected sensor modes yet -- reconnect the camera or check cinepi-raw --list-cameras.</p>';
+    if(!any) body.innerHTML='<tr><td colspan="9" class="mode-empty">No detected sensor modes — reconnect the camera or check cinepi-raw --list-cameras.</td></tr>';
   }
 
   /* Read-only mirror of the same detection on the Boot config page. The
@@ -3356,7 +3386,7 @@
   function loadFpsCeilings(){
     return fetch('/settings-editor/api/sensor-modes').then(function(r){ return r.json(); }).then(function(res){
       if (!res.ok) return;
-      renderFpsCeilings(res.sensors || {});
+      renderRecordingModes(res.sensors || {}, res);
       renderConfigModes(res.sensors || {});
       applyModeAvailability(res.available);
     }).catch(function(){ /* non-fatal -- the rest of the page still works */ });

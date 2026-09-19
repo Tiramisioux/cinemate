@@ -499,6 +499,7 @@ class SensorDetect:
         sensor_width = None
         sensor_height = None
         parsing_modes = False                     # inside a “Modes:” block?
+        current_hdr = False                       # --hdr sensor prints SDR first, HDR second
         last_mode = None
 
         for raw in output.splitlines():
@@ -524,6 +525,18 @@ class SensorDetect:
 
             # we can’t do anything without a current camera
             if current_cam is None:
+                continue
+
+            # --hdr sensor is a two-state listing: cinepi-raw first
+            # prints the ordinary SDR sensor state, then toggles the sensor
+            # and prints the ClearHDR state after this separator. The old
+            # parser tagged the entire --hdr invocation as HDR, which caused
+            # ordinary modes from the first half to be duplicated/misclassified.
+            if hdr and "CLEAR HDR / SENSOR HDR" in line.upper():
+                current_hdr = True
+                parsing_modes = False
+                current_bit_depth = None
+                last_mode = None
                 continue
 
             # ── “Modes:” line starts (or continues) a mode list
@@ -596,7 +609,7 @@ class SensorDetect:
                 mode_extra.update({"binning_x": bx, "binning_y": by})
             last_mode = self._mode_from_metadata_or_detected(
                 camera_name=current_cam, width=width, height=height,
-                bit_depth=current_bit_depth, fps_max=fps_max, hdr=hdr,
+                bit_depth=current_bit_depth, fps_max=fps_max, hdr=current_hdr,
                 extra=mode_extra,
             )
             sensors[current_cam].append(last_mode)

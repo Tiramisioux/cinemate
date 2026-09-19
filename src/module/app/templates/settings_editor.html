@@ -231,6 +231,7 @@
     transition:filter .12s ease, transform .05s ease;
   }
   .cinepi-launch:hover{ filter:brightness(1.08); }
+  .cinepi-live-launcher .cinepi-launch{ position:relative; right:auto; bottom:auto; }
   .cinepi-live-launcher{ position:fixed; right:max(18px, calc(env(safe-area-inset-right, 0px) + 10px)); bottom:max(18px, calc(env(safe-area-inset-bottom, 0px) + 10px)); z-index:40; display:flex; gap:8px; align-items:center; }
   .cinepi-live-source{ display:none; width:46px; height:46px; align-items:center; justify-content:center; border:1px solid var(--accent); border-radius:50%; color:var(--accent-ink); background:var(--accent); box-shadow:0 4px 16px rgba(0,0,0,.42); font-family:'DIN2014',Arial,sans-serif; font-weight:700; font-size:12px; text-decoration:none; }
   .cinepi-live-launcher.dual .cinepi-launch{ display:none; }

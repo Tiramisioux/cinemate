@@ -779,9 +779,12 @@ class SensorDetect:
     def _mode_sort_key(cls, mode: Dict) -> tuple:
         """Stable operator-facing mode order.
 
-        Capture classes are grouped exactly as the IMX585 driver exposes them:
-        16-bit ClearHDR -> 12-bit ClearHDR -> 12-bit SDR -> 10-bit SDR.
-        There is no standard/SDR 16-bit class for IMX585.
+        Capture classes are grouped exactly as the settings pane presents them:
+        16-bit ClearHDR 1x1 -> 16-bit ClearHDR 2x2 ->
+        12-bit ClearHDR 1x1 -> 12-bit ClearHDR 2x2 ->
+        16-bit SDR 1x1 -> 16-bit SDR 2x2 ->
+        12-bit SDR 1x1 -> 12-bit SDR 2x2 ->
+        10-bit SDR 1x1 -> 10-bit SDR 2x2.
 
         Within each class the full active frame comes first, followed by
         sensor-windowed derivatives, largest crop first.
@@ -797,10 +800,13 @@ class SensorDetect:
             class_rank = 0
         elif hdr and depth == 12:
             class_rank = 2
-        elif not hdr and depth == 12:
+        elif not hdr and depth == 16:
+            # Standard 16-bit modes belong above standard 12-bit modes.
             class_rank = 4
-        elif not hdr and depth == 10:
+        elif not hdr and depth == 12:
             class_rank = 6
+        elif not hdr and depth == 10:
+            class_rank = 8
         else:
             class_rank = 10
 
@@ -1005,16 +1011,6 @@ class SensorDetect:
                 elif self.bit_depths and m["bit_depth"] not in self.bit_depths:
                     continue
 
-                # IMX585 does not expose a standard/SDR RAW16 mode. RAW16
-                # belongs exclusively to the ClearHDR sensor state. Never let
-                # a stale/custom/database entry manufacture a "STANDARD 16-BIT"
-                # section in the settings UI.
-                if (
-                    str(cam).lower().removesuffix("_mono") == "imx585"
-                    and int(m.get("bit_depth") or 0) == 16
-                    and not bool(m.get("hdr"))
-                ):
-                    continue
                 # A ClearHDR mode also has to pass its own depth switch. The
                 # two are separate questions -- "expose ClearHDR at all" and
                 # "which of its depths" -- and only the second one can tell
@@ -1148,11 +1144,39 @@ class SensorDetect:
             hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True) if hdr_out.strip() else {}
             merged = self._merge_mode_lists(base_modes, hdr_modes)
 
-            # Driver metadata is authoritative. Do not copy crop/binning
-            # between modes: identical output dimensions can represent different
-            # sensor readouts (notably IMX585 1920x1080 1x1 vs 2x2), and RAW16
-            # ClearHDR dimensions include optical-black rows. The current
-            # cinepi-raw probe reports the metadata explicitly on every mode.
+            # The two states of the IMX585 probe should carry identical driver
+            # geometry for an identical transport mode. If a libcamera/rpicam
+            # build omits the optional geometry annotation on one state, copy
+            # it from the matching state rather than presenting a known crop as
+            # "Geometry not reported". Never infer geometry from the output
+            # dimensions: the source must be another explicitly annotated mode.
+            for cam, modes in merged.items():
+                for mode in modes:
+                    if mode.get("crop_width") is not None:
+                        continue
+                    matches = [
+                        other for other in modes
+                        if other is not mode
+                        # SDR and ClearHDR are two sensor states of the
+                        # same physical readout. Geometry is transport/readout
+                        # metadata, not an HDR property, so an annotation from
+                        # the plain probe is also authoritative for the matching
+                        # ClearHDR mode (and vice versa).
+                        and int(other.get("width") or 0) == int(mode.get("width") or 0)
+                        and int(other.get("height") or 0) == int(mode.get("height") or 0)
+                        and int(other.get("bit_depth") or 0) == int(mode.get("bit_depth") or 0)
+                        and other.get("crop_width") is not None
+                    ]
+                    if len(matches) == 1:
+                        source_mode = matches[0]
+                        for key in (
+                            "crop_x", "crop_y", "crop_width", "crop_height",
+                            "sensor_width", "sensor_height",
+                            "binning_x", "binning_y",
+                        ):
+                            if source_mode.get(key) is not None:
+                                mode[key] = source_mode[key]
+
             # The HDR probe "succeeding" (non-empty output) but adding zero new
             # modes means --hdr sensor couldn't actually change what the sensor
             # reports -- most commonly because another process (see

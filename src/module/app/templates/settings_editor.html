@@ -520,6 +520,15 @@
   }
   .recording-mode-table tr[data-mode-row]{ cursor:pointer; transition:background-color .12s ease, box-shadow .12s ease; }
   .recording-mode-table tr[data-mode-row]:hover{ background:var(--panel-2); }
+  /* The sensor-mode list is a table, not a settings card. Its container must
+     never acquire the card hover treatment; the individual mode rows are the
+     hover targets. */
+  .camera-modes-card:hover,
+  .camera-modes-card.card-clickable:hover,
+  .camera-modes-card:focus-within{
+    background:transparent;
+    box-shadow:none;
+  }
   /* Every settings card gets a clear hover target. Cards with a single
      control are also actionable from the surrounding card surface. */
   .card{ transition:background-color .12s ease, box-shadow .12s ease; }
@@ -543,9 +552,12 @@
   /* Keep the mode labels aligned with the content padding used by the other
      settings boxes; cropped modes retain a little extra inset to distinguish
      their active crop geometry. */
-  .mode-cropped td:first-child{ padding-left:30px; }
+  /* The mode switch is column 1; the title is column 2. Keep the
+     normal title aligned with the table cell, and indent only the title
+     of a cropped mode so the crop relationship is visible. */
+  .mode-cropped td:nth-child(2){ padding-left:30px; }
   .mode-cropped .mode-title{ font-weight:600; }
-  .mode-title{ font-weight:700; padding-left:10px; }
+  .mode-title{ font-weight:700; padding-left:0; }
   .mode-sub{ margin-top:2px; padding-left:10px; color:var(--muted); font-size:10px; }
   .mode-crop-cell{ width:110px; }
   .mode-crop-diagram{ width:86px; height:54px; display:flex; align-items:center; justify-content:center; }

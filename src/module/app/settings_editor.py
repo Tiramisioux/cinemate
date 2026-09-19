@@ -50,8 +50,6 @@ from module.jsonc_edit import apply_updates
 from module.redis_controller import ParameterKey, smpte_frame_base
 from module.sensor_detect import (
     thumbnail_choice_labels,
-    compute_frame_size_mb,
-    thumbnail_plane_bytes,
     SensorDetect,
 )
 from module.tuning_files import tuning_json_problem

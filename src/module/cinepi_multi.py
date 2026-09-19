@@ -188,10 +188,22 @@ def discover_cameras(timeout: float = 10.0, interval: float = 1.0) -> List[Camer
         proc = subprocess.run(['cinepi-raw', '--list-cameras'],
                               text=True, capture_output=True)
         cams: List[CameraInfo] = []
+        seen_physical: set[tuple[int, str]] = set()
         for line in (proc.stdout or '').splitlines():
             m = rx.match(line)
             if m:
                 idx, name, fmt, path = m.groups()
+                physical_key = (int(idx), path)
+
+                # --list-cameras prints the physical camera once for the
+                # normal probe and again under "CLEAR HDR / SENSOR HDR".
+                # Those HDR entries are alternate sensor modes, not a
+                # second physical camera. Keep the first occurrence for
+                # each camera/path so a single IMX585 cannot become two
+                # CAM0 entries in CineMate.
+                if physical_key in seen_physical:
+                    continue
+                seen_physical.add(physical_key)
 
                 # ───── create → log → append ─────
                 cam = CameraInfo(int(idx), name, fmt, path)

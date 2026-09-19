@@ -1520,28 +1520,26 @@ class SensorDetect:
 
 
     def _calc_lores(self, sensor_w: int, sensor_h: int) -> tuple[int, int]:
-        """Return (lores_width, lores_height) preserving sensor aspect ratio within the preview area."""
+        """Return the PiSP lores preview size for a sensor aspect ratio.
+
+        Keep the lores stream at the established preview geometry rather than
+        shrinking it to tiny sensor readouts.  The small IMX585 modes are
+        valid capture modes, but using their native dimensions as the lores
+        stream regressed the live preview to black.  cinepi-raw/PiSP can scale
+        the small sensor image into this preview stream; this is also the
+        geometry used by the preview path before the small-mode picker was
+        exposed.
+        """
         fw, fh = 1920, 1080
         px, py = 94, 50
         aw, ah = fw - 2 * px, fh - 2 * py
         aspect = sensor_w / sensor_h
 
-        # Never ask the lores stream to be larger than the actual sensor
-        # output.  The normal modes are large enough that the preview area
-        # (1920x1080 with its 94/50 margins) determines the lores geometry,
-        # but the small IMX585 modes are not: e.g. 400x300 used to request
-        # 960x720 here.  That asks the PiSP to upscale a tiny sensor readout
-        # into the lores stream and produces a black preview on these modes.
-        #
-        # Keep the largest aspect-preserving stream that fits BOTH the
-        # preview area and the sensor output.  This preserves the existing
-        # behaviour for normal modes while making the newly exposed small
-        # modes use their native geometry.
-        lh = min(720, ah, sensor_h)
+        lh = min(720, ah)
         lw = int(lh * aspect)
-        if lw > aw or lw > sensor_w:
-            lw = min(aw, sensor_w)
-            lh = min(sensor_h, int(round(lw / aspect)))
+        if lw > aw:
+            lw = aw
+            lh = int(round(aw / aspect))
         lw &= ~1
         lh &= ~1
         return lw, lh
@@ -1563,19 +1561,45 @@ class SensorDetect:
         return bool(resolution_info.get('hdr', False))
 
     def get_available_resolutions(self):
-        resolutions = []
-        last_group = None
+        """Return resolutions ordered by the four operator-facing groups.
+
+        The dropdown renderer inserts one separator when the group changes.
+        Therefore the backend must make each group contiguous; iterating
+        res_modes in discovery/index order can otherwise interleave HDR/SDR or
+        bit-depth groups and produce repeated dashed lines.
+        """
+        group_rank = {
+            (True, 16): 0,
+            (True, 12): 1,
+            (False, 12): 2,
+            (False, 10): 3,
+        }
+        items = []
         for mode, info in self.res_modes.items():
-            bx = info.get('binning_x')
-            by = info.get('binning_y')
-            binning = f"{bx}×{by}" if bx is not None and by is not None else ""
+            group = (
+                bool(info.get('hdr')),
+                int(info.get('bit_depth') or 0),
+            )
+            items.append((group_rank.get(group, 99), mode, info))
+
+        def sort_key(item):
+            rank, mode, info = item
+            bx = int(info.get('binning_x') or 1)
+            by = int(info.get('binning_y') or 1)
+            area = int(info.get('width') or 0) * int(info.get('height') or 0)
+            crop_x = int(info.get('crop_x') or 0)
+            crop_y = int(info.get('crop_y') or 0)
+            return (rank, bx * by, -area, crop_x, crop_y, int(mode))
+
+        items.sort(key=sort_key)
+
+        resolutions = []
+        for rank, mode, info in items:
             group = (
                 bool(info.get('hdr')),
                 int(info.get('bit_depth') or 0),
             )
             resolution = f"{info['width']} : {info['height']} : {info['bit_depth']}b"
-            # imx585 ClearHDR modes are tagged in the web GUI dropdown so the
-            # 12-bit HDR modes are distinguishable from the plain 12-bit ones.
             if info.get('hdr'):
                 resolution += " :HDR"
             resolutions.append({
@@ -1584,7 +1608,7 @@ class SensorDetect:
                 'group': group,
                 'group_label': (
                     ("Clear HDR" if info.get('hdr') else "Standard")
-                    + f" · {info['bit_depth']}-bit",
+                    + f" · {info['bit_depth']}-bit"
                 ),
             })
         return resolutions

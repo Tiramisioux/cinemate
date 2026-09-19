@@ -825,6 +825,26 @@ def get_sensor_modes():
     sensors = {}
     source = getattr(sensor_detect, "sensor_modes_unfiltered", {}) or {}
     for camera_name, modes in source.items():
+        # Prefer the largest known full active window as the diagram's
+        # coordinate space. For IMX585 this becomes 3840x2160 rather than the
+        # native 3856x2180 array, so a 480-pixel left/right crop is actually
+        # rendered centred. If geometry is unavailable (e.g. stock IMX477),
+        # the diagram simply remains "geometry not reported".
+        diagram_w = diagram_h = None
+        for candidate in modes:
+            if not SensorDetect._mode_is_full(candidate):
+                continue
+            cw, ch = candidate.get("crop_width"), candidate.get("crop_height")
+            bx, by = SensorDetect._mode_binning(candidate)
+            if cw and ch and bx and by:
+                rw, rh = int(cw) * bx, int(ch) * by
+            elif cw and ch:
+                rw, rh = int(cw), int(ch)
+            else:
+                continue
+            if diagram_w is None or rw * rh > diagram_w * diagram_h:
+                diagram_w, diagram_h = rw, rh
+
         entries = []
         for mode in sorted(modes, key=SensorDetect._mode_sort_key):
             width, height = mode.get("width"), mode.get("height")
@@ -847,6 +867,10 @@ def get_sensor_modes():
                 "crop_y": mode.get("crop_y"),
                 "crop_width": mode.get("crop_width"),
                 "crop_height": mode.get("crop_height"),
+                "sensor_width": mode.get("sensor_width"),
+                "sensor_height": mode.get("sensor_height"),
+                "diagram_sensor_width": diagram_w,
+                "diagram_sensor_height": diagram_h,
                 "crop_known": mode.get("crop_width") is not None,
                 "full": SensorDetect._mode_is_full(mode),
                 "selected": selected_for(camera_name, mode),

@@ -726,24 +726,24 @@ class SensorDetect:
         base_modes: Dict[str, List[Dict]],
         hdr_modes: Dict[str, List[Dict]],
     ) -> None:
-        """Preserve the explicit state of the two sensor probes.
+        """Treat the dedicated HDR probe as authoritative.
 
-        base_modes comes from the plain cinepi-raw probe and is SDR.
-        hdr_modes comes from the --hdr sensor probe. The probe state is
-        authoritative; FPS must never be used to infer SDR versus ClearHDR.
+        The plain probe is SDR. The --hdr sensor probe is ClearHDR. This is
+        the semantic contract between cinepi-raw and CineMate, so FPS is never
+        used to decide HDR state.
 
-        Some formatter versions repeat the SDR state inside the HDR probe
-        before printing the ClearHDR state. The parser handles that state
-        transition directly. If a formatter omits the state marker entirely,
-        we deliberately do not guess from FPS here.
+        If the formatter explicitly prints an SDR section before switching to
+        ClearHDR, _parse_cinepi_output() has already marked that first section
+        as hdr=False and the second section as hdr=True. Otherwise the entire
+        dedicated HDR probe is an HDR listing and its unmarked modes are
+        promoted to hdr=True here.
         """
         for cam, modes in hdr_modes.items():
             for mode in modes:
+                # An explicit parser state always wins.
                 if mode.get("hdr") is True:
                     continue
-                # No semantic state was exposed by this probe entry. Keep it
-                # SDR rather than inventing ClearHDR from a timing difference.
-                mode["hdr"] = False
+                mode["hdr"] = True
 
 
     @staticmethod
@@ -1238,21 +1238,9 @@ class SensorDetect:
             base_modes = self._parse_cinepi_output(out, hdr=False)
             hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True) if hdr_out.strip() else {}
 
-            # The --hdr probe has appeared in two formatter variants:
-            #   1. an explicit SDR section followed by a ClearHDR section;
-            #   2. the same two states without a reliable separator/header.
-            #
-            # The parser handles the explicit state markers, but we can make
-            # the result deterministic even when those markers are absent:
-            # an entry from the HDR probe that has the exact same readout,
-            # geometry, binning *and timing* as the plain probe is the plain
-            # mode being repeated; an entry with the same readout geometry but
-            # a different timing ceiling is the ClearHDR state. A mode already
-            # marked HDR by the parser remains HDR.
-            #
-            # This is deliberately done before _merge_mode_lists(), so the
-            # merge never has to guess whether a lower-FPS HDR timing belongs
-            # to SDR or ClearHDR.
+            # The plain probe is SDR and the dedicated --hdr sensor probe is
+            # ClearHDR. Preserve that semantic state directly; FPS is only a
+            # timing ceiling and is never used to classify HDR.
             self._normalize_hdr_probe_modes(base_modes, hdr_modes)
             merged = self._merge_mode_lists(base_modes, hdr_modes)
 

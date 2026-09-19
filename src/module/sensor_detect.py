@@ -782,6 +782,7 @@ class SensorDetect:
         Capture classes are grouped exactly as the settings pane presents them:
         16-bit ClearHDR 1x1 -> 16-bit ClearHDR 2x2 ->
         12-bit ClearHDR 1x1 -> 12-bit ClearHDR 2x2 ->
+        16-bit SDR 1x1 -> 16-bit SDR 2x2 ->
         12-bit SDR 1x1 -> 12-bit SDR 2x2 ->
         10-bit SDR 1x1 -> 10-bit SDR 2x2.
 
@@ -799,12 +800,15 @@ class SensorDetect:
             class_rank = 0
         elif hdr and depth == 12:
             class_rank = 2
-        elif not hdr and depth == 12:
+        elif not hdr and depth == 16:
+            # Standard 16-bit modes belong above standard 12-bit modes.
             class_rank = 4
-        elif not hdr and depth == 10:
+        elif not hdr and depth == 12:
             class_rank = 6
-        else:
+        elif not hdr and depth == 10:
             class_rank = 8
+        else:
+            class_rank = 10
 
         return (
             class_rank,
@@ -1152,7 +1156,11 @@ class SensorDetect:
                     matches = [
                         other for other in modes
                         if other is not mode
-                        and bool(other.get("hdr")) == bool(mode.get("hdr"))
+                        # SDR and ClearHDR are two sensor states of the
+                        # same physical readout. Geometry is transport/readout
+                        # metadata, not an HDR property, so an annotation from
+                        # the plain probe is also authoritative for the matching
+                        # ClearHDR mode (and vice versa).
                         and int(other.get("width") or 0) == int(mode.get("width") or 0)
                         and int(other.get("height") or 0) == int(mode.get("height") or 0)
                         and int(other.get("bit_depth") or 0) == int(mode.get("bit_depth") or 0)

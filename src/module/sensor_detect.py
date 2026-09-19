@@ -515,7 +515,8 @@ class SensorDetect:
         sensor_width = None
         sensor_height = None
         parsing_modes = False                     # inside a “Modes:” block?
-        current_hdr = False                       # --hdr sensor prints SDR first, HDR second
+        current_hdr = False                       # --hdr sensor may print SDR then HDR, or HDR only
+        saw_hdr_transition = False
         last_mode = None
 
         for raw in output.splitlines():
@@ -537,6 +538,7 @@ class SensorDetect:
                     next_cam += "_mono"
                 if hdr and next_cam in sensors and sensors.get(next_cam):
                     current_hdr = True
+                    saw_hdr_transition = True
 
                 # flush state & start a new camera section. Keep current_hdr
                 # across the repeated header so the modes following it remain
@@ -570,6 +572,7 @@ class SensorDetect:
                 # ClearHDR sensor state. Keep this state even when the driver
                 # repeats the camera header afterwards.
                 current_hdr = True
+                saw_hdr_transition = True
                 parsing_modes = False
                 current_bit_depth = None
                 last_mode = None
@@ -665,6 +668,18 @@ class SensorDetect:
                 extra=mode_extra,
             )
             sensors[current_cam].append(last_mode)
+
+        # Some cinepi-raw versions implement --hdr sensor as a dedicated HDR
+        # probe and therefore print only the ClearHDR state, without either
+        # the SDR/HDR separator or a repeated camera header. In that form
+        # there is no transition for the parser to observe, but the *entire
+        # invocation* is nevertheless the HDR state. Promote the complete
+        # result only when no state transition was seen; this preserves the
+        # SDR-first/HDR-second format handled above.
+        if hdr and not saw_hdr_transition:
+            for modes in sensors.values():
+                for mode in modes:
+                    mode["hdr"] = True
 
         return sensors
 

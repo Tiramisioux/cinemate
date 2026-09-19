@@ -231,6 +231,13 @@
     transition:filter .12s ease, transform .05s ease;
   }
   .cinepi-launch:hover{ filter:brightness(1.08); }
+  .cinepi-live-launcher{ position:fixed; right:max(18px, calc(env(safe-area-inset-right, 0px) + 10px)); bottom:max(18px, calc(env(safe-area-inset-bottom, 0px) + 10px)); z-index:40; display:flex; gap:8px; align-items:center; }
+  .cinepi-live-source{ display:none; width:46px; height:46px; align-items:center; justify-content:center; border:1px solid var(--accent); border-radius:50%; color:var(--accent-ink); background:var(--accent); box-shadow:0 4px 16px rgba(0,0,0,.42); font-family:'DIN2014',Arial,sans-serif; font-weight:700; font-size:12px; text-decoration:none; }
+  .cinepi-live-launcher.dual .cinepi-launch{ display:none; }
+  .cinepi-live-launcher.dual .cinepi-live-source{ display:flex; }
+  .cinepi-live-source.active{ filter:brightness(1.1); box-shadow:0 0 0 2px var(--accent-ink),0 4px 16px rgba(0,0,0,.42); }
+  .cinepi-live-source:hover{ filter:brightness(1.08); }
+
   .cinepi-launch:active{ transform:translateY(1px); }
   .cinepi-launch:focus-visible{ outline:none; box-shadow:var(--focus); }
   .cinepi-launch svg{ width:24px; height:24px; }
@@ -1197,11 +1204,16 @@
     <button class="btn btn-primary" id="saveBtn" disabled>Save changes</button>
   </header>
 
-  <a class="cinepi-launch" href="http://cinepi.local:5000" aria-label="Open CinePi live view" title="Open CinePi live view">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square" aria-hidden="true">
-      <path d="M9 3H3v6M15 3h6v6M21 15v6h-6M3 15v6h6"/>
-    </svg>
-  </a>
+  <div class="cinepi-live-launcher" id="cinepiLiveLauncher" aria-label="Open CinePi live view">
+    <a class="cinepi-launch" id="cinepiLiveDefault" href="http://cinepi.local:5000" aria-label="Open CinePi live view" title="Open CinePi live view">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square" aria-hidden="true">
+        <path d="M9 3H3v6M15 3h6v6M21 15v6h-6M3 15v6h6"/>
+      </svg>
+    </a>
+    <a class="cinepi-live-source" data-preview="cam0" href="http://cinepi.local:5000/?preview=cam0" aria-label="Open camera 0 live view" title="Camera 0">0</a>
+    <a class="cinepi-live-source" data-preview="cam1" href="http://cinepi.local:5000/?preview=cam1" aria-label="Open camera 1 live view" title="Camera 1">1</a>
+    <a class="cinepi-live-source" data-preview="combined" href="http://cinepi.local:5000/?preview=combined" aria-label="Open combined live view" title="Combined view">C</a>
+  </div>
 
   <div class="rail-scrim" id="railScrim"></div>
   <nav class="rail" id="rail" aria-label="Settings sections">
@@ -2551,6 +2563,20 @@
     return fetch('/api/v1/cmd', { method: 'POST', headers: headers, body: line })
       .then(function(res){ return res.text().then(function(body){ return { ok: res.ok, body: body.trim() }; }); })
       .catch(function(err){ return { ok: false, body: err.message }; });
+  }
+
+  function refreshLiveViewLauncher(){
+    var launcher=document.getElementById('cinepiLiveLauncher');
+    if(!launcher) return;
+    fetch('/settings-editor/api/sensor-modes',{cache:'no-store'}).then(function(r){return r.json();}).then(function(res){
+      if(!res.ok) return;
+      var dual=Object.keys(res.sensors||{}).length>=2;
+      launcher.classList.toggle('dual',dual);
+      var source=res.preview_source||'both';
+      launcher.querySelectorAll('.cinepi-live-source').forEach(function(a){
+        a.classList.toggle('active',a.getAttribute('data-preview')===source || (a.getAttribute('data-preview')==='combined' && ['both','pip_cam0','pip_cam1'].indexOf(source)>=0));
+      });
+    }).catch(function(){});
   }
 
   /* ---------- state / dirty tracking ---------- */
@@ -6357,6 +6383,7 @@
           showToast(res.message || (res.ok ? 'RTC set from system time' : 'Could not set the RTC'));
           if (res.rtc) i2cRenderClocks({ system: null, rtc: res.rtc });
           i2cRefresh();
+  refreshLiveViewLauncher();
         })
         .catch(function(err){ showToast('Could not reach the server: ' + err); })
         .finally(function(){ i2cSyncBtn.disabled = false; });

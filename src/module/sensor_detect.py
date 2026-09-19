@@ -1509,10 +1509,23 @@ class SensorDetect:
         px, py = 94, 50
         aw, ah = fw - 2 * px, fh - 2 * py
         aspect = sensor_w / sensor_h
-        lh = min(720, ah)
+
+        # Never ask the lores stream to be larger than the actual sensor
+        # output.  The normal modes are large enough that the preview area
+        # (1920x1080 with its 94/50 margins) determines the lores geometry,
+        # but the small IMX585 modes are not: e.g. 400x300 used to request
+        # 960x720 here.  That asks the PiSP to upscale a tiny sensor readout
+        # into the lores stream and produces a black preview on these modes.
+        #
+        # Keep the largest aspect-preserving stream that fits BOTH the
+        # preview area and the sensor output.  This preserves the existing
+        # behaviour for normal modes while making the newly exposed small
+        # modes use their native geometry.
+        lh = min(720, ah, sensor_h)
         lw = int(lh * aspect)
-        if lw > aw:
-            lw, lh = aw, int(round(aw / aspect))
+        if lw > aw or lw > sensor_w:
+            lw = min(aw, sensor_w)
+            lh = min(sensor_h, int(round(lw / aspect)))
         lw &= ~1
         lh &= ~1
         return lw, lh

@@ -499,6 +499,7 @@ class SensorDetect:
         sensor_width = None
         sensor_height = None
         parsing_modes = False                     # inside a “Modes:” block?
+        last_mode = None
 
         for raw in output.splitlines():
             line = raw.rstrip("\n")
@@ -540,6 +541,16 @@ class SensorDetect:
             # ── first resolution on the line (if any)
             res = re.search(r"(\d+)x(\d+)", line)
             if not res:
+                # Some drivers print mode geometry on a continuation line.
+                # Attach an explicitly reported binning value to the most
+                # recently parsed mode; never infer it from dimensions.
+                binning_only = re.search(
+                    r"\bbinning\s*[:=]?\s*(\d+)\s*[x×]\s*(\d+)\b",
+                    line, re.IGNORECASE,
+                )
+                if binning_only and last_mode is not None:
+                    last_mode["binning_x"] = int(binning_only.group(1))
+                    last_mode["binning_y"] = int(binning_only.group(2))
                 continue
 
             width, height = map(int, res.groups())
@@ -566,13 +577,12 @@ class SensorDetect:
             if binning:
                 bx, by = map(int, binning.groups())
                 mode_extra.update({"binning_x": bx, "binning_y": by})
-            sensors[current_cam].append(
-                self._mode_from_metadata_or_detected(
-                    camera_name=current_cam, width=width, height=height,
-                    bit_depth=current_bit_depth, fps_max=fps_max, hdr=hdr,
-                    extra=mode_extra,
-                )
+            last_mode = self._mode_from_metadata_or_detected(
+                camera_name=current_cam, width=width, height=height,
+                bit_depth=current_bit_depth, fps_max=fps_max, hdr=hdr,
+                extra=mode_extra,
             )
+            sensors[current_cam].append(last_mode)
 
         return sensors
 
@@ -627,6 +637,9 @@ class SensorDetect:
             int(mode.get("height") or 0),
             int(mode.get("bit_depth") or 0),
             mode.get("fps_max"),
+            mode.get("crop_x"), mode.get("crop_y"),
+            mode.get("crop_width"), mode.get("crop_height"),
+            mode.get("binning_x"), mode.get("binning_y"),
         )
 
     def _merge_mode_lists(
@@ -646,9 +659,11 @@ class SensorDetect:
         for cam, hdr_modes in hdr.items():
             base_keys = {self._mode_key(m) for m in merged.get(cam, [])}
             for mode in hdr_modes:
-                if self._mode_key(mode) in base_keys:
+                key = self._mode_key(mode)
+                if key in base_keys:
                     continue
                 merged.setdefault(cam, []).append(mode)
+                base_keys.add(key)
         return merged
 
     @staticmethod

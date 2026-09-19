@@ -728,13 +728,18 @@ class SensorDetect:
 
     @staticmethod
     def _mode_key(mode: Dict) -> tuple:
-        """Identity used to dedupe a mode across the plain and HDR runs."""
+        """Identity of a sensor readout state.
+
+        FPS is a timing ceiling, not part of the mode identity. The same
+        physical readout can be reported at different ceilings by the plain
+        and HDR probes. HDR itself is part of the identity because SDR and
+        ClearHDR are different sensor states.
+        """
         return (
             int(mode.get("width") or 0),
             int(mode.get("height") or 0),
             int(mode.get("bit_depth") or 0),
             bool(mode.get("hdr")),
-            mode.get("fps_max"),
             mode.get("crop_x"), mode.get("crop_y"),
             mode.get("crop_width"), mode.get("crop_height"),
             mode.get("binning_x"), mode.get("binning_y"),

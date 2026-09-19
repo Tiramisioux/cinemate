@@ -3226,6 +3226,7 @@
     if (!state.input_peripherals) state.input_peripherals = {};
     state.input_peripherals.quad_rotary_controller = buildQuadRotaryState();
     if (!state.image_capture) state.image_capture = {};
+    state.image_capture.enabled_modes = buildEnabledModesState();
     state.image_capture.custom_modes = buildCustomModesState();
     applyGpioOutToState(state);
     return state;
@@ -3427,41 +3428,63 @@
     }
   }
 
+  function buildEnabledModesState(){
+    var out = {};
+    var existing = (lastLoadedSettings && lastLoadedSettings.image_capture && lastLoadedSettings.image_capture.enabled_modes) || {};
+    Object.keys(existing).forEach(function(camera){ out[camera] = (existing[camera] || []).slice(); });
+    var cameras = {};
+    document.querySelectorAll('#recordingModesBody [data-mode-row]').forEach(function(row){
+      var camera=row.getAttribute('data-camera');
+      (cameras[camera] || (cameras[camera]=[])).push(row);
+    });
+    Object.keys(cameras).forEach(function(camera){
+      var selected=[];
+      cameras[camera].forEach(function(row){
+        var tog=row.querySelector('.mode-toggle');
+        if(!tog || tog.getAttribute('aria-checked')!=='true') return;
+        var entry={
+          width:Number(row.getAttribute('data-width')), height:Number(row.getAttribute('data-height')),
+          bit_depth:Number(row.getAttribute('data-bit-depth')), hdr:row.getAttribute('data-hdr')==='true'
+        };
+        ['x','y','width','height'].forEach(function(k){
+          var v=row.getAttribute('data-crop-'+k);
+          if(v!=='') entry['crop_'+k]=Number(v);
+        });
+        selected.push(entry);
+      });
+      if(selected.length) out[camera]=selected;
+    });
+    return out;
+  }
+
   function buildCustomModesState(){
     var out = {};
     var customModes = (lastLoadedSettings && lastLoadedSettings.image_capture
       && lastLoadedSettings.image_capture.custom_modes) || {};
-    // Start from every existing entry, so a genuinely custom (undetected)
-    // mode this pane has no row for survives untouched.
-    Object.keys(customModes).forEach(function(camera){
-      out[camera] = (customModes[camera] || []).slice();
-    });
+    Object.keys(customModes).forEach(function(camera){ out[camera] = (customModes[camera] || []).slice(); });
 
-    document.querySelectorAll('#fpsCeilingsList [data-fps-row]').forEach(function(row){
-      var camera = row.getAttribute('data-camera');
-      var w = parseInt(row.getAttribute('data-width'), 10);
-      var h = parseInt(row.getAttribute('data-height'), 10);
-      var bd = parseInt(row.getAttribute('data-bit-depth'), 10);
-      var hdr = row.getAttribute('data-hdr') === 'true';
-      var detected = parseFloat(row.getAttribute('data-detected'));
-      var input = row.querySelector('.fps-ceiling-input');
-      var raw = (input.value || '').trim();
-
-      out[camera] = (out[camera] || []).filter(function(entry){
-        return !(Number(entry.width) === w && Number(entry.height) === h
-          && Number(entry.bit_depth) === bd && !!entry.hdr === hdr);
+    document.querySelectorAll('#recordingModesBody [data-mode-row]').forEach(function(row){
+      var camera=row.getAttribute('data-camera');
+      var w=parseInt(row.getAttribute('data-width'),10), h=parseInt(row.getAttribute('data-height'),10);
+      var bd=parseInt(row.getAttribute('data-bit-depth'),10), hdr=row.getAttribute('data-hdr')==='true';
+      var detected=parseFloat(row.getAttribute('data-detected') || '0');
+      var input=row.querySelector('.mode-fps-input'); if(!input) return;
+      var raw=(input.value || '').trim();
+      out[camera]=(out[camera] || []).filter(function(entry){
+        return !(Number(entry.width)===w && Number(entry.height)===h && Number(entry.bit_depth)===bd && !!entry.hdr===hdr);
       });
-
-      if (raw === '') return; // blank -- use the detected value, no entry
-      var val = parseFloat(raw);
-      if (isNaN(val) || val === detected) return; // matches detected -- redundant, no entry
-
-      var entry = { width: w, height: h, bit_depth: bd, fps_max: val };
-      if (hdr) entry.hdr = true;
+      if(raw==='') return;
+      var val=parseFloat(raw);
+      if(!isFinite(val) || val===detected) return;
+      var entry={width:w,height:h,bit_depth:bd,fps_max:val};
+      if(hdr) entry.hdr=true;
+      ['x','y','width','height'].forEach(function(k){
+        var v=row.getAttribute('data-crop-'+k);
+        if(v!=='') entry['crop_'+k]=Number(v);
+      });
       out[camera].push(entry);
     });
-
-    Object.keys(out).forEach(function(camera){ if (out[camera].length === 0) delete out[camera]; });
+    Object.keys(out).forEach(function(camera){ if(out[camera].length===0) delete out[camera]; });
     return out;
   }
 

@@ -675,8 +675,10 @@ class SensorDetect:
 
     @classmethod
     def _mode_is_full(cls, mode: Dict) -> bool:
-        bx, by = cls._mode_binning(mode)
-        return (bx, by) == (1, 1) and int(mode.get("crop_x") or 0) == 0 and int(mode.get("crop_y") or 0) == 0
+        # Full/native is orthogonal to binning. A 2x1 or 2x2 binned mode can
+        # still cover the complete sensor. The driver/list-cameras crop tuple
+        # is therefore the only thing used to decide whether a mode is cropped.
+        return mode.get("crop_width") is None or mode.get("crop_height") is None
 
     @classmethod
     def _mode_sort_key(cls, mode: Dict) -> tuple:

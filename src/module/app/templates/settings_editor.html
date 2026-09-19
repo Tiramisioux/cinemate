@@ -478,7 +478,7 @@
 
   .mode-table-wrap{ width:100%; overflow-x:auto; margin-top:14px; }
   .camera-mode-panel{ margin-bottom:18px; }
-  .camera-modes-card{ margin-top:0; }
+  .camera-modes-card{ margin-top:0; display:block; padding:0; }
   .camera-mode-list{ width:100%; overflow-x:auto; }
   .recording-mode-table{ width:100%; min-width:760px; border-collapse:collapse; font-size:12px; line-height:1.25; }
   .recording-mode-table th{ padding:7px 8px; text-align:left; color:var(--muted); border-bottom:1px solid var(--line); font-size:10px; text-transform:uppercase; letter-spacing:.045em; white-space:nowrap; }
@@ -1395,10 +1395,6 @@
       </header>
       <div class="camera-mode-panel" id="cam0-mode-panel" hidden>
         <div class="card camera-modes-card" data-search="cam0 recording modes resolution bit depth binning crop aspect clear hdr fps">
-          <div class="card-main">
-            <label class="card-label">RECORDING MODES</label>
-            <p class="card-help">Modes reported by the connected sensor driver. Clear HDR is shown explicitly when the driver exposes it. Crop geometry and binning come from the detected mode metadata.</p>
-          </div>
           <div class="camera-mode-list" id="cam0-modes-list"><p class="card-help">Loading detected modes…</p></div>
         </div>
       </div>
@@ -1506,10 +1502,6 @@
       </header>
       <div class="camera-mode-panel" id="cam1-mode-panel" hidden>
         <div class="card camera-modes-card" data-search="cam1 recording modes resolution bit depth binning crop aspect clear hdr fps">
-          <div class="card-main">
-            <label class="card-label">RECORDING MODES</label>
-            <p class="card-help">Modes reported by the connected sensor driver. Clear HDR is shown explicitly when the driver exposes it. Crop geometry and binning come from the detected mode metadata.</p>
-          </div>
           <div class="camera-mode-list" id="cam1-modes-list"><p class="card-help">Loading detected modes…</p></div>
         </div>
       </div>

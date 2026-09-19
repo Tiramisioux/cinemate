@@ -3867,7 +3867,13 @@
     if (!primary) return;
     card.classList.add('card-clickable');
     card.addEventListener('click', function(e){
-      if (e.target.closest('button, select, input, textarea, a, label, .step-chip')) return;
+      var label = e.target.closest('label');
+      /* A label that actually wraps the primary toggle already gets a native
+         click on that toggle. Do not click it a second time. Other labels,
+         including the card title/help label on a switch-backed setting, are
+         part of the card's click target and should operate the switch. */
+      if (label && primary.classList.contains('toggle') && label.contains(primary)) return;
+      if (e.target.closest('button, select, input, textarea, a, .step-chip')) return;
       if (primary.classList.contains('toggle')) {
         primary.click();
       } else {

@@ -422,8 +422,14 @@
      per row so the switch column lines up with every other toggle on the
      page rather than reading as a second kind of control. */
   .switchset{ display:flex; flex-direction:column; align-items:stretch; gap:8px; min-width:118px; }
-  .switchrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; cursor:pointer; }
+  .switchrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; cursor:pointer; transition:opacity .15s ease; }
   .switchrow > span{ font-size:13px; color: var(--ink); white-space:nowrap; }
+  /* An offered item that the operator has switched off remains visible, but
+     is visually muted. This is distinct from .hw-absent: the latter means the
+     attached sensor cannot provide the item at all; this rule means the item
+     is available but deliberately not selected. */
+  .switchrow.is-off{ opacity:.42; }
+  .switchrow.is-off .toggle{ opacity:.9; }
   .step-chip{
     font-family: ui-monospace, monospace; font-size: 12px; font-variant-numeric: tabular-nums;
     background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
@@ -3755,6 +3761,7 @@
     t.addEventListener('click', function(){
       var checked = t.getAttribute('aria-checked') === 'true';
       t.setAttribute('aria-checked', String(!checked));
+      t.closest('.switchrow')?.classList.toggle('is-off', checked);
       checkDirty(t);
     });
     t.addEventListener('keydown', function(e){
@@ -4147,6 +4154,7 @@
         var isOn = on.indexOf(isFinite(n) ? String(n) : raw) !== -1;
         t.setAttribute('aria-checked', String(isOn));
         t.setAttribute('data-original', String(isOn));
+        t.closest('.switchrow')?.classList.toggle('is-off', !isOn);
         markDirty(t, false);
       });
     });

@@ -4361,6 +4361,12 @@
       container.querySelectorAll('.step-chip').forEach(function(c){ arr.push(c.firstChild.textContent.trim()); });
       container.setAttribute('data-chip-original', JSON.stringify(arr));
     });
+    document.querySelectorAll('#recordingModesBody [data-mode-row]').forEach(function(row){
+      var tog=row.querySelector('.mode-toggle');
+      var inp=row.querySelector('.mode-fps-input');
+      if(tog) tog.setAttribute('data-original-selected', tog.getAttribute('aria-checked'));
+      if(inp) inp.setAttribute('data-original', inp.value);
+    });
     document.querySelectorAll('.action-slot').forEach(function(slot){
       slot.setAttribute('data-original-method', slot.getAttribute('data-method') || '');
       slot.setAttribute('data-original-args', slot.getAttribute('data-args') || '');
@@ -4512,6 +4518,7 @@
     fetch('/settings-editor/api/settings/default').then(function(r){ return r.json(); }).then(function(res){
       if (!res.ok){ showToast('Could not load defaults: ' + res.message); return; }
       populateSettingsForm(res.settings);
+      loadFpsCeilings();
       dirtyEls.add(document.body); // force the dirty pill on: it now differs from the live file
       updateDirtyPill();
       showToast('Loaded stock settings.jsonc defaults — not saved yet');

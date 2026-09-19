@@ -396,7 +396,7 @@
       // Dual-sensor HDMI preview source at startup: both | cam0 | cam1 |
       // pip_cam0 | pip_cam1. Switch live with `set preview`. No effect with
       // a single sensor.
-      "default_hdmi_source": "both",
+      "default_hdmi_source": "cam0",
       "pip": {
         "scale": 0.28,
         "corner": "lower_right",

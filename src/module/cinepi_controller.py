@@ -427,7 +427,138 @@ class CinePiController:
             return min(same_shape)
         return None
 
+    def _sensor_mode_memory_sensor(self):
+        """Return the stable sensor-model key used for mode persistence."""
+        sensor = getattr(self, "current_sensor", None)
+        if not sensor:
+            sensor = getattr(self.sensor_detect, "camera_model", None)
+        return str(sensor or "unknown")
+
+    def _load_sensor_mode_memory(self):
+        """Load the per-sensor mode memory stored in Redis.
+
+        The value is deliberately a small JSON object rather than a Redis
+        hash: RedisController already provides the persistence boundary and
+        this keeps the complete mode signature together, including crop and
+        binning geometry which can change the numerical mode index.
+        """
+        raw = self.redis_controller.get_value(ParameterKey.SENSOR_MODE_MEMORY.value)
+        if raw is None:
+            return {}
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw) if isinstance(raw, str) else raw
+        except (TypeError, ValueError, json.JSONDecodeError):
+            logging.warning("Ignoring invalid per-sensor sensor-mode memory in Redis")
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    @staticmethod
+    def _mode_memory_signature(info):
+        """Capture the identity of a mode beyond its transient numeric index."""
+        fields = (
+            "width", "height", "bit_depth", "hdr",
+            "crop_x", "crop_y", "crop_width", "crop_height",
+            "binning_x", "binning_y",
+        )
+        signature = {}
+        for field in fields:
+            if field in info and info.get(field) is not None:
+                signature[field] = info.get(field)
+        return signature
+
+    @staticmethod
+    def _mode_memory_signature_matches(info, stored):
+        if not isinstance(info, dict) or not isinstance(stored, dict):
+            return False
+        for field, expected in stored.items():
+            if info.get(field) != expected:
+                return False
+        return True
+
+    def _remember_sensor_mode(self, mode, info=None):
+        """Persist the selected mode independently for each sensor model."""
+        if info is None:
+            info = self.sensor_detect.res_modes.get(mode, {})
+        if not isinstance(info, dict):
+            info = {}
+        memory = self._load_sensor_mode_memory()
+        memory[self._sensor_mode_memory_sensor()] = {
+            "mode": int(mode),
+            "signature": self._mode_memory_signature(info),
+        }
+        try:
+            self.redis_controller.set_value(
+                ParameterKey.SENSOR_MODE_MEMORY.value,
+                json.dumps(memory, separators=(",", ":"), sort_keys=True),
+            )
+        except (TypeError, ValueError):
+            logging.warning("Could not serialize per-sensor sensor-mode memory")
+
+    def _get_stored_sensor_mode_for_current_sensor(self):
+        """Resolve the remembered mode for the currently detected sensor.
+
+        Prefer the saved numeric index only when its saved mode signature still
+        matches. SensorDetect can re-index modes when settings or driver output
+        changes, so otherwise resolve by the stored dimensions/geometry.
+        """
+        entry = self._load_sensor_mode_memory().get(self._sensor_mode_memory_sensor())
+        if not isinstance(entry, dict):
+            return None
+        try:
+            stored_mode = int(entry.get("mode"))
+        except (TypeError, ValueError):
+            stored_mode = None
+        stored_signature = entry.get("signature")
+        modes = self.sensor_detect.res_modes
+
+        if stored_mode is not None and stored_mode in modes:
+            if not stored_signature or self._mode_memory_signature_matches(
+                modes[stored_mode], stored_signature
+            ):
+                return stored_mode
+
+        if not isinstance(stored_signature, dict) or not stored_signature:
+            return None
+
+        exact = [
+            mode for mode, info in modes.items()
+            if self._mode_memory_signature_matches(info, stored_signature)
+        ]
+        if exact:
+            return min(exact)
+
+        # Geometry may have been added by a newer driver/parser while the
+        # stored entry came from an older CineMate version. Fall back to the
+        # core capture identity rather than losing the user's selection.
+        core_fields = ("width", "height", "bit_depth", "hdr")
+        core = {k: stored_signature[k] for k in core_fields if k in stored_signature}
+        if core:
+            candidates = [
+                mode for mode, info in modes.items()
+                if all(info.get(k) == v for k, v in core.items())
+            ]
+            if candidates:
+                return min(candidates)
+        return None
+
     def _get_startup_sensor_mode(self) -> int:
+        # Mode selection is remembered per physical sensor. This must happen
+        # before looking at the legacy global SENSOR_MODE key: the same mode
+        # index can legitimately exist on IMX585 and IMX477 but mean something
+        # completely different on each sensor.
+        remembered = self._get_stored_sensor_mode_for_current_sensor()
+        if remembered is not None:
+            logging.info(
+                "Restoring sensor-specific mode %s for %s",
+                remembered, self._sensor_mode_memory_sensor(),
+            )
+            self.redis_controller.set_value(
+                ParameterKey.SENSOR_MODE.value, remembered
+            )
+            return remembered
+
         value = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
         try:
             mode = int(value)
@@ -435,6 +566,7 @@ class CinePiController:
             mode = None
 
         if mode is not None and mode in self.sensor_detect.res_modes:
+            self._remember_sensor_mode(mode, self.sensor_detect.res_modes.get(mode))
             return mode
 
         if not self.sensor_detect.res_modes:
@@ -2317,6 +2449,10 @@ class CinePiController:
         self._recompute_file_size()
 
         self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
+        # Keep a separate last-selection slot for this sensor so changing to
+        # another sensor cannot overwrite what should be restored when this
+        # one comes back.
+        self._remember_sensor_mode(value, resolution_info)
         self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
         self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
         self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))

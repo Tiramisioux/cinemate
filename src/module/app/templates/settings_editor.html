@@ -3473,23 +3473,6 @@
         body.appendChild(tr);
       });
       table.appendChild(body);
-          if(on){
-            var sameCamera=host.querySelectorAll('tr[data-mode-row] .mode-toggle'), count=0;
-            sameCamera.forEach(function(t){if(t.getAttribute('aria-checked')==='true')count++;});
-            if(count<=1){showToast('Keep at least one recording mode enabled for '+camera);return;}
-          }
-          tog.setAttribute('aria-checked',String(!on)); syncRow();
-          markDirty(tog,!on!==(String(mode.selected)==='true'));
-        });
-        tog.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();tog.click();}});
-        input.addEventListener('input',function(){
-          var v=input.value.trim(),n=parseFloat(v),sensor=parseFloat(mode.fps_max_detected);
-          if(v!==''&&(!isFinite(n)||n<0||n>sensor)) input.classList.add('invalid'); else input.classList.remove('invalid');
-          markDirty(input,v!==String(mode.fps_max_effective==null?'':mode.fps_max_effective));
-        });
-        body.appendChild(tr);
-      });
-      table.appendChild(body);
       if(!showSmaller){
         body.querySelectorAll('tr[data-mode-group]').forEach(function(groupRow){
           var hasVisible=false, node=groupRow.nextElementSibling;

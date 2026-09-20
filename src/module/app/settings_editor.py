@@ -833,6 +833,27 @@ def get_actions():
     return jsonify({"ok": True, "actions": actions})
 
 
+def _active_dimension(mode, crop_key, binning_key, fallback):
+    """The recorded picture's width or height (WP-CM-10).
+
+    ``crop_width``/``crop_height`` is the sensor-domain readout window
+    (see the domain contract in sensor_detect._mode_from_metadata_or_
+    detected), so dividing it by the matching binning factor reaches the
+    recorded picture -- never multiplying, and never using the crop as
+    given. This also corrects for a padded CSI buffer (a RAW16 ClearHDR
+    mode's own ``width``/``height`` may include buffer rows/columns the
+    crop excludes), which is why crop/binning is preferred over
+    ``fallback`` whenever both the crop and the binning factor are known.
+    A sensor that reports no crop at all (every stock sensor) falls back
+    to ``fallback`` (``width``/``height``) unchanged.
+    """
+    crop = mode.get(crop_key)
+    binning = mode.get(binning_key)
+    if crop is not None and isinstance(binning, (int, float)) and binning > 0:
+        return int(round(int(crop) / binning))
+    return int(fallback)
+
+
 @settings_editor_bp.route("/api/sensor-modes", methods=["GET"])
 def get_sensor_modes():
     """Return every currently detected driver mode for the dynamic mode table.
@@ -889,18 +910,19 @@ def get_sensor_modes():
         # native 3856x2180 array, so a 480-pixel left/right crop is actually
         # rendered centred. If geometry is unavailable (e.g. stock IMX477),
         # the diagram simply remains "geometry not reported".
+        #
+        # WP-CM-10: crop_width/crop_height is already the sensor-domain
+        # extent at any binning (see the domain contract in
+        # sensor_detect._mode_from_metadata_or_detected) -- use it as given,
+        # never multiplied by binning again.
         diagram_w = diagram_h = None
         for candidate in modes:
             if not SensorDetect._mode_is_full(candidate):
                 continue
             cw, ch = candidate.get("crop_width"), candidate.get("crop_height")
-            bx, by = SensorDetect._mode_binning(candidate)
-            if cw and ch and bx and by:
-                rw, rh = int(cw) * bx, int(ch) * by
-            elif cw and ch:
-                rw, rh = int(cw), int(ch)
-            else:
+            if not (cw and ch):
                 continue
+            rw, rh = int(cw), int(ch)
             if diagram_w is None or rw * rh > diagram_w * diagram_h:
                 diagram_w, diagram_h = rw, rh
 
@@ -913,10 +935,16 @@ def get_sensor_modes():
             entries.append({
                 "width": width,
                 "height": height,
-                # RAW16 ClearHDR modes may advertise a padded CSI buffer
-                # height. The editor presents the active recording crop.
-                "active_width": int(mode.get("crop_width") or width),
-                "active_height": int(mode.get("crop_height") or height),
+                # The recorded picture (WP-CM-10): crop_width/crop_height is
+                # the sensor-domain readout window, so dividing it by binning
+                # -- not multiplying it -- reaches the recorded picture. This
+                # still differs from width/height for a padded CSI buffer
+                # (RAW16 ClearHDR modes may advertise extra buffer rows the
+                # driver's crop excludes), which is why crop/binning is
+                # preferred over width/height whenever both crop and binning
+                # are known.
+                "active_width": _active_dimension(mode, "crop_width", "binning_x", width),
+                "active_height": _active_dimension(mode, "crop_height", "binning_y", height),
                 "bit_depth": depth,
                 "aspect": round(float(mode.get("aspect") or (width / height)), 3),
                 "hdr": bool(mode.get("hdr", False)),

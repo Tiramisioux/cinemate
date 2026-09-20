@@ -483,6 +483,17 @@ class SensorDetect:
             # geometry comes directly from cinepi-raw --list-cameras; binning
             # is parsed from the driver's mode description and is never
             # reconstructed from output dimensions.
+            #
+            # Domain contract (WP-CM-10): crop_x/crop_y/crop_width/crop_height
+            # is the sensor-side readout window, in native sensor coordinates
+            # -- this is what V4L2_SEL_TGT_CROP reports and what libcamera
+            # requires (WP-585-1). The recorded picture is width/height;
+            # binning is the ratio between the two (crop / binning ==
+            # width/height for a binned mode). Never multiply crop_* by
+            # binning to "reach" the sensor domain -- it is already there.
+            # A sensor that reports no crop at all (every stock sensor today)
+            # leaves these None, which every reader must keep treating as
+            # unknown geometry, not as a zero-size or full-frame crop.
             "crop_x": extra.get("crop_x"),
             "crop_y": extra.get("crop_y"),
             "crop_width": extra.get("crop_width"),
@@ -833,9 +844,14 @@ class SensorDetect:
 
         A missing crop annotation is deliberately *unknown*, not full frame.
         This matters for stock drivers such as IMX477 which do not expose the
-        optional geometry metadata. For binned modes, the crop is expressed in
-        the binned output domain, so a zero-origin crop is the full active
-        window even though it is smaller than the native sensor dimensions.
+        optional geometry metadata.
+
+        WP-CM-10: crop_x/crop_y/crop_width/crop_height is always the sensor-
+        side readout window in native sensor coordinates (see the contract
+        comment in _mode_from_metadata_or_detected), at any binning. A
+        zero-origin crop is compared to the native array directly -- it is
+        never multiplied by binning to "reach" the sensor domain, because it
+        is already expressed there.
         """
         cw, ch = mode.get("crop_width"), mode.get("crop_height")
         if cw is None or ch is None:
@@ -847,24 +863,26 @@ class SensorDetect:
             return False
 
         bx, by = cls._mode_binning(mode)
+        sw, sh = mode.get("sensor_width"), mode.get("sensor_height")
         if bx is not None and by is not None:
-            sw, sh = mode.get("sensor_width"), mode.get("sensor_height")
             if sw and sh:
                 # Permit the small optical-black/native-array margins present
-                # on sensors such as IMX585 (3856x2180 native, 3840x2160 active).
-                active_w = int(cw) * bx
-                active_h = int(ch) * by
+                # on sensors such as IMX585 (3856x2180 native, 3840x2160
+                # active). The crop is already in sensor coordinates, so
+                # this compares it to the native array directly -- no
+                # binning multiplication.
+                active_w, active_h = int(cw), int(ch)
                 native_w, native_h = int(sw), int(sh)
                 return (
                     active_w <= native_w and active_h <= native_h and
                     native_w - active_w <= max(32, bx * 16) and
                     native_h - active_h <= max(32, by * 16)
                 )
-            # No native dimensions, but the driver explicitly says zero-origin
-            # and gives binning: treat it as a full sensor window.
+            # No native dimensions, but the driver explicitly says
+            # zero-origin and gives binning: treat it as a full sensor
+            # window.
             return True
 
-        sw, sh = mode.get("sensor_width"), mode.get("sensor_height")
         if sw and sh:
             return int(cw) == int(sw) and int(ch) == int(sh)
 

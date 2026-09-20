@@ -86,10 +86,32 @@ class MergedClientShapeTests(unittest.TestCase):
         # destroy the row the batch is currently writing progress into.
         self.assertEqual(body.count("refreshSuppressed = false;"), 2)  # success + failure arm
 
-    def test_bulk_button_disables_only_on_the_non_picker_fallback(self):
+    def test_bulk_button_no_longer_disables_on_the_non_picker_fallback(self):
+        # fix/raw-pane-bulk-download: a combined-zip endpoint
+        # (/api/raw/download) replaced the old "not supported yet"
+        # disablement -- more than one selected take now downloads
+        # everywhere, not only with a folder picker, so the button must
+        # never be disabled for that reason any more.
         m = re.search(r"function updateBulkBar\(\).*?\n  \}", self.html, re.S)
         self.assertIsNotNone(m)
-        self.assertIn("!CAN_PICK_FOLDER && names.length > 1", m.group(0))
+        body = m.group(0)
+        self.assertNotIn("bulkDownloadBtn.disabled", body)
+        self.assertNotIn("tooManyForDownload", body)
+
+    def test_bulk_download_click_handler_no_longer_bails_without_a_picker(self):
+        # The no-picker branch used to `return` and do nothing for more than
+        # one selected take -- the operator's actual bug report ("Download
+        # selected not working"). It must now reach the combined-zip route.
+        m = re.search(
+            r"document\.getElementById\('bulkDownload'\)\.addEventListener\('click', function\(\).*?\n  \}\);",
+            self.html, re.S,
+        )
+        self.assertIsNotNone(m, "bulkDownload click handler not found")
+        body = m.group(0)
+        self.assertNotIn("if (!CAN_PICK_FOLDER) { return; }", body)
+        self.assertIn("if (!CAN_PICK_FOLDER) {", body)
+        self.assertIn("bulkTakeDownloadUrl(", body)
+        self.assertIn("downloadViaAnchor(", body)
 
     def test_the_footer_does_not_send_operators_to_a_switch_that_is_not_there(self):
         # It used to name two different reasons for the missing picker, one of

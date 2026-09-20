@@ -96,6 +96,59 @@ class StreamTakeZipRoundTripTests(RawFilesFixture):
             )
 
 
+class StreamTakesZipMultiTests(RawFilesFixture):
+    """W-raw-bulk-download: stream_take_zip(path) generalised to
+    stream_takes_zip(paths), one top-level folder per take."""
+
+    def setUp(self):
+        super().setUp()
+        self.other_name = "A001_20260101_130000"
+        self.other_dir = self.raw_root / self.other_name
+        self.other_dir.mkdir()
+        self.other_frame_names = ["f000001.dng", "f000002.dng", "clip.wav"]
+        for n in self.other_frame_names:
+            (self.other_dir / n).write_bytes(b"other-fake-bytes-" + n.encode())
+
+    def test_two_takes_land_under_two_top_level_folders(self):
+        data = b"".join(raw_files.stream_takes_zip([self.take_dir, self.other_dir]))
+        zf = zipfile.ZipFile(io.BytesIO(data))
+        self.assertIsNone(zf.testzip())
+        names = sorted(zf.namelist())
+        expected = sorted(
+            [f"{self.take_name}/{n}" for n in self.frame_names]
+            + [f"{self.other_name}/{n}" for n in self.other_frame_names]
+        )
+        self.assertEqual(names, expected)
+        # Same file basename (f000001.dng) under both takes must not
+        # collide or overwrite one another -- that is the entire point of
+        # the per-take top-level folder.
+        self.assertEqual(
+            zf.read(f"{self.take_name}/f000001.dng"),
+            (self.take_dir / "f000001.dng").read_bytes(),
+        )
+        self.assertEqual(
+            zf.read(f"{self.other_name}/f000001.dng"),
+            (self.other_dir / "f000001.dng").read_bytes(),
+        )
+
+    def test_single_element_wrapper_still_matches_the_multi_generator(self):
+        single = b"".join(raw_files.stream_take_zip(self.take_dir))
+        wrapped = b"".join(raw_files.stream_takes_zip([self.take_dir]))
+        self.assertEqual(single, wrapped)
+
+
+class TakeNameCannotContainAComma(RawFilesFixture):
+    """The multi-download route (GET /api/raw/download?names=a,b) splits
+    the query value on ','. That is only safe because a take directory name
+    can never contain one -- storage-automount.py/simple_gui.py mint it as
+    CINEPI_<date>_<time>_F<fps>_C<counter>[...], never from free-form
+    operator text."""
+
+    def test_realistic_take_names_contain_no_comma(self):
+        for name in (self.take_name, "CINEPI_25-07-01_220547_F10_C00000_cam1"):
+            self.assertNotIn(",", name)
+
+
 class RecordingInterlockTests(RawFilesFixture):
     def _recording_app(self):
         return make_app(redis_values={
@@ -236,6 +289,94 @@ class PerFileRouteTests(RawFilesFixture):
             f"/settings-editor/api/raw/takes/{self.take_name}/files/{self.frame_names[0]}"
         )
         self.assertEqual(res.status_code, 200)
+
+
+class BulkDownloadRouteTests(RawFilesFixture):
+    """GET /api/raw/download -- the combined-zip sibling of the per-take
+    download route, added so the bulk bar's "Download selected" works with
+    more than one take on every browser, not only Chrome-over-HTTPS with a
+    folder picker."""
+
+    def setUp(self):
+        super().setUp()
+        self.other_name = "A001_20260101_130000"
+        self.other_dir = self.raw_root / self.other_name
+        self.other_dir.mkdir()
+        (self.other_dir / "f000001.dng").write_bytes(b"other-fake-bytes")
+
+    def test_no_names_is_400(self):
+        app = make_app()
+        res = app.test_client().get("/settings-editor/api/raw/download")
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(res.get_json()["ok"])
+
+    def test_two_takes_download_as_one_zip_with_both_folders(self):
+        app = make_app()
+        res = app.test_client().get(
+            "/settings-editor/api/raw/download",
+            query_string={"names": f"{self.take_name},{self.other_name}"},
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.mimetype, "application/zip")
+        zf = zipfile.ZipFile(io.BytesIO(res.get_data()))
+        self.assertIsNone(zf.testzip())
+        names = sorted(zf.namelist())
+        expected = sorted(
+            [f"{self.take_name}/{n}" for n in self.frame_names]
+            + [f"{self.other_name}/f000001.dng"]
+        )
+        self.assertEqual(names, expected)
+
+    def test_one_missing_name_is_404_and_names_the_missing_take(self):
+        app = make_app()
+        res = app.test_client().get(
+            "/settings-editor/api/raw/download",
+            query_string={"names": f"{self.take_name},definitely-not-a-take"},
+        )
+        self.assertEqual(res.status_code, 404)
+        body = res.get_json()
+        self.assertFalse(body["ok"])
+        self.assertIn("definitely-not-a-take", body["message"])
+
+    def test_recording_take_in_selection_is_409_whole_request(self):
+        app = Flask(__name__)
+        app.testing = True
+        app.config["REDIS_CONTROLLER"] = FakeRedis({
+            ParameterKey.IS_RECORDING.value: "1",
+            ParameterKey.LAST_DNG_CAM0.value: str(self.take_dir / self.frame_names[0]),
+        })
+        app.config["SETTINGS"] = {}
+        app.register_blueprint(settings_editor_bp)
+        res = app.test_client().get(
+            "/settings-editor/api/raw/download",
+            query_string={"names": f"{self.take_name},{self.other_name}"},
+        )
+        self.assertEqual(res.status_code, 409)
+        self.assertEqual(res.get_json()["recording"], [self.take_name])
+
+    def test_head_does_not_leak_a_permit(self):
+        # Same HEAD-never-iterates-the-generator hazard as the single-take
+        # route's test -- guarded_stream()'s `finally` never runs for a HEAD
+        # response, so call_on_close() is the only release path exercised
+        # here.
+        app = make_app()
+        url = "/settings-editor/api/raw/download"
+        qs = f"names={self.take_name},{self.other_name}"
+        with app.test_client() as c:
+            with c.head(f"{url}?{qs}") as r1:
+                self.assertEqual(r1.status_code, 200)
+            with c.head(f"{url}?{qs}") as r2:
+                self.assertEqual(r2.status_code, 200)
+
+        got = []
+        try:
+            got.append(raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False))
+            got.append(raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False))
+        finally:
+            for ok in got:
+                if ok:
+                    raw_files.DOWNLOAD_SEMAPHORE.release()
+        self.assertEqual(got, [True, True])
 
 
 class ManifestTests(RawFilesFixture):

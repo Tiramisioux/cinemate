@@ -168,7 +168,7 @@ settings that describe it.
 - **Download** — streams a zip of the take. Only one download runs at a time server-wide; a second attempt is told to wait. On a Chromium browser over a secure context (HTTPS, or localhost) it can write straight into a folder you pick; elsewhere it's a normal browser download.
 - **Delete** — asks for confirmation, and is refused while that take is actively being written to.
 
-Checking takes and using **Download selected** / **Delete selected** applies the same actions to the whole selection. Bulk delete refuses the entire request (not a partial delete) if any selected take is currently recording. Downloading more than one take at once needs the folder-picker path above.
+Checking takes and using **Download selected** / **Delete selected** applies the same actions to the whole selection. Bulk delete refuses the entire request (not a partial delete) if any selected take is currently recording. **Download selected** with more than one take produces a single zip with each take in its own top-level folder — on a Chromium browser over a secure context it writes straight into a picked folder like the per-take download does; everywhere else (plain HTTP, the hotspot, mDNS, Safari, every phone) it's one combined zip as a normal browser download. Refusal/wait rules match the per-take download above.
 
 ## Playback tab
 

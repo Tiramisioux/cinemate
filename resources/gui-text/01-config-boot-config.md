@@ -51,10 +51,6 @@ CSI-2 lane rate on cam1 — sets the frame-rate ceiling.
 
 Anything above the default needs the RP1 overclock; without it the RP1 caps out near 43.8 fps at 4K whatever the sensor sends.
 
-### Detected modes
-<!-- key: card.bootconfig.5 -->
-
-What `cinepi-raw --list-cameras` reports for the sensor attached
 ### I²C bus
 <!-- key: card.bootconfig.6 -->
 

@@ -53,17 +53,7 @@ Preview desqueeze factors available on the anamorphic control. No pot or free st
 ## Resolution & sensor
 <!-- key: pane.resolution -->
 
-Which resolutions and bit depths are offered, and the startup values for imx585 ClearHDR.
-
-### Resolutions offered
-<!-- key: card.resolution.0 -->
-
-Which resolutions (in "K") the resolution control offers. Turning one off hides every mode at that size; a size this sensor has no mode for stays hidden either way.
-
-### Bit depths offered
-<!-- key: card.resolution.1 -->
-
-Which raw capture bit depths the resolution control offers. 16‑bit is imx585 ClearHDR only.
+Automatic resolution behaviour, ClearHDR's startup knobs, DNG thumbnails and the active sensor database. Which driver modes are offered is now chosen per camera, from the recording-mode table on each Camera pane.
 
 ### Dynamic resolution
 <!-- key: card.image_capture.dynamic_resolution -->
@@ -76,21 +66,6 @@ When the requested frame rate is higher than the selected mode can sustain, drop
 **Follow mode** holds the class and drops resolution first: 16‑bit 4K, then 16‑bit HD, then 4K SDR, then HD SDR. 
 **Follow resolution** holds the frame size and drops the class first: 16‑bit 4K, then 4K SDR, then HD SDR. 
 **Never leave the mode** – resolution is the only thing that changes.
-
-### Expose plain (SDR) modes
-<!-- key: card.image_capture.hdr.sdr -->
-
-Show the sensor's non‑HDR modes on the resolution control.
-
-### Enable IMX585 ClearHDR 12‑bit
-<!-- key: card.image_capture.hdr.imx585_clear_hdr_12bit -->
-
-The companded ClearHDR capture — cinepi‑raw applies the CCMP decompand. **Resolutions** above decides the sizes. **ISO is capped at 799, and held while recording.** Off by default.
-
-### Enable IMX585 ClearHDR 16‑bit
-<!-- key: card.image_capture.hdr.imx585_clear_hdr_16bit -->
-
-The sensor's single‑frame HDR, linear, no compander in the path. **Resolutions** above decides the sizes, as for 12‑bit. **ISO is capped at 1585, and held while recording.**
 
 ### ClearHDR startup knobs
 <!-- key: card.image_capture.hdr.threshold_low -->
@@ -112,14 +87,3 @@ Disable to slightly increase write speed and reduce cpu load during recording (d
 <!-- key: card.sensors.database_file -->
 
 Source file describing every supported sensor's modes. Edit only if you're adding hardware support.
-
----
-
-## Per-mode fps ceilings
-<!-- key: pane.fpsceilings -->
-
-If you are making your own test on what your storage can sustain, these values can be added here. Defaults are what `cinepi-raw --list-cameras` reported on this board,
-### (help text not attached to a card)
-<!-- key: help.fpsceilings.0 -->
-
-Loading detected modes…

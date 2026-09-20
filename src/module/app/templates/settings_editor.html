@@ -2748,6 +2748,22 @@
       .catch(function(err){ return { ok: false, body: err.message }; });
   }
 
+  /* ---------- /settings-editor/api/power -- restart CineMate, reboot, or
+     shut down the Pi. NOT apiCmd()/api/v1/cmd: that route only answers
+     reboot/shutdown when system.web_api.allow_destructive is true, which a
+     stock settings.jsonc ships false, so every power button here used to
+     toast "err blocked" on an unmodified camera. This blueprint route
+     answers independently of that setting, the same as saveConfigTxt()
+     already does for a config.txt reboot. */
+  function powerAction(action){
+    return fetch('/settings-editor/api/power', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action })
+    }).then(function(res){
+      return res.json().then(function(body){ return { ok: res.ok && !!body.ok, message: body.message || '' }; });
+    }).catch(function(err){ return { ok: false, message: err.message }; });
+  }
+
   function refreshLiveViewLauncher(){
     var launcher=document.getElementById('cinepiLiveLauncher');
     if(!launcher) return;
@@ -6926,14 +6942,15 @@
   var consoleEl = document.getElementById('console');
   restartBtn.addEventListener('click', function(){
     // F-291: this used to only play an animation and never ask the backend to
-    // restart anything. The restart is real, gated on a successful
-    // /api/v1/cmd call, and the console now reports the camera actually
-    // coming back rather than a scripted sequence.
+    // restart anything. The restart is real, gated on a successful dispatch,
+    // and the console now reports the camera actually coming back rather
+    // than a scripted sequence. powerAction(), not apiCmd(): see its comment
+    // above -- /api/v1/cmd refuses this on a stock camera.
     restartBtn.disabled = true;
-    apiCmd('restart cinemate').then(function(result){
+    powerAction('restart_cinemate').then(function(result){
       if (!result.ok) {
         restartBtn.disabled = false;
-        showToast('Restart failed: ' + (result.body || 'unknown error'));
+        showToast('Restart failed: ' + (result.message || 'unknown error'));
         return;
       }
       runBootSequence({
@@ -6988,14 +7005,15 @@
   /* Reboot for any other reason: this one must NOT write config.txt. It used
      to scroll to the boot-config card and click it, which meant "Reboot Pi"
      silently carried whatever unsaved edits that page happened to be holding
-     -- and, because that button wrote nothing either, actually did neither. */
+     -- and, because that button wrote nothing either, actually did neither.
+     powerAction(), not apiCmd(): see its comment above. */
   document.getElementById('genericRebootBtn').addEventListener('click', function(){
     var btn = document.getElementById('genericRebootBtn');
     btn.disabled = true;
-    apiCmd('reboot').then(function(result){
+    powerAction('reboot').then(function(result){
       if (!result.ok){
         btn.disabled = false;
-        showToast('Reboot failed: ' + (result.body || 'unknown error'));
+        showToast('Reboot failed: ' + (result.message || 'unknown error'));
         return;
       }
       runBootSequence({
@@ -7007,6 +7025,114 @@
         doneToast: 'Pi is back up'
       });
     });
+  });
+
+  /* ---------- config.txt pane: the same three actions, reusing this pane's
+     own status line/console (cfgStatusDot/cfgStatusText/cfgConsoleEl) rather
+     than adding a second set of DOM ids -- same pattern genericRebootBtn
+     above uses against the System pane's statusDot/statusText/consoleEl.
+     None of the three writes config.txt; that stays cfgRebootBtn's job
+     (saveConfigTxt() above). ---------- */
+  document.getElementById('cfgRestartBtn').addEventListener('click', function(){
+    var btn = document.getElementById('cfgRestartBtn');
+    btn.disabled = true;
+    powerAction('restart_cinemate').then(function(result){
+      if (!result.ok){
+        btn.disabled = false;
+        showToast('Restart failed: ' + (result.message || 'unknown error'));
+        return;
+      }
+      runBootSequence({
+        btn: btn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl,
+        waitText: 'waiting for the camera to answer again…',
+        busyText: 'Restarting CineMate — <b class="din">please wait</b>',
+        readyText: 'config.txt matches the running Pi — <b class="din">READY</b>',
+        doneToast: 'CineMate is back up'
+      });
+    });
+  });
+  document.getElementById('cfgGenericRebootBtn').addEventListener('click', function(){
+    var btn = document.getElementById('cfgGenericRebootBtn');
+    btn.disabled = true;
+    powerAction('reboot').then(function(result){
+      if (!result.ok){
+        btn.disabled = false;
+        showToast('Reboot failed: ' + (result.message || 'unknown error'));
+        return;
+      }
+      runBootSequence({
+        btn: btn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl,
+        waitText: 'waiting for the Pi to come back…',
+        settleMs: 12000, timeoutMs: 180000,
+        busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
+        readyText: 'config.txt matches the running Pi — <b class="din">READY</b>',
+        doneToast: 'Pi is back up'
+      });
+    });
+  });
+
+  /* ---------- shutdown: no "back up" to wait for, so this never calls
+     runBootSequence(). Unlike a restart or reboot, the whole point is that
+     the Pi stays off until someone at the rig flips power, so polling
+     /api/v1/hello and finishing on READY would report the opposite of what
+     just happened -- the same reasoning runBootSequence()'s own timeout
+     branch documents for a reboot that never answers. */
+  function runShutdownSequence(opts){
+    opts.btn.disabled = true;
+    opts.dot.classList.add('restarting');
+    opts.text.innerHTML = 'Shutting down — safe to cut power in about 20 s';
+    opts.consoleEl.classList.add('open');
+    function say(text, cls){ appendLogLine(opts.consoleEl, text, cls); }
+    say('shutdown requested');
+    var waited = 0;
+    var ticker = setInterval(function(){
+      waited += 5;
+      if (waited >= 20){
+        clearInterval(ticker);
+        opts.dot.classList.remove('restarting');
+        say('power can be removed', 'tag-ok');
+        return;
+      }
+      say('shutting down — ' + waited + ' s', 'tag-warn');
+    }, 5000);
+  }
+  document.getElementById('systemShutdownBtn').addEventListener('click', function(){
+    var btn = document.getElementById('systemShutdownBtn');
+    showConfirm(
+      'Shut down the Pi? Only someone at the rig can power it back on.',
+      function(){
+        btn.disabled = true;
+        powerAction('shutdown').then(function(result){
+          if (!result.ok){
+            btn.disabled = false;
+            showToast('Shutdown failed: ' + (result.message || 'unknown error'));
+            return;
+          }
+          runShutdownSequence({ btn: btn, dot: statusDot, text: statusText, consoleEl: consoleEl });
+        });
+      },
+      null,
+      { title: 'Shut down the Pi?', okLabel: 'Shut down', danger: true }
+    );
+  });
+  document.getElementById('cfgShutdownBtn').addEventListener('click', function(){
+    var btn = document.getElementById('cfgShutdownBtn');
+    showConfirm(
+      'Shut down the Pi? Only someone at the rig can power it back on.',
+      function(){
+        btn.disabled = true;
+        powerAction('shutdown').then(function(result){
+          if (!result.ok){
+            btn.disabled = false;
+            showToast('Shutdown failed: ' + (result.message || 'unknown error'));
+            return;
+          }
+          runShutdownSequence({ btn: btn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl });
+        });
+      },
+      null,
+      { title: 'Shut down the Pi?', okLabel: 'Shut down', danger: true }
+    );
   });
 
   var styleTag = document.createElement('style');

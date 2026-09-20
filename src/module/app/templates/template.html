@@ -2423,10 +2423,37 @@
     //    error until frames actually flow again. `load` fires on the first
     //    MJPEG frame; `error` re-arms the next attempt, so a dead server
     //    costs one request a second until it's back.
+    //
+    // Two timers, not one -- measured in Chromium against a deliberately
+    // silent MJPEG server (cinemate-handbook/working/browser-side-traps.md,
+    // "An identical-URL src reset issues no request"). Setting img.src back
+    // to the SAME URL in the same task as removeAttribute('src') does not
+    // issue a network request at all: the browser joins the still-pending
+    // request instead of opening a new one. That is exactly the
+    // accepted-and-silent case every signal below exists to recover from,
+    // so the old single-callback version reconnected nothing -- it re-armed
+    // the watchdog on a request that was never sent. Dropping src DOES abort
+    // the pending request, but only once the removal has been processed, so
+    // the re-request has to happen in a LATER task for the abort to have
+    // taken effect; a bare next-task deferral only recovered about two
+    // thirds of the time in the same measurement, 250ms is what measured
+    // clean. Timer A tears the connection down; timer B, a separate
+    // setTimeout callback STREAM_RELOAD_SETTLE_MS later, re-requests.
+    // streamReloadPending() is true while either timer is outstanding, and
+    // every other "is a reload already under way?" check (the naturalWidth
+    // sweep, the visibility check) must consult it -- a request arriving
+    // during the settle gap must not fire a second teardown into it, or it
+    // cancels the very re-request it was waiting for.
+    const STREAM_RELOAD_SETTLE_MS = 250;
+    function streamReloadPending(img) {
+        return img._reloadTimerA != null || img._reloadTimerB != null;
+    }
     function scheduleStreamReload(img, delay) {
-        clearTimeout(img._reloadTimer);
-        img._reloadTimer = setTimeout(() => {
-            img._reloadTimer = null;
+        clearTimeout(img._reloadTimerA);
+        clearTimeout(img._reloadTimerB);
+        img._reloadTimerB = null;
+        img._reloadTimerA = setTimeout(() => {
+            img._reloadTimerA = null;
             if (img.classList.contains('hidden')) { return; }
             // NO query string. cinepi-raw's MJPEG server matches the raw
             // request-target against the one topic it publishes ("/stream"):
@@ -2439,9 +2466,6 @@
             // with a permanent 404 (cinepi-raw deliberately keeps the listener
             // alive across a camera reconfigure, so the old connection would
             // have survived on its own).
-            //
-            // Dropping src first is what makes the browser re-request an
-            // identical URL -- which is the reason the cache-buster was there.
             img.removeAttribute('src');
             // This connection has produced nothing yet, whatever the last one
             // managed. Without clearing the flag the watchdog below declines
@@ -2449,8 +2473,12 @@
             // coming up after a restart, which is exactly when reloadStreams()
             // runs -- has nothing watching it and stays black.
             img._gotFrame = false;
-            img.src = img.dataset.streamBase;
-            armStreamWatchdog(img);
+            img._reloadTimerB = setTimeout(() => {
+                img._reloadTimerB = null;
+                if (img.classList.contains('hidden')) { return; }
+                img.src = img.dataset.streamBase;
+                armStreamWatchdog(img);
+            }, STREAM_RELOAD_SETTLE_MS);
         }, delay);
     }
 
@@ -2501,8 +2529,10 @@
             img._gotFrame = true;
             clearTimeout(img._watchTimer);
             img._watchTimer = null;
-            clearTimeout(img._reloadTimer);
-            img._reloadTimer = null;
+            clearTimeout(img._reloadTimerA);
+            img._reloadTimerA = null;
+            clearTimeout(img._reloadTimerB);
+            img._reloadTimerB = null;
         });
     });
     // Watchdog for the case neither `error` nor `reload_stream` catches: a
@@ -2510,13 +2540,37 @@
     // orphaned process squatting on :8000 does exactly that (see the
     // port-collision note in the docs) and the page would sit black forever
     // with no event ever firing. While the image is visible and has no
-    // decoded frame, keep re-issuing the request.
-    setInterval(() => {
+    // decoded frame and no reload already under way, keep re-issuing the
+    // request. One function, called from the 4s sweep and from a tab
+    // regaining visibility (see below), so the two checks cannot drift
+    // apart into two different ideas of "dead".
+    function sweepDeadStreams() {
         [$('stream'), $('stream-cam1')].forEach((img) => {
             if (!img || img.classList.contains('hidden') || !img.dataset.streamBase) { return; }
-            if (img.naturalWidth === 0 && img._reloadTimer == null) { scheduleStreamReload(img, 0); }
+            if (img.naturalWidth === 0 && !streamReloadPending(img)) { scheduleStreamReload(img, 0); }
         });
-    }, 4000);
+    }
+    setInterval(sweepDeadStreams, 4000);
+
+    // Back-forward cache: a page pulled from bfcache resumes exactly the
+    // JavaScript state it was frozen with, including an <img> whose MJPEG
+    // connection the browser (and cinepi-raw, on the other end) tore down
+    // while the page was frozen -- no event on the <img> itself ever fires
+    // for this, so it is invisible to every signal above.
+    // event.persisted is what distinguishes a restore from a fresh
+    // navigation (which already gets a live src from the template).
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) { reloadStreams(); }
+    });
+    // A backgrounded tab can miss reload_stream outright (see the comment
+    // above noteResolutionSwitching -- same failure, different signal), and
+    // a background tab's timers are throttled or paused, so the 4s sweep
+    // above may not have run either. Check once, immediately, the moment
+    // the tab is visible again instead of waiting up to 4s for the next
+    // scheduled sweep.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') { sweepDeadStreams(); }
+    });
 
     // ── bindings ──────────────────────────────────────────────────────
     // A locked parameter's setter drops the write and still answers 200

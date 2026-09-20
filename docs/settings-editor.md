@@ -59,7 +59,7 @@ The left rail groups the same fields `settings.jsonc` holds, unchanged in meanin
 | Exposure & steps | Value steps (click-stops per control) · Resolution & sensor (dynamic resolution and its priority, ClearHDR startup values, DNG thumbnails, the active sensor database) |
 | Recording | Audio (input gain, timecode alignment per bit depth) · HDMI & preview (monitor overlay, dual-feed framing) |
 | Physical controls | Buttons & switches (GPIO in) · Grove HAT potentiometers · Quad rotary encoder · Rec tally & GPIO out · OLED status display |
-| System | Restart CineMate |
+| System | Restart CineMate · Reboot Pi · Shut down Pi |
 
 Editing anything marks the page dirty (the header shows an "N unsaved" pill) but touches nothing on disk until you click **Save changes**.
 
@@ -82,7 +82,9 @@ Clicking **Save changes** on this tab:
 
 3. Restarts CineMate automatically to apply the new file — the same effect as the CLI's `restart cinemate`, not a reboot. Recording stops if one is in progress.
 
-You can also apply a save-in-place, or just restart with nothing pending, from **System → Restart CineMate**.
+You can also apply a save-in-place, or just restart with nothing pending, from **System → Restart CineMate**. The same pane's danger zone adds **Reboot Pi** and **Shut down Pi** for when CineMate itself is fine but the Pi needs a full restart or powering off — neither writes `config.txt`. Shut down Pi asks you to confirm first: once it answers, the Pi is on its way down and only someone at the rig can power it back on, so the page does not poll for it to come back the way a restart or reboot does.
+
+All three post to the settings editor's own `POST /settings-editor/api/power` route, not the general web API's `POST /api/v1/cmd` — that route refuses `reboot` and `shutdown` unless `system.web_api.allow_destructive` is turned on in `settings.jsonc`, which it is not by default (see [Web API](web-api.md)). The settings editor already performs other destructive actions (formatting a drive, deleting a take) without that switch, so these three buttons work on an unmodified camera the same way those do.
 
 The console under **Restart CineMate** is a live tail of the camera's own `system.log`, so runtime
 messages appear there as they happen — not only around a restart. It reconnects by itself, which is
@@ -105,6 +107,8 @@ back, so the restart appears in the log as the camera's own output.
     Double-check the change before saving, especially sensor overlay and link-frequency picks. Consider making config.txt edits through the recovery console instead when you want the safety net.
 
 Everything here needs a full reboot to take effect — restarting CineMate alone never picks up a `config.txt` change. The page shows the detected sensor modes for whatever is actually attached right now, separately from the overlay picks above them (those apply only after the reboot). CineMate only manages its own fenced block; anything you add to the file outside it survives updates and is untouched by this page.
+
+Below the **Save & reboot Pi** card sits a second, separate row: **Restart CineMate**, **Reboot Pi** and **Shut down Pi**. These are the same three actions as the System pane's, placed here too so you don't have to leave this tab to reach them — none of the three saves or writes `config.txt`; that stays **Save & reboot Pi**'s job alone, and Reboot Pi here ignores any unsaved edits on this page the same way the System pane's does.
 
 ## i2c tab
 

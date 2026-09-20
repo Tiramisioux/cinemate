@@ -3221,23 +3221,31 @@ class CinePiController:
             return False
         return True
 
-    def can_reboot(self) -> bool:
-        """Whether `systemctl reboot` would actually be permitted, without
+    def can_power(self, verb: str) -> bool:
+        """Whether `systemctl <verb>` would actually be permitted, without
         running it.
 
         `sudo -l <command>` asks the sudoers policy about one command and
         answers without executing it; `-n` keeps it from prompting. This is
         what lets the settings editor say "saved, reboot it yourself" instead
-        of animating a reboot that sudo is about to refuse.
+        of animating a reboot that sudo is about to refuse -- originally
+        reboot-only (can_reboot(), below), generalised so the settings
+        editor's shutdown button can ask the same question about `poweroff`
+        rather than assuming its grant follows reboot's.
         """
         try:
             result = subprocess.run(
-                ["sudo", "-n", "-l", "/usr/bin/systemctl", "reboot"],
+                ["sudo", "-n", "-l", "/usr/bin/systemctl", verb],
                 capture_output=True, text=True, timeout=5, check=False,
             )
         except (OSError, subprocess.TimeoutExpired):
             return False
         return result.returncode == 0
+
+    def can_reboot(self) -> bool:
+        """Thin wrapper over can_power("reboot") -- kept as its own method
+        because put_config_txt() and this file's tests pin the name."""
+        return self.can_power("reboot")
 
     def reboot(self) -> bool:
         return self._power_command("reboot", "reboot")

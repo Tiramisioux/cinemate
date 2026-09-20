@@ -758,6 +758,66 @@ def put_config_txt():
     return jsonify({"ok": True, "message": message, "rebooting": rebooting})
 
 
+@settings_editor_bp.route("/api/power", methods=["POST"])
+def power_action():
+    """Restart CineMate, reboot, or shut down the Pi -- from the settings
+    editor's own blueprint, separate from POST /api/v1/cmd.
+
+    /api/v1/cmd answers `reboot`/`shutdown` only when
+    `system.web_api.allow_destructive` is true in settings.jsonc, which
+    ships false by default (see docs/web-api.md for why that switch
+    exists). The settings editor is a different surface -- it already
+    formats drives and deletes takes through this same blueprint, and
+    put_config_txt() above already reboots directly from here -- so this
+    route answers the same way those do, independent of that switch.
+    """
+    body = request.get_json(silent=True)
+    action = body.get("action") if isinstance(body, dict) else None
+    if action not in ("restart_cinemate", "reboot", "shutdown"):
+        return jsonify({
+            "ok": False,
+            "message": "action must be one of: restart_cinemate, reboot, shutdown",
+        }), 400
+
+    cinepi_controller = current_app.config.get("CINEPI_CONTROLLER")
+    if cinepi_controller is None:
+        return jsonify({
+            "ok": False,
+            "message": "No camera controller attached -- this needs to run on the Pi.",
+        }), 503
+
+    if action == "restart_cinemate":
+        # 0.4 s so this response lands before the restart tears the process
+        # down -- same shape as put_config_txt()'s reboot timer below.
+        timer = threading.Timer(0.4, cinepi_controller.restart_cinemate)
+        timer.daemon = True
+        timer.start()
+        return jsonify({"ok": True, "action": action, "scheduled": True})
+
+    if action == "reboot":
+        verb, method, gerund, phrase = "reboot", cinepi_controller.reboot, "reboot", "reboot it yourself"
+    else:
+        verb, method, gerund, phrase = "poweroff", cinepi_controller.safe_shutdown, "shut down", "shut it down yourself"
+
+    # Ask the sudoers policy first rather than assuming the grant -- the same
+    # reasoning put_config_txt() documents for `rebooting` above.
+    if not cinepi_controller.can_power(verb):
+        message = ("This Pi will not let CineMate %s itself: `systemctl %s` is "
+                   "not in its sudoers rule. Re-run cinemate-install.sh, or "
+                   "%s." % (gerund, verb, phrase))
+        logger.warning("%s refused: not permitted by sudoers", action)
+        return jsonify({"ok": False, "message": message}), 403
+
+    # _power_command() (cinepi_controller.py) stops an in-progress recording
+    # itself before running the verb -- documented behaviour (docs/web-api.md,
+    # "Recording stops if one is in progress"), so this route does not also
+    # refuse with 409 the way /api/raw/format does.
+    timer = threading.Timer(0.4, method)
+    timer.daemon = True
+    timer.start()
+    return jsonify({"ok": True, "action": action, "scheduled": True})
+
+
 @settings_editor_bp.route("/api/actions", methods=["GET"])
 def get_actions():
     cinepi_controller = current_app.config.get("CINEPI_CONTROLLER")

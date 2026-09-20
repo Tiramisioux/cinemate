@@ -498,17 +498,18 @@ Applies changes you already saved, and shows CineMate's live log.
 | Control | What it does |
 | --- | --- |
 | CineMate is running — READY | Fixed coloured-dot label, not a live health check: always READY, except "Restarting CineMate — please wait" during the animation. |
-| Restart CineMate | Real restart. Sends `restart cinemate` to the page API, the same dispatcher entry as the CLI and the default GPIO 13 double-click. systemd restarts `cinemate-autostart`, ~10 s per the page. Recording stops, page unresponsive until the service returns. On failure: "Restart failed" toast, nothing restarted. |
+| Restart CineMate | Real restart: posts to the settings editor's own `POST /settings-editor/api/power` (`restart_cinemate`), which schedules `CinePiController.restart_cinemate()` — the same method the CLI's `restart cinemate` and the default GPIO 13 double-click call, just not through their shared dispatcher. systemd restarts `cinemate-autostart`, ~10 s per the page. Recording stops, page unresponsive until the service returns. On failure: "Restart failed" toast, nothing restarted. |
 | Log console | A live tail of `system.log`, streamed over server-sent events and coloured with the same per-module and per-level palette the CineMate CLI uses. Always running, not only during a restart; a restart does not clear it, since the lines explaining why you restarted are usually the ones you want. Shows when the camera answers again after a restart. |
-| Reboot Pi | Real reboot, and only a reboot: it sends the `reboot` command through the same dispatcher as the CLI and the GPIO 13 triple-click, and does **not** write `config.txt` — unsaved edits on Boot config are left where they are. Recording stops first. The console reports the Pi answering again; allow about 25 seconds. On failure: "Reboot failed" toast, nothing rebooted. |
+| Reboot Pi | Real reboot, and only a reboot: same `/settings-editor/api/power` route (`reboot`), which does **not** write `config.txt` — unsaved edits on Boot config are left where they are. Recording stops first. The console reports the Pi answering again; allow about 25 seconds. On failure: "Reboot failed" toast, nothing rebooted. |
+| Shut down Pi | Powers the Pi off — the same route (`shutdown`). Asks you to confirm first. Once it answers, the Pi is on its way down; the console counts roughly 20 seconds and stops on "power can be removed" without polling for the Pi to come back, because it is not coming back on its own — only someone at the rig, by cutting and restoring power, can do that. Recording stops first. On failure: "Shutdown failed" toast, nothing powered off. |
 
 !!! warning "An older install may refuse to reboot itself"
 
-    CineMate runs as `pi`, so rebooting needs a sudoers grant — and until this release its
-    drop-in never had one. On a Pi whose distro `NOPASSWD` rule is still in place nothing
-    changes; where it had been removed, every reboot path failed silently. Re-run
-    `cinemate-install.sh` to add the grant. Both buttons now say so instead of animating a
-    reboot that will not happen.
+    CineMate runs as `pi`, so rebooting or shutting down needs a sudoers grant — and until
+    this release its drop-in never had one. On a Pi whose distro `NOPASSWD` rule is still in
+    place nothing changes; where it had been removed, every reboot path failed silently. Re-run
+    `cinemate-install.sh` to add the grant. Every reboot/shutdown button now says so instead of
+    animating an action that will not happen.
 
 
 !!! note "config.txt reboots itself"

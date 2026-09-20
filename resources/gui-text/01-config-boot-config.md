@@ -76,6 +76,11 @@ The Pi's own audio output. Leave off if you're only ever using USB mic input.
 
 Writes these choices into the managed block of `config.txt` and reboots.
 
+### (help text not attached to a card)
+<!-- key: help.bootconfig.1 -->
+
+Restart CineMate, reboot, or shut down the Pi without saving anything above — these three never touch `config.txt`.
+
 ### (note box)
 <!-- key: note.bootconfig.1 -->
 

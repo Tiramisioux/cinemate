@@ -21,6 +21,11 @@ Restarting applies any saved changes above and takes about 10 seconds. Recording
 
 A full reboot for any other reason.
 
+### (other text in this pane)
+<!-- key: text.system.1 -->
+
+Powers the Pi off completely. Only someone at the rig can turn it back on — this page will not reconnect on its own once it goes down.
+
 ### (note box)
 <!-- key: note.system.0 -->
 

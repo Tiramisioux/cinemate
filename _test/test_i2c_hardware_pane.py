@@ -43,7 +43,9 @@ class ProbeSafetyTests(unittest.TestCase):
         original = hardware_probe._smbus
         hardware_probe._smbus = lambda: None
         try:
-            self.assertFalse(hardware_probe._ack(1, 0x08))
+            ok, err = hardware_probe._ack(1, 0x08)
+            self.assertFalse(ok)
+            self.assertIsNone(err)
             devices = hardware_probe.detect_devices()
         finally:
             hardware_probe._smbus = original
@@ -53,13 +55,15 @@ class ProbeSafetyTests(unittest.TestCase):
     def test_a_refused_address_is_absence_not_an_error(self):
         class Bus:
             def __init__(self, _n): self.closed = False
-            def read_byte(self, _a): raise OSError("no ack")
+            def read_byte(self, _a): raise OSError(121, "no ack")
             def close(self): self.closed = True
 
         original = hardware_probe._smbus
         hardware_probe._smbus = lambda: types.SimpleNamespace(SMBus=Bus)
         try:
-            self.assertFalse(hardware_probe._ack(1, 0x08))
+            ok, err = hardware_probe._ack(1, 0x08)
+            self.assertFalse(ok)
+            self.assertEqual(err, 121)
         finally:
             hardware_probe._smbus = original
 
@@ -82,13 +86,21 @@ class ProbeSafetyTests(unittest.TestCase):
         self.assertEqual(len(opened), 1)
         self.assertTrue(opened[0].closed)
 
-    def test_probing_never_writes_to_the_bus(self):
+    def test_probing_never_writes_to_the_bus_except_the_documented_seesaw_read(self):
+        # Every bare-ACK device (grove, rtc, oled, cfe_hat) must still see no
+        # write at all. The quad rotary encoder is the one documented
+        # exception -- see hardware_probe's module docstring and
+        # _seesaw_present -- so this pins that it writes exactly the
+        # STATUS/HW_ID register address, once, and nothing else.
         writes = []
+        register_writes = []
 
         class Bus:
             def __init__(self, _n): pass
-            def read_byte(self, _a): return 0
+            def read_byte(self, _a): return 0x87  # a known seesaw hw id
             def write_byte(self, *a): writes.append(a)
+            def write_i2c_block_data(self, addr, register, data):
+                register_writes.append((addr, register, tuple(data)))
             def close(self): pass
 
         original = hardware_probe._smbus
@@ -98,6 +110,7 @@ class ProbeSafetyTests(unittest.TestCase):
         finally:
             hardware_probe._smbus = original
         self.assertEqual(writes, [])
+        self.assertEqual(register_writes, [(0x49, 0x00, (0x01,))])
 
 
 class AddressTableTests(unittest.TestCase):

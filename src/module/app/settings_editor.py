@@ -874,12 +874,20 @@ def get_sensor_modes():
         if isinstance(entries, list) and entries:
             return SensorDetect._mode_matches_enabled(mode, entries)
         # First visit of an old settings file: preserve its existing filters,
-        # but otherwise default to the explicitly known full/native modes.
+        # but otherwise default-select every mode unless the driver's own
+        # annotation marks it as a windowed (non-full) crop -- i.e. binning
+        # metadata is present and the mode is not the full active window.
+        # A mode with no crop/binning annotation at all, which is every stock
+        # sensor and today's imx283 native readouts, stays selected exactly
+        # as it is offered today, even when its crop origin is non-zero.
         if legacy_k and round((mode.get("width", 0) / 1000) * 2) / 2 not in legacy_k:
             return False
         if legacy_depths and mode.get("bit_depth") not in legacy_depths:
             return False
-        return SensorDetect._mode_is_full(mode) or mode.get("crop_width") is None
+        bx, by = SensorDetect._mode_binning(mode)
+        if bx is not None and by is not None and not SensorDetect._mode_is_full(mode):
+            return False
+        return True
 
     sensors = {}
     source = getattr(sensor_detect, "sensor_modes_unfiltered", {}) or {}

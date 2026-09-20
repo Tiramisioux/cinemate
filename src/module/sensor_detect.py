@@ -584,9 +584,20 @@ class SensorDetect:
                 continue
 
             # ── format / bit-depth (may share the line with a resolution)
-            fmt = re.search(r"'(?:SRGGB|R|GREY|Y)(\d+)", line)
+            # Accept any four-letter Bayer order (SRGGB, SBGGR, SGRBG,
+            # SGBRG, ...): libcamera's format name follows the Bayer order
+            # after any sensor flip, so depending on one fixed order is a
+            # latent trap. Keep the mono and packed spellings (R.../Y...).
+            fmt = re.search(r"'(?:S[RGB]{4}|R|GREY|Y)(\d+)", line)
             if fmt:
                 current_bit_depth = int(fmt.group(1))
+            elif "PISP_COMP1" in line:
+                # The compressed container carries no depth digits of its
+                # own; it is always a 16-bit format. Set it explicitly
+                # rather than falling through and silently keeping
+                # whatever bit depth the previous format in this block left
+                # behind.
+                current_bit_depth = 16
 
             # ── first resolution on the line (if any)
             res = re.search(r"(\d+)x(\d+)", line)

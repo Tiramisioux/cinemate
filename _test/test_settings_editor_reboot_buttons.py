@@ -1,7 +1,7 @@
-"""The two reboot buttons do something, rather than animating.
+"""The reboot/restart/shutdown buttons do something, rather than animating.
 
-Same defect F-291 fixed on Restart Cinemate, left in the two places where an
-operator has the most reason to believe a reboot happened:
+Same defect F-291 fixed on Restart Cinemate, left in the places where an
+operator has the most reason to believe a power action happened:
 
 * **Save & reboot Pi** called runBootSequence() and nothing else. config.txt
   was never written, nothing rebooted, and the card still finished on "Pi is
@@ -11,21 +11,44 @@ operator has the most reason to believe a reboot happened:
   would additionally have carried whatever unsaved config.txt edits the other
   page was holding.
 
-Both real paths already existed. put_config_txt() writes the file and
-schedules cinepi_controller.reboot() 0.4 s after it answers, reporting that as
-`rebooting`; the CLI's own `reboot` verb is dispatchable over /api/v1/cmd, the
-same route Restart Cinemate uses. Verified in a browser against the real
-template: Save & reboot issues PUT /settings-editor/api/config-txt, and Reboot
-Pi issues POST /api/v1/cmd with the body `reboot`.
+put_config_txt() writes the file and schedules cinepi_controller.reboot()
+0.4 s after it answers, reporting that as `rebooting` -- that part still
+holds. What changed: Restart CineMate, Reboot Pi and the new Shut down Pi
+buttons used to (or, for shutdown, would have had to) dispatch through
+POST /api/v1/cmd, the same route the CLI and serial share. That route
+refuses `reboot`/`shutdown` unless `system.web_api.allow_destructive` is
+true, which a stock settings.jsonc ships false -- the switch exists to keep
+those two verbs away from anyone else on the hotspot, not from this page.
+So on an unmodified camera every one of these buttons used to answer 403
+"err blocked" and the page toasted "Reboot failed: err blocked". They now
+post to this blueprint's own POST /settings-editor/api/power instead, the
+same way put_config_txt() already reboots directly and the RAW pane already
+formats drives and deletes takes with no such switch in the way.
 """
 
 import re
 import sys
+import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
+sys.modules.setdefault("smbus", types.SimpleNamespace(SMBus=object))
+
+# Same mechanism as test_settings_editor_format.py: stub the parent package
+# so the `settings_editor` submodule resolves via __path__ without executing
+# module/app/__init__.py's flask_socketio import.
+_APP_PKG = types.ModuleType("module.app")
+_APP_PKG.__path__ = [str(ROOT / "src" / "module" / "app")]
+sys.modules.setdefault("module.app", _APP_PKG)
+
+from flask import Flask
+
+from module.app.settings_editor import settings_editor_bp
+from module.cinepi_controller import CinePiController
 
 TEMPLATE = ROOT / "src/module/app/templates/settings_editor.html"
 EDITOR_PY = ROOT / "src/module/app/settings_editor.py"
@@ -88,8 +111,19 @@ class RebootPiTests(unittest.TestCase):
         cls.html = TEMPLATE.read_text(encoding="utf-8")
 
     def test_it_dispatches_a_real_reboot(self):
+        # Used to assert apiCmd('reboot') -- POST /api/v1/cmd, which refuses
+        # reboot/shutdown unless system.web_api.allow_destructive is true.
+        # The shipped settings.jsonc sets that false (the switch exists to
+        # protect that route from anyone else on the hotspot, not from this
+        # page), so on a stock camera the button always got back 403 "err
+        # blocked" and toasted "Reboot failed: err blocked". The settings
+        # editor already performs other destructive actions (format, delete)
+        # through its own blueprint with no such switch, and put_config_txt()
+        # already reboots directly from there -- so this button now posts to
+        # that blueprint's own /api/power route instead.
         body = handler(self.html, "genericRebootBtn")
-        self.assertIn("apiCmd('reboot')", body)
+        self.assertIn("powerAction('reboot')", body)
+        self.assertNotIn("apiCmd(", body)
 
     def test_it_does_not_write_config_txt(self):
         # "A full reboot for any other reason" -- it must not carry the boot
@@ -178,18 +212,223 @@ class TheRealPathsExistTests(unittest.TestCase):
         self.assertIn("cinepi_controller.can_reboot()", block)
         self.assertIn("not in its sudoers rule", block)
 
-    def test_can_reboot_asks_without_rebooting(self):
+    def test_can_power_asks_without_running_the_command(self):
+        # can_reboot() generalised to can_power(verb) so the settings
+        # editor's shutdown button can ask sudoers about `poweroff` too,
+        # rather than assuming its grant follows reboot's.
         controller = (ROOT / "src/module/cinepi_controller.py").read_text(encoding="utf-8")
-        block = controller[controller.index("def can_reboot"):]
-        block = block[:block.index("def reboot(")]
+        block = controller[controller.index("def can_power"):]
+        block = block[:block.index("def can_reboot(")]
         # `sudo -l <command>` answers the policy question without running it.
         self.assertIn('"-l"', block)
         self.assertIn('"-n"', block)
 
+    def test_can_reboot_is_a_thin_wrapper_over_can_power(self):
+        # Kept under its own name: put_config_txt() and this file pin it.
+        controller = (ROOT / "src/module/cinepi_controller.py").read_text(encoding="utf-8")
+        block = controller[controller.index("def can_reboot"):]
+        block = block[:block.index("def reboot(")]
+        self.assertIn('can_power("reboot")', block)
+
     def test_reboot_is_a_dispatchable_cli_verb(self):
-        # apiCmd('reboot') goes through the same dispatcher as the CLI.
+        # The CLI/serial/web-API dispatcher still maps 'reboot' -- CLI and
+        # serial callers, and any /api/v1/cmd caller with allow_destructive
+        # on, still go through cinepi_controller.reboot this way. The
+        # settings editor no longer does (see RebootPiTests above).
         self.assertRegex(CLI.read_text(encoding="utf-8"),
                          r"'reboot'\s*:\s*\(cinepi_controller\.reboot")
+
+
+class CanPowerTests(unittest.TestCase):
+    """can_power(verb) -- the general form can_reboot() now wraps.
+
+    Neither method touches `self`, so these call it unbound against a bare
+    stub rather than constructing a full CinePiController (a wide
+    constructor wired to Redis, the sensor detector, and every step table --
+    see entry-points.md's note on this class).
+    """
+
+    def test_true_when_sudo_grants_it(self):
+        with mock.patch("module.cinepi_controller.subprocess.run") as run:
+            run.return_value = mock.Mock(returncode=0)
+            self.assertTrue(CinePiController.can_power(None, "poweroff"))
+            run.assert_called_once_with(
+                ["sudo", "-n", "-l", "/usr/bin/systemctl", "poweroff"],
+                capture_output=True, text=True, timeout=5, check=False)
+
+    def test_false_when_sudo_refuses(self):
+        with mock.patch("module.cinepi_controller.subprocess.run") as run:
+            run.return_value = mock.Mock(returncode=1)
+            self.assertFalse(CinePiController.can_power(None, "poweroff"))
+
+    def test_false_when_sudo_is_missing_or_times_out(self):
+        import subprocess
+        with mock.patch("module.cinepi_controller.subprocess.run",
+                         side_effect=subprocess.TimeoutExpired("sudo", 5)):
+            self.assertFalse(CinePiController.can_power(None, "reboot"))
+
+    def test_can_reboot_asks_can_power_for_the_reboot_verb(self):
+        class Stub:
+            asked = None
+
+            def can_power(self, verb):
+                self.asked = verb
+                return True
+
+        stub = Stub()
+        self.assertTrue(CinePiController.can_reboot(stub))
+        self.assertEqual(stub.asked, "reboot")
+
+
+def _make_power_app(controller=None):
+    """Same minimal-app pattern as test_settings_editor_format.py."""
+    app = Flask(__name__)
+    app.testing = True
+    if controller is not None:
+        app.config["CINEPI_CONTROLLER"] = controller
+    app.register_blueprint(settings_editor_bp)
+    return app
+
+
+def _post_power(app, action):
+    return app.test_client().post("/settings-editor/api/power", json={"action": action})
+
+
+class PowerRouteTests(unittest.TestCase):
+    """POST /settings-editor/api/power -- restart_cinemate / reboot / shutdown."""
+
+    def test_unknown_action_is_400_and_dispatches_nothing(self):
+        controller = mock.MagicMock()
+        res = _post_power(_make_power_app(controller), "erase")
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(res.get_json()["ok"])
+        controller.reboot.assert_not_called()
+        controller.safe_shutdown.assert_not_called()
+        controller.restart_cinemate.assert_not_called()
+
+    def test_no_controller_attached_is_503(self):
+        res = _post_power(_make_power_app(controller=None), "reboot")
+        self.assertEqual(res.status_code, 503)
+        self.assertFalse(res.get_json()["ok"])
+
+    def test_restart_cinemate_is_scheduled_without_asking_sudoers(self):
+        controller = mock.MagicMock()
+        with mock.patch("module.app.settings_editor.threading.Timer") as timer_cls:
+            timer = timer_cls.return_value
+            res = _post_power(_make_power_app(controller), "restart_cinemate")
+        self.assertEqual(res.status_code, 200)
+        body = res.get_json()
+        self.assertTrue(body["ok"])
+        self.assertTrue(body["scheduled"])
+        controller.can_power.assert_not_called()
+        timer_cls.assert_called_once_with(0.4, controller.restart_cinemate)
+        timer.start.assert_called_once()
+
+    def test_reboot_refuses_with_403_when_sudo_refuses(self):
+        controller = mock.MagicMock()
+        controller.can_power.return_value = False
+        with mock.patch("module.app.settings_editor.threading.Timer") as timer_cls:
+            res = _post_power(_make_power_app(controller), "reboot")
+        self.assertEqual(res.status_code, 403)
+        body = res.get_json()
+        self.assertFalse(body["ok"])
+        self.assertIn("not in its sudoers rule", body["message"])
+        self.assertIn("cinemate-install.sh", body["message"])
+        controller.can_power.assert_called_once_with("reboot")
+        timer_cls.assert_not_called()
+        controller.reboot.assert_not_called()
+
+    def test_shutdown_refuses_with_403_when_sudo_refuses(self):
+        controller = mock.MagicMock()
+        controller.can_power.return_value = False
+        with mock.patch("module.app.settings_editor.threading.Timer") as timer_cls:
+            res = _post_power(_make_power_app(controller), "shutdown")
+        self.assertEqual(res.status_code, 403)
+        self.assertFalse(res.get_json()["ok"])
+        controller.can_power.assert_called_once_with("poweroff")
+        timer_cls.assert_not_called()
+        controller.safe_shutdown.assert_not_called()
+
+    def test_reboot_is_scheduled_on_a_timer_when_permitted(self):
+        controller = mock.MagicMock()
+        controller.can_power.return_value = True
+        with mock.patch("module.app.settings_editor.threading.Timer") as timer_cls:
+            timer = timer_cls.return_value
+            res = _post_power(_make_power_app(controller), "reboot")
+        self.assertEqual(res.status_code, 200)
+        body = res.get_json()
+        self.assertTrue(body["ok"])
+        self.assertTrue(body["scheduled"])
+        timer_cls.assert_called_once_with(0.4, controller.reboot)
+        timer.start.assert_called_once()
+
+    def test_shutdown_is_scheduled_on_a_timer_when_permitted(self):
+        controller = mock.MagicMock()
+        controller.can_power.return_value = True
+        with mock.patch("module.app.settings_editor.threading.Timer") as timer_cls:
+            timer = timer_cls.return_value
+            res = _post_power(_make_power_app(controller), "shutdown")
+        self.assertEqual(res.status_code, 200)
+        body = res.get_json()
+        self.assertTrue(body["ok"])
+        self.assertTrue(body["scheduled"])
+        timer_cls.assert_called_once_with(0.4, controller.safe_shutdown)
+        timer.start.assert_called_once()
+
+
+class ConfigPaneButtonsTests(unittest.TestCase):
+    """The three power buttons at the bottom of the config.txt pane."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = TEMPLATE.read_text(encoding="utf-8")
+
+    def test_all_three_buttons_exist(self):
+        for button_id in ("cfgRestartBtn", "cfgGenericRebootBtn", "cfgShutdownBtn"):
+            self.assertIn('id="%s"' % button_id, self.html)
+
+    def test_none_of_them_save_config_txt(self):
+        for button_id in ("cfgRestartBtn", "cfgGenericRebootBtn", "cfgShutdownBtn"):
+            body = handler(self.html, button_id)
+            self.assertNotIn("saveConfigTxt", body,
+                              "%s must not write config.txt" % button_id)
+
+    def test_restart_and_reboot_use_the_power_route(self):
+        self.assertIn("powerAction('restart_cinemate')", handler(self.html, "cfgRestartBtn"))
+        self.assertIn("powerAction('reboot')", handler(self.html, "cfgGenericRebootBtn"))
+
+
+class ShutdownHandlerTests(unittest.TestCase):
+    """Shutdown never animates a return that is never coming."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = TEMPLATE.read_text(encoding="utf-8")
+
+    def test_both_shutdown_buttons_exist(self):
+        self.assertIn('id="systemShutdownBtn"', self.html)
+        self.assertIn('id="cfgShutdownBtn"', self.html)
+
+    def test_neither_shutdown_handler_calls_run_boot_sequence(self):
+        for button_id in ("systemShutdownBtn", "cfgShutdownBtn"):
+            body = handler(self.html, button_id)
+            self.assertNotIn("runBootSequence", body,
+                              "%s must not claim the Pi comes back" % button_id)
+            self.assertIn("powerAction('shutdown')", body)
+
+    def test_shutdown_asks_for_confirmation_first(self):
+        for button_id in ("systemShutdownBtn", "cfgShutdownBtn"):
+            body = handler(self.html, button_id)
+            self.assertIn("showConfirm(", body)
+            self.assertIn("danger: true", body)
+
+    def test_run_shutdown_sequence_never_claims_ready(self):
+        start = self.html.index("function runShutdownSequence(")
+        end = self.html.index("\n  }", start)
+        body = self.html[start:end]
+        self.assertNotIn("/api/v1/hello", body)
+        self.assertNotIn("READY", body)
+        self.assertIn("power can be removed", body)
 
 
 if __name__ == "__main__":

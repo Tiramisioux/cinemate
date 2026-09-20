@@ -958,11 +958,6 @@ class SensorDetect:
                 bd   = int(extra["bit_depth"])
                 fps  = extra.get("fps_max")
                 hdr_flag = bool(extra.get("hdr", False))
-                identity = {
-                    "width": w, "height": h, "bit_depth": bd, "hdr": hdr_flag,
-                    "crop_x": extra.get("crop_x"), "crop_y": extra.get("crop_y"),
-                    "crop_width": extra.get("crop_width"), "crop_height": extra.get("crop_height"),
-                }
                 def custom_match(m):
                     if (
                         int(m.get("width") or 0) != w or

@@ -92,17 +92,35 @@ CLEAR HDR / SENSOR HDR
         self.assertEqual(by_size[(3840, 2160)]["bit_depth"], 12)
         self.assertEqual(by_size[(3840, 2200)]["bit_depth"], 16)
 
-    def test_pisp_comp1_in_sdr_state_does_not_force_16_bit(self):
-        """PISP_COMP1's own container width is 16 bits, but
-        dng_output_depth.hpp documents this container also carrying a
-        10/12-bit stock-sensor mode (its own example is imx519) whenever the
-        PiSP frontend cannot output CSI2-packed or non-16-bit data directly.
-        Forcing current_bit_depth=16 whenever the string appears, without
-        checking the HDR state, would make the pre-existing "16-bit mode
-        seen in the SDR state is dropped" guard silently discard a real
-        stock-sensor mode. Outside the ClearHDR state, a COMP1 format must
-        not overwrite the depth already read from an earlier format in the
-        same mode block."""
+    def test_pisp_comp1_takes_its_depth_from_the_listing_header(self):
+        """COMP1's name has no digits, so the depth comes from the header.
+
+        cinepi-raw prints the sensor's own maximum depth in the camera header,
+        taken over the named Bayer formats, and that is the only evidence in the
+        listing for what a compressed container carries. Asserting the
+        container's own 16 bits would mislabel a 10- or 12-bit COMP1 mode -- and
+        the "16-bit in the SDR state is dropped" guard would then discard it --
+        while inheriting the previous format block's depth would label this mode
+        with a different mode's number.
+        """
+        output = """\
+0 : imx519 [4656x3496 10-bit RGGB]
+    Modes: 'SRGGB10_CSI2P' : 1920x1080 [60.00 fps - (0, 0)/4656x3496 crop]
+           'BGGR_PISP_COMP1' : 2328x1748 [30.00 fps - (0, 0)/4656x3496 crop]
+"""
+        modes = self._detector()._parse_cinepi_output(output)["imx519"]
+        by_size = {(m["width"], m["height"]): m for m in modes}
+        self.assertEqual(by_size[(1920, 1080)]["bit_depth"], 10)
+        self.assertIn((2328, 1748), by_size)
+        self.assertEqual(by_size[(2328, 1748)]["bit_depth"], 10)
+
+    def test_pisp_comp1_is_skipped_when_the_header_states_no_depth(self):
+        """With no header depth and no ClearHDR state, skip rather than guess.
+
+        A skipped line loses a mode; a guessed depth loses the operator's trust
+        in every number beside it, and silently changes which modes the
+        bit-depth filter keeps.
+        """
         output = """\
 0 : imx519 [4656x3496]
     Modes: 'SRGGB10_CSI2P' : 1920x1080 [60.00 fps - (0, 0)/4656x3496 crop]
@@ -111,10 +129,28 @@ CLEAR HDR / SENSOR HDR
         modes = self._detector()._parse_cinepi_output(output)["imx519"]
         by_size = {(m["width"], m["height"]): m for m in modes}
         self.assertEqual(by_size[(1920, 1080)]["bit_depth"], 10)
-        # Must not be force-set to 16 and then dropped by the SDR/16-bit
-        # guard: the mode must survive and must not silently claim 16-bit.
-        self.assertIn((2328, 1748), by_size)
-        self.assertEqual(by_size[(2328, 1748)]["bit_depth"], 10)
+        self.assertNotIn((2328, 1748), by_size)
+
+    def test_pisp_comp1_in_the_clearhdr_state_is_sixteen_bit(self):
+        """The imx585 RAW16 case, in the two-state shape the probe really emits.
+
+        Uses the SDR-then-ClearHDR listing rather than an HDR-only one: the
+        single-header HDR path has a separate, pre-existing defect on `dev` that
+        leaves `current_hdr` False, and this test is about the COMP1 branch, not
+        about that.
+        """
+        output = """\
+0 : imx585 [3856x2180 12-bit RGGB]
+    Modes: 'SRGGB12_CSI2P' : 3840x2160 [44.00 fps - (0, 0)/3856x2180 crop]
+CLEAR HDR / SENSOR HDR
+0 : imx585 [3856x2180 16-bit RGGB]
+    Modes: 'BGGR_PISP_COMP1' : 3840x2200 [22.00 fps - (0, 0)/3856x2180 crop]
+"""
+        modes = self._detector()._parse_cinepi_output(output, hdr=True)["imx585"]
+        by_size = {(m["width"], m["height"]): m for m in modes}
+        self.assertEqual(by_size[(3840, 2160)]["bit_depth"], 12)
+        self.assertEqual(by_size[(3840, 2200)]["bit_depth"], 16)
+        self.assertTrue(by_size[(3840, 2200)]["hdr"])
 
 
 if __name__ == "__main__":

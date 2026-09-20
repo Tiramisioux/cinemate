@@ -64,7 +64,7 @@ CLEAR HDR / SENSOR HDR
 CLEAR HDR / SENSOR HDR
 0 : imx585 [3856x2180]
     Modes: 'SGRBG12_CSI2P' : 3840x2160 [22.00 fps - (0, 0)/3856x2180 crop]
-1 : imx519 [4656x3496]
+1 : imx519 [4656x3496 10-bit RGGB]
     Modes: 'SRGGB10_CSI2P' : 1920x1080 [60.00 fps - (0, 0)/4656x3496 crop]
            'BGGR_PISP_COMP1' : 2328x1748 [30.00 fps - (0, 0)/4656x3496 crop]
 """

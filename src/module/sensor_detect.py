@@ -512,6 +512,8 @@ class SensorDetect:
         sensors: Dict[str, List[Dict]] = {}
         current_cam = None
         current_bit_depth = None
+        header_bits = None
+        comp1_sdr_warned = False
         sensor_width = None
         sensor_height = None
         parsing_modes = False                     # inside a “Modes:” block?
@@ -563,6 +565,12 @@ class SensorDetect:
                 header_size = re.search(r"\[\s*(\d+)x(\d+)", line)
                 if header_size:
                     sensor_width, sensor_height = map(int, header_size.groups())
+                # cinepi-raw's header carries the sensor's own maximum depth
+                # ("[3856x2180 12-bit RGGB]"), taken over the named Bayer
+                # formats. That is the evidence for a compressed format whose
+                # name has no digits to read -- see the PISP_COMP1 branch.
+                header_bits_match = re.search(r"\[\s*\d+x\d+\s+(\d+)-bit", line)
+                header_bits = int(header_bits_match.group(1)) if header_bits_match else None
                 parsing_modes = False
                 continue
 
@@ -604,20 +612,35 @@ class SensorDetect:
             fmt = re.search(r"'(?:S[RGB]{4}|R|GREY|Y)(\d+)", line)
             if fmt:
                 current_bit_depth = int(fmt.group(1))
-            elif "PISP_COMP1" in line and current_hdr:
-                # The compressed container's own width is always 16 bits,
-                # but that is the transport container, not necessarily the
-                # sensor's native depth: cinepi-raw's dng_output_depth.hpp
-                # documents PiSP COMP1 also carrying a 10/12-bit stock-sensor
-                # mode (its own worked example is imx519) whenever the
-                # frontend cannot output CSI2-packed or non-16-bit data
-                # directly. Only assert 16 here in the ClearHDR state, where
-                # a 16-bit mode is what the driver is actually expected to
-                # report; in the SDR state, leave current_bit_depth as-is
-                # rather than guessing, so the "16-bit seen in SDR state is
-                # dropped" guard below cannot discard a real stock-sensor
-                # mode that merely happens to be carried over COMP1.
-                current_bit_depth = 16
+            elif "PISP_COMP1" in line:
+                # PiSP COMP1 is a 16-bit *container* and its name has no digits,
+                # so the line itself cannot say what depth it carries.
+                # cinepi-raw's resolve_dng_output_depth() narrows a COMP1 stream
+                # to 12- or 10-bit precisely because the container does carry
+                # sub-16-bit sensor modes, so asserting 16 would mislabel those
+                # and then the 16-bit-in-SDR guard below would silently drop
+                # them; inheriting the previous format block's depth would label
+                # this mode with another mode's number.
+                #
+                # The evidence is in the camera header, which cinepi-raw prints
+                # as "[WxH N-bit ORDER]" from the sensor's own named formats. Use
+                # it, fall back to the container's 16 bits in the ClearHDR state
+                # where a 16-bit readout is what the sensor reports, and skip the
+                # line when neither is available rather than inventing a number.
+                if header_bits is not None:
+                    current_bit_depth = header_bits
+                elif current_hdr:
+                    current_bit_depth = 16
+                else:
+                    if not comp1_sdr_warned:
+                        logging.warning(
+                            "%s reports a PiSP COMP1 format and no bit depth in "
+                            "its header, so those lines are skipped: the listing "
+                            "cannot say what depth the container carries.",
+                            current_cam,
+                        )
+                        comp1_sdr_warned = True
+                    continue
 
             # ── first resolution on the line (if any)
             res = re.search(r"(\d+)x(\d+)", line)

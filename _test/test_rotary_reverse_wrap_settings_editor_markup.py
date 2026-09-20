@@ -11,7 +11,7 @@ Reverse/Wrap wiring is actually inside it, not just present somewhere in
 the 615 KB file.
 
 07-rotary-encoder-reverse-and-wrap.md: buildRotaryRow gets its own two
-.gesture rows (name | toggle); buildEncoderRow puts both toggles on the
+.gesture rows (name | toggle); buildEncoderRow stacks both toggles the same way, under the
 Turn line beside the setting select. Both state builders must read them
 back with toggleIsChecked() and write real reverse/wrap booleans.
 """
@@ -58,16 +58,26 @@ class RotaryReverseWrapMarkupTests(unittest.TestCase):
         self.assertIn("Reverse", body)
         self.assertIn("Wrap around", body)
 
-    def test_build_encoder_row_renders_both_toggles_on_the_turn_line(self):
+    def test_build_encoder_row_stacks_both_toggles_as_their_own_rows(self):
         body = extract_function(self.html, "buildEncoderRow")
         self.assertIn("prefix + '-reverse'", body)
         self.assertIn("prefix + '-wrap'", body)
-        # Both toggles must be inside turnControls (the Turn line), not a
-        # separate gesture row of their own -- that's the difference from
-        # the GPIO rotary row.
-        turn_controls_start = body.index("turnControls")
-        self.assertLess(turn_controls_start, body.index("prefix + '-reverse'"))
-        self.assertLess(turn_controls_start, body.index("prefix + '-wrap'"))
+        # Each toggle gets its own .gesture row, the same shape buildRotaryRow
+        # uses, so the identical pair reads the same in both sections. They
+        # used to sit inline on the Turn line; the operator asked for them
+        # stacked to match the single rotary encoder.
+        self.assertIn("makeToggleGestureRow(prefix + '-reverse'", body)
+        self.assertIn("makeToggleGestureRow(prefix + '-wrap'", body)
+        self.assertNotIn("turnControls", body)
+        # Reverse sits ABOVE Wrap around in the DOM, same order as the GPIO
+        # row. Source order is the reverse of DOM order here -- wrapRow is
+        # built first so Reverse can be inserted before it -- so pin the
+        # insertion, not the position of the strings in the file.
+        self.assertIn("wrapRow", body)
+        self.assertRegex(
+            body,
+            r"makeToggleGestureRow\(prefix \+ '-reverse'[\s\S]*?\n\s*wrapRow\s*\)",
+        )
 
     def test_hardware_controls_state_serializes_both_keys_for_rotary(self):
         body = extract_function(self.html, "buildHardwareControlsState")

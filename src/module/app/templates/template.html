@@ -2500,6 +2500,27 @@
     // multipart/x-mixed-replace response is not something to bet a reconnect
     // loop on.
     const STREAM_FIRST_FRAME_MS = 4000;
+    // Some browsers will not load a subresource from a different port than the
+    // page, and an <img> refused that way reports nothing at all: no error
+    // event, naturalWidth 0, forever. Measured on the camera 2026-09-20 -- the
+    // same <img>, in the same page, at the same moment, gave 0x0 for
+    // http://<host>:8000/stream and 1280x720 for the same-origin relay. That is
+    // why the preview came up black on a fresh load while curl and a direct
+    // visit to :8000 both worked, and why every retry failed identically:
+    // retrying a request the browser will not make is a no-op.
+    // main/routes.py already relays the stream from this origin; it was
+    // reserved for HTTPS pages, where the obstacle is mixed content rather than
+    // the port. Kept as a fallback rather than the default so a browser that is
+    // happy cross-port still costs CineMate nothing.
+    function proxyBaseFor(img) {
+        return img === $('stream') ? '/preview/0/stream' : '/preview/1/stream';
+    }
+    function fallBackToSameOrigin(img) {
+        if (img._usingProxy) { return false; }
+        img._usingProxy = true;
+        img.dataset.streamBase = proxyBaseFor(img);
+        return true;
+    }
     function armStreamWatchdog(img) {
         clearTimeout(img._watchTimer);
         if (img._gotFrame) { return; }
@@ -2507,6 +2528,10 @@
             img._watchTimer = null;
             if (img._gotFrame || img.classList.contains('hidden')) { return; }
             if (!img.dataset.streamBase) { return; }
+            // The first failure to produce a frame latches this <img> to the
+            // relay for the rest of the session; after that this is the
+            // ordinary reconnect it always was.
+            fallBackToSameOrigin(img);
             scheduleStreamReload(img, 0);
         }, STREAM_FIRST_FRAME_MS);
     }
@@ -2547,7 +2572,10 @@
     function sweepDeadStreams() {
         [$('stream'), $('stream-cam1')].forEach((img) => {
             if (!img || img.classList.contains('hidden') || !img.dataset.streamBase) { return; }
-            if (img.naturalWidth === 0 && !streamReloadPending(img)) { scheduleStreamReload(img, 0); }
+            if (img.naturalWidth === 0 && !streamReloadPending(img)) {
+                fallBackToSameOrigin(img);
+                scheduleStreamReload(img, 0);
+            }
         });
     }
     setInterval(sweepDeadStreams, 4000);

@@ -152,6 +152,12 @@ class QuadRotaryController(threading.Thread):
         self.last_positions = [0, 0, 0, 0]
         self.button_states = [False, False, False, False]
         self.connected = False
+        # Both set only inside _set_connected(), on an actual transition --
+        # the settings-editor i2c pane reports these beside its own bus probe
+        # rather than blending them into one "present" flag (see
+        # hardware_probe.py / handbook's probing-i2c-peripherals.md).
+        self.last_error = None
+        self.last_change_epoch = None
         self._last_reconnect = 0
         self._stop_event = threading.Event()
         self._ever_connected = False
@@ -161,11 +167,49 @@ class QuadRotaryController(threading.Thread):
             self._initialize_device()
 
     # ------------------------------------------------------------------
+    def _set_connected(self, value: bool, error: str | None = None):
+        """The only place self.connected changes, so a transition is never missed."""
+        if value != self.connected:
+            self.last_change_epoch = time.time()
+        self.connected = value
+        self.last_error = error
+
+    def state(self) -> Dict[str, Any]:
+        """A snapshot for the i2c pane -- see hardware_probe._detect_quad_rotary.
+
+        Read directly off live attributes with no lock, same as everything
+        else here (button_states, last_positions): the GIL makes each
+        attribute read atomic, and the worst a request can see is one field
+        one polling cycle (100 ms) stale, which is fine for a status pane.
+        """
+        return {
+            "enabled": self.enabled,
+            "connected": self.connected,
+            "ever_connected": self._ever_connected,
+            "last_error": self.last_error,
+            "last_change_epoch": self.last_change_epoch,
+        }
+
     def _initialize_device(self):
+        if self.i2c is not None:
+            # A reconnect used to overwrite self.i2c with a brand new
+            # busio.I2C() every time, leaking the previous handle -- this ran
+            # every RECONNECT_INTERVAL seconds for as long as a board stayed
+            # absent, and once per real drop-and-recover.
+            with contextlib.suppress(Exception):
+                self.i2c.deinit()
+            self.i2c = None
         try:
             self.i2c = busio.I2C(board.SCL, board.SDA)
             time.sleep(0.1)
-            self.seesaw = adafruit_seesaw.seesaw.Seesaw(self.i2c, 0x49)
+            # reset=False: the default sw_reset() zeroes the board's own
+            # state on every reconnect, which stamps on a controller that may
+            # be live and being turned by an operator at that exact moment.
+            # With reset=False the Seesaw constructor still reads the
+            # STATUS/HW_ID register itself and raises if it doesn't recognise
+            # the chip, so a board that genuinely isn't there is still caught
+            # here, just without resetting one that is.
+            self.seesaw = adafruit_seesaw.seesaw.Seesaw(self.i2c, 0x49, reset=False)
             self.encoders = [adafruit_seesaw.rotaryio.IncrementalEncoder(self.seesaw, n) for n in range(4)]
             self.switches = [adafruit_seesaw.digitalio.DigitalIO(self.seesaw, pin) for pin in (12, 14, 17, 9)]
             for sw in self.switches:
@@ -176,7 +220,7 @@ class QuadRotaryController(threading.Thread):
             self.button_states = [not sw.value for sw in self.switches]
             for button in self.buttons.values():
                 button.reset_state()
-            self.connected = True
+            self._set_connected(True)
             self._ever_connected = True
             logging.info(
                 "Quad rotary controller initialized with positions=%s button_states=%s",
@@ -184,7 +228,7 @@ class QuadRotaryController(threading.Thread):
                 self.button_states,
             )
         except Exception as exc:
-            self.connected = False
+            self._set_connected(False, str(exc))
             self._last_reconnect = time.time()
             if self._ever_connected:
                 # It was there and went away: a bus glitch or a knocked cable,
@@ -257,7 +301,7 @@ class QuadRotaryController(threading.Thread):
                 if self.pixels:
                     self.pixels[idx] = 0xFFFFFF if pressed else self.colorwheel(idx * 8)
         except OSError as exc:
-            self.connected = False
+            self._set_connected(False, str(exc))
             self._last_reconnect = time.time()
             logging.error("Quad rotary controller I/O error: %s", exc)
 

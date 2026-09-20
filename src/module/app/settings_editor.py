@@ -1321,10 +1321,13 @@ def get_hardware():
     """
     settings = current_app.config.get("SETTINGS") or {}
     oled_settings = (settings.get("output_peripherals") or {}).get("oled") or {}
+    peripherals = current_app.config.get("PERIPHERALS") or {}
+    quad_rotary = peripherals.get("quad_rotary")
+    quad_rotary_state = quad_rotary.state() if quad_rotary is not None else None
     return jsonify({
         "ok": True,
         "bus": f"i2c-{hardware_probe.I2C_BUS}",
-        "devices": hardware_probe.detect_devices(oled_settings),
+        "devices": hardware_probe.detect_devices(oled_settings, quad_rotary_state),
         "clocks": {
             "system": hardware_probe.system_time(),
             "rtc": hardware_probe.read_rtc_time(),

@@ -20,7 +20,11 @@ So this module does the cheapest thing that answers the question: a one-byte
 ACK read at a known address, the same primitive ``AnalogControls`` already
 uses to find the Grove HAT (analog_controls.py) and ``SsdMonitor`` to find the
 CFE Hat (ssd_monitor.py). Nothing here writes to a bus, and every probe is
-safe to re-run on every request.
+safe to re-run on every request -- with one exception, stated where it lives:
+the quad rotary encoder's seesaw does not reliably ACK that bare receive-byte
+(measured on the rig 2026-09-20: a live, working board NACKed roughly a third
+of them, `EREMOTEIO`), so it alone is probed with a real register read
+instead. See ``_seesaw_present`` for why that one write is safe.
 
 Everything is scoped to bus 1 deliberately. 0x34 is the CFE Hat there, but it
 is also the StarlightEye IR-cut filter on the camera buses (4 and 6 on a Pi
@@ -28,8 +32,10 @@ is also the StarlightEye IR-cut filter on the camera buses (4 and 6 on a Pi
 """
 from __future__ import annotations
 
+import errno
 import logging
 import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -106,19 +112,20 @@ def _smbus():
     return smbus2
 
 
-def _ack(bus_no: int, address: int) -> bool:
-    """True when something answers a one-byte read at *address*."""
+def _ack(bus_no: int, address: int) -> tuple[bool, int | None]:
+    """(True, None) when something answers a one-byte read at *address*;
+    (False, errno) otherwise -- errno is None when smbus2 itself is absent."""
     smbus2 = _smbus()
     if smbus2 is None:
-        return False
+        return False, None
     bus = None
     try:
         bus = smbus2.SMBus(bus_no)
         bus.read_byte(address)
-        return True
-    except (OSError, TypeError, ValueError):
+        return True, None
+    except (OSError, TypeError, ValueError) as exc:
         # OSError covers both "no such bus" and "nobody home at that address".
-        return False
+        return False, getattr(exc, "errno", None)
     finally:
         # analog_controls closes only on the success path, which leaks the
         # handle every time the HAT is absent. Closing here either way.
@@ -129,22 +136,154 @@ def _ack(bus_no: int, address: int) -> bool:
                 pass
 
 
-def _probe(addresses) -> int | None:
-    """The first address that answers, or None."""
+# EREMOTEIO (121) is Linux-only -- it is what the Pi's i2c-dev driver
+# actually raises for a NACK (confirmed on the rig 2026-09-20), but the
+# constant does not exist in Python's errno module on macOS/BSD, so it is
+# written as a literal here rather than errno.EREMOTEIO -- that attribute
+# lookup would crash this module's import on a desktop checkout.
+_EREMOTEIO = 121
+
+# Errno names this pane knows how to explain, mapped to the reading an
+# operator can act on. errno.errorcode already gives us the symbolic name
+# (e.g. 121 -> "EREMOTEIO"); this is only the subset worth a plain-English
+# hint. ENXIO/EREMOTEIO both mean "nobody home" (the two kernel I2C drivers
+# disagree on which one a plain NACK raises); ETIMEDOUT is a clock-stretch or
+# bus timeout; EBUSY means a kernel driver already owns the address; ENOENT
+# means the bus itself doesn't exist.
+_PROBE_ERROR_HINTS = {
+    errno.ENXIO: "not found (NACK)",
+    _EREMOTEIO: "not found (NACK)",
+    errno.ETIMEDOUT: "bus timeout (clock stretch)",
+    errno.EBUSY: "address busy (a kernel driver owns it)",
+    errno.ENOENT: "no such bus",
+}
+
+
+def _probe_error(err_no: int | None) -> dict | None:
+    """Errno name + a plain-English hint, or None when there was nothing to report."""
+    if err_no is None:
+        return None
+    # errno.errorcode is built from the platform's own errno.h, so a desktop
+    # checkout (no EREMOTEIO) would otherwise report "errno 121" instead of
+    # the name the Pi itself would give it.
+    name = "EREMOTEIO" if err_no == _EREMOTEIO else errno.errorcode.get(err_no, f"errno {err_no}")
+    return {
+        "errno": err_no,
+        "name": name,
+        "hint": _PROBE_ERROR_HINTS.get(err_no, "not found"),
+    }
+
+
+def _probe(addresses) -> tuple[int | None, int | None]:
+    """The first address that answers, plus the last errno seen if none did."""
+    last_errno = None
     for address in addresses:
-        if _ack(I2C_BUS, address):
-            return address
-    return None
+        ok, err = _ack(I2C_BUS, address)
+        if ok:
+            return address, None
+        last_errno = err
+    return None, last_errno
+
+
+# Seesaw hardware-id register: STATUS module base (0x00), HW_ID function
+# (0x01) -- the exact transaction adafruit_seesaw.Seesaw.__init__ performs
+# via its own read(reg_base, reg) helper. 0x55 is the SAMD09 seesaw, 0x87 the
+# ATtiny8xx seesaw that answered on this rig; both ship on different Adafruit
+# boards. A board that never answers this returns 0x00 or raises -- measured
+# on the rig, 2 of 40 successful reads against a present board came back
+# 0x00 rather than a real id, so "no exception" is not accepted as presence.
+_SEESAW_STATUS_BASE = 0x00
+_SEESAW_HW_ID_REGISTER = 0x01
+_SEESAW_READ_DELAY = 0.008  # matches adafruit_seesaw.Seesaw.read()'s own default
+_SEESAW_HW_IDS = (0x55, 0x87)
+
+
+def _seesaw_present(bus_no: int, address: int) -> tuple[bool, int | None, int | None]:
+    """(present, hw_id, errno) for an Adafruit seesaw at *address*.
+
+    Every other device in this module is probed with a bare receive-byte
+    specifically so nothing here ever writes to a bus a driver might be
+    using. The quad rotary encoder's seesaw is the one exception: it does not
+    reliably ACK that receive-byte (measured on the rig 2026-09-20, a live
+    working board NACKed about a third of them), because that isn't the
+    question a seesaw answers -- it answers a *register* read. So this writes
+    the STATUS/HW_ID register address, waits out the seesaw's own read
+    turnaround, and reads the id back, accepting only a known one.
+
+    This is safe to add as the one write in the module because it is not a
+    new kind of bus traffic: it is the identical two-byte-write-then-read
+    QuadRotaryController.update() already performs, over and over, ten times
+    a second, for as long as the driver runs.
+    """
+    smbus2 = _smbus()
+    if smbus2 is None:
+        return False, None, None
+    bus = None
+    try:
+        bus = smbus2.SMBus(bus_no)
+        bus.write_i2c_block_data(address, _SEESAW_STATUS_BASE, [_SEESAW_HW_ID_REGISTER])
+        time.sleep(_SEESAW_READ_DELAY)
+        hw_id = bus.read_byte(address)
+        return hw_id in _SEESAW_HW_IDS, hw_id, None
+    except (OSError, TypeError, ValueError) as exc:
+        return False, None, getattr(exc, "errno", None)
+    finally:
+        if bus is not None:
+            try:
+                bus.close()
+            except OSError:
+                pass
+
+
+def _detect_quad_rotary(spec: dict, driver_state: dict | None) -> dict:
+    """Prefer the driver's own state when it has one; probe the seesaw otherwise.
+
+    QuadRotaryController polls this exact board at 10 Hz, so when it reports
+    connected that answer is both more accurate than a fresh probe and free
+    of adding to whatever contention already exists between the two. Whether
+    that contention is even the cause of the seesaw's NACK rate is not
+    settled (hardware log 2026-09-20) -- which is exactly why, when the
+    driver has no opinion (disabled, or never connected), this falls back to
+    the proper register read in ``_seesaw_present`` rather than the bare ACK
+    every other device here uses.
+    """
+    address = spec["addresses"][0]
+    driver_state = driver_state or None
+    driver_confirmed = bool(
+        driver_state and driver_state.get("enabled") and driver_state.get("connected")
+    )
+    if driver_confirmed:
+        present, hw_id, err = True, None, None
+        provenance = "driver-confirmed"
+    else:
+        present, hw_id, err = _seesaw_present(I2C_BUS, address)
+        provenance = "probed"
+    entry = {
+        "key": spec["key"],
+        "name": spec["name"],
+        "hint": spec["hint"],
+        "bus": f"i2c-{I2C_BUS}",
+        "present": present,
+        "address": address if present else None,
+        "expected": [f"0x{a:02x}" for a in spec["addresses"]],
+        "provenance": provenance,
+        "probe_error": None if present else _probe_error(err),
+        "driver": driver_state,
+    }
+    if hw_id is not None:
+        entry["hw_id"] = f"0x{hw_id:02x}"
+    return entry
 
 
 def detect_cfe_hat() -> dict:
     """Present when 0x34 answers on the bus, and only then."""
-    address = _probe((0x34,))
+    address, err = _probe((0x34,))
     return {
         "present": address is not None,
         "bus": f"i2c-{I2C_BUS}",
         "address": address,
         "via": "i2c" if address is not None else None,
+        "probe_error": None if address is not None else _probe_error(err),
     }
 
 
@@ -173,22 +312,35 @@ def detect_oled(oled_settings: dict | None = None) -> dict:
         "geometry_source": "settings",
         "enabled": bool(settings.get("enabled", False)),
     }
+    last_errno = None
     for oled_type in OLED_TYPES:
-        if _ack(I2C_BUS, oled_type["address"]):
+        ok, err = _ack(I2C_BUS, oled_type["address"])
+        if ok:
             entry["present"] = True
             entry["address"] = oled_type["address"]
             entry["controller"] = " or ".join(oled_type["controllers"])
             entry["controllers"] = list(oled_type["controllers"])
             entry["note"] = oled_type["note"]
             break
+        last_errno = err
+    entry["probe_error"] = None if entry["present"] else _probe_error(last_errno)
     return entry
 
 
-def detect_devices(oled_settings: dict | None = None) -> list[dict]:
-    """Presence of every peripheral the pane lists, probed now."""
+def detect_devices(oled_settings: dict | None = None, quad_rotary_driver: dict | None = None) -> list[dict]:
+    """Presence of every peripheral the pane lists, probed now.
+
+    *quad_rotary_driver* is the running ``QuadRotaryController``'s own state
+    snapshot (``{enabled, connected, ever_connected, last_error,
+    last_change_epoch}``), or None when the controller was never started --
+    see ``_detect_quad_rotary`` for how it changes what gets probed.
+    """
     found = []
     for spec in DEVICES:
-        address = _probe(spec["addresses"])
+        if spec["key"] == "quad_rotary":
+            found.append(_detect_quad_rotary(spec, quad_rotary_driver))
+            continue
+        address, err = _probe(spec["addresses"])
         entry = {
             "key": spec["key"],
             "name": spec["name"],
@@ -197,6 +349,7 @@ def detect_devices(oled_settings: dict | None = None) -> list[dict]:
             "present": address is not None,
             "address": address,
             "expected": [f"0x{a:02x}" for a in spec["addresses"]],
+            "probe_error": None if address is not None else _probe_error(err),
         }
         if spec["key"] == "rtc":
             entry["kernel_device"] = _rtc_device_present()
@@ -214,6 +367,7 @@ def detect_devices(oled_settings: dict | None = None) -> list[dict]:
         "address": cfe["address"],
         "expected": ["0x34"],
         "via": cfe["via"],
+        "probe_error": cfe.get("probe_error"),
     })
     return found
 

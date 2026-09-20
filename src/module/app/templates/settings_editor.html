@@ -4908,6 +4908,17 @@
     var url = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
     return storage ? url + '?storage=' + encodeURIComponent(storage) : url;
   }
+  // Combined-zip sibling of takeDownloadUrl() for the no-folder-picker bulk
+  // path (/api/raw/download). `storage`, like the single-take route, is one
+  // label applied to every name in the request -- the caller groups the
+  // selection by data-storage first (see the bulkDownload click handler) so
+  // a selection spanning /media/RAW and /media/RAW1 becomes one request per
+  // drive rather than one request that could resolve a same-named take on
+  // the wrong drive.
+  function bulkTakeDownloadUrl(names, storage){
+    var url = '/settings-editor/api/raw/download?names=' + names.map(encodeURIComponent).join(',');
+    return storage ? url + '&storage=' + encodeURIComponent(storage) : url;
+  }
   function takeFilesUrl(name, storage){
     var url = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/files';
     return storage ? url + '?storage=' + encodeURIComponent(storage) : url;
@@ -5379,17 +5390,11 @@
     bar.classList.toggle('show', names.length > 0);
     document.getElementById('selectAllClips').checked = names.length > 0 && names.length === currentTakes.length;
     // With a folder picker, several takes download sequentially into it, one
-    // write stream at a time -- see the bulk handler below. Without one there
-    // is no server-side combined-zip endpoint, and N parallel per-take
-    // <a download> clicks would race each other (raw_files.DOWNLOAD_SEMAPHORE
-    // caps concurrent server-side reads at 2), so "download selected" stays
-    // honest only for exactly one take at a time on that fallback path.
-    var bulkDownloadBtn = document.getElementById('bulkDownload');
-    var tooManyForDownload = !CAN_PICK_FOLDER && names.length > 1;
-    bulkDownloadBtn.disabled = tooManyForDownload;
-    bulkDownloadBtn.title = tooManyForDownload
-      ? 'Download one take at a time — select a single take to download it'
-      : '';
+    // write stream at a time. Without one, /api/raw/download builds a single
+    // combined zip server-side (raw_files.stream_takes_zip) instead of N
+    // parallel per-take <a download> clicks racing each other -- see the
+    // bulk handler below. Either way "Download selected" now works with more
+    // than one take picked, so the button is never disabled for that reason.
   }
 
   function wireClipRowActions(){
@@ -5502,9 +5507,26 @@
       if (row) { startTakeDownload(names[0], row.getAttribute('data-storage'), row); }
       return;
     }
-    // More than one take is only reachable here with a folder picker --
-    // updateBulkBar() disables this button above one selection otherwise.
-    if (!CAN_PICK_FOLDER) { return; }
+    if (!CAN_PICK_FOLDER) {
+      // Plain HTTP, the hotspot, mDNS, Safari, every phone -- no folder
+      // picker here, so one combined zip per storage from
+      // /api/raw/download instead of N racing per-take <a download> clicks.
+      // A bulk zip of several takes can take a while before the browser
+      // shows anything, unlike the single-take path, so say so up front.
+      var byStorage = {};
+      names.forEach(function(name){
+        var row = document.querySelector('.cliprow[data-name="' + CSS.escape(name) + '"]');
+        var storage = (row && row.getAttribute('data-storage')) || '';
+        (byStorage[storage] = byStorage[storage] || []).push(name);
+      });
+      var groups = Object.keys(byStorage);
+      groups.forEach(function(storage){
+        downloadViaAnchor(bulkTakeDownloadUrl(byStorage[storage], storage), 'cinemate-takes.zip');
+      });
+      showToast('Preparing ' + names.length + ' take(s) as ' + groups.length +
+        (groups.length === 1 ? ' zip' : ' zips') + ' — this can take a while.');
+      return;
+    }
     pickFolder().then(function(dirRoot){
       refreshSuppressed = true;
       return names.reduce(function(chain, name, i){

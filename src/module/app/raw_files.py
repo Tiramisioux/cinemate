@@ -330,29 +330,44 @@ class _StreamSink(io.RawIOBase):
         return chunk
 
 
-def stream_take_zip(path: Path):
-    """Yield a zip of *path* as it is built, instead of writing a whole take
+def stream_takes_zip(paths: list[Path]):
+    """Yield a zip of *paths* as it is built, instead of writing a whole take
     to a temp file first (the previous build_take_zip -- a 60 s take was
     ~4 GB written to /tmp before a single byte reached the browser). DNGs are
     already stored uncompressed (dng_encoder.cpp hardcodes COMPRESSION_NONE),
     so this uses ZIP_STORED rather than spending CPU on compression that
-    won't shrink anything."""
+    won't shrink anything.
+
+    Each take lands under its own top-level folder (``<take-name>/<file>``)
+    inside the one zip, so a multi-take download un-zips into one folder per
+    take instead of colliding same-named frames (``f000001.dng`` etc.) across
+    takes. Same `_StreamSink`, same ZIP_STORED/zip64 as the single-take path
+    this generalises -- see `stream_take_zip()` below, kept as the
+    one-element case."""
     sink = _StreamSink()
     with zipfile.ZipFile(sink, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as zf:
-        for f in sorted(path.rglob("*")):
-            if not f.is_file():
-                continue
-            zi = zipfile.ZipInfo.from_file(f, arcname=f"{path.name}/{f.relative_to(path)}")
-            zi.compress_type = zipfile.ZIP_STORED
-            with zf.open(zi, "w") as dest, open(f, "rb") as src:
-                while chunk := src.read(1 << 20):
-                    dest.write(chunk)
-                    if out := sink.drain():
-                        yield out
-            if out := sink.drain():
-                yield out
+        for path in paths:
+            for f in sorted(path.rglob("*")):
+                if not f.is_file():
+                    continue
+                zi = zipfile.ZipInfo.from_file(f, arcname=f"{path.name}/{f.relative_to(path)}")
+                zi.compress_type = zipfile.ZIP_STORED
+                with zf.open(zi, "w") as dest, open(f, "rb") as src:
+                    while chunk := src.read(1 << 20):
+                        dest.write(chunk)
+                        if out := sink.drain():
+                            yield out
+                if out := sink.drain():
+                    yield out
     if out := sink.drain():
         yield out
+
+
+def stream_take_zip(path: Path):
+    """One-element wrapper around `stream_takes_zip()`, kept so
+    `download_raw_take` (the single-take route) and the existing round-trip
+    test don't need to change shape."""
+    yield from stream_takes_zip([path])
 
 
 def guarded_stream(gen, sem=DOWNLOAD_SEMAPHORE):

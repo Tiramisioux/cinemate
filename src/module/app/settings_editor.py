@@ -1183,6 +1183,71 @@ def format_raw_drive():
     }), 500
 
 
+@settings_editor_bp.route("/api/raw/download", methods=["GET"])
+def download_raw_takes():
+    """Bulk sibling of download_raw_take(): one zip holding several takes,
+    each under its own top-level folder (raw_files.stream_takes_zip()). GET,
+    not POST -- the client reaches this the same way as the single-take
+    download, an `<a download>` click, which cannot carry a request body.
+
+    `names` is a comma-separated list of encodeURIComponent'd take names;
+    take names are the CINEPI_... folder names storage-automount.py mints
+    and can never contain a comma (asserted in
+    _test/test_raw_files_download.py), so a plain split is safe.
+
+    A selection spanning two mounted drives (/media/RAW and /media/RAW1)
+    sends one request per storage from the client rather than mixing
+    storages in one query -- see the bulk-download handler in
+    settings_editor.html -- so, like the single-take route, `storage` here
+    applies to every name in this request rather than being per-name."""
+    raw_names = request.args.get("names") or ""
+    names = [n for n in raw_names.split(",") if n]
+    if not names:
+        return jsonify({"ok": False, "message": "No take names given"}), 400
+
+    storage = request.args.get("storage") or None
+    paths = []
+    missing = []
+    for name in names:
+        path = raw_files.resolve_take(name, storage=storage)
+        if path is None:
+            missing.append(name)
+        else:
+            paths.append(path)
+    if missing:
+        return jsonify({
+            "ok": False,
+            "message": f"Take(s) not found: {', '.join(missing)}",
+        }), 404
+
+    # Whole-request refusal, same as bulk delete: a zip silently missing the
+    # recording take's newest frames would be worse than refusing the whole
+    # download outright.
+    blocked = _recording_take_names() & set(names)
+    if blocked:
+        return jsonify({
+            "ok": False,
+            "message": "Refusing to download while recording",
+            "recording": sorted(blocked),
+        }), 409
+
+    if not raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False):
+        return jsonify({"ok": False, "message": "A download is already in progress"}), 429, {"Retry-After": "5"}
+
+    # Same two-release-path shape as download_raw_take() -- see the comment
+    # there about a HEAD request never running guarded_stream()'s generator,
+    # and so never reaching its `finally`.
+    permit = raw_files._Permit(raw_files.DOWNLOAD_SEMAPHORE)
+    filename = "cinemate-takes-" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".zip"
+    response = Response(
+        stream_with_context(raw_files.guarded_stream(raw_files.stream_takes_zip(paths), sem=permit)),
+        mimetype="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+    response.call_on_close(permit.release)
+    return response
+
+
 # ── i2c pane ─────────────────────────────────────────────────────────────
 @settings_editor_bp.route("/api/hardware", methods=["GET"])
 def get_hardware():

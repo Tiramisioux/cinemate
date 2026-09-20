@@ -3551,14 +3551,16 @@
     crop.className='mode-crop-window';
     var hasCrop=mode.crop_known && mode.crop_width && mode.crop_height;
     if(hasCrop){
-      // Crop coordinates are reported in the mode's output domain. The
-      // diagram uses the largest 1x1 active sensor domain (3840×2160 on
-      // IMX585), so scale binned crop geometry back into that domain before
-      // drawing. Without this, a centred 2x2 crop such as 1440×1080 at
-      // (240,0) is incorrectly drawn near the upper-left instead of centred.
+      // WP-CM-10: crop_x/crop_y/crop_width/crop_height is already reported
+      // in native sensor coordinates, at any binning (the driver's
+      // V4L2_SEL_TGT_CROP domain -- see the contract comment in
+      // sensor_detect._mode_from_metadata_or_detected). The diagram uses
+      // the largest 1x1 active sensor domain (3840x2160 on IMX585) as its
+      // coordinate space, so the crop is drawn as given -- never multiplied
+      // by binning again, which would double it out of the frame.
       var bx=mode.binning_x || 1, by=mode.binning_y || 1;
-      var sx=(mode.crop_x || 0)*bx, sy=(mode.crop_y || 0)*by;
-      var sw=mode.crop_width*bx, sh=mode.crop_height*by;
+      var sx=mode.crop_x || 0, sy=mode.crop_y || 0;
+      var sw=mode.crop_width, sh=mode.crop_height;
       var sensorW=mode.diagram_sensor_width || mode.sensor_width || Math.max(mode.width || sw, sx+sw);
       var sensorH=mode.diagram_sensor_height || mode.sensor_height || Math.max(mode.height || sh, sy+sh);
       crop.style.left=(sx/sensorW*100)+'%';

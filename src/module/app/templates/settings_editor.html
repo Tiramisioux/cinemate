@@ -1868,7 +1868,7 @@
     <section class="group" id="resolution" data-page="settings">
   <header class="group-head">
     <h2>{{ t('pane.resolution.heading') }}</h2>
-    <p class="group-sub">Automatic resolution behaviour.</p>
+    <p class="group-sub">{{ t('pane.resolution.sub') }}</p>
   </header>
   <div class="cards">
     <div class="card" data-search="dynamic resolution fps substitute automatic mode">
@@ -1878,6 +1878,80 @@
     <div class="card" data-search="dynamic resolution priority ladder hdr sdr bit depth class follow mode follow resolution">
       <div class="card-main"><label class="card-label" for="f-dynres-priority">{{ t('card.image_capture.dynamic_resolution_priority.label') }}</label><p class="card-help">{{ t('card.image_capture.dynamic_resolution_priority.help') }}</p></div>
       <div class="card-control"><select class="field-input" id="f-dynres-priority" data-path="image_capture.dynamic_resolution_priority" data-type="string" data-original="mode"><option value="mode">Mode first</option><option value="resolution">Resolution first</option><option value="none">Never leave class</option></select></div>
+    </div>
+    <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">
+      <div class="card-main">
+        <label class="card-label">{{ t('card.image_capture.hdr.threshold_low.label') }}</label>
+        <p class="card-help">{{ t('card.image_capture.hdr.threshold_low.help') }}</p>
+      </div>
+      <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
+        <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+          <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.0') }}</span>
+          <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+          <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.1') }}</span>
+          <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+          <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.2') }}</span>
+          <input class="field-input num-input" type="number" id="f-hdr-blend" data-path="image_capture.hdr.blend" data-type="number" data-original="0" value="0" style="width:56px">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
+          <span class="live-cap" style="color:var(--muted)">{{ t('caption.image_capture.hdr.threshold_low.3') }}</span>
+          <input class="field-input num-input" type="number" id="f-hdr-gainadder" data-path="image_capture.hdr.gain_adder" data-type="number" data-original="1" value="1" style="width:56px">
+        </label>
+      </div>
+    </div>
+    <div class="card" data-search="dng thumbnail embedded preview playback mono colour color jpeg greyscale off">
+      <div class="card-main">
+        <label class="card-label">{{ t('card.image_capture.thumbnail.label') }}</label>
+        <p class="card-help">{{ t('card.image_capture.thumbnail.help') }}</p>
+        <!-- What "on" costs, in this camera's own numbers rather than a
+             figure restated by hand: rendered from thumbnail_choice_labels()
+             (sensor_detect.py), the same function and the same byte formula
+             file_size uses, so it cannot drift from what a take costs. Only
+             the on position needs a figure -- off is 0 B. -->
+        <p class="card-help" id="thumb-cost" style="color:var(--muted)">{{ thumbnail_on_label }}</p>
+        <p class="card-help">{{ t('caption.image_capture.thumbnail.0') }}</p>
+      </div>
+      <div class="card-control">
+        <!-- One toggle, not a mode picker and a size picker (operator
+             decision 2026-09-13). All four modes and every size still
+             work and are still reachable -- by hand in settings.jsonc or
+             live with `set thumbnail` -- but this page offers the choice
+             that is actually a choice: a preview in the Playback pane, or
+             nothing.
+
+             The toggle carries no data-path of its own, so buildState()
+             ignores it; the hidden inputs below are what the save reads
+             and what populateSimpleFields() hydrates, exactly like every
+             other field on this page. thumbnail_size is hidden rather
+             than absent for the reason B-2 recorded: a key the form does
+             not carry is dropped from settings.jsonc on the next save,
+             and that drop is a structural change, which costs the file
+             every comment in it. -->
+        <button class="toggle" id="f-thumb-toggle" role="switch" aria-checked="true"
+                aria-label="Embedded DNG thumbnail"></button>
+        <input type="hidden" id="f-thumb-value" data-path="image_capture.thumbnail" data-type="string" data-original="jpeg" value="jpeg">
+        <input type="hidden" id="f-thumb-size-value" data-path="image_capture.thumbnail_size" data-type="number" data-original="1" value="1">
+      </div>
+    </div>
+    <div class="card" data-search="sensor database file resources sensors json advanced">
+      <div class="card-main">
+        <label class="card-label">{{ t('card.sensors.database_file.label') }}</label>
+        <p class="card-help">{{ t('card.sensors.database_file.help') }}</p>
+      </div>
+      <div class="card-control">
+        <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>{{ sensor_db_path }}</span>
+        <!-- The card is read-only, but the key still has to round-trip:
+             buildState() only collects [data-path] elements, so without
+             this field a Save posts no sensors.database_file at all and
+             _apply_settings_defaults setdefaults it back to the stock
+             "resources/sensors.json" -- silently discarding an
+             operator's override. -->
+        <input type="hidden" data-path="sensors.database_file">
+      </div>
     </div>
   </div>
 </section>

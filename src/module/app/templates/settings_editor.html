@@ -37,6 +37,11 @@
     --ok-soft: #12291a;
     --danger: #ff4136;
     --danger-soft: #2c0f0d;
+    /* Reboot is recoverable; shutdown is not (only a human at the rig can power
+       the camera back on). They used to share --danger, which said the same thing
+       about both. Purple separates the one you can undo. */
+    --reboot: #b388ff;
+    --reboot-soft: #1b1030;
     --restart: #ffdd00;
     --restart-soft: #2e2600;
     --dirty: #ff33ff;
@@ -208,6 +213,8 @@
   .btn-primary:disabled{ opacity:.5; cursor:default; }
   .btn-ghost{ background: transparent; }
   .btn-danger-outline{ border-color: var(--danger); color: var(--danger); background:transparent; }
+  .btn-reboot-outline{ border-color: var(--reboot); color: var(--reboot); background:transparent; }
+  .btn-reboot-outline:hover{ background: var(--reboot-soft); }
 
   /* Keep the live camera control one tap away while editing settings.
      This is the same green circular live-view affordance used by the
@@ -1192,6 +1199,7 @@
   #app.skin-hud .btn{ font-weight:700; letter-spacing:.05em; }
   #app.skin-hud .btn-primary{ background: var(--ok); border-color: var(--ok); color: #04210c; }
   #app.skin-hud .btn-danger-outline{ border-color: var(--danger); color: var(--danger); }
+  #app.skin-hud .btn-reboot-outline{ border-color: var(--reboot); color: var(--reboot); }
   #app.skin-hud .danger-zone{ background: var(--danger-soft); border-color: var(--danger); }
 
   #app.skin-hud .status-dot{ background: var(--ok); }
@@ -2338,7 +2346,7 @@
           <div class="eyebrow">Reboot the Pi</div>
           <p>{{ t('text.system.0.body') }}</p>
         </div>
-        <button class="btn btn-danger-outline" id="genericRebootBtn">Reboot Pi</button>
+        <button class="btn btn-reboot-outline" id="genericRebootBtn">Reboot Pi</button>
       </div>
 
       <div class="danger-zone" style="margin-top:12px">
@@ -2661,7 +2669,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           Restart CineMate
         </button>
-        <button class="btn btn-danger-outline" id="cfgGenericRebootBtn">Reboot Pi</button>
+        <button class="btn btn-reboot-outline" id="cfgGenericRebootBtn">Reboot Pi</button>
         <button class="btn btn-danger-outline" id="cfgShutdownBtn">Shut down Pi</button>
       </div>
       <p class="card-help" style="max-width:60ch; margin-top:8px">{{ t('help.bootconfig.1.body') }}</p>

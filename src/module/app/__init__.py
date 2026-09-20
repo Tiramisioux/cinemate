@@ -5,7 +5,7 @@ import logging
 import threading
 
 def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect,
-                command_executor, settings):
+                command_executor, settings, peripherals=None):
     app = Flask(__name__)
     
     # Adjust the logging level for the internal Flask logger
@@ -72,6 +72,13 @@ def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect,
     app.config['SENSOR_DETECT'] = sensor_detect
     app.config['COMMAND_EXECUTOR'] = command_executor
     app.config['SETTINGS'] = settings
+    # A small registry of peripheral driver instances the settings-editor's
+    # i2c pane can read state off (currently just the quad rotary
+    # controller), separate from the six flat config keys above because this
+    # one is optional and only ever has one consumer so far. See
+    # hardware_probe.py / handbook's probing-i2c-peripherals.md for why the
+    # pane needs this rather than reusing a driver as its own probe.
+    app.config['PERIPHERALS'] = peripherals or {}
 
     from .main.routes import main_routes
     from .main.events import register_events

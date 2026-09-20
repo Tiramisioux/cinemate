@@ -1112,6 +1112,7 @@ def run_application(args, log_queue):
         app, socketio = create_app(
             redis_controller, cinepi_controller, simple_gui, sensor_detect,
             command_executor, settings,
+            peripherals={"quad_rotary": quad_rotary},
         )
         run_kwargs = {'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True}
         # Flask-SocketIO's threading async mode forwards **kwargs to

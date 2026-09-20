@@ -3,6 +3,7 @@ from gpiozero import RotaryEncoder as GPIOZeroRotaryEncoder
 import threading
 import logging
 import shlex  # Add this import
+import inspect
 
 import warnings
 import logging
@@ -189,7 +190,9 @@ class ComponentInitializer:
                 cinepi_controller=self.cinepi_controller,
                 clk_pin=encoder_config['clk_pin'],
                 dt_pin=encoder_config['dt_pin'],
-                actions=encoder_config['encoder_actions']
+                actions=encoder_config['encoder_actions'],
+                reverse=as_bool(encoder_config.get('reverse', False), default=False),
+                wrap=as_bool(encoder_config.get('wrap', False), default=False)
             )
 
             button_pin = encoder_config.get('button_pin')
@@ -683,42 +686,63 @@ class ThreeWaySwitch:
         return -1  # Undefined position
     
 class RotaryEncoder:
-    def __init__(self, cinepi_controller, clk_pin, dt_pin, actions):
+    def __init__(self, cinepi_controller, clk_pin, dt_pin, actions, reverse=False, wrap=False):
         self.logger = logging.getLogger(f"RotaryEncoder{clk_pin}_{dt_pin}")
-        
+
         # Correct initialization with gpiozero's RotaryEncoder using a and b for pin names
         self.encoder = GPIOZeroRotaryEncoder(a=clk_pin, b=dt_pin)
-        
+
         self.actions = actions
         self.cinepi_controller = cinepi_controller
+        self.wrap = wrap
 
-        # Set up event handlers
-        self.encoder.when_rotated_clockwise = self.on_rotated_clockwise
-        self.encoder.when_rotated_counter_clockwise = self.on_rotated_counter_clockwise
+        # Reverse swaps which physical rotation gpiozero reports as CW/CCW,
+        # not which action fires: on_rotated_clockwise still means "run
+        # whatever settings.jsonc configured for rotate_clockwise", it is
+        # just now bound to the opposite physical turn. That keeps the
+        # dispatch/logging below identical either way.
+        if reverse:
+            self.encoder.when_rotated_clockwise = self.on_rotated_counter_clockwise
+            self.encoder.when_rotated_counter_clockwise = self.on_rotated_clockwise
+        else:
+            self.encoder.when_rotated_clockwise = self.on_rotated_clockwise
+            self.encoder.when_rotated_counter_clockwise = self.on_rotated_counter_clockwise
+
+    def _dispatch(self, action, direction_label):
+        if not action:
+            return
+        method_name = action.get('method')
+        args = action.get('args', [])
+        method = getattr(self.cinepi_controller, method_name, None)
+        if not method:
+            self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+            return
+        # An encoder's rotation action is any controller method an operator
+        # names, not necessarily an inc_/dec_ pair -- only forward wrap to a
+        # method that actually declares it (inspecting the signature, not
+        # catching TypeError, so a real error in the call still surfaces).
+        # A method that doesn't accept it is not a silent no-op: it just
+        # can't wrap, and that is logged here so it shows up in the log
+        # rather than only in the docs.
+        kwargs = {}
+        if 'wrap' in inspect.signature(method).parameters:
+            kwargs['wrap'] = self.wrap
+        elif self.wrap:
+            self.logger.info(
+                f"Wrap is on for this encoder but {method_name}() takes no "
+                "wrap argument; this turn has no wrap effect."
+            )
+        method(*args, **kwargs)
+        self.logger.info(
+            f"Rotary encoder rotated {direction_label}, calling method {method_name} "
+            f"with args {args}{' wrap=' + str(self.wrap) if kwargs else ''}."
+        )
 
     def on_rotated_clockwise(self):
-        action = self.actions.get('rotate_clockwise')
-        if action:
-            method_name = action.get('method')
-            args = action.get('args', [])
-            method = getattr(self.cinepi_controller, method_name, None)
-            if method:
-                method(*args)
-                self.logger.info(f"Rotary encoder rotated clockwise, calling method {method_name} with args {args}.") 
-            else:
-                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+        self._dispatch(self.actions.get('rotate_clockwise'), 'clockwise')
 
     def on_rotated_counter_clockwise(self):
-        action = self.actions.get('rotate_counterclockwise')
-        if action:
-            method_name = action.get('method')
-            args = action.get('args', [])
-            method = getattr(self.cinepi_controller, method_name, None)
-            if method:
-                method(*args)
-                self.logger.info(f"Rotary encoder rotated counterclockwise, calling method {method_name} with args {args}.")
-            else:
-                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+        self._dispatch(self.actions.get('rotate_counterclockwise'), 'counterclockwise')
 
 
 # Suppress specific warnings

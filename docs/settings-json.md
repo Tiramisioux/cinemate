@@ -422,8 +422,11 @@ single, double and triple click, and a hold, each running a different command.
 The stock image ships six controls (two record buttons, a multi-gesture button, two switches and a
 rotary encoder) and the four dials of the quad rotary board. The GPIO encoder and the quad board each
 carry an `enabled` flag, both `true` as shipped; set either to `false` to keep the mapping on file
-while switching the device off. Creating a control, choosing its command and argument, and moving it
-to another pin are covered in [Additional hardware](hardware-controls.md).
+while switching the device off. Every GPIO rotary encoder and every quad-board channel also carries its
+own `reverse` and `wrap` booleans (both `false` as shipped): Reverse swaps which turn direction
+increases the value, Wrap makes one more click at either end of the range land on the other end
+instead of stopping. Creating a control, choosing its command and argument, and moving it to another
+pin are covered in [Additional hardware](hardware-controls.md).
 
 These map to `hardware_controls` and `input_peripherals`.
 

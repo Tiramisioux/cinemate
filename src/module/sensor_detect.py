@@ -591,12 +591,19 @@ class SensorDetect:
             fmt = re.search(r"'(?:S[RGB]{4}|R|GREY|Y)(\d+)", line)
             if fmt:
                 current_bit_depth = int(fmt.group(1))
-            elif "PISP_COMP1" in line:
-                # The compressed container carries no depth digits of its
-                # own; it is always a 16-bit format. Set it explicitly
-                # rather than falling through and silently keeping
-                # whatever bit depth the previous format in this block left
-                # behind.
+            elif "PISP_COMP1" in line and current_hdr:
+                # The compressed container's own width is always 16 bits,
+                # but that is the transport container, not necessarily the
+                # sensor's native depth: cinepi-raw's dng_output_depth.hpp
+                # documents PiSP COMP1 also carrying a 10/12-bit stock-sensor
+                # mode (its own worked example is imx519) whenever the
+                # frontend cannot output CSI2-packed or non-16-bit data
+                # directly. Only assert 16 here in the ClearHDR state, where
+                # a 16-bit mode is what the driver is actually expected to
+                # report; in the SDR state, leave current_bit_depth as-is
+                # rather than guessing, so the "16-bit seen in SDR state is
+                # dropped" guard below cannot discard a real stock-sensor
+                # mode that merely happens to be carried over COMP1.
                 current_bit_depth = 16
 
             # ── first resolution on the line (if any)

@@ -92,6 +92,30 @@ CLEAR HDR / SENSOR HDR
         self.assertEqual(by_size[(3840, 2160)]["bit_depth"], 12)
         self.assertEqual(by_size[(3840, 2200)]["bit_depth"], 16)
 
+    def test_pisp_comp1_in_sdr_state_does_not_force_16_bit(self):
+        """PISP_COMP1's own container width is 16 bits, but
+        dng_output_depth.hpp documents this container also carrying a
+        10/12-bit stock-sensor mode (its own example is imx519) whenever the
+        PiSP frontend cannot output CSI2-packed or non-16-bit data directly.
+        Forcing current_bit_depth=16 whenever the string appears, without
+        checking the HDR state, would make the pre-existing "16-bit mode
+        seen in the SDR state is dropped" guard silently discard a real
+        stock-sensor mode. Outside the ClearHDR state, a COMP1 format must
+        not overwrite the depth already read from an earlier format in the
+        same mode block."""
+        output = """\
+0 : imx519 [4656x3496]
+    Modes: 'SRGGB10_CSI2P' : 1920x1080 [60.00 fps - (0, 0)/4656x3496 crop]
+           'BGGR_PISP_COMP1' : 2328x1748 [30.00 fps - (0, 0)/4656x3496 crop]
+"""
+        modes = self._detector()._parse_cinepi_output(output)["imx519"]
+        by_size = {(m["width"], m["height"]): m for m in modes}
+        self.assertEqual(by_size[(1920, 1080)]["bit_depth"], 10)
+        # Must not be force-set to 16 and then dropped by the SDR/16-bit
+        # guard: the mode must survive and must not silently claim 16-bit.
+        self.assertIn((2328, 1748), by_size)
+        self.assertEqual(by_size[(2328, 1748)]["bit_depth"], 10)
+
 
 if __name__ == "__main__":
     unittest.main()

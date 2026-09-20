@@ -551,7 +551,12 @@
   .recording-mode-table tr.mode-off td{ opacity:.38; }
   .recording-mode-table tr.mode-off:hover{ background:var(--panel-2); }
   .recording-mode-table .mode-toggle{ margin:0; }
-  .recording-mode-table .mode-fps-input{ width:clamp(24px, 8vw, 48px); max-width:100%; box-sizing:border-box; padding:5px 3px; text-align:right; font-variant-numeric:tabular-nums; }
+  .recording-mode-table .mode-fps-input{ width:clamp(24px, 10vw, 48px); min-width:24px; height:30px; min-height:30px; box-sizing:border-box; padding:4px 1px; text-align:right; font-size:11px; font-variant-numeric:tabular-nums; }
+  .recording-mode-table .mode-fps-input::-webkit-inner-spin-button,
+  .recording-mode-table .mode-fps-input::-webkit-outer-spin-button{ margin:0; }
+  .recording-mode-table td:nth-child(6){ min-width:52px; }
+  .recording-mode-table tr[data-mode-row] > td{ height:40px; min-height:40px; }
+  .recording-mode-table tr[data-mode-row] > td:nth-child(6){ white-space:nowrap; overflow:visible; }
   .recording-mode-table .mode-fps-input.invalid{ border-color:var(--danger); }
   .mode-group-row td{ padding:7px 8px; background:var(--panel-2); color:var(--muted); font-family:'DIN2014',sans-serif; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-top:1px solid var(--line); text-align:left !important; }
   .mode-subgroup-row td{ padding:2px 8px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border-bottom:0; background:transparent; }

@@ -733,6 +733,19 @@
     padding-top: 6px;
   }
   .gesture .g-action{ color: var(--ink); }
+  /* Reverse/Wrap on a rotary row (07-rotary-encoder-reverse-and-wrap.md):
+     buildRotaryRow gives each its own .gesture row (name | toggle, the same
+     2-cell shape the Turn row already used before this), while the quad
+     encoder's Turn row grows a .turn-controls wrapper so the setting select
+     and both switches share the command column without breaking the
+     3-column .gesture grid. */
+  .turn-controls{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; min-width:0; }
+  .turn-controls select.field-input{ flex:1 1 160px; min-width:120px; }
+  .inline-toggle{
+    display:inline-flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap;
+    font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px;
+    text-transform:uppercase; letter-spacing:.03em; color: var(--muted);
+  }
   .gesture-remove{
     width:22px; height:22px; border-radius: var(--radius); border:1px solid var(--line); background: var(--panel-2);
     color: var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; padding:0;
@@ -3135,6 +3148,60 @@
     return makeControlRow('switch3', prefix, picker, gestures, 'this 3-way switch', 'three way switch gpio');
   }
 
+  /* Reverse and Wrap: per-encoder booleans (07-rotary-encoder-reverse-and-wrap.md),
+     not dispatched actions, so they don't belong in ROTARY_GESTURE_SPECS --
+     there is nothing to re-key or grey out, just a switch. makeToggleButton
+     is the bare control both row builders below key off of by id;
+     makeToggleGestureRow wraps one in a standalone .gesture row (2 cells --
+     name, toggle -- the same shape the Turn row already used before this
+     change added a third), for the GPIO rotary row's gestures block. */
+  function makeToggleButton(id, checked, ariaLabel){
+    var tog = document.createElement('button');
+    tog.type = 'button';
+    tog.id = id;
+    tog.className = 'toggle';
+    tog.setAttribute('role', 'switch');
+    tog.setAttribute('aria-checked', checked ? 'true' : 'false');
+    tog.setAttribute('aria-label', ariaLabel);
+    tog.addEventListener('click', function(){
+      var isChecked = tog.getAttribute('aria-checked') === 'true';
+      tog.setAttribute('aria-checked', String(!isChecked));
+      markControlsDirtyIfNeeded();
+    });
+    tog.addEventListener('keydown', function(e){
+      if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); tog.click(); }
+    });
+    return tog;
+  }
+  /* Reads a makeToggleButton back out by id at save time -- absent (row
+     removed, or a build that predates this feature) reads as off, same as
+     an absent key in the loaded settings.jsonc. */
+  function toggleIsChecked(id){
+    var el = document.getElementById(id);
+    return !!el && el.getAttribute('aria-checked') === 'true';
+  }
+  function makeToggleGestureRow(id, label, checked, ariaLabel){
+    var row = document.createElement('div');
+    row.className = 'gesture';
+    var name = document.createElement('span');
+    name.className = 'g-name';
+    name.textContent = label;
+    row.appendChild(name);
+    row.appendChild(makeToggleButton(id, checked, ariaLabel));
+    return row;
+  }
+  /* A labelled toggle compact enough to sit inline next to a select, for the
+     quad encoder's Turn line (see buildEncoderRow below). */
+  function makeInlineToggle(id, label, checked, ariaLabel){
+    var wrap = document.createElement('label');
+    wrap.className = 'inline-toggle';
+    wrap.appendChild(makeToggleButton(id, checked, ariaLabel));
+    var span = document.createElement('span');
+    span.textContent = label;
+    wrap.appendChild(span);
+    return wrap;
+  }
+
   function buildRotaryRow(data){
     var prefix = nextControlPrefix();
     var picker = document.createElement('div');
@@ -3156,6 +3223,16 @@
     } : { rpress: 'None' };
     Object.keys(actions).forEach(function(k){ if (actions[k] === undefined) delete actions[k]; });
     var gestures = buildGesturesBlock(prefix, 'rotary', actions);
+    var gestureList = gestures.querySelector('.gestures');
+    var addGestureRow = gestureList.querySelector('.gesture-add');
+    gestureList.insertBefore(
+      makeToggleGestureRow(prefix + '-reverse', 'Reverse', !!(data && data.reverse), 'Reverse this encoder’s rotation direction'),
+      addGestureRow
+    );
+    gestureList.insertBefore(
+      makeToggleGestureRow(prefix + '-wrap', 'Wrap around', !!(data && data.wrap), 'Wrap to the other end of the range instead of stopping'),
+      addGestureRow
+    );
     return makeControlRow('rotary', prefix, picker, gestures, 'this rotary encoder', 'rotary encoder gpio clk dt');
   }
 
@@ -3298,7 +3375,16 @@
     }
     turnSel.addEventListener('change', function(){ markControlsDirtyIfNeeded(); refreshDrawer(); });
     turnRow.appendChild(turnName);
-    turnRow.appendChild(turnSel);
+    /* Reverse and Wrap ride the Turn line beside the setting select rather
+       than getting their own gesture rows (unlike the GPIO rotary row above)
+       -- .turn-controls keeps them inside the .gesture grid's single
+       command column so the 3-column layout isn't disturbed. */
+    var turnControls = document.createElement('div');
+    turnControls.className = 'turn-controls';
+    turnControls.appendChild(turnSel);
+    turnControls.appendChild(makeInlineToggle(prefix + '-reverse', 'Reverse', !!(data && data.reverse), 'Reverse this encoder’s rotation direction'));
+    turnControls.appendChild(makeInlineToggle(prefix + '-wrap', 'Wrap around', !!(data && data.wrap), 'Wrap to the other end of the range instead of stopping'));
+    turnRow.appendChild(turnControls);
     var gestureList = gestures.querySelector('.gestures');
     gestureList.insertBefore(turnRow, gestureList.firstChild);
 
@@ -3360,6 +3446,8 @@
         var entry = {
           enabled: true, clk_pin: clk, dt_pin: dt,
           pull_up: true, debounce_time: 0.05,
+          reverse: toggleIsChecked(prefix + '-reverse'),
+          wrap: toggleIsChecked(prefix + '-wrap'),
           button_actions: { press_action: actionFromSlot(prefix + '-rpress'), hold_action: actionFromSlot(prefix + '-rhold') },
           encoder_actions: { rotate_clockwise: actionFromSlot(prefix + '-cw'), rotate_counterclockwise: actionFromSlot(prefix + '-ccw') }
         };
@@ -3384,6 +3472,8 @@
       var entry = {};
       var turnSel = document.getElementById(prefix + '-turn');
       if (turnSel && turnSel.value) entry.setting_name = turnSel.value;
+      entry.reverse = toggleIsChecked(prefix + '-reverse');
+      entry.wrap = toggleIsChecked(prefix + '-wrap');
       entry.button = buildButtonLikeObject(prefix);
       encoders[sel.value] = entry;
     });

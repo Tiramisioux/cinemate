@@ -662,6 +662,16 @@
               "debounce_time": {
                 "type": "number"
               },
+              "reverse": {
+                "type": "boolean",
+                "default": false,
+                "description": "Swap which rotation direction increases the value."
+              },
+              "wrap": {
+                "type": "boolean",
+                "default": false,
+                "description": "At either end of the range, one more click wraps to the other end instead of stopping."
+              },
               "button_actions": {
                 "type": "object",
                 "properties": {
@@ -737,6 +747,16 @@
                 "properties": {
                   "setting_name": {
                     "type": "string"
+                  },
+                  "reverse": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Swap which rotation direction increases the value."
+                  },
+                  "wrap": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "At either end of the range, one more click wraps to the other end instead of stopping."
                   },
                   "button": {
                     "type": "object",

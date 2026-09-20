@@ -116,6 +116,24 @@ The row starts with a single **Button press** line; **+ Add** offers the rest.
     ships it `true`; set it to `false` to keep a row's wiring on file while switching it off. A row
     with no `enabled` key at all is on.
 
+Two switches sit alongside the gesture lines, both off by default:
+
+| Switch | What it does |
+| --- | --- |
+| **Reverse** | Swaps which physical turn gpiozero reports as clockwise for this encoder, so **Rotate CW**'s command fires on what used to be the counter-clockwise turn, and vice versa. Which command is bound to which line does not change -- only which turn triggers it. |
+| **Wrap around** | Passed on to whichever command **Rotate CW**/**Rotate CCW** calls, if that command accepts it. At either end of a setting's range, one more click wraps to the other end instead of stopping. A command that is not one of the `inc_`/`dec_` setting steppers below ignores Wrap for this row and says so in the log ("takes no wrap argument") rather than doing nothing silently. |
+
+!!! note "Wrap only changes this encoder"
+    `iso`, `shutter_a`, `shutter_a_nom`, `fps` and the four HDR settings clamp at the ends by default
+    everywhere; turning Wrap on here makes them wrap around *for this encoder only* -- `set iso` from
+    the CLI, the web API and a pot still clamp. `wb`, `zoom` and `resolution` are the other way round:
+    they have always wrapped unconditionally, so turning Wrap **off** here now clamps them instead, a
+    change from earlier CineMate versions for this encoder specifically -- every other surface (CLI,
+    web API, pots) keeps wrapping those three regardless of this switch.
+
+`hardware_controls.rotary_encoders[]` carries these as `"reverse": true/false` and `"wrap": true/false`;
+absent is `false` for both.
+
 ### The Adafruit Quad Rotary Encoder i²c board
 
 Sits below the GPIO in list with its own **+ Add encoder**. Its rows address the board's four encoders, not GPIO pins, so the left column offers **None** and **Encoder 0** through **Encoder 3**.
@@ -127,6 +145,14 @@ Sits below the GPIO in list with its own **+ Add encoder**. Its rows address the
 **Turn** offers **Nothing**, **ISO**, **Shutter angle**, **Frame rate**, **White balance**, **Resolution**, **Preview zoom**, **Nominal shutter angle**, **HDR threshold low**, **HDR threshold high**, **HDR blend**, **HDR gain adder**.
 
 The push button below **Turn** takes the full button grammar.
+
+Two switches ride the **Turn** line beside the setting dropdown, off by default and set per channel --
+encoder 0 can wrap while encoder 1 does not. Same two switches and the same semantics as the GPIO
+rotary encoder's above: **Reverse** flips which way this dial's turn counts as positive; **Wrap
+around** is passed to the channel's `inc_`/`dec_` pair, so it wraps `iso`/`shutter_a`/etc that normally
+clamp, and -- when off -- clamps `wb`/`zoom`/`resolution` that normally wrap. `input_peripherals.
+quad_rotary_controller.encoders["0".."3"]` carries these as `"reverse": true/false` and
+`"wrap": true/false`; absent is `false` for both.
 
 With all four configured, **+ Add encoder** reports "All four encoders are already configured". The stock file configures all four encoders and ships the board on: `input_peripherals.quad_rotary_controller.enabled` is `true`, and CineMate only sets the board up when it is. Set it to `false` if you are not running the board.
 

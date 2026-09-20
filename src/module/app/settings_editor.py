@@ -808,7 +808,6 @@ def get_sensor_modes():
     enabled_modes = getattr(sensor_detect, "enabled_modes", {}) or {}
     legacy_k = image.get("k_steps", []) or []
     legacy_depths = image.get("bit_depths", []) or []
-    use_individual = isinstance(enabled_modes, dict) and bool(enabled_modes)
 
     def selected_for(camera, mode):
         entries = enabled_modes.get(camera) if isinstance(enabled_modes, dict) else None

@@ -10,16 +10,24 @@ Only four steplists have a free toggle. The four HDR free toggles live in the
 Pots section with no steplist beside them, and the remaining chip containers
 (light_hz, anamorphic, k_steps, bit_depths, oled values) have no free stepping.
 
-Numeric lists are also held in ascending order at all times, in both modes,
-and in free stepping the two ends are pulled to the right of the row with an
-arrow between them so it reads as the range it is. That move is done with
+In free stepping, the two ends are pulled to the right of the row with an
+arrow between them so it reads as the range it is (found by value, from
+Math.min/max over the chips -- never by DOM position). That move is done with
 flex `order`, never by moving nodes: the DOM order is what the saved array is
 read back from.
 
+3d44e84e ("Make array chips reorderable and open add field from card")
+retired the numeric auto-sort this module originally documented: chip order
+is now explicitly operator-controlled by dragging, numeric lists included --
+sortChipContainer() is kept only as a no-op for older callers, and every
+chip (numeric or string) gets a drag handle. The free-stepping range display
+below is unaffected: it finds the two ends by value wherever they sit in the
+(now operator-ordered) DOM, it just no longer implies the rest of the row is
+sorted between them.
+
 Verified in a browser against a harness built from the shipped functions, fed
-chips in deliberately unsorted DOM order (800, 100, 3200, 400, 1600):
-  DOM after sort  100 400 800 1600 3200      <- and this is what is saved
-  free off        every chip lit, plain ascending row
+chips in DOM order (800, 100, 3200, 400, 1600):
+  free off        every chip lit, in the order given -- no longer re-sorted
   free on         400* 800* 1600*  100 -> 3200      (* = muted)
 i.e. the ends are found by value, and the DOM is never reordered to show them.
 """
@@ -95,21 +103,17 @@ class FreeSteppingChipMutingTests(unittest.TestCase):
                              self.html, re.S).group(1)
         self.assertIn("syncAllFreeSteppingChips()", populate)
 
-    def test_numeric_lists_are_held_in_ascending_order(self):
-        fn = re.search(r"function sortChipContainer\(container\)\{(.*?)\n  \}",
-                       self.html, re.S).group(1)
-        self.assertIn("chipsAreNumeric(container)", fn)
-        # string lists (the OLED fields) keep author order -- there the sequence
-        # is the content, not a range
-        numeric_only = re.search(r"function chipsAreNumeric\(container\)\{(.*?)\n  \}",
-                                 self.html, re.S).group(1)
-        self.assertIn("data-chip-type", numeric_only)
-        self.assertIn("'number'", numeric_only)
-
-    def test_a_numeric_list_sorts_itself_so_drag_is_not_offered(self):
-        wire = re.search(r"function wireChipContainer\(container\)\{(.*?)\n    container\.addEventListener",
-                         self.html, re.S).group(1)
-        self.assertIn("if (!chipsAreNumeric(container)) makeChipDraggable", wire)
+    # test_numeric_lists_are_held_in_ascending_order and
+    # test_a_numeric_list_sorts_itself_so_drag_is_not_offered were removed:
+    # 3d44e84e ("Make array chips reorderable and open add field from card")
+    # made sortChipContainer() an explicit no-op ("Array order is now
+    # explicitly controlled by the operator and must never be rewritten")
+    # and made wireChipContainer() hand every chip a drag handle, numeric
+    # lists included, rather than only non-numeric ones. Both are deliberate,
+    # commented reversals of the behaviour these two tests guarded, not a
+    # regression -- there is no replacement test because there is no
+    # remaining claim to guard: chip order for every list, numeric or not,
+    # is now just "whatever the operator dragged it to."
 
     def test_the_repaint_sorts_before_writing_the_dirty_baseline(self):
         # otherwise a file that happens to be out of order loads looking edited

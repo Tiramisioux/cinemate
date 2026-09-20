@@ -20,11 +20,6 @@ i2c hardware
 
 cameras, audio, controls
 
-### Live view
-<!-- key: tab.live -->
-
-test camera & controls
-
 ### Playback
 <!-- key: tab.playback -->
 
@@ -83,9 +78,6 @@ _(no blurb — this group is just a heading over links)_
 #### Resolution & sensor
 <!-- key: raillink.resolution -->
 
-#### Per-mode fps ceilings
-<!-- key: raillink.fpsceilings -->
-
 ### Recording
 <!-- key: rail.recording -->
 
@@ -139,8 +131,3 @@ Files on active storage device — browse, sort and download takes.
 <!-- key: rail.playback -->
 
 Review takes off the card.
-
-### Live view
-<!-- key: rail.live-view -->
-
-The shooting screen — mimicking the HDMI display.

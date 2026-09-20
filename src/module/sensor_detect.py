@@ -516,7 +516,6 @@ class SensorDetect:
         sensor_height = None
         parsing_modes = False                     # inside a “Modes:” block?
         current_hdr = False                       # --hdr sensor may print SDR then HDR, or HDR only
-        saw_hdr_transition = False
         last_mode = None
 
         for raw in output.splitlines():
@@ -538,7 +537,6 @@ class SensorDetect:
                     next_cam += "_mono"
                 if hdr and next_cam in sensors and sensors.get(next_cam):
                     current_hdr = True
-                    saw_hdr_transition = True
 
                 # flush state & start a new camera section. Keep current_hdr
                 # across the repeated header so the modes following it remain
@@ -572,7 +570,6 @@ class SensorDetect:
                 # ClearHDR sensor state. Keep this state even when the driver
                 # repeats the camera header afterwards.
                 current_hdr = True
-                saw_hdr_transition = True
                 parsing_modes = False
                 current_bit_depth = None
                 last_mode = None
@@ -958,11 +955,6 @@ class SensorDetect:
                 bd   = int(extra["bit_depth"])
                 fps  = extra.get("fps_max")
                 hdr_flag = bool(extra.get("hdr", False))
-                identity = {
-                    "width": w, "height": h, "bit_depth": bd, "hdr": hdr_flag,
-                    "crop_x": extra.get("crop_x"), "crop_y": extra.get("crop_y"),
-                    "crop_width": extra.get("crop_width"), "crop_height": extra.get("crop_height"),
-                }
                 def custom_match(m):
                     if (
                         int(m.get("width") or 0) != w or

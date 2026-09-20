@@ -535,6 +535,19 @@ class SensorDetect:
                 next_cam = m.group(1)
                 if m.group(2) == "MONO":
                     next_cam += "_mono"
+
+                # Reset the ClearHDR flag by default whenever this header
+                # belongs to a genuinely different camera than the one we
+                # were just parsing. Without this, current_hdr set True by
+                # one camera's own ClearHDR section (repeat header or the
+                # literal marker below) would otherwise leak into a second,
+                # different camera's mode block within the same combined
+                # multi-camera --hdr sensor probe. The repeat/marker logic
+                # right below re-sets it True again for that camera's own
+                # ClearHDR section only.
+                if next_cam != current_cam:
+                    current_hdr = False
+
                 if hdr and next_cam in sensors and sensors.get(next_cam):
                     current_hdr = True
 

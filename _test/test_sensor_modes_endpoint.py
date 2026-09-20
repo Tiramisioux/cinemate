@@ -95,5 +95,65 @@ class SensorModesEndpointTests(unittest.TestCase):
         ])
 
 
+class FakeSensorDetectUnfiltered:
+    """A fixture shaped like the real SensorDetect: sensor_modes_unfiltered
+    plus enabled_modes, which is what selected_for() actually reads (M5)."""
+
+    def __init__(self, sensor_modes_unfiltered, enabled_modes=None):
+        self.sensor_modes_unfiltered = sensor_modes_unfiltered
+        self.enabled_modes = enabled_modes or {}
+
+
+class NativeModeDefaultSelectionTests(unittest.TestCase):
+    """M5: a native mode with a non-zero crop origin (imx283 1A/2A/1C) must
+    default-select on a settings file with no explicit selection, exactly
+    like a mode with no crop annotation at all. Only a driver-annotated
+    windowed (binned, non-full) crop should arrive unselected."""
+
+    def _selected(self, mode):
+        app = flask.Flask(__name__)
+        app.register_blueprint(settings_editor_bp)
+        app.config["SENSOR_DETECT"] = FakeSensorDetectUnfiltered({"cam": [mode]})
+        app.config["SETTINGS"] = {}
+        res = app.test_client().get("/settings-editor/api/sensor-modes")
+        body = res.get_json()
+        return body["sensors"]["cam"][0]["selected"]
+
+    def test_native_mode_with_nonzero_origin_and_no_binning_is_selected(self):
+        # imx283-style centred native readout: crop origin is not 0,0, and
+        # the driver supplies no binning annotation at all.
+        mode = {
+            "width": 3840, "height": 2160, "bit_depth": 12, "hdr": False,
+            "fps_max": 24,
+            "crop_x": 100, "crop_y": 40,
+            "crop_width": 3840, "crop_height": 2160,
+        }
+        self.assertTrue(self._selected(mode))
+
+    def test_annotated_windowed_crop_is_unselected(self):
+        # imx585-style binned windowed crop: binning annotation is present
+        # and the crop is not the full active window.
+        mode = {
+            "width": 1920, "height": 1080, "bit_depth": 10, "hdr": False,
+            "fps_max": 50,
+            "binning_x": 2, "binning_y": 2,
+            "crop_x": 200, "crop_y": 200,
+            "crop_width": 960, "crop_height": 540,
+            "sensor_width": 3856, "sensor_height": 2180,
+        }
+        self.assertFalse(self._selected(mode))
+
+    def test_full_field_annotated_mode_is_selected(self):
+        mode = {
+            "width": 3840, "height": 2160, "bit_depth": 12, "hdr": False,
+            "fps_max": 50,
+            "binning_x": 1, "binning_y": 1,
+            "crop_x": 0, "crop_y": 0,
+            "crop_width": 3840, "crop_height": 2160,
+            "sensor_width": 3856, "sensor_height": 2180,
+        }
+        self.assertTrue(self._selected(mode))
+
+
 if __name__ == "__main__":
     unittest.main()

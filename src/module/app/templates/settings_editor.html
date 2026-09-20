@@ -518,7 +518,8 @@
   .recording-mode-table .mode-crop-frame{
     width:100%; height:100%;
   }
-  .recording-mode-table tr[data-mode-row]{ cursor:pointer; transition:background-color .12s ease, box-shadow .12s ease; }
+  .recording-mode-table tr[data-mode-row]{ cursor:pointer; transition:background-color .12s ease, box-shadow .12s ease; height:40px; }
+  .recording-mode-table tr[data-mode-row] > td{ height:40px; box-sizing:border-box; }
   .recording-mode-table tr[data-mode-row]:hover{ background:var(--panel-2); }
   /* The sensor-mode list is a table, not a settings card. Its container must
      never acquire the card hover treatment; the individual mode rows are the

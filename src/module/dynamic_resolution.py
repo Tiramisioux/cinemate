@@ -158,6 +158,89 @@ def _mode_area(mode_info: dict[str, Any]) -> int | None:
     return width * height
 
 
+# How close two aspects have to be to count as "the same shape" -- matches
+# the tolerance ASPECT-RATIOS.md's matcher uses for the operator-facing
+# ratio table, so a mode that would satisfy one also satisfies the other.
+_ASPECT_TOLERANCE = 0.02
+
+
+def _mode_aspect(mode_info: dict[str, Any]) -> float | None:
+    """The mode's real image aspect, from whatever geometry it carries.
+
+    sensor_detect already computes this onto every mode as ``aspect``
+    (crop-based when a crop is known, width/height otherwise), so this
+    reads that field first and only falls back to recomputing it from crop
+    or output dimensions for a mode dict that skipped sensor_detect
+    entirely, such as a hand-built fixture.
+    """
+    aspect = mode_info.get("aspect")
+    if aspect is not None:
+        aspect_value = _as_float(aspect)
+        if aspect_value is not None:
+            return aspect_value
+    width = _as_int(mode_info.get("crop_width")) or _as_int(mode_info.get("width"))
+    height = _as_int(mode_info.get("crop_height")) or _as_int(mode_info.get("height"))
+    if not width or not height:
+        return None
+    return width / height
+
+
+def _mode_is_windowed_crop(mode_info: dict[str, Any]) -> bool | None:
+    """Whether the mode's crop is a sub-window of the active sensor field.
+
+    Returns ``None`` when the mode carries no crop annotation at all -- an
+    unmodified driver such as imx477 never reports ``crop_width``/
+    ``crop_height``, and that absence is what keeps WP-CM-5's aspect-hold
+    filter from ever engaging on those sensors: see ``_mode_geometry``.
+    Mirrors ``SensorDetect._mode_is_full`` (zero-origin crop, back-projected
+    through binning into the native array, within the same optical-black
+    tolerance); WP-CM-10 owns fixing that projection's crop-domain
+    assumption, not this package.
+    """
+    cw = _as_int(mode_info.get("crop_width"))
+    ch = _as_int(mode_info.get("crop_height"))
+    if cw is None or ch is None:
+        return None
+
+    cx = _as_int(mode_info.get("crop_x")) or 0
+    cy = _as_int(mode_info.get("crop_y")) or 0
+    if cx != 0 or cy != 0:
+        return True
+
+    bx = _as_int(mode_info.get("binning_x")) or 1
+    by = _as_int(mode_info.get("binning_y")) or 1
+    sw = _as_int(mode_info.get("sensor_width"))
+    sh = _as_int(mode_info.get("sensor_height"))
+    if sw is None or sh is None:
+        # Zero origin with no native array to check against: nothing else
+        # says this is a sub-window, so treat it as the full field.
+        return False
+
+    active_w = cw * bx
+    active_h = ch * by
+    full = (
+        active_w <= sw and active_h <= sh
+        and sw - active_w <= max(32, bx * 16)
+        and sh - active_h <= max(32, by * 16)
+    )
+    return not full
+
+
+def _mode_geometry(mode_info: dict[str, Any]) -> tuple[float, bool] | None:
+    """(aspect, is_windowed_crop), or None when the mode has no geometry
+    annotation to hold. A candidate filter keyed on this returns every
+    mode unfiltered for a sensor that never reports crop metadata -- the
+    stock-sensor case WP-CM-5 must leave untouched.
+    """
+    windowed = _mode_is_windowed_crop(mode_info)
+    if windowed is None:
+        return None
+    aspect = _mode_aspect(mode_info)
+    if aspect is None:
+        return None
+    return (aspect, windowed)
+
+
 def dynamic_resolution_is_lower_substitute(
     *,
     sensor_modes: dict[int, dict[str, Any]] | None,
@@ -272,6 +355,10 @@ def _candidate_modes(
     if desired_area is None:
         return None
     desired_rank = _family_rank(desired_info)
+    # WP-CM-5 (M8): None on a mode with no crop annotation at all, so this
+    # filter never engages for a sensor that does not report one -- every
+    # stock sensor is untouched. See _mode_geometry.
+    desired_geometry = _mode_geometry(desired_info)
 
     if priority == PRIORITY_NONE and restrict_to_family is None:
         # "none" pins to the desired mode's own class -- but only when the
@@ -294,6 +381,23 @@ def _candidate_modes(
             # find something the sensor can sustain, not to hand the
             # operator a richer mode than the one they selected.
             continue
+        if desired_geometry is not None:
+            # A substitute must keep the selected mode's shape: same aspect
+            # within tolerance, same full-or-windowed character. Otherwise a
+            # centred crop and a full/binned mode of similar area are
+            # interchangeable by area and class alone, and the camera can
+            # silently change what is in frame mid-shoot (M8). A candidate
+            # with no geometry of its own cannot be shown to match, so it is
+            # excluded rather than assumed compatible.
+            info_geometry = _mode_geometry(info)
+            if info_geometry is None:
+                continue
+            info_aspect, info_windowed = info_geometry
+            desired_aspect, desired_windowed = desired_geometry
+            if info_windowed != desired_windowed:
+                continue
+            if abs(info_aspect - desired_aspect) > _ASPECT_TOLERANCE:
+                continue
         candidates.append((mode, info, area))
     return desired_info, candidates
 

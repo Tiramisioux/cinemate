@@ -67,6 +67,42 @@ IMX477_MODES = {
     9: {"width": 4056, "height": 3040, "bit_depth": 12, "fps_max": 11.72},
 }
 
+# WP-CM-5 (M8): an imx585 running the aspect family -- a 2.39 windowed crop
+# alongside the two 16:9 shapes it must never be swapped for. Geometry
+# mirrors what sensor_detect actually attaches to a mode (aspect, crop_*,
+# sensor_*, binning_*), so the annotation this filter keys off of is the real
+# shape, not a fixture-only shortcut.
+IMX585_ASPECT_MODES = {
+    # Full active field, 2x2 binned -- fastest readout, native 16:9-ish shape.
+    # crop_width/crop_height are in the binned (output) domain, the contract
+    # _mode_is_windowed_crop currently assumes (pre-WP-CM-10): binning
+    # projects them back to the native array to decide full-vs-windowed.
+    0: {
+        "width": 1928, "height": 1090, "aspect": 1.77, "bit_depth": 12,
+        "fps_max": 87,
+        "crop_x": 0, "crop_y": 0, "crop_width": 1928, "crop_height": 1090,
+        "sensor_width": 3856, "sensor_height": 2180,
+        "binning_x": 2, "binning_y": 2,
+    },
+    # Full active field, 1x1 -- same shape as mode 0, slower.
+    1: {
+        "width": 3840, "height": 2160, "aspect": 1.78, "bit_depth": 12,
+        "fps_max": 40,
+        "crop_x": 0, "crop_y": 0, "crop_width": 3840, "crop_height": 2160,
+        "sensor_width": 3856, "sensor_height": 2180,
+        "binning_x": 1, "binning_y": 1,
+    },
+    # 2.39 windowed crop: non-zero vertical origin, fewer rows read out than
+    # the full field, so it can outrun the full 4K mode despite being 1x1.
+    2: {
+        "width": 3840, "height": 1608, "aspect": 2.39, "bit_depth": 12,
+        "fps_max": 65,
+        "crop_x": 0, "crop_y": 286, "crop_width": 3840, "crop_height": 1608,
+        "sensor_width": 3856, "sensor_height": 2180,
+        "binning_x": 1, "binning_y": 1,
+    },
+}
+
 
 class DynamicResolutionTests(unittest.TestCase):
     def test_resolution_indicator_only_when_dynamic_substitute_is_active(self):
@@ -531,6 +567,56 @@ class DynamicResolutionTests(unittest.TestCase):
         )
 
         self.assertIsNone(fps_max)
+
+    # WP-CM-5 (M8): a substitute must keep the selected mode's shape.
+
+    def test_a_windowed_crop_caps_the_frame_rate_rather_than_reframe(self):
+        # Mode 2 is the 2.39 crop; mode 0 is a 16:9 binned mode of smaller
+        # area that used to look like a perfectly good substitute by the
+        # area/family test alone. Handing it back would silently widen the
+        # frame from 2.39 to 16:9 mid-shoot. Nothing on the ladder shares
+        # mode 2's shape at 70fps, so the answer is "no substitute", which is
+        # how this module already says "cap the frame rate instead".
+        choice = choose_resolution(
+            sensor_modes=IMX585_ASPECT_MODES,
+            desired_mode=2,
+            requested_fps=70,
+        )
+
+        self.assertIsNone(choice)
+        self.assertEqual(
+            max_fps_for_context(sensor_modes=IMX585_ASPECT_MODES, desired_mode=2),
+            65,
+        )
+
+    def test_a_16_9_mode_still_falls_back_to_a_smaller_16_9_mode(self):
+        # Mode 1 is the full 4K 16:9 mode. Mode 2 (the 2.39 crop) has more
+        # area and, absent a shape check, wins the ladder's own tie-break --
+        # which would swap a full 16:9 frame for a narrower crop, just as
+        # wrong as the reverse. The same-shape mode 0 must be chosen instead.
+        choice = choose_resolution(
+            sensor_modes=IMX585_ASPECT_MODES,
+            desired_mode=1,
+            requested_fps=60,
+        )
+
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 0)
+
+    def test_imx477_ladder_is_unchanged_by_the_aspect_hold(self):
+        # No crop annotation at all -- the geometry filter must not engage,
+        # so this is byte-for-byte the pre-WP-CM-5 ladder behaviour
+        # (test_genuine_downgrade_prefers_bit_depth_over_unused_fps_headroom).
+        choice = choose_resolution(
+            sensor_modes=IMX477_MODES,
+            desired_mode=9,
+            requested_fps=20,
+        )
+
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 7)
+        self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 12)
+        self.assertTrue(choice.dynamic_active)
 
 
 if __name__ == "__main__":

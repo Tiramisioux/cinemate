@@ -77,7 +77,7 @@ class SensorModeGeometryTests(unittest.TestCase):
             self.assertIsNone(mode.get("binning_x"))
             self.assertFalse(SensorDetect._mode_is_full(mode))
 
-    def test_custom_fps_override_does_not_duplicate_a_now-described_mode(self):
+    def test_custom_fps_override_does_not_duplicate_a_now_described_mode(self):
         d = self._detector()
         d.custom_modes = {
             "imx585": [{

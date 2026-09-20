@@ -33,16 +33,17 @@ The top bar carries a search box (filters every field/take on the current tab by
 | **Upload** | Parses a `.json`/`.jsonc`/`.txt` file you pick and loads it into the form — again, not written until Save |
 | **Save changes** | Writes the file for the active tab and applies it (see below) — disabled until something is actually dirty |
 
-The four file controls and **Save changes** are hidden on Live view, Playback and RAW files, which edit no file. The search box stays.
+The four file controls and **Save changes** are hidden on Playback and RAW files, which edit no file. The search box stays.
 
-Five tabs run across the top of the page:
+For the live camera feed without leaving the page, see [The live-view launcher](#the-live-view-launcher) below — it replaced a dedicated tab.
+
+Four tabs run across the top of the page:
 
 | Tab | Edits |
 |---|---|
 | **config.txt** | The managed block CineMate owns inside `/boot/firmware/config.txt` — sensor overlays, hardware buses, RP1 overclock |
 | **i2c** | What is attached to the camera's I²C bus, and the two clocks |
 | **settings.jsonc** | Everything in `settings.jsonc`, grouped into sections (below) |
-| **Live view** | The main Web GUI, embedded |
 | **Playback** | Reviews a recorded take frame-by-frame off the card |
 | **RAW files** | Browse, download, delete and format the mounted RAW storage |
 
@@ -55,7 +56,7 @@ The left rail groups the same fields `settings.jsonc` holds, unchanged in meanin
 | Look & feel | Welcome screen (HDMI boot splash) · Wi‑Fi hotspot |
 | Cameras | Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, tuning-file override, independent per sensor |
 | Timing | Timing & sync — how strictly frame timing is watched before warning or flagging a take |
-| Exposure & steps | Value steps (click-stops per control) · Resolution & sensor (resolutions, bit depths, dynamic resolution and its priority, ClearHDR startup values) · Per-mode fps ceilings (per-sensor-mode overrides — see `custom_modes` in the settings reference) |
+| Exposure & steps | Value steps (click-stops per control) · Resolution & sensor (dynamic resolution and its priority, ClearHDR startup values, DNG thumbnails, the active sensor database) |
 | Recording | Audio (input gain, timecode alignment per bit depth) · HDMI & preview (monitor overlay, dual-feed framing) |
 | Physical controls | Buttons & switches (GPIO in) · Grove HAT potentiometers · Quad rotary encoder · Rec tally & GPIO out · OLED status display |
 | System | Restart CineMate |
@@ -175,10 +176,10 @@ Checking takes and using **Download selected** / **Delete selected** applies the
 
 Reviews a take's frames, decoded live from the CinemaDNG files, at the settings' conform frame rate. Fully covered in [Playback](playback.md) — including the storage-contention lockout that holds playback while a take is recording or its buffer is still flushing.
 
-## Live view tab
+## The live-view launcher
 
-Embeds the main [Web GUI](web-gui.md) in an iframe — the same live image, ISO/shutter/fps/WB controls and record button, without leaving the settings editor. Open it in a full tab if the controls feel cramped here.
+A circular button fixed to the bottom-right corner of the page (`#cinepiLiveLauncher`), on every tab rather than a tab of its own. It replaced the settings editor's old embedded Live view tab, which ran the main [Web GUI](web-gui.md) in an iframe.
 
-The [EXPERIMENT drawer](web-gui.md) is open by default in this pane, where having every remaining control to hand is the point of it, and closed on the full page, which is the shooting screen.
+With one camera detected it is a single button that opens the live Web GUI at `http://cinepi.local:5000` — the same shooting screen a full tab would show, with the [EXPERIMENT drawer](web-gui.md) and the record button. With two cameras it instead shows three small buttons (cam0, cam1, combined); whichever source the Web GUI is currently previewing is highlighted.
 
-For the picture on its own with nothing drawn over it, use port 8000 instead of 5000 (`8001` for a second sensor).
+Unlike the old embedded tab, following the launcher navigates away from the settings editor rather than showing the live image inline. For the picture on its own with nothing drawn over it, use port 8000 instead of 5000 (`8001` for a second sensor).

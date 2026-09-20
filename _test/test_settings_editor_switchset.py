@@ -1,22 +1,22 @@
-"""Resolutions and bit depths are a closed catalogue, so they are switches.
+"""Resolutions and bit depths were a closed catalogue, offered as switches.
 
-Both were free-form chip lists: type a number, get a chip. But neither is a
-value the operator invents -- a sensor either reports a mode at a given size
-and depth or it does not, and typing "5" only narrowed the filter to nothing.
-The real question is which of the known ones to offer, which is a row of
-on/off answers.
+Both were free-form chip lists before that: type a number, get a chip. But
+neither is a value the operator invents -- a sensor either reports a mode at
+a given size and depth or it does not, and typing "5" only narrowed the
+filter to nothing. So the chip editors were replaced with a row of on/off
+switches, one per known category.
 
-The switches carry data-set-item rather than data-path: each one is a member
-of an array, not a settings key of its own, so buildState reads the container
-and not the switch. Everything else -- dirty pill, card highlight -- comes
-from the same data-type/data-original pair every other toggle uses.
-
-The label also changed. These are resolutions; "crop factor" is a different
-quantity, and the settings page was the only place still calling them that.
+9e0ed32f ("Replace resolution filters with dynamic recording mode table")
+retired the switches in turn: k_steps/bit_depths are now the legacy fallback
+used only while a camera has no `image_capture.enabled_modes` entry (see
+settings.schema.json's description of `enabled_modes`), and the operator-
+facing control is the per-camera recording-mode table on each Camera pane
+instead -- one row per driver-reported mode, not one switch per size/depth
+category. `test_sensor_modes_endpoint.py` covers that table's backend today;
+what remains here is the one claim that outlived the switches themselves.
 """
 
 import json
-import re
 import sys
 import unittest
 from pathlib import Path
@@ -24,7 +24,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from module.app.gui_text import load_gui_text  # noqa: E402
 TEMPLATE = ROOT / "src/module/app/templates/settings_editor.html"
 SETTINGS = ROOT / "settings.jsonc"
 SCHEMA = ROOT / "settings.schema.json"
@@ -45,69 +44,10 @@ class SwitchSetMarkupTests(unittest.TestCase):
     def setUpClass(cls):
         cls.html = TEMPLATE.read_text(encoding="utf-8")
 
-    def _container(self, path):
-        match = re.search(
-            r'<div class="card-control switchset" data-set-path="%s"[^>]*>(.*?)</div>'
-            % re.escape(path),
-            self.html,
-            re.S,
-        )
-        self.assertIsNotNone(match, f"no switchset for {path}")
-        return match.group(0)
-
-    def test_every_catalogue_member_has_a_switch(self):
-        for path, values in SETS.items():
-            block = self._container(path)
-            for value in values:
-                with self.subTest(path=path, value=value):
-                    self.assertIn(f'data-set-item="{value}"', block)
-
-    def test_the_switches_are_toggles_with_dirty_tracking_attributes(self):
-        for path in SETS:
-            block = self._container(path)
-            for switch in re.findall(r"<button[^>]*data-set-item[^>]*>", block):
-                with self.subTest(path=path, switch=switch[:60]):
-                    self.assertIn('class="toggle"', switch)
-                    self.assertIn('data-type="bool"', switch)
-                    self.assertIn("data-original=", switch)
-                    self.assertIn('role="switch"', switch)
-                    self.assertIn("aria-checked=", switch)
-                    # A member of an array, not a settings key of its own:
-                    # a data-path here would make buildState write a bogus
-                    # key alongside the array it belongs to.
-                    self.assertNotIn("data-path=", switch)
-
     def test_the_free_form_chip_editors_are_gone(self):
         for path in SETS:
             with self.subTest(path=path):
                 self.assertNotIn(f'data-chip-path="{path}"', self.html)
-
-    def test_these_are_called_resolutions_not_crop_factors(self):
-        # The wording lives in resources/gui-text/, not in the template --
-        # the template only carries the key it looks the string up by. Read
-        # the copy itself, which is what the operator actually reads.
-        copy = " ".join(load_gui_text().values())
-        self.assertIn("Resolutions offered", copy)
-        self.assertNotIn("Crop factors offered", copy)
-        self.assertNotIn("crop factors and bit depths", copy)
-
-
-    def test_the_catalogue_covers_every_k_the_sensor_database_can_produce(self):
-        # A category with no switch is a category no operator can turn back
-        # on: 5.5 is off in the shipped k_steps, so before this card existed
-        # the only way to reach the imx283 5K modes was to type "5.5" into a
-        # chip box. Derived from the database rather than restated.
-        import json  # noqa: PLC0415
-        database = json.loads((ROOT / "resources/sensors.json").read_text())
-        reachable = set()
-        for sensor in database["sensors"].values():
-            for mode in sensor.get("modes") or []:
-                width = mode.get("width")
-                if width:
-                    reachable.add(round(width / 1000 * 2) / 2)
-        block = self._container("image_capture.k_steps")
-        offered = {float(v) for v in re.findall(r'data-set-item="([\d.]+)"', block)}
-        self.assertEqual(offered, reachable)
 
 
 class SwitchSetWiringTests(unittest.TestCase):
@@ -186,8 +126,13 @@ class ModeAvailabilityTests(unittest.TestCase):
     def test_the_dim_class_is_the_one_the_stylesheet_defines(self):
         self.assertIn(".hw-absent{ opacity:.45; }", self.html)
 
-    def test_the_availability_note_exists_for_the_script_to_fill(self):
-        self.assertIn('id="modeAvailabilityNote"', self.html)
+    # test_the_availability_note_exists_for_the_script_to_fill was removed:
+    # 5c964a16 ("Remove obsolete resolution filter availability UI") deleted
+    # both #modeAvailabilityNote and the applyModeAvailability(res.available)
+    # call site as part of retiring the switchset this note dimmed. The
+    # function body above is now unreachable from any call site -- left in
+    # place by that commit, not by this one; noted rather than removed here,
+    # since nothing in this PR's scope calls for a JS cleanup pass.
 
 
 class DynamicResolutionSettingTests(unittest.TestCase):

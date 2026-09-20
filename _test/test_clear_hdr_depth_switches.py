@@ -121,40 +121,21 @@ class LegacyKeyTests(unittest.TestCase):
 
 
 class WiringTests(unittest.TestCase):
-    def test_the_page_offers_one_switch_per_depth(self):
-        """Both depths get a switch, and the frame size is a separate
-        question that Resolutions already answers.
-
-        The page used to offer 16-bit plus a third switch for the binned
-        16-bit HD mode alone. That switch gated every binned ClearHDR mode
-        regardless of depth, so turning it on also handed back 12-bit HD --
-        which is exactly what it claimed not to do."""
-        html = (ROOT / "src/module/app/templates/settings_editor.html").read_text(encoding="utf-8")
-        self.assertIn('data-path="image_capture.hdr.imx585_clear_hdr_12bit"', html)
-        self.assertIn('data-path="image_capture.hdr.imx585_clear_hdr_16bit"', html)
-        self.assertNotIn('data-path="image_capture.hdr.imx585_clear_hdr_16bit_hd"', html)
-
-    def test_twelve_bit_comes_first_on_the_page_and_in_the_copy(self):
-        """12-bit before 16-bit, in the template and in the copy that
-        describes it.
-
-        Order is a deliberate choice here, not an accident of which card was
-        added last -- and it is the kind of thing a later edit flips back
-        without noticing, because nothing about the page breaks when it does.
-        The copy is checked alongside the template because the 16-bit help
-        says "as for 12-bit": that back-reference only reads correctly while
-        12-bit is the one above it."""
-        html = (ROOT / "src/module/app/templates/settings_editor.html").read_text(encoding="utf-8")
-        twelve = html.index('data-path="image_capture.hdr.imx585_clear_hdr_12bit"')
-        sixteen = html.index('data-path="image_capture.hdr.imx585_clear_hdr_16bit"')
-        self.assertLess(twelve, sixteen, "the 16-bit ClearHDR card is above the 12-bit one again")
-
-        md = (ROOT / "resources/gui-text/05-settings-exposure-and-steps.md").read_text(
-            encoding="utf-8")
-        md_twelve = md.index("card.image_capture.hdr.imx585_clear_hdr_12bit")
-        md_sixteen = md.index("card.image_capture.hdr.imx585_clear_hdr_16bit")
-        self.assertLess(md_twelve, md_sixteen, "the copy no longer follows the page order")
-        self.assertIn("as for 12\u2011bit", md)
+    # test_the_page_offers_one_switch_per_depth and
+    # test_twelve_bit_comes_first_on_the_page_and_in_the_copy were removed:
+    # 9e0ed32f ("Replace resolution filters with dynamic recording mode
+    # table") deleted the imx585_clear_hdr_12bit/16bit toggle cards along
+    # with the k-step/bit-depth switches in the same pass. sensor_detect.py's
+    # _finalize_modes() confirms this is not collateral damage -- once a
+    # camera has an image_capture.enabled_modes entry, individual mode
+    # selection is authoritative and both depth switches (like k_steps and
+    # bit_depths) are skipped entirely, not just unreachable from this page.
+    # The settings.jsonc/schema keys stay live as the legacy fallback for a
+    # camera with no enabled_modes entry yet -- see
+    # test_the_hd_switch_is_gone_from_settings_and_schema and
+    # test_settings_and_schema_carry_both below, which still guard them.
+    # The per-camera recording-mode table is the replacing UI; its backend
+    # is test_sensor_modes_endpoint.py's territory.
 
     def test_the_hd_switch_is_gone_from_settings_and_schema(self):
         import json  # noqa: PLC0415
@@ -166,13 +147,6 @@ class WiringTests(unittest.TestCase):
         props = json.loads((ROOT / "settings.schema.json").read_text())[
             "properties"]["image_capture"]["properties"]["hdr"]["properties"]
         self.assertNotIn("imx585_clear_hdr_16bit_hd", props)
-
-    def test_the_gui_copy_has_a_card_for_each_depth(self):
-        md = (ROOT / "resources/gui-text/05-settings-exposure-and-steps.md").read_text(
-            encoding="utf-8")
-        self.assertIn("card.image_capture.hdr.imx585_clear_hdr_12bit", md)
-        self.assertIn("card.image_capture.hdr.imx585_clear_hdr_16bit -->", md)
-        self.assertNotIn("card.image_capture.hdr.imx585_clear_hdr_16bit_hd", md)
 
     def test_settings_and_schema_carry_both(self):
         import json  # noqa: PLC0415

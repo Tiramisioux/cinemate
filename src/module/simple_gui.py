@@ -12,6 +12,7 @@ import re
 from module.utils import Utils
 from module.redis_controller import ParameterKey, smpte_frame_base
 from module.dynamic_resolution import dynamic_resolution_indicator_active
+from module.sensor_detect import compute_preview_geometry
 from module.design_tokens import DESIGN_TOKENS
 import json
 import re
@@ -80,6 +81,8 @@ def _calculate_preview_guide_rect(
     sensor_height,
     anamorphic_factor=1.0,
     outline_width=PREVIEW_GUIDE_OUTLINE_WIDTH,
+    crop_width=None,
+    crop_height=None,
 ):
     """Return the outline rectangle that wraps the live DRM preview image.
 
@@ -87,28 +90,30 @@ def _calculate_preview_guide_rect(
     DrmPreview::Show() for the lores-stream fit — without the extra
     even-rounding that _build_args() does not apply, so the comparison
     that decides letterbox vs pillarbox stays consistent with the C++ side.
+
+    WP-CM-1 (findings C3, M2): the preview-window and lores-stream
+    arithmetic itself now lives once, in
+    module.sensor_detect.compute_preview_geometry(), which this calls with
+    the same (sensor_width, sensor_height) as the mode's width/height, and
+    *crop_width*/*crop_height* when the caller has them (draw_gui() passes
+    the active sensor's driver-reported crop, when known, so this stays in
+    step with CinePiProcess._build_args()). Leaving crop_width/crop_height
+    unset reproduces the exact pre-WP-CM-1 arithmetic this function's own
+    two golden tests pin.
     """
-    aspect = sensor_width / sensor_height
-    aw = frame_width  - 2 * PREVIEW_PADDING_X
-    ah = frame_height - 2 * PREVIEW_PADDING_Y
-
-    # Preview window: raw-sensor aspect, centred in the available area
-    # (matches _build_args: pw, ph, ox, oy)
-    if (aw / ah) > aspect:
-        ph = ah
-        pw = int(ph * aspect)
-    else:
-        pw = aw
-        ph = int(pw / aspect)
-    ox = (frame_width  - pw) // 2
-    oy = (frame_height - ph) // 2
-
-    # Lores-stream dimensions: same formula as _build_args, no even-rounding
-    lh = min(720, ah)
-    lw = int(lh * aspect * anamorphic_factor)
-    if lw > aw:
-        lw = aw
-        lh = int(round(aw / (aspect * anamorphic_factor)))
+    mode = {
+        "width": sensor_width,
+        "height": sensor_height,
+        "crop_width": crop_width,
+        "crop_height": crop_height,
+    }
+    geometry = compute_preview_geometry(
+        mode, frame_width, frame_height, anamorphic_factor,
+        padding_x=PREVIEW_PADDING_X, padding_y=PREVIEW_PADDING_Y,
+    )
+    pw, ph = geometry["preview_width"], geometry["preview_height"]
+    ox, oy = geometry["preview_x"], geometry["preview_y"]
+    lw, lh = geometry["lores_width"], geometry["lores_height"]
 
     # DrmPreview::Show() fit: place lores stream inside preview window
     x_off = 0
@@ -2032,12 +2037,26 @@ class SimpleGUI(threading.Thread):
             # in dual mode; the shrunken `-p` rectangle leaves the column room.
             pass
         else:
+            # Driver-reported crop for the active mode, when known (WP-CM-1,
+            # finding M2): keeps this guide box in step with
+            # CinePiProcess._build_args(), which the live preview itself was
+            # launched from. self.width/self.height above are read fresh
+            # from Redis for a reason (see the comment they carry), so this
+            # crop lookup is intentionally the only part read back through
+            # sensor_detect -- res_modes is keyed by sensor_mode, not by the
+            # transport size, and can't go stale the same way.
+            sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
+            modes = getattr(self.sensor_detect, "res_modes", {}) or {}
+            active_mode = modes.get(sensor_mode, {}) or {}
+
             outline_rect = _calculate_preview_guide_rect(
                 frame_width,
                 frame_height,
                 self.width,
                 self.height,
                 anamorphic_factor,
+                crop_width=active_mode.get("crop_width"),
+                crop_height=active_mode.get("crop_height"),
             )
             draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
             if values.get("camera_missing"):

@@ -19,7 +19,7 @@ from module.config_loader import (
 from module.redis_controller import ParameterKey, decode_log_encode_request, Event
 from module.framebuffer import Framebuffer
 from module.sensor_database import repo_root
-from module.sensor_detect import is_pi4_family
+from module.sensor_detect import is_pi4_family, compute_preview_geometry
 from module.tuning_files import resolve_tuning_override
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
@@ -402,7 +402,6 @@ class CinePiProcess(Thread):
         )
 
         # lores & preview
-        aspect = width / height
         anam = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0)
         
         # Get HDMI resolution from settings, but prefer the active
@@ -429,18 +428,17 @@ class CinePiProcess(Thread):
         
         px, py = 94, 50
         aw, ah = fw - 2*px, fh - 2*py
-        lh = min(720, ah)
-        lw = int(lh * aspect * anam)
-        if lw > aw:
-            lw, lh = aw, int(round(aw / (aspect * anam)))
+
+        # WP-CM-1 (findings C3, M2): lores size and `-p` rectangle from the
+        # shared helper, aspect-from-crop and clamped to the mode, instead of
+        # this file's own copy of the arithmetic (see
+        # module.sensor_detect.compute_preview_geometry's docstring).
+        geometry = compute_preview_geometry(res, fw, fh, anamorphic_factor=anam)
+        lw, lh = geometry["lores_width"], geometry["lores_height"]
         self.redis_controller.set_value(ParameterKey.LORES_WIDTH.value, lw)
         self.redis_controller.set_value(ParameterKey.LORES_HEIGHT.value, lh)
-        if (aw/ah) > aspect:
-            ph = ah; pw = int(ph * aspect)
-        else:
-            pw = aw; ph = int(pw / aspect)
-        
-        ox, oy = (fw-pw)//2, (fh-ph)//2
+        ox, oy = geometry["preview_x"], geometry["preview_y"]
+        pw, ph = geometry["preview_width"], geometry["preview_height"]
 
         # Dual-sensor preview window = the full padded area. The compositor
         # canvas aspect changes with the live source (one pane vs two), and DRM

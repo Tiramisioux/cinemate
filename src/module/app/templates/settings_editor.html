@@ -6543,12 +6543,24 @@
     return '0x' + Number(value).toString(16).padStart(2, '0');
   }
 
+  /* A refused address used to just be "not found" -- the same rendering
+     whether nobody was ever there (ENXIO/EREMOTEIO) or something answered
+     but not this request (ETIMEDOUT, EBUSY). probe_error names which, per
+     hardware_probe._probe_error's mapping, so the card help can say why
+     rather than only that. */
+  function i2cProbeErrorHint(err){
+    if (!err) return null;
+    return err.hint || err.name || null;
+  }
+
   function i2cDeviceDetail(d){
     var where = d.address !== null && d.address !== undefined
       ? i2cHex(d.address) + ' on ' + d.bus
       : null;
     if (!d.present){
       var missing = 'Not found. Looked for ' + (d.expected || []).join(' or ') + ' on ' + d.bus + '.';
+      var errorHint = i2cProbeErrorHint(d.probe_error);
+      if (errorHint) missing += ' (' + errorHint + ')';
       if (d.key === 'rtc' && d.kernel_device){
         // A Pi 5 has an RTC on board, so hwclock works with nothing on the
         // bus. Saying only "not found" next to two clocks that plainly agree
@@ -6562,7 +6574,18 @@
       return 'Found via the PCIe bridge node — the hat did not answer on i2c, so this is the bridge '
            + 'being present rather than the hat itself.';
     }
+    if (d.provenance === 'driver-confirmed'){
+      // The running quad-rotary driver already reports connected -- reusing
+      // that answer is both more accurate and avoids adding a probe to
+      // whatever contention already exists with the driver's own 10 Hz
+      // polling of this exact board (not itself settled -- hardware log
+      // 2026-09-20). No bus traffic is issued for this reading at all.
+      return 'Reported present by the running driver — no bus probe issued.';
+    }
     var detail = 'Found at ' + where + '.';
+    if (d.key === 'quad_rotary' && d.hw_id){
+      detail += ' seesaw hardware id ' + d.hw_id + '.';
+    }
     if (d.key === 'oled'){
       detail += ' ' + (d.controller || 'Display') + ', ' + d.width + ' × ' + d.height + ' px'
               + ' (from settings — a display cannot be asked its own size).';
@@ -6573,6 +6596,28 @@
               + ' hwclock cannot reach it.';
     }
     return detail;
+  }
+
+  /* The driver's own connected/last_error state is a second, separately
+     labelled fact -- never blended into "present" above. See the handbook's
+     working/probing-i2c-peripherals.md: report provenance beside the value. */
+  function i2cEpochLabel(epoch){
+    if (typeof epoch !== 'number') return null;
+    return new Date(epoch * 1000).toLocaleTimeString();
+  }
+
+  function i2cDriverDetail(d){
+    var driver = d.driver;
+    if (!driver) return null;
+    if (!driver.enabled) return 'driver: disabled in settings';
+    if (driver.connected){
+      var since = i2cEpochLabel(driver.last_change_epoch);
+      return 'driver: connected' + (since ? ' since ' + since : '');
+    }
+    if (!driver.ever_connected) return 'driver: never connected';
+    var at = i2cEpochLabel(driver.last_change_epoch);
+    var lost = 'driver: lost' + (at ? ' at ' + at : '');
+    return lost + (driver.last_error ? ': ' + driver.last_error : '');
   }
 
   function i2cRenderDevices(devices){
@@ -6595,6 +6640,14 @@
       help.textContent = i2cDeviceDetail(d);
       main.appendChild(label);
       main.appendChild(help);
+
+      var driverLine = i2cDriverDetail(d);
+      if (driverLine){
+        var driverHelp = document.createElement('p');
+        driverHelp.className = 'card-help';
+        driverHelp.textContent = driverLine;
+        main.appendChild(driverHelp);
+      }
 
       var control = document.createElement('div');
       control.className = 'card-control';

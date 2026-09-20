@@ -588,6 +588,30 @@ class PaneMarkupTests(unittest.TestCase):
         rail = rail[:rail.index("</div>")]
         self.assertNotIn("data-nav", rail)
 
+    def test_a_driver_confirmed_reading_says_no_probe_was_issued(self):
+        # the pane must say WHY a present reading needed no bus traffic,
+        # rather than rendering it identically to a probed one
+        fn = re.search(r"function i2cDeviceDetail\(d\)\{(.*?)\n  \}", self.html, re.S).group(1)
+        self.assertIn("driver-confirmed", fn)
+        self.assertIn("no bus probe issued", fn)
+
+    def test_an_absent_reading_carries_the_probe_error_hint(self):
+        # NACK/timeout/busy/no-bus render differently -- not just "not found"
+        fn = re.search(r"function i2cDeviceDetail\(d\)\{(.*?)\n  \}", self.html, re.S).group(1)
+        self.assertIn("i2cProbeErrorHint", fn)
+
+    def test_the_driver_state_is_a_separate_line_never_blended_into_present(self):
+        # handbook rule: report provenance beside the value, never blend a
+        # driver flag into "present" itself -- so this is its own function
+        # and its own <p>, not folded into i2cDeviceDetail's return value
+        detail_fn = re.search(r"function i2cDeviceDetail\(d\)\{(.*?)\n  \}", self.html, re.S).group(1)
+        self.assertNotIn("d.driver", detail_fn)
+        driver_fn = re.search(r"function i2cDriverDetail\(d\)\{(.*?)\n  \}", self.html, re.S).group(1)
+        self.assertIn("never connected", driver_fn)
+        self.assertIn("lost", driver_fn)
+        self.assertIn("connected", driver_fn)
+        self.assertIn("driverLine", self.html)
+
 
 if __name__ == "__main__":
     unittest.main()

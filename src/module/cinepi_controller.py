@@ -1250,29 +1250,29 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, v)
         logging.info(f"ClearHDR gain adder set to menu index {v}")
 
-    def inc_hdr_threshold_low(self):
-        self.increment_setting('hdr_threshold_low', self.hdr_threshold_low_steps)
+    def inc_hdr_threshold_low(self, wrap=False):
+        self.increment_setting('hdr_threshold_low', self.hdr_threshold_low_steps, wrap=wrap)
 
-    def dec_hdr_threshold_low(self):
-        self.decrement_setting('hdr_threshold_low', self.hdr_threshold_low_steps)
+    def dec_hdr_threshold_low(self, wrap=False):
+        self.decrement_setting('hdr_threshold_low', self.hdr_threshold_low_steps, wrap=wrap)
 
-    def inc_hdr_threshold_high(self):
-        self.increment_setting('hdr_threshold_high', self.hdr_threshold_high_steps)
+    def inc_hdr_threshold_high(self, wrap=False):
+        self.increment_setting('hdr_threshold_high', self.hdr_threshold_high_steps, wrap=wrap)
 
-    def dec_hdr_threshold_high(self):
-        self.decrement_setting('hdr_threshold_high', self.hdr_threshold_high_steps)
+    def dec_hdr_threshold_high(self, wrap=False):
+        self.decrement_setting('hdr_threshold_high', self.hdr_threshold_high_steps, wrap=wrap)
 
-    def inc_hdr_blend(self):
-        self.increment_setting('hdr_blend', self.hdr_blend_steps)
+    def inc_hdr_blend(self, wrap=False):
+        self.increment_setting('hdr_blend', self.hdr_blend_steps, wrap=wrap)
 
-    def dec_hdr_blend(self):
-        self.decrement_setting('hdr_blend', self.hdr_blend_steps)
+    def dec_hdr_blend(self, wrap=False):
+        self.decrement_setting('hdr_blend', self.hdr_blend_steps, wrap=wrap)
 
-    def inc_hdr_gain_adder(self):
-        self.increment_setting('hdr_gain_adder', self.hdr_gain_adder_steps)
+    def inc_hdr_gain_adder(self, wrap=False):
+        self.increment_setting('hdr_gain_adder', self.hdr_gain_adder_steps, wrap=wrap)
 
-    def dec_hdr_gain_adder(self):
-        self.decrement_setting('hdr_gain_adder', self.hdr_gain_adder_steps)
+    def dec_hdr_gain_adder(self, wrap=False):
+        self.decrement_setting('hdr_gain_adder', self.hdr_gain_adder_steps, wrap=wrap)
 
     def _log_requested_state(self):
         """The live `set log` request -- False/True/10/12 -- from redis, or
@@ -2366,7 +2366,11 @@ class CinePiController:
         )
         return self.sensor_mode if choice is None else choice.mode
 
-    def switch_resolution(self, step=1):
+    def switch_resolution(self, step=1, wrap=True):
+        # wrap defaults to True: this always wrapped past the ends of
+        # sensor_modes unconditionally before this change (see the
+        # `% num_sensor_modes` this replaced), so the default keeps every
+        # existing caller behaving as before. Pass wrap=False to clamp.
         try:
             sensor_modes = sorted(
                 self.sensor_detect.res_modes.keys(),
@@ -2409,7 +2413,7 @@ class CinePiController:
                 )
                 next_sensor_mode = sensor_modes[0]
             else:
-                next_index = (current_index + step) % num_sensor_modes
+                next_index = self._stepped_index(current_index, step, num_sensor_modes, wrap)
                 next_sensor_mode = sensor_modes[next_index]
 
             logging.info("Switching resolution from mode %s to mode %s", current_sensor_mode, next_sensor_mode)
@@ -3327,7 +3331,25 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.EXPOSURE_TIME.value, self.exposure_time_s)
 
 
-    def increment_setting(self, setting_name, steps, fps=None):
+    @staticmethod
+    def _stepped_index(idx, delta, length, wrap):
+        """Advance a step-list index by delta, wrapping around the ends or
+        clamping to them.
+
+        Shared by increment_setting/decrement_setting (which clamp unless a
+        caller opts into wrap=True) and by set_wb/set_zoom/switch_resolution
+        (which wrapped unconditionally before this change, so they default
+        wrap=True and only clamp when a caller explicitly asks) -- see
+        07-rotary-encoder-reverse-and-wrap.md for why the defaults differ
+        per setting instead of being uniform.
+        """
+        if length <= 0:
+            return 0
+        if wrap:
+            return (idx + delta) % length
+        return max(0, min(idx + delta, length - 1))
+
+    def increment_setting(self, setting_name, steps, fps=None, wrap=False):
         current_value = float(self.get_setting(setting_name))
 
         param = parameters.get(setting_name, source="increment_setting")
@@ -3335,7 +3357,7 @@ class CinePiController:
 
         if current_value in dynamic_steps:
             idx = dynamic_steps.index(current_value)
-            idx = min(idx + 1, len(dynamic_steps) - 1)
+            idx = self._stepped_index(idx, 1, len(dynamic_steps), wrap)
         else:
             idx = 0
 
@@ -3356,7 +3378,7 @@ class CinePiController:
         logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
 
 
-    def decrement_setting(self, setting_name, steps, fps=None):
+    def decrement_setting(self, setting_name, steps, fps=None, wrap=False):
         current_value = float(self.get_setting(setting_name))
 
         param = parameters.get(setting_name, source="decrement_setting")
@@ -3364,7 +3386,7 @@ class CinePiController:
 
         if current_value in dynamic_steps:
             idx = dynamic_steps.index(current_value)
-            idx = max(idx - 1, 0)
+            idx = self._stepped_index(idx, -1, len(dynamic_steps), wrap)
         else:
             idx = 0
 
@@ -3381,40 +3403,40 @@ class CinePiController:
 
         logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
 
-    def inc_shutter_a(self):
-        self.increment_setting('shutter_a', self.shutter_a_steps, fps=self.fps)
+    def inc_shutter_a(self, wrap=False):
+        self.increment_setting('shutter_a', self.shutter_a_steps, fps=self.fps, wrap=wrap)
 
-    def dec_shutter_a(self):
-        self.decrement_setting('shutter_a', self.shutter_a_steps, fps=self.fps)
-    
-    def inc_iso(self):
+    def dec_shutter_a(self, wrap=False):
+        self.decrement_setting('shutter_a', self.shutter_a_steps, fps=self.fps, wrap=wrap)
+
+    def inc_iso(self, wrap=False):
         # effective_iso_steps() rather than iso_steps: stepping up must stop
         # where ClearHDR stops being ClearHDR, the same place set_iso() clamps.
-        self.increment_setting('iso', self.effective_iso_steps())
+        self.increment_setting('iso', self.effective_iso_steps(), wrap=wrap)
 
-    def dec_iso(self):
-        self.decrement_setting('iso', self.effective_iso_steps())
-        
-    def inc_shutter_a_nom(self):
-        self.increment_setting('shutter_a_nom', self.shutter_a_steps)
+    def dec_iso(self, wrap=False):
+        self.decrement_setting('iso', self.effective_iso_steps(), wrap=wrap)
 
-    def dec_shutter_a_nom(self):
-        self.decrement_setting('shutter_a_nom', self.shutter_a_steps)
+    def inc_shutter_a_nom(self, wrap=False):
+        self.increment_setting('shutter_a_nom', self.shutter_a_steps, wrap=wrap)
 
-    def inc_fps(self):
-        self.increment_setting('fps', self.fps_steps)
+    def dec_shutter_a_nom(self, wrap=False):
+        self.decrement_setting('shutter_a_nom', self.shutter_a_steps, wrap=wrap)
 
-    def dec_fps(self):
-        self.decrement_setting('fps', self.fps_steps)
+    def inc_fps(self, wrap=False):
+        self.increment_setting('fps', self.fps_steps, wrap=wrap)
+
+    def dec_fps(self, wrap=False):
+        self.decrement_setting('fps', self.fps_steps, wrap=wrap)
 
     # The quad rotary controller turns into inc_<setting>/dec_<setting>
     # (see i2c/quad_rotary_controller.py's _update_setting), so an encoder
     # assigned to "resolution" cycles the mode list one step per detent.
-    def inc_resolution(self):
-        return self.switch_resolution(1)
+    def inc_resolution(self, wrap=True):
+        return self.switch_resolution(1, wrap=wrap)
 
-    def dec_resolution(self):
-        return self.switch_resolution(-1)
+    def dec_resolution(self, wrap=True):
+        return self.switch_resolution(-1, wrap=wrap)
 
     def initialize_wb_cg_rb_array(self):
         """Initialize the white balance cg_rb array based on the sensor model."""
@@ -3576,8 +3598,16 @@ class CinePiController:
         logging.debug(f"Interpolated result: {result}")
         return result
 
-    def set_wb(self, kelvin_temperature=None, direction='next'):
-        """Set white balance based on the Kelvin temperature or direction."""
+    def set_wb(self, kelvin_temperature=None, direction='next', wrap=True):
+        """Set white balance based on the Kelvin temperature or direction.
+
+        wrap defaults to True: stepping wb has always wrapped past the ends
+        of wb_steps unconditionally, and this default keeps every existing
+        caller (CLI, web API, pots) behaving exactly as before. A rotary
+        encoder with its own Wrap switch off passes wrap=False here to
+        clamp instead -- see 07-rotary-encoder-reverse-and-wrap.md for why
+        Wrap-off now clamps wb rather than leaving it always wrapping.
+        """
         logging.debug(f"WB steps available: {self.wb_steps}")
         
         if not self.wb_steps:
@@ -3600,9 +3630,9 @@ class CinePiController:
 
             if found_index is not None:
                 if direction == 'next':
-                    next_index = (found_index + 1) % len(self.wb_steps)
+                    next_index = self._stepped_index(found_index, 1, len(self.wb_steps), wrap)
                 elif direction == 'prev':
-                    next_index = (found_index - 1) % len(self.wb_steps)
+                    next_index = self._stepped_index(found_index, -1, len(self.wb_steps), wrap)
             else:
                 next_index = 0
 
@@ -3619,17 +3649,17 @@ class CinePiController:
         else:
             logging.error(f"White balance value not found for {kelvin_temperature}K")
 
-    def inc_wb(self):
-        self.set_wb(direction='next')
+    def inc_wb(self, wrap=True):
+        self.set_wb(direction='next', wrap=wrap)
 
-    def dec_wb(self):
-        self.set_wb(direction='prev')
-        
-    def inc_zoom(self):
-        self.set_zoom(direction='next')
+    def dec_wb(self, wrap=True):
+        self.set_wb(direction='prev', wrap=wrap)
 
-    def dec_zoom(self):
-        self.set_zoom(direction='prev')
+    def inc_zoom(self, wrap=True):
+        self.set_zoom(direction='next', wrap=wrap)
+
+    def dec_zoom(self, wrap=True):
+        self.set_zoom(direction='prev', wrap=wrap)
 
         
     def restart_camera(self, preview_enabled=None):
@@ -3788,13 +3818,18 @@ class CinePiController:
             return "Invalid value provided."
          
      # ─── Zoom control ─────────────────────────────────────────────────────────
-    def set_zoom(self, value=None, direction="next"):
+    def set_zoom(self, value=None, direction="next", wrap=True):
         """
         Change the live-view digital-zoom factor.
 
         • Pass an explicit *value* (float) → set that value.
         • Omit *value*                    → step through preview.zoom_steps.
         Use *direction="prev"* to step backwards.
+
+        wrap defaults to True for the same reason as set_wb: stepping zoom
+        has always wrapped past the ends of zoom_steps unconditionally, so
+        this default keeps every existing caller behaving as before. Pass
+        wrap=False to clamp instead.
         """
         preview_cfg  = self.settings.get("hdmi_display", {}).get("preview", {})
         zoom_steps   = preview_cfg.get("zoom_steps",   [0.5, 1.0, 1.5, 2.0])
@@ -3813,7 +3848,7 @@ class CinePiController:
             if current in zoom_steps:
                 idx = zoom_steps.index(current)
                 step = 1 if direction == "next" else -1
-                idx = (idx + step) % len(zoom_steps)
+                idx = self._stepped_index(idx, step, len(zoom_steps), wrap)
             else:
                 idx = 0                      # unknown value → start from first step
 

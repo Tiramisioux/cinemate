@@ -1,4 +1,4 @@
-import contextlib
+import inspect
 import logging
 import threading
 import time
@@ -277,7 +277,9 @@ class QuadRotaryController(threading.Thread):
                         self.last_positions[idx] = pos
                         setting = cfg.get("setting_name")
                         if setting:
-                            self._update_setting(setting, change)
+                            if cfg.get("reverse", False):
+                                change = -change
+                            self._update_setting(setting, change, wrap=bool(cfg.get("wrap", False)))
 
                 pressed = not self.switches[idx].value
                 if startup_active:
@@ -303,14 +305,26 @@ class QuadRotaryController(threading.Thread):
             self._last_reconnect = time.time()
             logging.error("Quad rotary controller I/O error: %s", exc)
 
-    def _update_setting(self, name: str, change: int):
+    def _update_setting(self, name: str, change: int, wrap: bool = False):
         inc = getattr(self.cinepi_controller, f"inc_{name}", None)
         dec = getattr(self.cinepi_controller, f"dec_{name}", None)
         try:
-            if change > 0 and inc:
-                inc()
-            elif change < 0 and dec:
-                dec()
+            method = inc if change > 0 else dec if change < 0 else None
+            if method:
+                # setting_name is picked from a fixed list on the settings
+                # editor, but a hand-typed one on the camera can still name
+                # an inc_/dec_ pair with no wrap parameter -- inspect rather
+                # than assume, same reasoning as the GPIO dispatcher.
+                if "wrap" in inspect.signature(method).parameters:
+                    method(wrap=wrap)
+                else:
+                    if wrap:
+                        logging.info(
+                            "Wrap is on for encoder setting %s but %s() takes no "
+                            "wrap argument; this turn has no wrap effect.",
+                            name, method.__name__,
+                        )
+                    method()
         except Exception as exc:
             logging.error("Failed to update %s: %s", name, exc)
 

@@ -181,6 +181,33 @@ class FpsWiringTests(unittest.TestCase):
         c.set_fps.assert_called_once_with(25)
 
 
+class WrapTests(unittest.TestCase):
+    """wrap=False is the default and preserves the clamping behaviour the
+    tests above already lock in; wrap=True is new -- an encoder configured
+    with Wrap on passes it through so the last entry's next click lands on
+    the first, and vice versa. See 07-rotary-encoder-reverse-and-wrap.md."""
+
+    def test_increment_wraps_from_the_top_to_the_first_entry(self):
+        c = make_controller({ParameterKey.ISO.value: "3200"})
+        c.increment_setting("iso", c.iso_steps, wrap=True)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 100)
+
+    def test_increment_without_wrap_still_clamps_at_the_top(self):
+        c = make_controller({ParameterKey.ISO.value: "3200"})
+        c.increment_setting("iso", c.iso_steps, wrap=False)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 3200)
+
+    def test_decrement_wraps_from_the_bottom_to_the_last_entry(self):
+        c = make_controller({ParameterKey.ISO.value: "100"})
+        c.decrement_setting("iso", c.iso_steps, wrap=True)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 3200)
+
+    def test_decrement_without_wrap_still_clamps_at_the_bottom(self):
+        c = make_controller({ParameterKey.ISO.value: "100"})
+        c.decrement_setting("iso", c.iso_steps, wrap=False)
+        self.assertEqual(c.redis_controller.get_value(ParameterKey.ISO.value), 100)
+
+
 class UnknownSettingNameFallbackTests(unittest.TestCase):
     def test_unknown_name_warns_and_falls_back_to_the_passed_steps_and_set_prefix(self):
         c = make_controller({"totally_made_up": "1"})

@@ -69,15 +69,33 @@ ACTIONS = {
     "rotate_counterclockwise": {"method": "dec_iso"},
 }
 
+# gpiozero is stubbed process-wide (see the module docstring): whichever test
+# file in _test/ imports module.gpio_input first is the one whose fake
+# RotaryEncoder/_FakePin classes gpio_input.py's GPIOZeroRotaryEncoder name
+# ends up bound to for the rest of the run, and test_gpio_duplicate_pin_guard.py
+# sorts before this file and enforces a real one-owner-per-pin rule with a
+# claimed-pins dict that persists across its own tests. Each RotaryEncoder()
+# below therefore gets its own never-reused pin pair so a collision with
+# that dict (or with an earlier test in this file) can't happen regardless
+# of which fake ends up wired.
+_next_pins = iter(range(200, 300, 2))
+
+
+def _pins():
+    n = next(_next_pins)
+    return n, n + 1
+
 
 class ReverseBindingTests(unittest.TestCase):
     def test_unreversed_binds_each_handler_to_its_own_direction(self):
-        enc = RotaryEncoder(_FakeController(), 9, 11, ACTIONS, reverse=False)
+        clk, dt = _pins()
+        enc = RotaryEncoder(_FakeController(), clk, dt, ACTIONS, reverse=False)
         self.assertEqual(enc.encoder.when_rotated_clockwise, enc.on_rotated_clockwise)
         self.assertEqual(enc.encoder.when_rotated_counter_clockwise, enc.on_rotated_counter_clockwise)
 
     def test_reverse_swaps_the_two_handler_bindings(self):
-        enc = RotaryEncoder(_FakeController(), 9, 11, ACTIONS, reverse=True)
+        clk, dt = _pins()
+        enc = RotaryEncoder(_FakeController(), clk, dt, ACTIONS, reverse=True)
         self.assertEqual(enc.encoder.when_rotated_clockwise, enc.on_rotated_counter_clockwise)
         self.assertEqual(enc.encoder.when_rotated_counter_clockwise, enc.on_rotated_clockwise)
 
@@ -85,13 +103,15 @@ class ReverseBindingTests(unittest.TestCase):
 class WrapDispatchTests(unittest.TestCase):
     def test_wrap_on_reaches_a_method_that_accepts_it(self):
         controller = _FakeController()
-        enc = RotaryEncoder(controller, 9, 11, ACTIONS, wrap=True)
+        clk, dt = _pins()
+        enc = RotaryEncoder(controller, clk, dt, ACTIONS, wrap=True)
         enc.on_rotated_clockwise()
         self.assertEqual(controller.calls, [("inc_iso", True)])
 
     def test_wrap_off_is_still_forwarded_explicitly(self):
         controller = _FakeController()
-        enc = RotaryEncoder(controller, 9, 11, ACTIONS, wrap=False)
+        clk, dt = _pins()
+        enc = RotaryEncoder(controller, clk, dt, ACTIONS, wrap=False)
         enc.on_rotated_clockwise()
         self.assertEqual(controller.calls, [("inc_iso", False)])
 
@@ -101,7 +121,8 @@ class WrapDispatchTests(unittest.TestCase):
             "rotate_clockwise": {"method": "custom_no_wrap"},
             "rotate_counterclockwise": {"method": "custom_no_wrap"},
         }
-        enc = RotaryEncoder(controller, 9, 11, actions, wrap=True)
+        clk, dt = _pins()
+        enc = RotaryEncoder(controller, clk, dt, actions, wrap=True)
         enc.on_rotated_clockwise()  # must not TypeError
         self.assertEqual(controller.calls, [("custom_no_wrap",)])
 
@@ -111,7 +132,8 @@ class WrapDispatchTests(unittest.TestCase):
             "rotate_clockwise": {"method": "custom_no_wrap"},
             "rotate_counterclockwise": {"method": "custom_no_wrap"},
         }
-        enc = RotaryEncoder(controller, 9, 11, actions, wrap=True)
+        clk, dt = _pins()
+        enc = RotaryEncoder(controller, clk, dt, actions, wrap=True)
         with self.assertLogs(enc.logger.name, level="INFO") as cm:
             enc.on_rotated_clockwise()
         self.assertTrue(any("wrap" in line.lower() for line in cm.output))

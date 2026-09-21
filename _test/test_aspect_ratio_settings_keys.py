@@ -36,17 +36,30 @@ class SettingsKeysTests(unittest.TestCase):
                 ic = load_settings(str(ROOT / path))["image_capture"]
                 self.assertEqual(ic["min_mode_width"], 1280)
 
-    def test_config_loader_defaults_a_settings_file_with_neither_key(self):
+    def test_config_loader_leaves_a_settings_file_with_neither_key_absent(self):
         # A settings.jsonc written before this package landed has neither
-        # key at all -- load_settings() must still hand back the shipped
-        # defaults rather than raising or leaving them out.
+        # key at all -- every deployed settings.jsonc, since both keys are
+        # brand new. _apply_settings_defaults() must NOT inject either one:
+        # doing so would make "the operator explicitly chose the shipped
+        # default" indistinguishable from "config_loader defaulted a key
+        # the operator never saw", and sensor_detect.SensorDetect relies on
+        # that distinction (aspect_ratios_cfg/min_mode_width being None, not
+        # merely falsy) to skip the ratio matcher/width floor entirely for a
+        # settings file that predates WP-CM-6 -- otherwise a stock sensor's
+        # non-16:9 modes (e.g. imx477's 4:3 full-sensor readout) would
+        # silently vanish behind the new filter, which is exactly the
+        # regression WORK-PACKAGES.md's WP-CM-6 rules out with "a settings
+        # file with no aspect_ratios must behave exactly as it does today".
+        # A fresh install still gets both keys, because they come from
+        # resources/settings/settings_default.jsonc's own content (see the
+        # two tests above), not from this defaulting pass.
         minimal = json.loads(strip_jsonc((ROOT / "settings.jsonc").read_text(encoding="utf-8")))
         del minimal["image_capture"]["aspect_ratios"]
         del minimal["image_capture"]["min_mode_width"]
         from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
         out = _apply_settings_defaults(minimal)
-        self.assertEqual(out["image_capture"]["aspect_ratios"], {"default": ["1.78:1"]})
-        self.assertEqual(out["image_capture"]["min_mode_width"], 1280)
+        self.assertNotIn("aspect_ratios", out["image_capture"])
+        self.assertNotIn("min_mode_width", out["image_capture"])
 
     def test_schema_declares_both_keys(self):
         props = json.loads((ROOT / "settings.schema.json").read_text())[

@@ -237,5 +237,67 @@ class SensorSwapScopingTests(unittest.TestCase):
         )
 
 
+class ConfigLoaderDefaultRegressionTests(unittest.TestCase):
+    """WP-CM-6 rework: the aspect_ratios_cfg/min_mode_width a real
+    config_loader.py hands a real settings.jsonc that predates this
+    package -- not a hand-picked None/{} in a test fixture -- must not
+    narrow a stock, mixed-aspect sensor's mode table.
+
+    Tier5B_Imx477Tests above proves the matcher behaves sanely once it is
+    *asked* to run: available_aspect_ratios() (informational), or an
+    explicit non-default selection like {"imx477": ["1.33:1"]}. Neither of
+    those proves the matcher stays off for the case WORK-PACKAGES.md's
+    WP-CM-6 promises unchanged behaviour for -- "a settings file with no
+    aspect_ratios must behave exactly as it does today" -- because a
+    hand-set aspect_ratios_cfg={} already IS an operator opinion (an
+    explicit, if empty, key) that this test file's other classes correctly
+    resolve to the "default" ratio and never exercise the truly-absent-key
+    path through the real defaulting code.
+
+    Real numbers from resources/sensors.json's imx477 entry: a 16:9-ish
+    ratio (1.87), the sensor's full-FOV 4:3 readout (1.33), and its high-fps
+    crop (1.34) -- none of which are both within ASPECT_RATIO_TOLERANCE of
+    1.78, so a wrongly-engaged matcher collapses all three down to the one
+    closest to 1.78 instead of leaving today's bit_depths/k_steps-only
+    result alone.
+    """
+
+    IMX477_STOCK_MODES = [
+        {"width": 2028, "height": 1080, "bit_depth": 12, "hdr": False,
+         "fps_max": 50, "aspect": 1.87},
+        {"width": 2028, "height": 1520, "bit_depth": 12, "hdr": False,
+         "fps_max": 40, "aspect": 1.33},
+        {"width": 1332, "height": 990, "bit_depth": 10, "hdr": False,
+         "fps_max": 120, "aspect": 1.34},
+    ]
+
+    def test_default_cfg_from_config_loader_keeps_every_stock_imx477_mode(self):
+        from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
+
+        # A settings.jsonc written before WP-CM-6 landed -- no image_capture
+        # section at all, let alone aspect_ratios/min_mode_width. This is
+        # every settings.jsonc deployed before this package, since both
+        # keys are brand new.
+        legacy_settings = _apply_settings_defaults({})
+        image_capture_cfg = legacy_settings["image_capture"]
+        self.assertNotIn("aspect_ratios", image_capture_cfg)
+        self.assertNotIn("min_mode_width", image_capture_cfg)
+
+        d = _detector(
+            aspect_ratios_cfg=image_capture_cfg.get("aspect_ratios"),
+            min_mode_width=image_capture_cfg.get("min_mode_width"),
+            bit_depths=image_capture_cfg.get("bit_depths"),
+            k_steps=image_capture_cfg.get("k_steps"),
+        )
+        pruned = d._finalize_modes(
+            {"imx477": [dict(m) for m in self.IMX477_STOCK_MODES]}
+        )
+        sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
+        self.assertEqual(
+            sizes,
+            {(m["width"], m["height"]) for m in self.IMX477_STOCK_MODES},
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -664,20 +664,24 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # be a cycle. settings.schema.json pins the same three values.
         "dynamic_resolution_priority": "mode",
         "custom_modes": {},
-        # WP-CM-6 (ASPECT-RATIOS.md): per-camera aspect-ratio selection,
-        # keyed exactly as enabled_modes above -- a camera with no entry of
-        # its own uses "default". Ships as {"default": ["1.78:1"]} so a
-        # fresh camera behaves as it does today until the operator opts
-        # into more shapes. See module.sensor_detect.SensorDetect's
-        # available_aspect_ratios()/_ratio_matches_for_camera().
-        "aspect_ratios": {"default": ["1.78:1"]},
-        # Modes narrower than this are hidden (not removed) from the dial
-        # and both GUIs by default; an enabled_modes entry bypasses it.
-        "min_mode_width": 1280,
     }
     for k, v in image_capture_defaults.items():
         image_capture_cfg.setdefault(k, v)
     settings["image_capture"] = image_capture_cfg
+    # WP-CM-6 (ASPECT-RATIOS.md): aspect_ratios and min_mode_width are
+    # deliberately NOT setdefault'd above. sensor_detect.SensorDetect tells
+    # "the operator has an opinion" apart from "this key doesn't exist yet"
+    # by whether the key is present at all (None vs {} / an int) -- see
+    # SensorDetect.__init__ and _finalize_modes(). If this loop injected
+    # them here, every settings.jsonc that predates WP-CM-6 (i.e. every
+    # deployed one) would gain the key on next load and silently start
+    # running the ratio matcher / width floor, which is exactly the "a
+    # settings file with no aspect_ratios must behave exactly as it does
+    # today" clause in WORK-PACKAGES.md's WP-CM-6. A fresh install still
+    # gets both keys explicitly, because resources/settings/settings_default.jsonc
+    # ships them (item 1) and that file's content becomes the new
+    # settings.jsonc verbatim -- so "ships as {"default": ["1.78:1"]}" is
+    # honoured by the template, not by this defaulting pass.
 
     # ── audio_capture: capture gain + timecode offset per mic path ─────────
     # Migrate old flat keys to nested per-toolchain objects.

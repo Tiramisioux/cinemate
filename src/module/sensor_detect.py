@@ -419,12 +419,24 @@ class SensorDetect:
         # it. An enabled_modes entry for the camera is still authoritative
         # and skips this filter outright, same as it already skips
         # k_steps/bit_depths above.
-        self.aspect_ratios_cfg = res_cfg.get("aspect_ratios", {})
+        #
+        # No default here (None, not {}): config_loader.py deliberately does
+        # not setdefault this key either, so an absent key really means
+        # "the operator has no opinion" -- WP-CM-6's compatibility clause,
+        # "a settings file with no aspect_ratios must behave exactly as it
+        # does today". {} (key present, empty map) is a real, if odd,
+        # operator choice and is left alone; only a genuinely missing key
+        # reads as None, which _finalize_modes() checks for to skip the
+        # ratio matcher entirely.
+        self.aspect_ratios_cfg = res_cfg.get("aspect_ratios")
         # Modes narrower than this are hidden (not removed -- they stay in
         # sensor_modes_unfiltered) from the dial/GUIs by default. An
         # enabled_modes entry bypasses this floor too: an explicit choice
-        # beats a default.
-        self.min_mode_width = res_cfg.get("min_mode_width", DEFAULT_MIN_MODE_WIDTH)
+        # beats a default. Same "no default here" reasoning as
+        # aspect_ratios_cfg above -- an absent key must not turn the floor
+        # on for a settings.jsonc that predates it; a falsy floor is a
+        # no-op in _finalize_modes()'s `if floor:` check either way.
+        self.min_mode_width = res_cfg.get("min_mode_width")
         # The canonical ratio table (id, exact value, common name) -- one
         # file, read here and, from WP-CM-7, by the settings page. See
         # module.aspect_ratios.

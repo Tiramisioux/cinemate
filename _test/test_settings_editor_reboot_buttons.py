@@ -377,25 +377,52 @@ class PowerRouteTests(unittest.TestCase):
 
 
 class ConfigPaneButtonsTests(unittest.TestCase):
-    """The three power buttons at the bottom of the config.txt pane."""
+    """The one power button left at the bottom of the config.txt pane.
+
+    There used to be three -- Restart CineMate, Reboot Pi, Shut down Pi.
+    Restart and Reboot were removed at the operator's request (2026-09-22):
+    "Save & reboot Pi" sits directly above them in the same pane, so a bare
+    Reboot Pi beside it was an invitation to discard the unsaved config.txt
+    edits the pane was holding, and a CineMate restart does nothing for a file
+    that is only read at boot. Both actions still exist in the System pane
+    (genericRebootBtn / restartBtn), which is what the other tests in this
+    file cover. Shutdown stayed, because ending a session at the rig is a
+    reasonable thing to do from this pane.
+
+    The removal must take the click handlers with it: a bare
+    document.getElementById(id).addEventListener(...) throws on null and
+    would take every listener registered after it down with it.
+    """
 
     @classmethod
     def setUpClass(cls):
         cls.html = TEMPLATE.read_text(encoding="utf-8")
 
-    def test_all_three_buttons_exist(self):
-        for button_id in ("cfgRestartBtn", "cfgGenericRebootBtn", "cfgShutdownBtn"):
-            self.assertIn('id="%s"' % button_id, self.html)
+    def test_only_shutdown_remains(self):
+        self.assertIn('id="cfgShutdownBtn"', self.html)
+        for button_id in ("cfgRestartBtn", "cfgGenericRebootBtn"):
+            self.assertNotIn('id="%s"' % button_id, self.html,
+                             "%s was removed from the config.txt pane" % button_id)
 
-    def test_none_of_them_save_config_txt(self):
-        for button_id in ("cfgRestartBtn", "cfgGenericRebootBtn", "cfgShutdownBtn"):
-            body = handler(self.html, button_id)
-            self.assertNotIn("saveConfigTxt", body,
-                              "%s must not write config.txt" % button_id)
+    def test_the_removed_buttons_left_no_listener_behind(self):
+        for button_id in ("cfgRestartBtn", "cfgGenericRebootBtn"):
+            self.assertNotIn("getElementById('%s')" % button_id, self.html,
+                             "%s has no element to bind; the listener would "
+                             "throw and kill the handlers after it" % button_id)
 
-    def test_restart_and_reboot_use_the_power_route(self):
-        self.assertIn("powerAction('restart_cinemate')", handler(self.html, "cfgRestartBtn"))
-        self.assertIn("powerAction('reboot')", handler(self.html, "cfgGenericRebootBtn"))
+    def test_shutdown_does_not_save_config_txt(self):
+        body = handler(self.html, "cfgShutdownBtn")
+        self.assertNotIn("saveConfigTxt", body,
+                         "cfgShutdownBtn must not write config.txt")
+
+    def test_the_help_text_no_longer_promises_three_buttons(self):
+        # The copy lives in resources/gui-text/, not the template, and it
+        # used to read "these three never touch config.txt".
+        md = (ROOT / "resources/gui-text/01-config-boot-config.md").read_text(encoding="utf-8")
+        body = md[md.index("<!-- key: help.bootconfig.1 -->"):]
+        body = body[:body.index("###", 10)]
+        self.assertNotIn("these three", body)
+        self.assertIn("config.txt", body)
 
 
 class ShutdownHandlerTests(unittest.TestCase):

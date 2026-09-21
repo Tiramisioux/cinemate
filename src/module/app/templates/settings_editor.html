@@ -900,13 +900,16 @@
   }
   .danger-zone p{ margin:0; font-size: 13px; color: var(--ink); max-width: 46ch; }
   .danger-zone .eyebrow{ color: var(--danger); }
-  /* A reboot is disruptive but recoverable, so this card keeps a red frame --
-     fainter than the shutdown card beside it, which is the one you cannot undo
-     from the same room. The text goes purple with its own button, so the words
-     and the control you press agree with each other. */
+  /* A reboot is disruptive but recoverable, so this card is purple throughout
+     -- frame, field and words all matching its own button -- rather than
+     borrowing the shutdown card's red. Red is reserved for the action beside
+     it that nobody in the room can undo. --reboot is #b388ff; the two rgba()
+     literals below are that colour at frame and wash strength, spelled out
+     because CSS cannot take an alpha off a hex custom property without
+     color-mix(), which this page does not otherwise rely on. */
   .danger-zone.reboot-zone{
-    border-color: rgba(255, 65, 54, .38);
-    background: rgba(255, 65, 54, .06);
+    border-color: rgba(179, 136, 255, .55);
+    background: rgba(179, 136, 255, .08);
   }
   .danger-zone.reboot-zone .eyebrow{ color: var(--reboot); }
   .danger-zone.reboot-zone p{ color: var(--reboot); }
@@ -1222,7 +1225,7 @@
   #app.skin-hud .btn-reboot-outline{ border-color: var(--reboot); color: var(--reboot); }
   #app.skin-hud .danger-zone{ background: var(--danger-soft); border-color: var(--danger); }
   #app.skin-hud .danger-zone.reboot-zone{
-    background: rgba(255, 65, 54, .06); border-color: rgba(255, 65, 54, .38);
+    background: rgba(179, 136, 255, .08); border-color: rgba(179, 136, 255, .55);
   }
 
   #app.skin-hud .status-dot{ background: var(--ok); }
@@ -2699,19 +2702,20 @@
         <div class="console" id="cfgConsole" aria-live="polite"></div>
       </div>
 
-      <!-- Restart / reboot / shutdown, separate from the write-and-reboot card
-           above: none of these three save config.txt (see cfgRestartBtn /
-           cfgGenericRebootBtn / cfgShutdownBtn below -- same reasoning as
-           genericRebootBtn's comment in the System pane). -->
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px">
-        <button class="btn btn-primary" id="cfgRestartBtn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Restart CineMate
-        </button>
-        <button class="btn btn-reboot-outline" id="cfgGenericRebootBtn">Reboot Pi</button>
+      <!-- Shut down only. Restart CineMate and Reboot Pi used to sit here as
+           well, but "Save & reboot Pi" is directly above them: a bare reboot
+           next to it is an invitation to throw away the edits in this pane,
+           and restarting CineMate does nothing for a file that is only read at
+           boot. Both still live in the System pane, which is where a power
+           action belongs. Shutdown stays because the config.txt pane is where
+           a session at the rig tends to end -- and like the two that left, it
+           does not save config.txt; that is still cfgRebootBtn's job. The help
+           text shares this row so the button can sit right without leaving an
+           orphan caption under it. -->
+      <div style="display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-top:16px">
+        <p class="card-help" style="max-width:60ch; margin:0">{{ t('help.bootconfig.1.body') }}</p>
         <button class="btn btn-danger-outline" id="cfgShutdownBtn">Shut down Pi</button>
       </div>
-      <p class="card-help" style="max-width:60ch; margin-top:8px">{{ t('help.bootconfig.1.body') }}</p>
 
       <div class="note" style="margin-top:16px">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
@@ -7383,50 +7387,6 @@
         settleMs: 12000, timeoutMs: 180000,
         busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
         readyText: 'CineMate is running — <b class="din">READY</b>',
-        doneToast: 'Pi is back up'
-      });
-    });
-  });
-
-  /* ---------- config.txt pane: the same three actions, reusing this pane's
-     own status line/console (cfgStatusDot/cfgStatusText/cfgConsoleEl) rather
-     than adding a second set of DOM ids -- same pattern genericRebootBtn
-     above uses against the System pane's statusDot/statusText/consoleEl.
-     None of the three writes config.txt; that stays cfgRebootBtn's job
-     (saveConfigTxt() above). ---------- */
-  document.getElementById('cfgRestartBtn').addEventListener('click', function(){
-    var btn = document.getElementById('cfgRestartBtn');
-    btn.disabled = true;
-    powerAction('restart_cinemate').then(function(result){
-      if (!result.ok){
-        btn.disabled = false;
-        showToast('Restart failed: ' + (result.message || 'unknown error'));
-        return;
-      }
-      runBootSequence({
-        btn: btn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl,
-        waitText: 'waiting for the camera to answer again…',
-        busyText: 'Restarting CineMate — <b class="din">please wait</b>',
-        readyText: 'config.txt matches the running Pi — <b class="din">READY</b>',
-        doneToast: 'CineMate is back up'
-      });
-    });
-  });
-  document.getElementById('cfgGenericRebootBtn').addEventListener('click', function(){
-    var btn = document.getElementById('cfgGenericRebootBtn');
-    btn.disabled = true;
-    powerAction('reboot').then(function(result){
-      if (!result.ok){
-        btn.disabled = false;
-        showToast('Reboot failed: ' + (result.message || 'unknown error'));
-        return;
-      }
-      runBootSequence({
-        btn: btn, dot: cfgStatusDot, text: cfgStatusText, consoleEl: cfgConsoleEl,
-        waitText: 'waiting for the Pi to come back…',
-        settleMs: 12000, timeoutMs: 180000,
-        busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
-        readyText: 'config.txt matches the running Pi — <b class="din">READY</b>',
         doneToast: 'Pi is back up'
       });
     });

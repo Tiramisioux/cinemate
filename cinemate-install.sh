@@ -103,7 +103,7 @@ LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
 # optical-black-correct crop sizes, the `experimental_modes` gate, the five
 # read-only Mode Binning / Mode Crop Left/Top/Width/Height geometry controls,
 # and its own 14-ratio aspect family.
-# Verified on hardware.
+# Desk-checked only; the imx283 hardware gate (G8) has not run yet.
 # The old `6.12.y` branch stays selectable via this env var but is no longer
 # the supported default.
 IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx283-v4l2-driver.git}"
@@ -1513,7 +1513,17 @@ install_imx283_support() {
 
     ensure_repo "$IMX283_DRIVER_DIR" "$IMX283_DRIVER_REPO_URL" "$IMX283_DRIVER_REPO_REF"
     log "Installing IMX283 driver"
-    run_as_pi_clean_shell "cd '$IMX283_DRIVER_DIR' && ./setup.sh"
+    # Both drivers install unconditionally by default regardless of SENSOR_MODEL, and the
+    # imx283 cinemate-modes branch is desk-checked only (its DKMS build has not run on real
+    # hardware -- gate G8 is unrun, see development/experimental-crop-modes/STATE.md). Warn-
+    # don't-die here, the same as the mono rp1-cfe patch below: a build problem in an unverified
+    # imx283 driver must not abort installs for imx477/imx296/imx519/imx708 users who never
+    # asked for imx283 support.
+    if ! run_as_pi_clean_shell "cd '$IMX283_DRIVER_DIR' && ./setup.sh"; then
+        warn "IMX283 driver setup failed -- imx283 recording will be unavailable until this"
+        warn "is resolved. Other sensors are unaffected. See docs/installation-steps.md."
+        return 0
+    fi
     if is_rpi2712_platform; then
         detail "Ensuring DKMS builds IMX283 for the pinned Pi 5 kernel baseline"
         sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"

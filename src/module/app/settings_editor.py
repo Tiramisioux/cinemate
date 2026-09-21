@@ -1077,6 +1077,7 @@ def get_sensor_modes():
         # enabled.
         "aspect_ratio_table": aspect_ratio_table,
         "aspect_ratios": aspect_ratios_payload,
+        "min_mode_width": width_floor,
     })
 
 

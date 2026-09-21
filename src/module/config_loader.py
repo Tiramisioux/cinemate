@@ -472,6 +472,83 @@ def rec_tone_config(gpio_cfg: dict) -> dict:
     }
 
 
+# The one literal value settings.jsonc/settings_default.jsonc ever shipped
+# for image_capture.aspect_ratios before WP-CM-11 (still visible in git
+# history as this package's parent commit's settings files). See
+# _migrate_legacy_shipped_aspect_ratio_default()'s docstring for why
+# matching on exactly this value, and nothing wider, is the safe check.
+_LEGACY_SHIPPED_ASPECT_RATIO_DEFAULT = {"default": ["1.78:1"]}
+
+
+def _migrate_legacy_shipped_aspect_ratio_default(settings: dict) -> None:
+    """Clear image_capture.aspect_ratios in place when it is still exactly
+    the WP-CM-6/7 shipped constant, {"default": ["1.78:1"]}.
+
+    No code path other than that old template ever wrote this exact value:
+    the pane always writes a per-camera key, never "default" (WORK-PACKAGES.md
+    WP-CM-11 item 4), so an aspect_ratios that is *only* {"default": [...]},
+    equal to that one literal list, is either this leftover or a hand edit
+    that happens to match it byte for byte -- see the residual-risk
+    paragraph below. Left alone it would silently filter a fresh probe on next load,
+    e.g. dropping imx477's 4056x3040/2028x1520/1332x990 modes and imx283's
+    two full-resolution modes, on a settings.jsonc nobody actually edited.
+
+    WP-CM-11 rework, blocking review finding (settings-editor merge order):
+    this must run on a settings dict read straight off disk, before any
+    newly-saved payload is merged onto it. put_settings() in
+    settings_editor.py used to call _apply_settings_defaults() only *after*
+    _merge_saved_settings() had already overlaid the operator's per-camera
+    payload onto the raw on-disk dict, and buildAspectRatiosState() in
+    settings_editor.html seeds that payload from the already-migrated GET
+    response, so it never mentions "default" itself, and _merge_saved_settings
+    keeps whatever the payload does not mention -- so a legacy on-disk
+    {"default": ["1.78:1"]} plus a normal single-camera save such as
+    {"imx585": [...]} merged into a *two*-key dict before this check ever
+    ran, which no longer equalled the bare legacy shape below, so the stale
+    "default" fragment silently survived on disk forever, from the very
+    first save any pre-existing WP-CM-6/7 install ever made through the
+    pane -- and from then on it was treated (correctly, per this package's
+    own precedence rule) as a genuine global choice, quietly narrowing every
+    OTHER camera that relies on the derived default. Calling this directly
+    on the on-disk snapshot, before the merge, fixes that: the legacy
+    leftover is only ever a single key on a genuinely-untouched disk file,
+    so whole-dict equality still catches it before the operator's own
+    payload has a chance to keep it alive as a sibling. See
+    settings_editor.py's put_settings().
+
+    Whole-dict equality (not a key-level check that clears "default"
+    regardless of siblings) is deliberate: once this runs pre-merge, a
+    *two*-key {"default": [...], <camera>: [...]} reaching
+    _apply_settings_defaults() can only be genuine operator config (either
+    hand-written, or the result of a previous save that already went
+    through this same pre-merge step), never the merge-order corruption
+    above -- so it must survive untouched, which is exactly what
+    LegacyShippedDefaultMigrationTests.test_a_default_with_extra_keys_is_not_treated_as_leftover
+    asserts. A key-level check would strip "default" out of that dict too,
+    silently narrowing it back to per-camera-choice territory instead of
+    leaving a deliberate combination alone.
+
+    Residual, accepted risk (WP-CM-11 rework, blocking review finding,
+    option (a)): an operator who hand-edits settings.jsonc directly, outside
+    the pane, to *exactly* {"default": ["1.78:1"]} as a deliberate global
+    16:9-only choice, and then triggers any settings-editor save before ever
+    touching the aspect-ratio pane again, will have that choice silently
+    cleared the same way a genuine leftover would be -- there is no presence
+    or version signal in the file that tells the two apart from a bare
+    value, and this package does not add one (feature/crop-modes-all has
+    not merged to dev, so no real released install is exposed to this yet).
+    A hand-edited settings.jsonc predating this package is therefore a
+    known, one-time manual step: re-pick the ratio in the pane once after
+    upgrading, which always writes a per-camera key, and this check will
+    never touch it again.
+    """
+    image_capture_cfg = settings.get("image_capture")
+    if not isinstance(image_capture_cfg, dict):
+        return
+    if image_capture_cfg.get("aspect_ratios") == _LEGACY_SHIPPED_ASPECT_RATIO_DEFAULT:
+        image_capture_cfg["aspect_ratios"] = {}
+
+
 def _apply_settings_defaults(settings: dict) -> dict:
     # ── system: splash, network, storage behavior ──────────────────────────
     system_cfg = settings.setdefault("system", {})
@@ -684,6 +761,28 @@ def _apply_settings_defaults(settings: dict) -> dict:
     # empty entry means each camera's default is derived from its own mode
     # table, not a single hardcoded ratio) is honoured by the template, not
     # by this defaulting pass.
+    #
+    # WP-CM-11 rework, blocking review finding: the paragraph above only
+    # covers a settings.jsonc that predates WP-CM-6 (key truly absent) and a
+    # fresh WP-CM-11 install (key present but {}). It says nothing about the
+    # settings.jsonc every WP-CM-6/7 install actually wrote to disk in
+    # between: image_capture.aspect_ratios == {"default": ["1.78:1"]}, the
+    # literal value settings.jsonc/settings_default.jsonc shipped before
+    # this package (still visible in git history). That value is *present*,
+    # so aspect_ratios_cfg is not None and the matcher runs; before WP-CM-11
+    # an explicit "default" equal to the shipped constant was recognised as
+    # "nobody chose this" and exempted (_ratio_selection_is_a_choice) -- but
+    # WP-CM-11 deletes that exemption and makes any explicit "default" entry
+    # unconditionally a choice, on the premise that there is no longer a
+    # single shipped value to compare against. There still is one, on every
+    # disk that has not been reformatted since WP-CM-6/7, and left alone it
+    # would silently filter a fresh probe on next load -- e.g. dropping
+    # imx477's 4056x3040/2028x1520/1332x990 modes and imx283's two
+    # full-resolution modes, on a settings.jsonc nobody edited. See
+    # _migrate_legacy_shipped_aspect_ratio_default() below for how this is
+    # migrated, why value equality is safe *here*, and its one accepted
+    # residual gap.
+    _migrate_legacy_shipped_aspect_ratio_default(settings)
 
     # ── audio_capture: capture gain + timecode offset per mic path ─────────
     # Migrate old flat keys to nested per-toolchain objects.

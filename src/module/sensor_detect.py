@@ -260,6 +260,92 @@ def compute_frame_size_mb(width: int, height: int, bit_depth: int,
     return round((pixel_bytes + DNG_HEADER_OVERHEAD_BYTES) / compression_ratio / 1_000_000, 2)
 
 
+# Preview canvas defaults, shared with simple_gui.py's own
+# PREVIEW_PADDING_X/Y (94/50) and cinepi_multi.py's inline px, py = 94, 50.
+PREVIEW_TARGET_LINES = 720
+PREVIEW_PADDING_X = 94
+PREVIEW_PADDING_Y = 50
+
+
+def compute_preview_geometry(
+    mode: dict,
+    canvas_width: int,
+    canvas_height: int,
+    anamorphic_factor: float = 1.0,
+    *,
+    target_lines: int = PREVIEW_TARGET_LINES,
+    padding_x: int = PREVIEW_PADDING_X,
+    padding_y: int = PREVIEW_PADDING_Y,
+) -> dict:
+    """Shared geometry for the live preview: the lores stream size cinepi-raw
+    is launched with (--lores-width/--lores-height) and the `-p` window that
+    places the preview on the canvas.
+
+    WP-CM-1 (findings C3, M2). *mode* is a resolution-info dict shaped like
+    get_resolution_info()'s return value -- 'width'/'height' are the
+    transport frame (a RAW16 mode's optical-black padding included) and
+    'crop_width'/'crop_height' are the driver-reported active image, when
+    the driver annotated one. This one helper replaces three previously
+    separate, drifting copies of the same arithmetic: SensorDetect's own
+    lores getters, CinePiProcess._build_args() and
+    simple_gui._calculate_preview_guide_rect().
+
+    Aspect comes from the crop when the driver reported one -- computing it
+    from the padded transport size instead stretches a ClearHDR preview and
+    stops excluding the optical-black rows (M2). Absent crop annotation (a
+    stock sensor -- see the campaign's DEC-4: no annotation means *unknown*,
+    never *full frame*) falls back to the mode's own width/height, exactly
+    as every caller already did.
+
+    Both outputs are clamped to *mode*'s own width/height, not just to the
+    padded canvas: a mode shorter than 720 rows (e.g. a small imx585 crop
+    window) used to get a taller/wider lores request than the mode itself
+    delivers, and cinepi-raw's ConfigureVideo throws
+    "Low res image larger than raw image" (C3).
+
+    Returns unrounded values (no even-alignment) -- that stays each caller's
+    own choice, because simple_gui._calculate_preview_guide_rect() must
+    match DrmPreview::Show()'s own unrounded fit exactly.
+    """
+    width = mode.get('width') or canvas_width
+    height = mode.get('height') or canvas_height
+    crop_width = mode.get('crop_width') or width
+    crop_height = mode.get('crop_height') or height
+    aspect = (crop_width / crop_height) if crop_height else 1.0
+
+    aw = canvas_width - 2 * padding_x
+    ah = canvas_height - 2 * padding_y
+
+    # -p preview window: raw aspect, centred in the padded canvas area.
+    if ah and (aw / ah) > aspect:
+        preview_h = ah
+        preview_w = int(preview_h * aspect)
+    else:
+        preview_w = aw
+        preview_h = int(preview_w / aspect) if aspect else ah
+    preview_x = (canvas_width - preview_w) // 2
+    preview_y = (canvas_height - preview_h) // 2
+
+    # Lores stream: target `target_lines`, clamped to the padded canvas AND
+    # to the mode's own delivered size -- the fix for C3.
+    lores_h = min(target_lines, ah, height)
+    lores_w = int(lores_h * aspect * anamorphic_factor)
+    max_lores_w = min(aw, width)
+    if lores_w > max_lores_w:
+        lores_w = max_lores_w
+        divisor = aspect * anamorphic_factor
+        lores_h = int(round(lores_w / divisor)) if divisor else lores_h
+
+    return {
+        "lores_width": lores_w,
+        "lores_height": lores_h,
+        "preview_x": preview_x,
+        "preview_y": preview_y,
+        "preview_width": preview_w,
+        "preview_height": preview_h,
+    }
+
+
 def read_pi_model() -> str:
     try:
         with open("/proc/device-tree/model", "r") as f:
@@ -1636,32 +1722,28 @@ class SensorDetect:
         the small sensor image into this preview stream; this is also the
         geometry used by the preview path before the small-mode picker was
         exposed.
-        """
-        fw, fh = 1920, 1080
-        px, py = 94, 50
-        aw, ah = fw - 2 * px, fh - 2 * py
-        aspect = sensor_w / sensor_h
 
-        lh = min(720, ah)
-        lw = int(lh * aspect)
-        if lw > aw:
-            lw = aw
-            lh = int(round(aw / aspect))
-        lw &= ~1
-        lh &= ~1
+        Thin, crop-blind wrapper (no `self` access -- called unbound as
+        `SensorDetect._calc_lores(None, w, h)` from several tests) over the
+        shared compute_preview_geometry(); see get_lores_width()/
+        get_lores_height() for the crop-aware entry points WP-CM-1 added.
+        """
+        geometry = compute_preview_geometry(
+            {"width": sensor_w, "height": sensor_h}, 1920, 1080,
+        )
+        lw = geometry["lores_width"] & ~1
+        lh = geometry["lores_height"] & ~1
         return lw, lh
 
     def get_lores_width(self, camera_name, sensor_mode):
         res = self.get_resolution_info(camera_name, sensor_mode)
-        w = res.get('width') or 1920
-        h = res.get('height') or 1080
-        return self._calc_lores(w, h)[0]
+        geometry = compute_preview_geometry(res, 1920, 1080)
+        return geometry["lores_width"] & ~1
 
     def get_lores_height(self, camera_name, sensor_mode):
         res = self.get_resolution_info(camera_name, sensor_mode)
-        w = res.get('width') or 1920
-        h = res.get('height') or 1080
-        return self._calc_lores(w, h)[1]
+        geometry = compute_preview_geometry(res, 1920, 1080)
+        return geometry["lores_height"] & ~1
     
     def get_hdr(self, camera_name, sensor_mode):
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)

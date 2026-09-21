@@ -41,6 +41,7 @@ from module.config_loader import (
     DEFAULT_CONFORM_FRAME_RATE,
     SettingsLoadError,
     _apply_settings_defaults,
+    _migrate_legacy_shipped_aspect_ratio_default,
     load_settings,
     strip_jsonc,
     DEFAULT_SETTINGS_PATH,
@@ -619,8 +620,18 @@ def put_settings():
 
     dest = Path(SETTINGS_FILE)
     try:
+        # WP-CM-11 rework, blocking review finding: migrate a legacy
+        # image_capture.aspect_ratios == {"default": ["1.78:1"]} on the raw
+        # on-disk snapshot, before the operator's payload is merged onto it.
+        # buildAspectRatiosState() in settings_editor.html never sends
+        # "default" itself, so merging first let that stale key survive as
+        # a sibling of a freshly-saved per-camera entry -- see
+        # _migrate_legacy_shipped_aspect_ratio_default()'s docstring in
+        # config_loader.py for the full failure mode this avoids.
+        on_disk = _settings_on_disk(dest)
+        _migrate_legacy_shipped_aspect_ratio_default(on_disk)
         settings = _apply_settings_defaults(
-            _merge_saved_settings(_settings_on_disk(dest), body)
+            _merge_saved_settings(on_disk, body)
         )
     except Exception as exc:  # pragma: no cover - defensive, mirrors load_settings' own catch-all
         logger.exception("Rejected settings save: failed to normalize payload")

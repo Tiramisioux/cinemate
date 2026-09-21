@@ -924,7 +924,7 @@ class SensorDetect:
         base_modes: Dict[str, List[Dict]],
         hdr_modes: Dict[str, List[Dict]],
     ) -> None:
-        """Treat the dedicated HDR probe as authoritative.
+        """Decide which modes of an unmarked ``--hdr sensor`` probe are HDR.
 
         The plain probe is SDR. The --hdr sensor probe is ClearHDR. This is
         the semantic contract between cinepi-raw and CineMate, so FPS is never
@@ -932,16 +932,64 @@ class SensorDetect:
 
         If the formatter explicitly prints an SDR section before switching to
         ClearHDR, _parse_cinepi_output() has already marked that first section
-        as hdr=False and the second section as hdr=True. Otherwise the entire
-        dedicated HDR probe is an HDR listing and its unmarked modes are
-        promoted to hdr=True here.
+        as hdr=False and the second section as hdr=True, and this method leaves
+        both alone: an explicit parser state always wins.
+
+        What is left is the formatter that prints no state boundary at all, and
+        there the probe itself is not evidence of anything: a sensor with no
+        ClearHDR ignores --hdr sensor and prints its plain listing back,
+        character for character (observed on imx283, and true of every stock
+        sensor whose driver has no HDR mode -- imx477, imx296). Promoting that
+        wholesale is what produced 42 rows for the imx283's 21 modes, half of
+        them phantom "CLEAR HDR" duplicates in the GUI.
+
+        So an unmarked mode is promoted only on evidence that the sensor
+        actually changed state, and there are exactly two kinds:
+
+        * The probe lists a timing the plain probe never reported
+          (_mode_timing_key, geometry plus the fps ceiling). ClearHDR halves
+          the readout rate, so a real ClearHDR mode arrives either as a
+          geometry the plain probe does not have at all (the 16-bit modes) or
+          as a known geometry at a new, lower ceiling.
+        * The probe lists the same readout twice at two different ceilings.
+          That is the SDR-then-ClearHDR listing without its separator, so the
+          repeat is the second state even when the plain probe happens to list
+          that lower ceiling too.
+
+        A mode that is neither -- same readout, same ceiling, already in the
+        plain listing -- stays hdr=False and _merge_mode_lists then drops it as
+        the duplicate it is. A sensor that echoes its plain listing therefore
+        contributes zero hdr=True modes, while imx585 keeps gaining them.
+
+        The residual risk is a genuine ClearHDR mode reported at exactly the
+        SDR geometry *and* the SDR ceiling, which would be read as an echo.
+        Nothing in the listing could distinguish the two, and on the hardware
+        that has ClearHDR the probe prints the CLEAR HDR marker anyway, so the
+        marked path above is what imx585 actually takes.
         """
         for cam, modes in hdr_modes.items():
+            plain_timings = {
+                cls._mode_timing_key(m) for m in (base_modes.get(cam) or [])
+            }
+            # Readout (_mode_key: geometry and depth, no fps) -> the ceilings
+            # this probe has already listed for it. Built as we go, so "seen
+            # earlier in this probe" means exactly that.
+            timings_seen: Dict[tuple, set] = {}
             for mode in modes:
+                # Read the readout key before any promotion below: _mode_key
+                # carries the HDR flag, so promoting first would file the mode
+                # under a different readout than its unmarked siblings.
+                readout = cls._mode_key(mode)
+                timing = cls._mode_timing_key(mode)
+                seen = timings_seen.setdefault(readout, set())
                 # An explicit parser state always wins.
                 if mode.get("hdr") is True:
+                    seen.add(timing)
                     continue
-                mode["hdr"] = True
+                second_state = bool(seen) and timing not in seen
+                if second_state or timing not in plain_timings:
+                    mode["hdr"] = True
+                seen.add(timing)
 
 
     @staticmethod
@@ -950,7 +998,9 @@ class SensorDetect:
 
         Unlike _mode_key(), this deliberately excludes the SDR/ClearHDR state.
         It is used only to compare the HDR probe with the plain probe when the
-        human-readable formatter does not expose a reliable state separator.
+        human-readable formatter does not expose a reliable state separator
+        (_normalize_hdr_probe_modes) -- a comparison that has to see both
+        probes' timings and must not depend on the state it is deciding.
         """
         return (
             int(mode.get("width") or 0),
@@ -988,11 +1038,19 @@ class SensorDetect:
     ) -> Dict[str, List[Dict]]:
         """Combine the plain (non-HDR) and ``--hdr sensor`` mode lists.
 
-        A mode reported by the HDR run is kept as HDR only when the plain run
-        did not already report an identical (width, height, bit_depth, fps)
-        mode. Sensors that ignore ``--hdr sensor`` therefore return the same
-        modes twice and collapse back to a single non-HDR list, so only real
-        ClearHDR sensors (imx585) gain HDR modes.
+        A mode from the HDR run is appended only when the plain run reported no
+        mode with the same _mode_key -- the readout state, which includes the
+        SDR/ClearHDR flag and excludes fps -- so one readout reported at two
+        ceilings does not become two modes.
+
+        The collapse for a sensor that ignores ``--hdr sensor`` is decided
+        before this, in _normalize_hdr_probe_modes: such a probe's modes are
+        never promoted, so they arrive here with a key the plain list already
+        holds and are dropped, and only real ClearHDR sensors (imx585) gain HDR
+        modes. This method cannot do that job itself -- by the time it runs, a
+        promoted mode's key carries hdr=True and can never equal a plain
+        hdr=False key, which is why the collapse it used to promise here never
+        happened.
         """
         merged: Dict[str, List[Dict]] = {cam: list(modes) for cam, modes in base.items()}
         for cam, hdr_modes in hdr.items():
@@ -1693,8 +1751,9 @@ class SensorDetect:
                 return
 
             # Second pass exposes the imx585 ClearHDR (16-bit + 12-bit HDR)
-            # modes; sensors that ignore --hdr sensor collapse back to the
-            # plain list in _merge_mode_lists().
+            # modes; a sensor that ignores --hdr sensor prints its plain
+            # listing again, which _normalize_hdr_probe_modes refuses to
+            # promote and _merge_mode_lists then collapses.
             hdr_out = self._list_cameras(hdr=True)
             if hdr_out.strip():
                 logging.info("cinepi-raw --hdr sensor output:\n%s", hdr_out)
@@ -1770,9 +1829,13 @@ class SensorDetect:
 
             # The HDR probe "succeeding" (non-empty output) but adding zero new
             # modes means --hdr sensor couldn't actually change what the sensor
-            # reports -- most commonly because another process (see
-            # _kill_stale_cinepi_raw above) still held the subdev. Surface this
-            # loudly instead of silently shipping a mode table missing ClearHDR.
+            # reports. On a sensor with no ClearHDR at all (imx283, imx477,
+            # imx296) that is the expected outcome and the whole point of the
+            # collapse above. On one that does have it, the usual cause is
+            # another process (see _kill_stale_cinepi_raw above) still holding
+            # the subdev, and shipping a mode table silently missing ClearHDR is
+            # the failure this warning exists to make visible -- so it stays
+            # loud, and says both things rather than asserting the second.
             if hdr_out.strip():
                 added = sum(
                     len(merged.get(cam, [])) - len(base_modes.get(cam, []))
@@ -1781,10 +1844,11 @@ class SensorDetect:
                 if added == 0:
                     logging.warning(
                         "ClearHDR probe (--hdr sensor) returned no modes beyond "
-                        "the plain probe. If this sensor supports ClearHDR (e.g. "
-                        "imx585), 16-bit modes are unavailable this session -- "
-                        "likely because something already held the sensor "
-                        "subdev when Cinemate started."
+                        "the plain probe. Expected on a sensor without ClearHDR. "
+                        "If this sensor supports ClearHDR (e.g. imx585), 16-bit "
+                        "modes are unavailable this session -- likely because "
+                        "something already held the sensor subdev when Cinemate "
+                        "started."
                     )
 
             # No camera header line parsed. This is NOT the same test as the

@@ -3733,12 +3733,28 @@
     if(!ids.length){ panel.hidden=true; host.innerHTML=''; return; }
     panel.hidden=false;
     // Canonical table order, not object key order. An id the table does not
-    // carry sorts last, which is where the whole-sensor toggle belongs
-    // ("add the full option (last)"): it is the only such id today, and it
-    // only exists at all on a sensor whose full frame is off-table.
+    // carry -- today only the whole-sensor toggle on a sensor whose full
+    // frame is off-table -- is placed by its VALUE among the table's ratios
+    // rather than appended at the end: the imx283's 1.50:1 (full) is that
+    // sensor's native shape and belongs between 1.37:1 and 1.78:1, where an
+    // operator scanning the row for a number will actually look (operator,
+    // 2026-09-22, revising the original "last").
+    //
+    // Counting how many table ratios are narrower gives that position
+    // without assuming the table is sorted by value: it yields a rank
+    // halfway between the two neighbours, so a table id's own integer rank
+    // is never displaced.
     var rank={};
     aspectRatioTable.forEach(function(e,i){ rank[e.id]=i; });
-    ids.sort(function(a,b){ return (rank[a]!=null?rank[a]:999)-(rank[b]!=null?rank[b]:999); });
+    function rankOf(id){
+      if(rank[id]!=null) return rank[id];
+      var v=(available[id]||{}).value;
+      if(typeof v!=='number') return 999;   // no value to place it by
+      var narrower=0;
+      aspectRatioTable.forEach(function(e){ if(e.value<v) narrower++; });
+      return narrower-0.5;
+    }
+    ids.sort(function(a,b){ return rankOf(a)-rankOf(b); });
 
     if(!selectedAspectRatiosByCamera[camera]){
       // First render for this camera this page-load: seed from the

@@ -1253,13 +1253,25 @@ class FullFrameToggleTests(unittest.TestCase):
         self.assertEqual(entry["label"], "1.50:1 (full)")
         self.assertEqual(entry["value"], 1.5)
 
-    def test_the_full_toggle_sorts_after_every_table_ratio(self):
-        # The pane ranks an id the canonical table does not carry at 999, so
-        # "last" is a property of the id being off-table. Pin that it IS
-        # off-table, which is what puts it lower-right.
+    def test_the_full_toggle_is_off_table_and_carries_its_own_value(self):
+        """It is not a table id, and it must carry a numeric value.
+
+        Originally the pane appended it last. The operator revised that on
+        2026-09-22 -- "that is the native aspect ratio, put it into its place
+        in the list, not last" -- so the pane now places it by VALUE among the
+        table's ratios (1.50 lands between 1.37:1 and 1.78:1). That sort lives
+        in renderAspectRatioToggles(); what this side owes it is an entry that
+        is genuinely off-table and has a value to be placed by, since an entry
+        without one falls back to being appended last.
+        """
         sd = self._detector(self._three_two_sensor())
         table_ids = {e["id"] for e in sd._aspect_ratio_table()}
         self.assertNotIn(FULL_FRAME_RATIO_ID, table_ids)
+        entry = sd.available_aspect_ratios("cam")[FULL_FRAME_RATIO_ID]
+        self.assertIsInstance(entry["value"], float)
+        neighbours = sorted(e["value"] for e in sd._aspect_ratio_table())
+        self.assertTrue(min(neighbours) < entry["value"] < max(neighbours),
+                        "1.50 falls inside the table's range, so it has a place in it")
 
     def test_the_full_toggle_claims_whole_sensor_modes_and_only_those(self):
         modes = self._three_two_sensor()

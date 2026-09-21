@@ -9,8 +9,20 @@ from typing import Any, Dict, List
 
 from module import rp1_regime
 from module.sensor_database import load_sensor_database
+from module.aspect_ratios import load_aspect_ratio_table
 
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
+# WP-CM-6 (ASPECT-RATIOS.md): the default ratio when image_capture.aspect_ratios
+# names nothing for a camera or for "default" -- a fresh camera behaves as it
+# did before the aspect family existed.
+DEFAULT_ASPECT_RATIOS = ["1.78:1"]
+# image_capture.min_mode_width's own default: modes narrower than this are
+# hidden (not removed) from the dial/GUIs unless an enabled_modes entry names
+# them.
+DEFAULT_MIN_MODE_WIDTH = 1280
+# How close a mode's real aspect has to be to a ratio's value to count as
+# that ratio "exact" rather than merely the closest available shape.
+ASPECT_RATIO_TOLERANCE = 0.02
 FALLBACK_PACKING_INFO = {
     "imx296": "U",
     "imx283": "U",
@@ -398,6 +410,25 @@ class SensorDetect:
         # Per-mode operator selection. An absent camera entry preserves the
         # legacy k_steps/bit_depths filters for backward compatibility.
         self.enabled_modes = res_cfg.get("enabled_modes", {})
+        # WP-CM-6: per-camera aspect-ratio selection, keyed exactly as
+        # enabled_modes is keyed above (a camera with no entry of its own
+        # uses "default"). Availability -- which ratios a camera can
+        # actually produce -- is derived at startup from the mode table
+        # (see available_aspect_ratios()), never stored here: it depends on
+        # the driver installed right now, and a cached answer would outlive
+        # it. An enabled_modes entry for the camera is still authoritative
+        # and skips this filter outright, same as it already skips
+        # k_steps/bit_depths above.
+        self.aspect_ratios_cfg = res_cfg.get("aspect_ratios", {})
+        # Modes narrower than this are hidden (not removed -- they stay in
+        # sensor_modes_unfiltered) from the dial/GUIs by default. An
+        # enabled_modes entry bypasses this floor too: an explicit choice
+        # beats a default.
+        self.min_mode_width = res_cfg.get("min_mode_width", DEFAULT_MIN_MODE_WIDTH)
+        # The canonical ratio table (id, exact value, common name) -- one
+        # file, read here and, from WP-CM-7, by the settings page. See
+        # module.aspect_ratios.
+        self.aspect_ratio_table = load_aspect_ratio_table()
         # Optional ClearHDR (imx585) whitelist. settings.jsonc → resolutions.hdr
         # is {"sdr": bool, "imx585_clear_hdr": bool}; both true (default)
         # exposes plain and ClearHDR modes, turn a flag off to hide that class
@@ -1073,6 +1104,123 @@ class SensorDetect:
             int(mode.get("crop_y") or 0),
         )
 
+    # ────────────────────────────────────────────────────────────────
+    #  WP-CM-6: aspect ratio as a selection axis
+    # ────────────────────────────────────────────────────────────────
+    @staticmethod
+    def _mode_aspect(mode: Dict) -> float | None:
+        """The real aspect of a mode: its own "aspect" field when one has
+        already been computed (tier A/B: from the driver's crop; tier C:
+        from width/height -- see _mode_from_metadata_or_detected), else a
+        width/height fallback for a mode dict that predates that field.
+        Never derived from binning -- this is purely the picture shape."""
+        a = mode.get("aspect")
+        if a is not None:
+            try:
+                return float(a)
+            except (TypeError, ValueError):
+                pass
+        w, h = mode.get("width"), mode.get("height")
+        if w and h:
+            try:
+                return round(float(w) / float(h), 2)
+            except (TypeError, ValueError, ZeroDivisionError):
+                return None
+        return None
+
+    @classmethod
+    def _modes_within_ratio_tolerance(cls, modes: List[Dict], ratio_value: float) -> List[Dict]:
+        """Modes within ASPECT_RATIO_TOLERANCE of ratio_value; when none
+        are, the closest mode plus any other within tolerance of *that*
+        mode's own error -- a near-tie offers both rather than an arbitrary
+        pick between them. Returns [] only when no mode has a known aspect
+        at all."""
+        scored = [
+            (abs(cls._mode_aspect(m) - ratio_value), m)
+            for m in modes if cls._mode_aspect(m) is not None
+        ]
+        if not scored:
+            return []
+        within = [m for err, m in scored if err <= ASPECT_RATIO_TOLERANCE]
+        if within:
+            return within
+        best_err = min(err for err, _ in scored)
+        return [m for err, m in scored if err <= best_err + ASPECT_RATIO_TOLERANCE]
+
+    def _aspect_ratio_table(self) -> List[Dict[str, Any]]:
+        table = getattr(self, "aspect_ratio_table", None)
+        return table if table is not None else load_aspect_ratio_table()
+
+    def _enabled_ratio_ids(self, camera_name: str) -> List[str]:
+        cfg = getattr(self, "aspect_ratios_cfg", None) or {}
+        ids = cfg.get(camera_name) or cfg.get("default")
+        return list(ids) if ids else list(DEFAULT_ASPECT_RATIOS)
+
+    def _enabled_ratio_values(self, camera_name: str) -> List[tuple]:
+        values_by_id = {e["id"]: e["value"] for e in self._aspect_ratio_table()}
+        out = []
+        for rid in self._enabled_ratio_ids(camera_name):
+            val = values_by_id.get(rid)
+            if val is not None:
+                out.append((rid, val))
+        return out
+
+    def _ratio_matches_for_camera(self, camera_name: str, modes: List[Dict]) -> Dict[int, tuple]:
+        """id(mode) -> (ratio_id, exact, real_aspect) for every mode
+        reachable by one of the camera's enabled ratios, unioned across
+        ratios (item 4: "union across ratios"). A mode reachable by more
+        than one enabled ratio keeps the smallest-error match -- the ratio
+        it actually resembles most."""
+        best: Dict[int, tuple] = {}
+        for rid, rval in self._enabled_ratio_values(camera_name):
+            for m in self._modes_within_ratio_tolerance(modes, rval):
+                aspect = self._mode_aspect(m)
+                err = abs(aspect - rval) if aspect is not None else float("inf")
+                key = id(m)
+                prev = best.get(key)
+                if prev is None or err < prev[3]:
+                    best[key] = (rid, err <= ASPECT_RATIO_TOLERANCE, aspect, err)
+        return {k: v[:3] for k, v in best.items()}
+
+    def available_aspect_ratios(self, camera_name: str) -> Dict[str, Dict[str, Any]]:
+        """Which ratios this camera can actually produce (ASPECT-RATIOS.md
+        step 2), derived at startup from its raw, pre-filter mode table --
+        never stored, because it depends on the driver installed right now
+        and a cached answer would outlive it.
+
+        A ratio is "exact" when some mode's real aspect is within
+        ASPECT_RATIO_TOLERANCE of it; otherwise it is "approximate" and
+        carries the closest mode's real aspect and the delta; a ratio with
+        no mode behind it at all (only possible for a camera with zero
+        modes, or none with a known aspect) is absent from the result and
+        must not appear as a toggle.
+        """
+        modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
+        result: Dict[str, Dict[str, Any]] = {}
+        for entry in self._aspect_ratio_table():
+            rid, rval = entry["id"], entry["value"]
+            best_mode = None
+            best_err = None
+            for m in modes:
+                a = self._mode_aspect(m)
+                if a is None:
+                    continue
+                err = abs(a - rval)
+                if best_err is None or err < best_err:
+                    best_err = err
+                    best_mode = m
+            if best_mode is None:
+                continue
+            result[rid] = {
+                "id": rid,
+                "value": rval,
+                "name": entry.get("name"),
+                "exact": best_err <= ASPECT_RATIO_TOLERANCE,
+                "real_aspect": self._mode_aspect(best_mode),
+                "delta": round(best_err, 3),
+            }
+        return result
+
     def _order_modes(self, selected: List[Dict]) -> List[Dict]:
         """Order recording modes in the same class/geometry order used by the UI."""
         return sorted(selected, key=self._mode_sort_key)
@@ -1234,12 +1382,25 @@ class SensorDetect:
             **{cam: [dict(m) for m in modes] for cam, modes in sensors.items()},
         )
 
-        # ── filter & index (k-steps / bit depths / hdr) ─────────────
+        # ── filter & index (aspect ratios / k-steps / bit depths / hdr) ──
         pruned: Dict[str, Dict[int, Dict]] = {}
         for cam, modes in sensors.items():
             selected = []
             mode_entries = (getattr(self, "enabled_modes", {}) or {}).get(cam)
             use_individual_selection = isinstance(mode_entries, list) and len(mode_entries) > 0
+
+            # WP-CM-6: the ratio matcher, beside the other filters. getattr,
+            # same convention as clear_hdr_depths below -- an instance built
+            # with __new__ that never set aspect_ratios_cfg has "no opinion"
+            # and is left exactly as it behaved before this filter existed;
+            # a real SensorDetect always has the attribute (__init__ sets it
+            # from image_capture.aspect_ratios, default {}). Skipped outright
+            # when enabled_modes is authoritative -- an explicit choice beats
+            # a default, same as it already beats k_steps/bit_depths.
+            ratio_matches: Dict[int, tuple] = {}
+            if not use_individual_selection and getattr(self, "aspect_ratios_cfg", None) is not None:
+                ratio_matches = self._ratio_matches_for_camera(cam, modes)
+
             for m in modes:
                 # Individual mode selection is authoritative.  Do not
                 # impose a separate resolution floor here: small sensor modes
@@ -1248,8 +1409,18 @@ class SensorDetect:
                 if use_individual_selection:
                     if not self._mode_matches_enabled(m, mode_entries):
                         continue
-                elif self.bit_depths and m["bit_depth"] not in self.bit_depths:
-                    continue
+                else:
+                    if ratio_matches:
+                        match = ratio_matches.get(id(m))
+                        if match is None:
+                            continue
+                        # Carry the matched ratio, the real aspect, and
+                        # exact-vs-approximate on the mode itself (item 6)
+                        # so the GUI can say a stock sensor's 1.878 stands in
+                        # for a requested 1.78 rather than pretending to be it.
+                        m["aspect_ratio_id"], m["aspect_ratio_exact"], m["aspect_ratio_real"] = match
+                    if self.bit_depths and m["bit_depth"] not in self.bit_depths:
+                        continue
 
                 # A ClearHDR mode also has to pass its own depth switch. The
                 # two are separate questions -- "expose ClearHDR at all" and
@@ -1271,6 +1442,18 @@ class SensorDetect:
                 if not use_individual_selection and self.k_steps and k_val not in self.k_steps:
                     continue
                 selected.append(m)
+
+            # WP-CM-6 item 5: the width floor. Hidden, not removed -- the
+            # narrow mode stays reachable in sensor_modes_unfiltered for the
+            # settings editor to offer by hand. enabled_modes already took
+            # the use_individual_selection branch above and never reaches
+            # here, so an explicit per-mode choice is never subject to it.
+            # getattr: same "no opinion on an instance that never set this"
+            # convention as aspect_ratios_cfg/clear_hdr_depths above.
+            if not use_individual_selection:
+                floor = getattr(self, "min_mode_width", None)
+                if floor:
+                    selected = [m for m in selected if int(m.get("width") or 0) >= floor]
 
             # ⚑ NEW: never leave a camera without modes
             if not selected:

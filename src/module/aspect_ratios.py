@@ -23,6 +23,22 @@ from typing import Any
 
 DEFAULT_ASPECT_RATIO_TABLE_FILE = "resources/aspect_ratios.json"
 
+# The ratios a camera nobody has chosen ratios for starts out selected on,
+# in table order, and only the ones that camera has a mode for
+# (SensorDetect._default_ratio_ids applies the "if present" half).
+#
+# Operator instruction, 2026-09-21: "make default selected aspect ratios for a
+# new sensor the standard 1.33:1, 1.78:1 (if present)". These two because they
+# are what footage is delivered in -- 4:3 and 16:9 -- not because of anything
+# about the sensors: a fresh camera should open on the two shapes almost every
+# operator wants, with the other twelve one toggle away in the settings page
+# rather than filling the mode dial from the start.
+#
+# Ids, not values: the table is the one place a ratio's number lives (that is
+# this module's whole job), so these are looked up in it and a ratio missing
+# from it simply cannot be preferred.
+PREFERRED_DEFAULT_RATIO_IDS = ("1.33:1", "1.78:1")
+
 logger = logging.getLogger(__name__)
 
 _EMPTY: list[dict[str, Any]] = []

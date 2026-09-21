@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from module import rp1_regime
 from module.sensor_database import load_sensor_database
-from module.aspect_ratios import load_aspect_ratio_table
+from module.aspect_ratios import PREFERRED_DEFAULT_RATIO_IDS, load_aspect_ratio_table
 
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
 # image_capture.min_mode_width's own default: modes narrower than this are
@@ -1253,20 +1253,21 @@ class SensorDetect:
         return min(table, key=lambda e: abs(e["value"] - aspect))["id"]
 
     def _derived_default_ratio_ids(self, camera_name: str) -> List[str]:
-        """WP-CM-11: the default ratio set for a camera with no explicit
-        selection -- no per-camera entry and no operator-chosen "default"
-        entry -- is the set of ratios its OWN modes actually map to, derived
-        at startup from the camera's raw, pre-filter mode table
+        """WP-CM-11: every ratio a camera's OWN modes map to, in mode-table
+        order, derived at startup from its raw, pre-filter mode table
         (sensor_modes_unfiltered, the same table available_aspect_ratios()
         walks). Never stored: it depends on the driver installed right now.
 
+        This is the *whole* shape of the camera, and _default_ratio_ids uses it
+        two ways: as the set the preferred pair is looked up in, and as the
+        fallback for a camera that has neither of them.
+
         Each mode contributes the canonical ratio it is nearest to, whether
-        or not that is within ASPECT_RATIO_TOLERANCE. This covers every
+        or not that is within ASPECT_RATIO_TOLERANCE. This set covers every
         mode by construction: a mode's own nearest ratio is always a member
-        of the set that goes on to filter it, so a default nobody chose can
-        never drop a mode from a fresh camera's table -- unlike the old
-        hardcoded single ratio ("1.78:1"), which relied on
-        an exemption to avoid exactly that on a sensor with no 16:9 mode at
+        of it, so selecting all of it can never drop a mode from a camera's
+        table -- unlike the old hardcoded single ratio ("1.78:1"), which relied
+        on an exemption to avoid exactly that on a sensor with no 16:9 mode at
         all (imx477, imx296: see WORK-PACKAGES.md's WP-CM-11).
         """
         modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
@@ -1282,22 +1283,49 @@ class SensorDetect:
                 ids.append(rid)
         return ids
 
+    def _default_ratio_ids(self, camera_name: str) -> List[str]:
+        """The selection for a camera nobody has chosen ratios for: the
+        preferred pair (aspect_ratios.PREFERRED_DEFAULT_RATIO_IDS -- 1.33:1 and
+        1.78:1) restricted to the ones this camera actually has a mode for,
+        and the whole derived set when it has neither.
+
+        "Has a mode for" is membership of _derived_default_ratio_ids, i.e. some
+        mode comes *home* to that ratio (its nearest canonical ratio), not
+        merely that some mode is within tolerance of it. That is the same rule
+        _ratio_matches_for_camera and the settings pane's row labels use, so a
+        preferred ratio is enabled only when at least one row is labelled with
+        it, and enabling it therefore always yields modes.
+
+        The result is never empty for a camera with any mode at all, and the
+        fallback is the reason: a sensor with neither 1.33 nor 1.78 -- imx477
+        and imx296 have no 16:9 mode at all, which is what WP-CM-11's
+        derive-everything default was built for -- still shows its whole table
+        rather than nothing. This narrows where WP-CM-11 deliberately did not,
+        so unlike _derived_default_ratio_ids it does hide modes: on a camera
+        that has both preferred ratios, every other ratio family starts hidden
+        and is one toggle away in the settings page.
+        """
+        derived = self._derived_default_ratio_ids(camera_name)
+        preferred = [rid for rid in PREFERRED_DEFAULT_RATIO_IDS if rid in derived]
+        return preferred or derived
+
     def _enabled_ratio_ids(self, camera_name: str) -> List[str]:
         """Precedence (WP-CM-11): an entry naming this camera wins; else an
-        explicit "default" entry in aspect_ratios_cfg; else the derived set
-        (_derived_default_ratio_ids) -- the shapes this camera's own modes
-        actually have. The first two narrow because someone chose them; the
-        third never narrows, by construction."""
+        explicit "default" entry in aspect_ratios_cfg; else the shipped default
+        for a camera nobody has chosen ratios for (_default_ratio_ids). All
+        three can narrow; only the first two narrow because someone chose
+        them."""
         cfg = getattr(self, "aspect_ratios_cfg", None) or {}
         ids = cfg.get(camera_name) or cfg.get("default")
         if ids:
             return list(ids)
-        return self._derived_default_ratio_ids(camera_name)
+        return self._default_ratio_ids(camera_name)
 
     def _ratio_selection_is_derived(self, camera_name: str) -> bool:
         """True when nobody chose this camera's ratios and the set came from
-        _derived_default_ratio_ids. Mirrors _enabled_ratio_ids' precedence, so
-        the two cannot drift apart."""
+        _default_ratio_ids. Mirrors _enabled_ratio_ids' precedence, so the two
+        cannot drift apart -- it reads the same cfg entries in the same order,
+        and says nothing about which ratios that step then returns."""
         cfg = getattr(self, "aspect_ratios_cfg", None) or {}
         return not (cfg.get(camera_name) or cfg.get("default"))
 
@@ -1318,23 +1346,28 @@ class SensorDetect:
         it actually resembles most.
 
         WP-CM-11: there is no exemption here any more. _enabled_ratio_ids
-        already resolves to a real, mode-derived set the moment nobody has
-        named this camera or changed the global "default" -- every mode's
-        own nearest canonical ratio (_derived_default_ratio_ids) -- so the
-        ordinary matching loop below covers every mode on its own, the same
-        way it would for an operator's explicit choice. A default nobody
-        chose is not a filter because it is built from the camera's own
-        modes, not because this method special-cases it.
+        resolves to a real set of ratio ids whoever chose them -- an operator,
+        or the shipped default (_default_ratio_ids) -- and the ordinary
+        matching loop below treats all of them the same way.
+
+        A default nobody chose does narrow the table now: it is 1.33:1 and
+        1.78:1 where the camera has them, so every other ratio family starts
+        hidden. What it can never do is leave a camera with nothing, and that
+        is _default_ratio_ids' own fallback (the whole derived set for a sensor
+        with neither preferred ratio), not an exemption here.
 
         This replaces an earlier "the matcher returns every mode" exemption
         that existed because the old shipped default was a single hardcoded
-        ratio, "1.78:1": a sensor with no mode near it, such as imx477 or
-        imx296, would otherwise lose most of its table on a fresh install
-        (WORK-PACKAGES.md's WP-CM-11; regression coverage
-        for that shape is ShippedDefaultAcrossANativelyDifferentSensorTests
-        and ShippedDefaultPartialMatchRegressionTests, both in
-        test_aspect_ratio_selection.py). bit_depths, k_steps, min_mode_width
-        and the HDR switches still apply after this, as they always have.
+        ratio, "1.78:1", applied to every sensor alike: a sensor with no mode
+        near it, such as imx477 or imx296, would lose most of its table on a
+        fresh install and the matcher had to make an exception for the default
+        itself (WORK-PACKAGES.md's WP-CM-11; regression coverage for that shape
+        is ShippedDefaultAcrossANativelyDifferentSensorTests and
+        ShippedDefaultPartialMatchRegressionTests, both in
+        test_aspect_ratio_selection.py). The preferred pair is checked against
+        the camera's own modes before it is selected, which is what makes the
+        exemption unnecessary. bit_depths, k_steps, min_mode_width and the HDR
+        switches still apply after this, as they always have.
         """
         best: Dict[int, tuple] = {}
         for rid, rval in self._enabled_ratio_values(camera_name):

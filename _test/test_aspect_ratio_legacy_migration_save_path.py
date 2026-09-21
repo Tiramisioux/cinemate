@@ -133,37 +133,54 @@ class LegacyDefaultSurvivesASingleCameraSaveTests(unittest.TestCase):
             "sibling of the camera key a normal save just wrote",
         )
 
-    def test_imx477_keeps_all_five_modes_after_that_save(self):
+    # CM-2 (operator instruction, 2026-09-21): a camera nobody has chosen
+    # ratios for now defaults to 1.33:1 and 1.78:1 where it has them, so "keeps
+    # every mode" is no longer the signature of an unaffected camera. These two
+    # compare the camera after the save against the same camera with no config
+    # at all -- the property the migration is actually for -- and keep an
+    # explicit expected set so a change in the default is still caught here.
+    def _assert_unaffected_by_the_save(self, camera_name, modes, expected_sizes, key):
         saved = self._put({
             "image_capture": {"aspect_ratios": {"imx585": ["1.78:1", "1.90:1"]}},
         })
 
-        d = _detector(saved["image_capture"]["aspect_ratios"])
-        pruned = d._finalize_modes({"imx477": [dict(m) for m in IMX477_FIVE_MODES]})
-        sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
-        self.assertEqual(
-            sizes,
-            {(m["width"], m["height"]) for m in IMX477_FIVE_MODES},
-            "imx477 was never the camera being saved -- a surviving stale "
-            "\"default\" would silently narrow it to 1.78:1 only",
-        )
-
-    def test_imx283_keeps_all_six_modes_after_that_save(self):
-        saved = self._put({
-            "image_capture": {"aspect_ratios": {"imx585": ["1.78:1", "1.90:1"]}},
-        })
-
-        d = _detector(saved["image_capture"]["aspect_ratios"])
-        pruned = d._finalize_modes({"imx283": [dict(m) for m in IMX283_SIX_MODES]})
-        sizes = {
-            (m["width"], m["height"], m["bit_depth"])
-            for m in pruned["imx283"].values()
+        after = _detector(saved["image_capture"]["aspect_ratios"])
+        fresh = _detector({})
+        sizes_after = {
+            key(m) for m in
+            after._finalize_modes({camera_name: [dict(m) for m in modes]})[camera_name].values()
+        }
+        sizes_fresh = {
+            key(m) for m in
+            fresh._finalize_modes({camera_name: [dict(m) for m in modes]})[camera_name].values()
         }
         self.assertEqual(
-            sizes,
-            {(m["width"], m["height"], m["bit_depth"]) for m in IMX283_SIX_MODES},
-            "imx283 was never the camera being saved -- a surviving stale "
-            "\"default\" would silently narrow it to 1.78:1 only",
+            sizes_after, sizes_fresh,
+            f"{camera_name} was never the camera being saved -- a surviving "
+            f"stale \"default\" would narrow it to 1.78:1 only, instead of "
+            f"leaving it exactly as a camera nobody chose ratios for",
+        )
+        self.assertEqual(sizes_after, expected_sizes)
+
+    def test_imx477_is_left_as_a_fresh_camera_after_that_save(self):
+        self._assert_unaffected_by_the_save(
+            "imx477", IMX477_FIVE_MODES,
+            # imx477 has no 16:9 mode, so its default is 1.33:1: the two 4:3
+            # readouts and the 1332x990 crop. The stale "default" would have
+            # kept the other two instead, which is what makes this disjoint
+            # from the bug's own outcome.
+            {(4056, 3040), (2028, 1520), (1332, 990)},
+            lambda m: (m["width"], m["height"]),
+        )
+
+    def test_imx283_is_left_as_a_fresh_camera_after_that_save(self):
+        self._assert_unaffected_by_the_save(
+            "imx283", IMX283_SIX_MODES,
+            # This metadata table has no 4:3 mode either, so 1.78:1 alone: the
+            # three ~1.8 modes. Its 1.5-aspect modes come home to 1.37:1 and
+            # start hidden, on a fresh camera and after this save alike.
+            {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10)},
+            lambda m: (m["width"], m["height"], m["bit_depth"]),
         )
 
 

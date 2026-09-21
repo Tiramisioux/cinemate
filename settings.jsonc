@@ -197,13 +197,18 @@
 
   // ── image_capture: resolution / bit-depth / HDR filters ──────────────────
   "image_capture": {
-    // WP-CM-6 (ASPECT-RATIOS.md), WP-CM-11: per-camera aspect-ratio
+    // WP-CM-6 (ASPECT-RATIOS.md), WP-CM-11, CM-2: per-camera aspect-ratio
     // selection, keyed exactly as enabled_modes below -- a camera with no
     // entry of its own uses "default". An absent or empty entry -- what
-    // this ships as -- means "the shapes this sensor has": each camera's
-    // own default is derived at startup from its own mode table, one ratio
-    // per mode (its nearest), so a fresh camera offers every mode it has,
-    // never fewer, whatever ratios its driver actually produces. A
+    // this ships as -- means 4:3 and 16:9 where the sensor has them:
+    // 1.33:1 and 1.78:1 are selected for a camera nobody has chosen ratios
+    // for, but only the ones at least one of its own modes comes home to,
+    // so a sensor with no 16:9 mode (imx477, imx296) is never left
+    // selecting a shape it cannot produce. A sensor with neither keeps its
+    // whole table instead of nothing. Every other ratio the sensor has is
+    // one toggle away in the settings page -- switching one on is what
+    // brings its modes back, and nothing is ever removed from the
+    // settings-editor's unfiltered mode table. A
     // "default" list is still supported as a deliberate global choice, and
     // narrows like any other entry the moment it is set. The mode table
     // offered is the modes reachable by one of the enabled ratios (within

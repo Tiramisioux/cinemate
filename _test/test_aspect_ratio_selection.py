@@ -342,15 +342,15 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
     not None, so the ratio matcher in _finalize_modes actively runs on a
     fresh install too.
 
-    For imx477 (tier B), none of its three stock modes is within
+    For imx477 (tier B), none of its five stock modes is within
     ASPECT_RATIO_TOLERANCE of 1.78 (closest is the 2028x1080 mode at 1.87).
     Before WP-CM-6's original fix this silently dropped the 4:3 2028x1520
     mode and the sensor's fastest mode, 1332x990@120fps; before WP-CM-11
     replaced the hardcoded "1.78:1"-plus-exemption mechanism that fix used,
-    the same three modes were only kept by an exemption that had to
+    those modes were only kept by an exemption that had to
     recognise "nobody chose anything" as a special case. WP-CM-11 makes
     this structural instead: an imx477 with no explicit selection derives
-    {1.33:1, 1.89:1} from its own three modes, and every mode is a member
+    {1.33:1, 1.89:1} from its own five modes, and every mode is a member
     of that set by construction -- see WORK-PACKAGES.md's WP-CM-11 and
     _derived_default_ratio_ids's docstring.
 
@@ -385,11 +385,19 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
             for m in raw_modes
         ]
 
+    # WP-CM-12: resources/sensors.json's imx477 entry grew two modes (the
+    # driver's 4056x3040 full readout and its 4056x2160 16:9 crop, both
+    # missing before), so the fresh-install survivor set is five sizes now,
+    # not three.
+    ALL_STOCK_IMX477_SIZES = {
+        (2028, 1080), (2028, 1520), (1332, 990), (4056, 3040), (4056, 2160),
+    }
+
     def _assert_all_stock_modes_survive(self, image_capture_cfg, source_label):
         modes = self._imx477_modes_from_database()
         self.assertEqual(
             {(m["width"], m["height"]) for m in modes},
-            {(2028, 1080), (2028, 1520), (1332, 990)},
+            self.ALL_STOCK_IMX477_SIZES,
             f"resources/sensors.json's imx477 entry changed shape -- update "
             f"this test's expectations ({source_label})",
         )
@@ -403,9 +411,9 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
         sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
         self.assertEqual(
             sizes,
-            {(2028, 1080), (2028, 1520), (1332, 990)},
+            self.ALL_STOCK_IMX477_SIZES,
             f"{source_label}: fresh-install default silently dropped an "
-            f"imx477 stock mode (expected all 3, including the "
+            f"imx477 stock mode (expected all 5, including the "
             f"1332x990@120fps mode)",
         )
 

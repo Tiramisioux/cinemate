@@ -487,6 +487,25 @@
   .camera-mode-panel{ margin-bottom:18px; }
   .camera-modes-card{ margin-top:0; display:block; padding:0; }
   .camera-mode-list{ width:100%; overflow:hidden; }
+
+  /* WP-CM-7: the aspect pane -- one toggle per offered ratio, above the
+     mode table it filters. */
+  .camera-aspect-ratio-card{ display:block; }
+  .aspect-ratio-toggles{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .aspect-ratio-toggle{
+    display:flex; align-items:center; gap:7px; padding:6px 10px 6px 8px;
+    border-radius:10px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--muted); cursor:pointer; font-size:12px; line-height:1.2;
+    transition:background-color .12s ease, border-color .12s ease, color .12s ease;
+  }
+  .aspect-ratio-toggle .aspect-ratio-swatch{ flex:none; color:inherit; }
+  .aspect-ratio-toggle:hover{ border-color:var(--accent); color:var(--ink); }
+  .aspect-ratio-toggle:focus-visible{ outline:none; box-shadow:var(--focus); }
+  .aspect-ratio-toggle[aria-checked="true"]{
+    background:var(--accent); border-color:var(--accent); color:var(--accent-ink);
+  }
+  .aspect-ratio-toggle-label{ white-space:nowrap; }
+  .aspect-ratio-toggle-label.aspect-ratio-approx{ font-style:italic; }
   .recording-mode-table{
     width:100%; min-width:0; table-layout:fixed;
     border-collapse:collapse; font-size:12px; line-height:1.25;
@@ -1485,6 +1504,15 @@
         <h2>{{ t('pane.cam0.heading') }}</h2>
         <p class="group-sub">{{ t('pane.cam0.sub') }}</p>
       </header>
+      <div class="camera-mode-panel" id="cam0-ratio-panel" hidden>
+        <div class="card camera-aspect-ratio-card" data-search="cam0 aspect ratio filter shape widescreen anamorphic scope">
+          <div class="card-main">
+            <label class="card-label">{{ t('card.sensors.cam0.aspect_ratios.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam0.aspect_ratios.help') }}</p>
+          </div>
+          <div class="aspect-ratio-toggles" id="cam0-ratio-list"></div>
+        </div>
+      </div>
       <div class="camera-mode-panel" id="cam0-mode-panel" hidden>
         <div class="card camera-modes-card" data-search="cam0 recording modes resolution bit depth binning crop aspect clear hdr fps">
           <div class="camera-mode-list" id="cam0-modes-list"><p class="card-help">Loading detected modes…</p></div>
@@ -1592,6 +1620,15 @@
         <h2>{{ t('pane.cam1.heading') }}</h2>
         <p class="group-sub">{{ t('pane.cam1.sub') }}</p>
       </header>
+      <div class="camera-mode-panel" id="cam1-ratio-panel" hidden>
+        <div class="card camera-aspect-ratio-card" data-search="cam1 aspect ratio filter shape widescreen anamorphic scope">
+          <div class="card-main">
+            <label class="card-label">{{ t('card.sensors.cam1.aspect_ratios.label') }}</label>
+            <p class="card-help">{{ t('card.sensors.cam1.aspect_ratios.help') }}</p>
+          </div>
+          <div class="aspect-ratio-toggles" id="cam1-ratio-list"></div>
+        </div>
+      </div>
       <div class="camera-mode-panel" id="cam1-mode-panel" hidden>
         <div class="card camera-modes-card" data-search="cam1 recording modes resolution bit depth binning crop aspect clear hdr fps">
           <div class="camera-mode-list" id="cam1-modes-list"><p class="card-help">Loading detected modes…</p></div>
@@ -3521,6 +3558,7 @@
     if (!state.image_capture) state.image_capture = {};
     state.image_capture.enabled_modes = buildEnabledModesState();
     state.image_capture.custom_modes = buildCustomModesState();
+    state.image_capture.aspect_ratios = buildAspectRatiosState();
     applyGpioOutToState(state);
     return state;
   }
@@ -3627,6 +3665,120 @@
     catch(e){}
   }
 
+  /* ---------- WP-CM-7: the aspect pane, ASPECT-RATIOS.md steps 3/4 ----------
+     Per camera, the ratio toggles are the first section and the mode table
+     under them is filtered to whichever ratios are on. aspectRatioTable and
+     aspectRatiosByCamera come straight off GET /api/sensor-modes
+     (aspect_ratio_table, aspect_ratios) -- the single canonical source; this
+     file adds no ratio numbers of its own. selectedAspectRatiosByCamera is
+     this page's working copy of the operator's choice: seeded from the
+     server's resolved "enabled" list on first render, then owned by clicks
+     on the toggles until saved. */
+  var aspectRatioTable = [];
+  var aspectRatiosByCamera = {};
+  var selectedAspectRatiosByCamera = {};
+  var lastMinModeWidth = null;
+
+  function aspectRatioSvg(value, exact){
+    // A small fixed box; the rectangle is the only thing that varies, drawn
+    // from the two numbers the ratio actually is -- no image asset, so it
+    // cannot drift from the table and it themes with currentColor.
+    var boxW=30, boxH=22, pad=3, innerW=boxW-2*pad, innerH=boxH-2*pad;
+    var w=innerW, h=innerW/(value||1);
+    if(h>innerH){ h=innerH; w=innerH*(value||1); }
+    var x=(boxW-w)/2, y=(boxH-h)/2;
+    var dash = exact ? '' : ' stroke-dasharray="2,2"';
+    return '<svg class="aspect-ratio-swatch" width="'+boxW+'" height="'+boxH+'" viewBox="0 0 '+boxW+' '+boxH+'" aria-hidden="true">'
+      +'<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(w,1).toFixed(1)+'" height="'+Math.max(h,1).toFixed(1)+'" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"'+dash+'/>'
+      +'</svg>';
+  }
+
+  function aspectRatioToggleLabel(id, info){
+    // "An exact ratio and an approximate one look different, and an
+    // approximate one states what it will actually get" -- WP-CM-7. The
+    // operator should never discover the approximation only after a take.
+    if(info.exact) return id;
+    var real=(typeof info.real_aspect==='number') ? info.real_aspect.toFixed(2) : '?';
+    return id+' — nearest '+real;
+  }
+
+  function renderAspectRatioToggles(slot, camera, data){
+    var panel=document.getElementById(slot+'-ratio-panel');
+    var host=document.getElementById(slot+'-ratio-list');
+    if(!panel||!host) return;
+    var available=(data && data.available) || {};
+    var ids=Object.keys(available);
+    if(!ids.length){ panel.hidden=true; host.innerHTML=''; return; }
+    panel.hidden=false;
+    // Canonical table order, not object key order.
+    var rank={};
+    aspectRatioTable.forEach(function(e,i){ rank[e.id]=i; });
+    ids.sort(function(a,b){ return (rank[a]!=null?rank[a]:999)-(rank[b]!=null?rank[b]:999); });
+
+    if(!selectedAspectRatiosByCamera[camera]){
+      // First render for this camera this page-load: seed from the
+      // server's own resolution of image_capture.aspect_ratios (per-camera
+      // entry, falling back to "default"), not a hard-coded 1.78 here.
+      selectedAspectRatiosByCamera[camera]=((data && data.enabled) || []).slice();
+    }
+    var enabledSet={};
+    selectedAspectRatiosByCamera[camera].forEach(function(id){ enabledSet[id]=true; });
+
+    host.innerHTML='';
+    ids.forEach(function(id){
+      var info=available[id];
+      var btn=document.createElement('button');
+      btn.type='button'; btn.className='aspect-ratio-toggle'; btn.setAttribute('role','switch');
+      var on=!!enabledSet[id];
+      btn.setAttribute('aria-checked', on?'true':'false');
+      btn.setAttribute('data-ratio-id', id);
+      btn.title = info.exact ? id+' ('+info.name+')' : id+' ('+info.name+') — this sensor gets '+info.real_aspect.toFixed(2)+':1';
+      btn.innerHTML = aspectRatioSvg(info.value, info.exact);
+      var label=document.createElement('span');
+      label.className='aspect-ratio-toggle-label'+(info.exact?'':' aspect-ratio-approx');
+      label.textContent=aspectRatioToggleLabel(id, info);
+      btn.appendChild(label);
+      btn.addEventListener('click', function(){
+        var nowOn = btn.getAttribute('aria-checked')!=='true';
+        btn.setAttribute('aria-checked', nowOn?'true':'false');
+        var set=selectedAspectRatiosByCamera[camera]||[];
+        set = nowOn ? set.concat(set.indexOf(id)===-1?[id]:[]) : set.filter(function(x){return x!==id;});
+        selectedAspectRatiosByCamera[camera]=set;
+        markDirty(btn, true);
+        refreshModeRowVisibility(camera);
+      });
+      host.appendChild(btn);
+    });
+  }
+
+  /* Recompute which mode rows show, for one camera: a row is out when its
+     ratio is not among the camera's currently-enabled toggles (removed from
+     the table -- "turning a ratio off removes its modes"), or -- unrelated
+     to ratio selection -- below the width floor and the smaller-modes
+     disclosure is collapsed (unchanged pre-existing behaviour, still
+     reachable, never the ratio filter's business). Group header rows follow
+     whether any row under them is visible, same rule for both reasons. */
+  function refreshModeRowVisibility(camera){
+    var showSmaller=showSmallerSensorModes();
+    var enabled=selectedAspectRatiosByCamera[camera]||[];
+    var enabledSet={}; enabled.forEach(function(id){ enabledSet[id]=true; });
+    var rows=document.querySelectorAll('tr[data-mode-row][data-camera="'+camera+'"]');
+    rows.forEach(function(row){
+      var ratioId=row.getAttribute('data-aspect-ratio-id');
+      var ratioOff = enabled.length>0 && ratioId && !enabledSet[ratioId];
+      var belowFloor = row.getAttribute('data-small-mode')==='1' && !showSmaller;
+      row.hidden = ratioOff || belowFloor;
+    });
+    document.querySelectorAll('tr[data-mode-group][data-camera="'+camera+'"]').forEach(function(groupRow){
+      var hasVisible=false, node=groupRow.nextElementSibling;
+      while(node && !node.hasAttribute('data-mode-group')){
+        if(node.hasAttribute('data-mode-row') && !node.hidden){ hasVisible=true; break; }
+        node=node.nextElementSibling;
+      }
+      groupRow.hidden=!hasVisible;
+    });
+  }
+
   function renderRecordingModes(sensors){
     var showSmaller=showSmallerSensorModes();
     var cameraNames=Object.keys(sensors||{}), slots=['cam0','cam1'];
@@ -3640,9 +3792,14 @@
       var present=!!camera && modes.length>0;
       section.hidden=!present;
       panel.hidden=!present;
-      if(!present){ host.innerHTML=''; return; }
+      if(!present){
+        host.innerHTML='';
+        renderAspectRatioToggles(slot, camera, camera ? aspectRatiosByCamera[camera] : null);
+        return;
+      }
       var head=section.querySelector('.group-head h2');
       if(head) head.textContent=(slot==='cam0'?'CAMERA 0':'CAMERA 1')+' · '+camera.toUpperCase();
+      renderAspectRatioToggles(slot, camera, aspectRatiosByCamera[camera]);
       host.innerHTML='';
       var table=document.createElement('table');
       table.className='recording-mode-table camera-recording-mode-table';
@@ -3653,6 +3810,7 @@
         var group=modeGroupKey(mode);
         if(group!==lastGroup){
           var gr=document.createElement('tr'); gr.className='mode-group-row'; gr.setAttribute('data-mode-group','1');
+          gr.setAttribute('data-camera',camera);
           var gd=document.createElement('td'); gd.colSpan=7;
           var binLabel=(mode.binning_x!=null && mode.binning_y!=null)
             ? mode.binning_x+'×'+mode.binning_y
@@ -3662,9 +3820,14 @@
         }
         var tr=document.createElement('tr');
         tr.setAttribute('data-mode-row','1');
-        tr.setAttribute('data-small-mode',((mode.active_width || mode.crop_width || mode.width || 0) < 1280) ? '1' : '0');
-        if(!showSmaller && ((mode.active_width || mode.crop_width || mode.width || 0) < 1280)) tr.hidden=true;
+        // WP-CM-7: below_width_floor comes from image_capture.min_mode_width
+        // by way of the endpoint (the same rule that hides the mode from the
+        // dial), not a hard-coded 1280 here -- "hidden, not removed", still
+        // reachable through the disclosure below.
+        tr.setAttribute('data-small-mode',mode.below_width_floor ? '1' : '0');
         tr.setAttribute('data-camera',camera);
+        tr.setAttribute('data-aspect-ratio-id',mode.aspect_ratio_id||'');
+        tr.setAttribute('data-aspect-ratio-exact',mode.aspect_ratio_exact?'1':'0');
         tr.setAttribute('data-width',mode.width);
         tr.setAttribute('data-height',mode.height);
         tr.setAttribute('data-bit-depth',mode.bit_depth);
@@ -3740,23 +3903,18 @@
         body.appendChild(tr);
       });
       table.appendChild(body);
-      if(!showSmaller){
-        body.querySelectorAll('tr[data-mode-group]').forEach(function(groupRow){
-          var hasVisible=false, node=groupRow.nextElementSibling;
-          while(node && !node.hasAttribute('data-mode-group')){
-            if(node.hasAttribute('data-mode-row') && !node.hidden){ hasVisible=true; break; }
-            node=node.nextElementSibling;
-          }
-          groupRow.hidden=!hasVisible;
-        });
-      }
       host.appendChild(table);
+      // WP-CM-7: applies both the ratio-toggle filter (rows removed) and
+      // the pre-existing width-floor disclosure (rows hidden, reachable) in
+      // one pass -- see refreshModeRowVisibility's own comment.
+      refreshModeRowVisibility(camera);
 
       var smallCount=host.querySelectorAll('tr[data-mode-row][data-small-mode="1"]').length;
       if(smallCount){
         var controls=document.createElement('div'); controls.className='mode-small-controls';
         var note=document.createElement('span'); note.className='mode-small-note';
-        note.textContent=smallCount+' smaller mode'+(smallCount===1?'':'s')+' below 1280×720';
+        var floorLabel=(typeof lastMinModeWidth==='number') ? lastMinModeWidth : 1280;
+        note.textContent=smallCount+' smaller mode'+(smallCount===1?'':'s')+' below '+floorLabel+'px wide';
         var button=document.createElement('button'); button.type='button'; button.className='mode-small-toggle';
         button.textContent=showSmaller ? 'Hide smaller modes' : 'Show smaller modes';
         button.setAttribute('aria-expanded',showSmaller?'true':'false');
@@ -3774,6 +3932,9 @@
   function loadFpsCeilings(){
     return fetch('/settings-editor/api/sensor-modes').then(function(r){ return r.json(); }).then(function(res){
       if (!res.ok) return;
+      aspectRatioTable = res.aspect_ratio_table || [];
+      aspectRatiosByCamera = res.aspect_ratios || {};
+      lastMinModeWidth = (typeof res.min_mode_width==='number') ? res.min_mode_width : null;
       renderRecordingModes(res.sensors || {});
     }).catch(function(){ /* non-fatal -- the rest of the page still works */ });
   }
@@ -3838,6 +3999,24 @@
         selected.push(entry);
       });
       if(selected.length) out[camera]=selected;
+    });
+    return out;
+  }
+
+  /* WP-CM-7: image_capture.aspect_ratios, same shape and same "start from
+     what was already on disk" convention buildEnabledModesState() uses
+     above -- every camera the settings file already named keeps its
+     selection, and only the camera(s) actually rendered on this page
+     (selectedAspectRatiosByCamera, owned by the toggle clicks in
+     renderAspectRatioToggles) overwrite theirs. This is what lets the save
+     touch one camera's ratios without a merge depending on it: the payload
+     already carries every camera's own array. */
+  function buildAspectRatiosState(){
+    var out = {};
+    var existing = (lastLoadedSettings && lastLoadedSettings.image_capture && lastLoadedSettings.image_capture.aspect_ratios) || {};
+    Object.keys(existing).forEach(function(camera){ out[camera] = (existing[camera] || []).slice(); });
+    Object.keys(selectedAspectRatiosByCamera).forEach(function(camera){
+      out[camera] = selectedAspectRatiosByCamera[camera].slice();
     });
     return out;
   }

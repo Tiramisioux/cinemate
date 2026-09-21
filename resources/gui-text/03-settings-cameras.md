@@ -11,6 +11,13 @@ they are what the GUI looks each string up by when CineMate starts.
 
 Sensor mounted on connector `cam0`.
 
+### Aspect ratios
+<!-- key: card.sensors.cam0.aspect_ratios -->
+
+Pick the shapes you want. Only ratios this sensor's driver can actually produce are shown — a
+dashed rectangle marks one it can only approximate, labelled with what it will really get. The
+mode table below lists only modes belonging to a ratio that's on.
+
 ### Rotate 180°
 <!-- key: card.sensors.cam0.geometry.rotate_180 -->
 
@@ -62,6 +69,13 @@ Records log instead of linear. "On" uses this mode's own default target; force 1
 <!-- key: pane.cam1 -->
 
 Sensor mounted on connector `cam1` — same options, independent values.
+
+### Aspect ratios
+<!-- key: card.sensors.cam1.aspect_ratios -->
+
+Pick the shapes you want. Only ratios this sensor's driver can actually produce are shown — a
+dashed rectangle marks one it can only approximate, labelled with what it will really get. The
+mode table below lists only modes belonging to a ratio that's on.
 
 ### Rotate 180°
 <!-- key: card.sensors.cam1.geometry.rotate_180 -->

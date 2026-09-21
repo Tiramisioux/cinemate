@@ -664,6 +664,16 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # be a cycle. settings.schema.json pins the same three values.
         "dynamic_resolution_priority": "mode",
         "custom_modes": {},
+        # WP-CM-6 (ASPECT-RATIOS.md): per-camera aspect-ratio selection,
+        # keyed exactly as enabled_modes above -- a camera with no entry of
+        # its own uses "default". Ships as {"default": ["1.78:1"]} so a
+        # fresh camera behaves as it does today until the operator opts
+        # into more shapes. See module.sensor_detect.SensorDetect's
+        # available_aspect_ratios()/_ratio_matches_for_camera().
+        "aspect_ratios": {"default": ["1.78:1"]},
+        # Modes narrower than this are hidden (not removed) from the dial
+        # and both GUIs by default; an enabled_modes entry bypasses it.
+        "min_mode_width": 1280,
     }
     for k, v in image_capture_defaults.items():
         image_capture_cfg.setdefault(k, v)

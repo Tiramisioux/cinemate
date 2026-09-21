@@ -97,29 +97,43 @@ REDIS_PLUS_PLUS_REPO_URL="${REDIS_PLUS_PLUS_REPO_URL:-https://github.com/sewenew
 REDIS_PLUS_PLUS_REPO_REF="${REDIS_PLUS_PLUS_REPO_REF:-}"
 LGPIO_REPO_URL="${LGPIO_REPO_URL:-https://github.com/joan2937/lg.git}"
 LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
-# Tiramisioux fork of Will Whang's driver; 6.12.y branch adds the UHD 4K (mode 1C)
-# and 2.7K 16:9 (mode 2A) readout modes on top of the upstream 6.12.y base.
-IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx283-v4l2-driver.git}"
-IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-6.12.y}"
-# Tiramisioux fork of Will Whang's driver. cinemate-7modes (switched
-# 2026-09-03, replaces innomaker-v1.0 as the default) ships seven modes —
-# three SDR (1920x1080 12-bit binned, 3840x2160 12-bit all-pixel, and a
-# 3840x2160 10-bit RAW10 all-pixel mode up to 90 fps) and four ClearHDR
-# (1920x1080 12-bit binned ClearHDR+CCMP, 3840x2160 12-bit all-pixel
-# ClearHDR+CCMP, 1920x1100 16-bit binned ClearHDR linear, and 3840x2200
-# 16-bit all-pixel ClearHDR linear). The two binned-HDR modes are restored
-# from `6.12.y` (innomaker-v1.0 had dropped them) and are colour-sensor only
-# — mono returns pure BLC pedestal at binned resolutions and stays on the
-# 4K-only 16-bit HDR entry. Also makes 12-bit CCMP ClearHDR default-on for
-# colour (mono still needs the `ccmp` overlay flag below). Gates the invalid
-# binned-ClearHDR combo on mono, and pairs with the rp1-cfe Y16 patch
-# (scripts/patch-rp1-cfe.sh) for mono 16-bit.
+# Tiramisioux fork of Will Whang's driver. cinemate-modes (switched
+# 2026-09-21, replaces 6.12.y as the default) merges 6.12.y -- keeping its
+# UHD 4K (mode 1C) and 2.7K 16:9 (mode 2A) readout modes -- and adds
+# optical-black-correct crop sizes, the `experimental_modes` gate, the five
+# read-only Mode Binning / Mode Crop Left/Top/Width/Height geometry controls,
+# and its own 14-ratio aspect family.
 # Verified on hardware.
-# The old `6.12.y` branch (readout dims 3856x2180/1928x1090, no ccmp param)
-# and `innomaker-v1.0` (dropped the two binned-HDR modes and the RAW10 mode)
-# stay selectable via this env var but are no longer the supported default.
+# The old `6.12.y` branch stays selectable via this env var but is no longer
+# the supported default.
+IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx283-v4l2-driver.git}"
+IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-cinemate-modes}"
+# Tiramisioux fork of Will Whang's driver. cinemate-modes (switched
+# 2026-09-21, replaces cinemate-7modes as the default) carries everything
+# cinemate-7modes shipped -- three SDR (1920x1080 12-bit binned, 3840x2160
+# 12-bit all-pixel, and a 3840x2160 10-bit RAW10 all-pixel mode up to 90 fps)
+# and four ClearHDR (1920x1080 12-bit binned ClearHDR+CCMP, 3840x2160 12-bit
+# all-pixel ClearHDR+CCMP, 1920x1100 16-bit binned ClearHDR linear, and
+# 3840x2200 16-bit all-pixel ClearHDR linear) -- plus the sensor-coordinate
+# crop fix, derived VMAX floors, window alignment, a probe-time self check,
+# and its own 14-ratio aspect family. On hardware the 16-bit ClearHDR aspect
+# crops turned out binned-incompatible: a *cropped* binned 16-bit ClearHDR
+# readout returns the sensor's black-level pedestal instead of an image
+# (confirmed 2026-09-21, cinemate-handbook/lessons/hardware-log.md), so in
+# the aspect family those crops are offered unbinned only -- the original
+# non-cropped 1920x1100 binned HD entry above is unaffected. The two binned-
+# HDR modes remain colour-sensor only — mono returns pure BLC pedestal at
+# binned resolutions and stays on the 4K-only 16-bit HDR entry. Also makes
+# 12-bit CCMP ClearHDR default-on for colour (mono still needs the `ccmp`
+# overlay flag below). Gates the invalid binned-ClearHDR combo on mono, and
+# pairs with the rp1-cfe Y16 patch (scripts/patch-rp1-cfe.sh) for mono 16-bit.
+# Verified on hardware.
+# The old `cinemate-7modes`, `6.12.y` (readout dims 3856x2180/1928x1090, no
+# ccmp param) and `innomaker-v1.0` (dropped the two binned-HDR modes and the
+# RAW10 mode) branches stay selectable via this env var but are no longer the
+# supported default.
 IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx585-v4l2-driver.git}"
-IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-cinemate-7modes}"
+IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-cinemate-modes}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
 # Pi 5 kernel baseline. 6.12.93+rpt is the oldest baseline validated for

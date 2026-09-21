@@ -1151,9 +1151,10 @@ class SensorDetect:
         at all.
 
         additive_fallback (WP-CM-6/WP-CM-7 rework, blocking review finding
-        on tier B/C sensors like imx477 and imx283): when the *only*
-        enabled ratio is the spec's own shipped default, 1.78:1 (see
-        DEFAULT_ASPECT_RATIOS / _ratio_matches_for_camera), the near-tie
+        on tier B/C sensors like imx477 and imx283): when the camera has
+        no explicit per-camera ratio selection at all (see
+        _camera_has_explicit_ratio_selection / _ratio_matches_for_camera)
+        and so resolves to the spec's own shipped default, 1.78:1, the near-tie
         fallback above is narrowing rather than additive -- it silently
         drops modes that bit_depths/k_steps/enabled_modes alone would have
         kept, which breaks WP-CM-6's own compatibility clause ("a fresh
@@ -1190,6 +1191,30 @@ class SensorDetect:
         ids = cfg.get(camera_name) or cfg.get("default")
         return list(ids) if ids else list(DEFAULT_ASPECT_RATIOS)
 
+    def _camera_has_explicit_ratio_selection(self, camera_name: str) -> bool:
+        """True when the operator named this camera specifically in
+        aspect_ratios_cfg (settings.jsonc's image_capture.aspect_ratios).
+
+        This is the fix for the WP-CM-7 rework review finding: whether the
+        camera's enabled-ratio set is a genuine no-opinion fallback must be
+        decided by WHERE the value came from, not by what it resolves to.
+        Comparing the resolved list to DEFAULT_ASPECT_RATIOS by value is
+        wrong because an operator who deliberately narrows a camera to
+        exactly 16:9 produces {"<camera>": ["1.78:1"]}, which is
+        bit-for-bit identical to the untouched-default list -- so a
+        value-equality check can never tell the two apart and an operator
+        can never restrict a multi-ratio sensor to plain 16:9.
+
+        A per-camera key that is absent or empty means "no opinion for
+        this camera" and falls through to the "default" key or the
+        hardcoded DEFAULT_ASPECT_RATIOS -- both genuine fallbacks, so a
+        bare "default" entry (what settings_default.jsonc ships, WP-CM-6
+        item 1) does NOT count as an explicit per-camera selection here.
+        Only a non-empty entry keyed by this camera's own name does.
+        """
+        cfg = getattr(self, "aspect_ratios_cfg", None) or {}
+        return bool(cfg.get(camera_name))
+
     def _enabled_ratio_values(self, camera_name: str) -> List[tuple]:
         values_by_id = {e["id"]: e["value"] for e in self._aspect_ratio_table()}
         out = []
@@ -1206,19 +1231,26 @@ class SensorDetect:
         than one enabled ratio keeps the smallest-error match -- the ratio
         it actually resembles most.
 
-        additive_fallback is set only when this camera's enabled ratio set
-        resolves to exactly the spec's own shipped default,
-        ["1.78:1"] -- whether that is because aspect_ratios_cfg genuinely
-        names nothing for this camera/"default" (_enabled_ratio_ids' own
-        fallback), or because the operator's settings.jsonc literally
-        contains {"default": ["1.78:1"]}, which is what
-        resources/settings/settings_default.jsonc ships (WP-CM-6 item 1).
-        Either way this is not a deliberate non-default choice, so the
-        near-tie fallback in _modes_within_ratio_tolerance must not narrow
-        a stock sensor's mode table down from what bit_depths/k_steps
+        additive_fallback is set only when this camera has NO explicit
+        per-camera entry in aspect_ratios_cfg (see
+        _camera_has_explicit_ratio_selection) -- whether that is because
+        aspect_ratios_cfg genuinely names nothing for this camera at all,
+        or because the operator's settings.jsonc only sets the global
+        "default" key, which is what resources/settings/settings_default.jsonc
+        ships (WP-CM-6 item 1). Either of those is a genuine "no opinion",
+        so the near-tie fallback in _modes_within_ratio_tolerance must not
+        narrow a stock sensor's mode table down from what bit_depths/k_steps
         alone would offer -- see that method's docstring.
+
+        additive_fallback is deliberately NOT decided by comparing the
+        resolved ratio list to DEFAULT_ASPECT_RATIOS by value: an operator
+        who explicitly narrows a camera to exactly 16:9 saves
+        {"<camera>": ["1.78:1"]}, which resolves to the same list as the
+        untouched default and would be indistinguishable from "no opinion"
+        under a value check. Keying off presence of the per-camera entry
+        instead lets that deliberate narrow selection actually narrow.
         """
-        additive_fallback = self._enabled_ratio_ids(camera_name) == DEFAULT_ASPECT_RATIOS
+        additive_fallback = not self._camera_has_explicit_ratio_selection(camera_name)
         best: Dict[int, tuple] = {}
         for rid, rval in self._enabled_ratio_values(camera_name):
             for m in self._modes_within_ratio_tolerance(modes, rval, additive_fallback=additive_fallback):

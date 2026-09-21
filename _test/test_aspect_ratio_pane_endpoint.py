@@ -148,22 +148,65 @@ class TogglingRatioChangesSelectedTests(unittest.TestCase):
                  "hdr": False, "aspect": 2.39},
             ],
         }
-        # Narrowing to a *non-default* single ratio (2.39, not the shipped
-        # 1.78 default) demonstrates the toggle: WP-CM-7 rework made
-        # {"default": ["1.78:1"]} -- the shipped default -- an additive
-        # no-op (never narrows, see _modes_within_ratio_tolerance's
-        # additive_fallback), so narrowing to *only* the default can no
-        # longer be told apart from an untouched fresh install and must not
-        # be used to prove narrowing here; 2.39 is unambiguous.
-        only_scope = _detector(TABLE, {"default": ["2.39:1"]}, modes)
+        # Narrowing to a single ratio via an EXPLICIT PER-CAMERA key --
+        # {"imx585": [...]}, the shape buildAspectRatiosState() actually
+        # writes for a camera the operator has interacted with (templates/
+        # settings_editor.html:4021-4028), not the global "default" key.
+        # additive_fallback is keyed off presence of this per-camera entry
+        # (_camera_has_explicit_ratio_selection), so this is what narrowing
+        # looks like for a real operator toggle regardless of which ratio
+        # they narrowed to -- including 2.39 here, and separately below the
+        # single most likely real selection, narrowing to plain 1.78:1
+        # (test_narrowing_a_camera_to_only_the_default_ratio_still_narrows).
+        only_scope = _detector(TABLE, {"default": ["1.78:1"], "imx585": ["2.39:1"]}, modes)
         by_size_scope = {(m["width"], m["height"]): m for m in _get(only_scope)["sensors"]["imx585"]}
         self.assertFalse(by_size_scope[(1920, 1080)]["selected"])
         self.assertTrue(by_size_scope[(1920, 804)]["selected"])
 
-        both = _detector(TABLE, {"default": ["1.78:1", "2.39:1"]}, modes)
+        both = _detector(TABLE, {"default": ["1.78:1"], "imx585": ["1.78:1", "2.39:1"]}, modes)
         by_size_both = {(m["width"], m["height"]): m for m in _get(both)["sensors"]["imx585"]}
         self.assertTrue(by_size_both[(1920, 1080)]["selected"])
         self.assertTrue(by_size_both[(1920, 804)]["selected"])
+
+    def test_narrowing_a_camera_to_only_the_default_ratio_still_narrows(self):
+        """Regression test for the WP-CM-7 rework's blocking review finding:
+        an operator who deliberately toggles a multi-ratio camera down to
+        exactly 16:9 saves {"<camera>": ["1.78:1"]} -- bit-for-bit the same
+        list DEFAULT_ASPECT_RATIOS resolves to for an untouched camera, so a
+        value-equality additive_fallback check could never tell the two
+        apart and this selection silently stopped narrowing anything (every
+        mode with a known aspect survived, mislabeled as 1.78:1). This saves
+        the explicit per-camera key -- never the global "default" key -- and
+        asserts the non-1.78 mode is excluded, from both the endpoint
+        (settings_editor.selected_for(), via _ratio_matches_for_camera) and
+        _ratio_matches_for_camera() directly."""
+        modes = {
+            "imx283": [
+                {"width": 5760, "height": 2160, "bit_depth": 12, "fps_max": 24,
+                 "hdr": False, "aspect": 2.67},
+                {"width": 5472, "height": 3648, "bit_depth": 12, "fps_max": 18,
+                 "hdr": False, "aspect": 1.5},
+                {"width": 3840, "height": 2160, "bit_depth": 12, "fps_max": 30,
+                 "hdr": False, "aspect": 1.78},
+            ],
+        }
+        cfg = {"imx283": ["1.78:1"]}
+
+        d = _detector(TABLE, cfg, modes)
+        by_size = {(m["width"], m["height"]): m for m in _get(d)["sensors"]["imx283"]}
+        self.assertTrue(by_size[(3840, 2160)]["selected"])
+        self.assertFalse(by_size[(5472, 3648)]["selected"])
+        self.assertFalse(by_size[(5760, 2160)]["selected"])
+
+        sd = SensorDetect.__new__(SensorDetect)
+        sd.aspect_ratio_table = TABLE
+        sd.aspect_ratios_cfg = cfg
+        matches = sd._ratio_matches_for_camera("imx283", modes["imx283"])
+        matched_sizes = {
+            (m["width"], m["height"])
+            for m in modes["imx283"] if id(m) in matches
+        }
+        self.assertEqual(matched_sizes, {(3840, 2160)})
 
 
 class SettingsRoundTripTests(unittest.TestCase):

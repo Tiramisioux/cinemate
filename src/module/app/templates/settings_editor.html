@@ -900,12 +900,16 @@
   }
   .danger-zone p{ margin:0; font-size: 13px; color: var(--ink); max-width: 46ch; }
   .danger-zone .eyebrow{ color: var(--danger); }
-  /* A reboot is disruptive but recoverable, and its button already says so in
-     purple. Red belongs to the shutdown card next to it, which is the one you
-     cannot undo from the same room. Keeping the frame and the heading in the
-     button's own colour stops this card reading as the more serious of the two. */
-  .danger-zone.reboot-zone{ border-color: var(--reboot); background: var(--reboot-soft); }
+  /* A reboot is disruptive but recoverable, so this card keeps a red frame --
+     fainter than the shutdown card beside it, which is the one you cannot undo
+     from the same room. The text goes purple with its own button, so the words
+     and the control you press agree with each other. */
+  .danger-zone.reboot-zone{
+    border-color: rgba(255, 65, 54, .38);
+    background: rgba(255, 65, 54, .06);
+  }
   .danger-zone.reboot-zone .eyebrow{ color: var(--reboot); }
+  .danger-zone.reboot-zone p{ color: var(--reboot); }
 
   /* ---------- JSON drawer ---------- */
   .json-drawer{
@@ -1217,7 +1221,9 @@
   #app.skin-hud .btn-danger-outline{ border-color: var(--danger); color: var(--danger); }
   #app.skin-hud .btn-reboot-outline{ border-color: var(--reboot); color: var(--reboot); }
   #app.skin-hud .danger-zone{ background: var(--danger-soft); border-color: var(--danger); }
-  #app.skin-hud .danger-zone.reboot-zone{ background: var(--reboot-soft); border-color: var(--reboot); }
+  #app.skin-hud .danger-zone.reboot-zone{
+    background: rgba(255, 65, 54, .06); border-color: rgba(255, 65, 54, .38);
+  }
 
   #app.skin-hud .status-dot{ background: var(--ok); }
   #app.skin-hud .status-dot.restarting{ background: var(--restart); }
@@ -7363,9 +7369,17 @@
         showToast('Reboot failed: ' + (result.message || 'unknown error'));
         return;
       }
+      /* A reboot with autostart disabled leaves the Pi up and CineMate down, so
+         this wait would run its full three minutes and then report no answer,
+         with nothing saying why. The server tells us up front; say so at once
+         rather than letting the spinner imply something is wrong with the Pi. */
+      var autostart = result.autostart_enabled;
       runBootSequence({
         btn: btn, dot: statusDot, text: statusText, consoleEl: consoleEl,
-        waitText: 'waiting for the Pi to come back…',
+        waitText: autostart === false
+          ? 'waiting for the Pi to come back… note: CineMate autostart is disabled, '
+            + 'so it will not start itself — start it over SSH once the Pi is up'
+          : 'waiting for the Pi to come back…',
         settleMs: 12000, timeoutMs: 180000,
         busyText: 'Rebooting the Pi — <b class="din">please wait</b>',
         readyText: 'CineMate is running — <b class="din">READY</b>',

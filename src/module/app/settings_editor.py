@@ -14,6 +14,7 @@ import os
 import re
 import tempfile
 import time
+import subprocess
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -771,6 +772,32 @@ def put_config_txt():
     return jsonify({"ok": True, "message": message, "rebooting": rebooting})
 
 
+def _autostart_will_bring_cinemate_back() -> bool | None:
+    """Whether CineMate starts itself after a reboot, or None if unknowable.
+
+    A reboot with the autostart unit disabled leaves the camera up and CineMate
+    down, so the page that asked for the reboot waits for an answer that is
+    never coming -- three minutes of spinner before the timeout, with nothing
+    saying why. The operator disables that unit for good reasons (a clean
+    `--list-cameras` needs nothing holding the sensor), which is exactly when
+    this bites. So the reboot response carries the answer and the page can say
+    it up front.
+    """
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-enabled", "cinemate-autostart"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    state = (result.stdout or "").strip()
+    if state in ("enabled", "enabled-runtime", "static", "indirect", "generated"):
+        return True
+    if state in ("disabled", "masked", "masked-runtime"):
+        return False
+    return None
+
+
 @settings_editor_bp.route("/api/power", methods=["POST"])
 def power_action():
     """Restart CineMate, reboot, or shut down the Pi -- from the settings
@@ -828,7 +855,12 @@ def power_action():
     timer = threading.Timer(0.4, method)
     timer.daemon = True
     timer.start()
-    return jsonify({"ok": True, "action": action, "scheduled": True})
+    payload = {"ok": True, "action": action, "scheduled": True}
+    if action == "reboot":
+        # So the page can say, before the wait even starts, whether anything will
+        # be there to answer. See _autostart_will_bring_cinemate_back().
+        payload["autostart_enabled"] = _autostart_will_bring_cinemate_back()
+    return jsonify(payload)
 
 
 @settings_editor_bp.route("/api/actions", methods=["GET"])

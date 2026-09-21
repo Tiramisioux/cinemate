@@ -3349,8 +3349,26 @@ class CinePiController:
         self.ssd_monitor.format_drive(filesystem or "exfat")
     
     def calculate_dynamic_shutter_angles(self, fps):
+        """The shutter-angle table for this fps: the operator's own steps plus the
+        flicker-free angles for each mains frequency.
+
+        Recomputed from a lot of places -- startup, every fps change, every
+        resolution change, and every `set shutter angle` -- and the answer only
+        depends on (fps, light_hz, shutter_a_steps). On the camera that meant 228
+        of a 1531-line startup log were this one table, fired every half second
+        with identical inputs and an identical 360-entry result. A log that is 15%
+        one repeated line is a log nobody reads.
+
+        So a repeat with unchanged inputs returns the cached list in silence, and
+        only a table that actually changed is announced -- as its size and the
+        inputs that produced it, with the list itself left for debug.
+        """
         if fps <= 0:
             fps = 1  # Prevent division by zero
+
+        key = (round(float(fps), 3), tuple(self.light_hz), tuple(self.shutter_a_steps))
+        if key == getattr(self, "_shutter_steps_cache_key", None):
+            return self.shutter_a_steps_dynamic
 
         dynamic_steps = set(self.shutter_a_steps)  # Start with user-defined shutter angles
 
@@ -3360,7 +3378,13 @@ class CinePiController:
             dynamic_steps.update(flicker_free_angles)  # Add unique flicker-free values
 
         self.shutter_a_steps_dynamic = sorted(dynamic_steps)
-        logging.info(f"Updated shutter angles (user-defined + flicker-free): {self.shutter_a_steps_dynamic}")
+        self._shutter_steps_cache_key = key
+        logging.info(
+            "Shutter angles: %d steps for fps=%s, mains %s",
+            len(self.shutter_a_steps_dynamic), fps,
+            "/".join(str(h) for h in self.light_hz) or "none",
+        )
+        logging.debug("Shutter angle table: %s", self.shutter_a_steps_dynamic)
 
         return self.shutter_a_steps_dynamic
 
@@ -3375,7 +3399,10 @@ class CinePiController:
             if 1 <= angle <= 360:  # Ensure the angle is valid
                 flicker_free_angles.append(round(angle, 1))
 
-        logging.info(f"Generated flicker-free shutter angles for fps={fps}, hz={hz}: {flicker_free_angles}")
+        # Debug, not info: this is the per-frequency detail behind the one line
+        # calculate_dynamic_shutter_angles logs, and it fired twice for every one
+        # of those -- see that method's docstring.
+        logging.debug(f"Generated flicker-free shutter angles for fps={fps}, hz={hz}: {flicker_free_angles}")
         
         return flicker_free_angles
 

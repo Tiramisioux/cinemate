@@ -924,6 +924,20 @@ def get_sensor_modes():
                 return False
             if width_floor and int(mode.get("width") or 0) < width_floor:
                 return False
+            # The ratio matcher is not the only filter _finalize_modes applies:
+            # bit_depths and k_steps still run after it. If this branch returned
+            # True without them, the page would show a mode as selected that the
+            # camera would never offer, and a plain save would write it into
+            # enabled_modes -- which IS authoritative -- promoting it past those
+            # filters permanently. imx519's native 4656x3496 is the worked
+            # example: k_val 4.5, absent from the shipped k_steps.
+            #
+            # So the displayed state has to agree with what the camera would
+            # actually offer, and that means the same two checks as below.
+            if legacy_k and round((mode.get("width", 0) / 1000) * 2) / 2 not in legacy_k:
+                return False
+            if legacy_depths and mode.get("bit_depth") not in legacy_depths:
+                return False
             return True
         # First visit of an old settings file: preserve its existing filters,
         # but otherwise default-select every mode unless the driver's own

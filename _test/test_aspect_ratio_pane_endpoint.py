@@ -246,5 +246,50 @@ class SettingsRoundTripTests(unittest.TestCase):
         self.assertEqual(ic["k_steps"], [1.5, 2, 3, 4])
 
 
+class LegacyFiltersStillApplyToARatioMatchTests(unittest.TestCase):
+    """A row the page shows as selected must be a row the camera would offer.
+
+    The ratio matcher is not the last word: bit_depths and k_steps run after it
+    in _finalize_modes. If the endpoint reported a ratio-matched mode as selected
+    without applying them, the page would disagree with the camera -- and worse,
+    a plain save writes the displayed selection into enabled_modes, which IS
+    authoritative, so the mode would be promoted past those filters for good.
+
+    imx519's native 4656x3496 is the worked example: k_val 4.5, which the shipped
+    k_steps does not list.
+    """
+
+    MODES = {
+        "imx519": [
+            {"width": 4656, "height": 3496, "bit_depth": 10, "fps_max": 9,
+             "hdr": False, "aspect": 1.33},
+            {"width": 2328, "height": 1748, "bit_depth": 10, "fps_max": 30,
+             "hdr": False, "aspect": 1.33},
+        ],
+    }
+
+    def _selected(self, k_steps):
+        d = _detector(TABLE, {"imx519": ["1:1"]}, self.MODES)
+        app = _make_app(d)
+        app.config["SETTINGS"] = {"image_capture": {"k_steps": k_steps}}
+        body = app.test_client().get("/settings-editor/api/sensor-modes").get_json()
+        assert body["ok"], body
+        return {(m["width"], m["height"]): m["selected"] for m in body["sensors"]["imx519"]}
+
+    def test_a_ratio_match_excluded_by_k_steps_is_not_shown_selected(self):
+        # 4.5 absent, 2.5 present: the big mode must not be offered, the small one may.
+        selected = self._selected([1.5, 2, 2.5, 3, 4])
+        self.assertFalse(selected[(4656, 3496)],
+                         "a mode k_steps excludes was shown as selected, so a save "
+                         "would promote it into enabled_modes permanently")
+        self.assertTrue(selected[(2328, 1748)])
+
+    def test_with_the_mode_inside_k_steps_it_is_shown_selected(self):
+        # Same ratio match, same code path: only k_steps changed, so this proves
+        # the exclusion above came from k_steps and not from the ratio matcher.
+        selected = self._selected([2.5, 4.5])
+        self.assertTrue(selected[(4656, 3496)])
+
+
 if __name__ == "__main__":
     unittest.main()

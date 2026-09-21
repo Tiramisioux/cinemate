@@ -1141,12 +1141,28 @@ class SensorDetect:
         return None
 
     @classmethod
-    def _modes_within_ratio_tolerance(cls, modes: List[Dict], ratio_value: float) -> List[Dict]:
+    def _modes_within_ratio_tolerance(
+        cls, modes: List[Dict], ratio_value: float, additive_fallback: bool = False,
+    ) -> List[Dict]:
         """Modes within ASPECT_RATIO_TOLERANCE of ratio_value; when none
         are, the closest mode plus any other within tolerance of *that*
         mode's own error -- a near-tie offers both rather than an arbitrary
         pick between them. Returns [] only when no mode has a known aspect
-        at all."""
+        at all.
+
+        additive_fallback (WP-CM-6 rework, blocking review finding on tier
+        B/C sensors like imx477): when the *only* enabled ratio is the
+        spec's own shipped default, 1.78:1 (see DEFAULT_ASPECT_RATIOS /
+        _ratio_matches_for_camera), and this camera has no mode within
+        tolerance of it, the near-tie fallback above is narrowing rather
+        than additive -- it silently drops modes that
+        bit_depths/k_steps/enabled_modes alone would have kept, which
+        breaks WP-CM-6's own compatibility clause ("a fresh camera behaves
+        as it does today") for every stock sensor that isn't natively
+        16:9. In that specific case only, fall through to every candidate
+        with a known aspect instead of the near-tie subset: the default
+        selection must never narrow a sensor's mode table on its own,
+        only an operator's deliberate, non-default choice may."""
         scored = [
             (abs(cls._mode_aspect(m) - ratio_value), m)
             for m in modes if cls._mode_aspect(m) is not None
@@ -1156,6 +1172,8 @@ class SensorDetect:
         within = [m for err, m in scored if err <= ASPECT_RATIO_TOLERANCE]
         if within:
             return within
+        if additive_fallback:
+            return [m for _, m in scored]
         best_err = min(err for err, _ in scored)
         return [m for err, m in scored if err <= best_err + ASPECT_RATIO_TOLERANCE]
 
@@ -1182,10 +1200,24 @@ class SensorDetect:
         reachable by one of the camera's enabled ratios, unioned across
         ratios (item 4: "union across ratios"). A mode reachable by more
         than one enabled ratio keeps the smallest-error match -- the ratio
-        it actually resembles most."""
+        it actually resembles most.
+
+        additive_fallback is set only when this camera's enabled ratio set
+        resolves to exactly the spec's own shipped default,
+        ["1.78:1"] -- whether that is because aspect_ratios_cfg genuinely
+        names nothing for this camera/"default" (_enabled_ratio_ids' own
+        fallback), or because the operator's settings.jsonc literally
+        contains {"default": ["1.78:1"]}, which is what
+        resources/settings/settings_default.jsonc ships (WP-CM-6 item 1).
+        Either way this is not a deliberate non-default choice, so the
+        near-tie fallback in _modes_within_ratio_tolerance must not narrow
+        a stock sensor's mode table down from what bit_depths/k_steps
+        alone would offer -- see that method's docstring.
+        """
+        additive_fallback = self._enabled_ratio_ids(camera_name) == DEFAULT_ASPECT_RATIOS
         best: Dict[int, tuple] = {}
         for rid, rval in self._enabled_ratio_values(camera_name):
-            for m in self._modes_within_ratio_tolerance(modes, rval):
+            for m in self._modes_within_ratio_tolerance(modes, rval, additive_fallback=additive_fallback):
                 aspect = self._mode_aspect(m)
                 err = abs(aspect - rval) if aspect is not None else float("inf")
                 key = id(m)

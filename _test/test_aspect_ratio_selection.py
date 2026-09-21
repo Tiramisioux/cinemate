@@ -299,5 +299,103 @@ class ConfigLoaderDefaultRegressionTests(unittest.TestCase):
         )
 
 
+class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
+    """WP-CM-6 rework, second blocking finding: ConfigLoaderDefaultRegressionTests
+    above only proves the *legacy* path (a settings.jsonc written before
+    WP-CM-6, where the key is truly absent and aspect_ratios_cfg ends up
+    None). It never runs the *literal shipped default*,
+    {"default": ["1.78:1"]}, through the matcher -- and that value is a
+    present key on every fresh install, because
+    resources/settings/settings_default.jsonc and settings.jsonc both ship
+    it (WP-CM-6 item 1, "Ships as {"default": ["1.78:1"]}"). A present key
+    means aspect_ratios_cfg is not None, so the ratio matcher in
+    _finalize_modes actively runs on a fresh install too.
+
+    For imx477 (tier B), none of its three stock modes is within
+    ASPECT_RATIO_TOLERANCE of 1.78 (closest is the 2028x1080 mode at 1.87),
+    so the matcher's own near-tie fallback used to narrow the table down to
+    that one mode, silently dropping the 4:3 2028x1520 mode and the
+    sensor's fastest mode, 1332x990@120fps -- contradicting
+    ASPECT-RATIOS.md's "1.78:1 when nothing has been chosen, so a fresh
+    camera behaves as it does today" and WP-CM-6's own compatibility
+    clause.
+
+    This test loads the real image_capture.aspect_ratios default the
+    repo actually ships in BOTH settings.jsonc and
+    resources/settings/settings_default.jsonc (via the real
+    config_loader.load_settings(), not a hand-picked fixture) and the real
+    imx477 entry from resources/sensors.json (via the real
+    sensor_database.load_sensor_database()), and runs both through
+    _finalize_modes() exactly as SensorDetect would on a fresh install.
+    """
+
+    @staticmethod
+    def _imx477_modes_from_database():
+        from module.sensor_database import load_sensor_database  # noqa: PLC0415
+
+        db = load_sensor_database(str(ROOT / "resources" / "sensors.json"))
+        raw_modes = db["sensors"]["imx477"]["modes"]
+        # Shape matches what SensorDetect's own probe/parsing attaches to a
+        # runtime mode dict (width/height/bit_depth/aspect/fps_max/hdr) --
+        # see _mode_from_metadata_or_detected. hdr is always False here:
+        # imx477 has no ClearHDR modes in the database.
+        return [
+            {
+                "width": m["width"],
+                "height": m["height"],
+                "bit_depth": m["bit_depth"],
+                "aspect": m["aspect"],
+                "fps_max": m["max_fps"],
+                "hdr": False,
+            }
+            for m in raw_modes
+        ]
+
+    def _assert_all_stock_modes_survive(self, image_capture_cfg, source_label):
+        modes = self._imx477_modes_from_database()
+        self.assertEqual(
+            {(m["width"], m["height"]) for m in modes},
+            {(2028, 1080), (2028, 1520), (1332, 990)},
+            f"resources/sensors.json's imx477 entry changed shape -- update "
+            f"this test's expectations ({source_label})",
+        )
+        d = _detector(
+            aspect_ratios_cfg=image_capture_cfg.get("aspect_ratios"),
+            min_mode_width=image_capture_cfg.get("min_mode_width"),
+            bit_depths=image_capture_cfg.get("bit_depths"),
+            k_steps=image_capture_cfg.get("k_steps"),
+        )
+        pruned = d._finalize_modes({"imx477": [dict(m) for m in modes]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
+        self.assertEqual(
+            sizes,
+            {(2028, 1080), (2028, 1520), (1332, 990)},
+            f"{source_label}: fresh-install default silently dropped an "
+            f"imx477 stock mode (expected all 3, including the "
+            f"1332x990@120fps mode)",
+        )
+
+    def test_shipped_settings_jsonc_default_keeps_every_stock_imx477_mode(self):
+        from module.config_loader import load_settings  # noqa: PLC0415
+
+        settings = load_settings(ROOT / "settings.jsonc")
+        image_capture_cfg = settings["image_capture"]
+        # The literal shipped default this finding is about -- a *present*
+        # key, not the legacy absent-key case.
+        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+        self._assert_all_stock_modes_survive(image_capture_cfg, "settings.jsonc")
+
+    def test_shipped_settings_default_jsonc_keeps_every_stock_imx477_mode(self):
+        from module.config_loader import load_settings  # noqa: PLC0415
+
+        # The fresh-install template: a brand-new settings.jsonc is this
+        # file's content verbatim (WP-CM-6 item 1's own justification for
+        # not setdefault'ing the keys in _apply_settings_defaults).
+        settings = load_settings(ROOT / "resources" / "settings" / "settings_default.jsonc")
+        image_capture_cfg = settings["image_capture"]
+        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+        self._assert_all_stock_modes_survive(image_capture_cfg, "settings_default.jsonc")
+
+
 if __name__ == "__main__":
     unittest.main()

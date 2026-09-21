@@ -48,6 +48,38 @@ CLEAR HDR / SENSOR HDR
         modes = self._detector()._parse_cinepi_output(output, hdr=True)["imx585"]
         self.assertEqual([m["hdr"] for m in modes], [False, True])
 
+    def test_hdr_state_does_not_leak_into_a_second_cameras_header(self):
+        """A combined multi-camera ``--hdr sensor`` probe covers every
+        attached camera in one transcript. If the imx585 section sets
+        current_hdr True at its ClearHDR marker and that flag is never
+        reset when parsing moves on to a second, different camera's own
+        header, a later PISP_COMP1 line in that second camera's block
+        would be force-set to 16-bit (see the PISP_COMP1 gate above) and
+        would also dodge the SDR/16-bit-drop guard -- corrupting a real,
+        non-ClearHDR stock sensor's mode on any dual-sensor rig that pairs
+        it with an imx585."""
+        output = """\
+0 : imx585 [3856x2180]
+    Modes: 'SRGGB12_CSI2P' : 3840x2160 [44.00 fps - (0, 0)/3856x2180 crop]
+CLEAR HDR / SENSOR HDR
+0 : imx585 [3856x2180]
+    Modes: 'SGRBG12_CSI2P' : 3840x2160 [22.00 fps - (0, 0)/3856x2180 crop]
+1 : imx519 [4656x3496 10-bit RGGB]
+    Modes: 'SRGGB10_CSI2P' : 1920x1080 [60.00 fps - (0, 0)/4656x3496 crop]
+           'BGGR_PISP_COMP1' : 2328x1748 [30.00 fps - (0, 0)/4656x3496 crop]
+"""
+        sensors = self._detector()._parse_cinepi_output(output, hdr=True)
+        imx519_modes = sensors["imx519"]
+        by_size = {(m["width"], m["height"]): m for m in imx519_modes}
+        # The second camera's own modes must never be tagged HDR (it has no
+        # ClearHDR section of its own in this transcript) and its COMP1
+        # mode must keep its real, non-16 bit depth instead of being
+        # force-set to 16 by the leaked imx585 current_hdr flag.
+        self.assertTrue(all(not m["hdr"] for m in imx519_modes))
+        self.assertEqual(by_size[(1920, 1080)]["bit_depth"], 10)
+        self.assertIn((2328, 1748), by_size)
+        self.assertEqual(by_size[(2328, 1748)]["bit_depth"], 10)
+
     def test_unmarked_probe_classifies_new_lower_fps_timings_as_hdr(self):
         d = self._detector()
         base = {"imx585": [{

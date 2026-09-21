@@ -24,6 +24,47 @@ class SensorDatabaseTests(unittest.TestCase):
         self.assertIn("imx585", detector.sensor_database["sensors"])
         self.assertEqual(detector.packing_info["imx585_mono"], "U")
 
+    def test_imx477_metadata_covers_all_five_driver_modes(self):
+        """WP-CM-12: the mainline imx477 driver has five modes, but the
+        database only enriched three of them (missing the 4056x3040 full
+        readout and the 4056x2160 16:9 crop) -- see
+        IMX477_LISTCAMERAS below, which is what the live probe actually
+        reports for this sensor. Both missing entries' max_fps come from
+        the driver's own mode comments ("12 mpix 10fps" and "12 mpix
+        cropped to 16:9 10fps" in imx477.c), not from a guess or from the
+        higher throttled ceiling a live probe reports for them.
+        """
+        detector = self._detector_without_probe()
+        modes = detector.sensor_database["sensors"]["imx477"]["modes"]
+        by_size = {(m["width"], m["height"]): m for m in modes}
+
+        self.assertEqual(len(modes), 5)
+        self.assertIn((4056, 3040), by_size)
+        self.assertIn((4056, 2160), by_size)
+
+        full_readout = by_size[(4056, 3040)]
+        self.assertEqual(full_readout["max_fps"], 10)
+        self.assertEqual(full_readout["aspect"], 1.33)
+
+        crop_16_9 = by_size[(4056, 2160)]
+        self.assertEqual(crop_16_9["max_fps"], 10)
+        self.assertEqual(crop_16_9["aspect"], 1.87)
+
+        # The other three modes must be untouched.
+        self.assertEqual(by_size[(2028, 1080)]["max_fps"], 50)
+        self.assertEqual(by_size[(2028, 1520)]["max_fps"], 40)
+        self.assertEqual(by_size[(1332, 990)]["max_fps"], 120)
+
+        # The enrichment must actually reach a mode built the same way the
+        # live probe path builds one (_mode_from_metadata_or_detected),
+        # not just sit unused in the raw JSON.
+        detector.settings = {}
+        built = detector._mode_from_metadata_or_detected(
+            camera_name="imx477", width=4056, height=3040, bit_depth=full_readout["bit_depth"],
+            fps_max=None,
+        )
+        self.assertEqual(built["fps_max"], 10)
+
     def _detector_with_modes(self):
         detector = self._detector_without_probe()
         detector.settings = {}

@@ -199,8 +199,16 @@ class TogglingRatioChangesSelectedTests(unittest.TestCase):
         d = _detector(TABLE, cfg, modes)
         by_size = {(m["width"], m["height"]): m for m in _get(d)["sensors"]["imx283"]}
         self.assertTrue(by_size[(3840, 2160)]["selected"])
-        self.assertFalse(by_size[(5472, 3648)]["selected"])
+        # 5760x2160 is 2.67, whose home in this fixture's table is 2.39:1, so a
+        # 1.78:1-only selection excludes it.
         self.assertFalse(by_size[(5760, 2160)]["selected"])
+        # 5472x3648 is 1.50. Against the REAL fourteen-ratio table its home would
+        # be 1.37:1 and it would be excluded here too -- but this fixture uses a
+        # deliberately sparse three-ratio table, where 1.78:1 is the nearest entry
+        # to 1.50 and so the label this row carries. Selection filters on that
+        # label, because it is what the operator sees on the row, so a row labelled
+        # 1.78:1 must not vanish while 1.78:1 is on.
+        self.assertTrue(by_size[(5472, 3648)]["selected"])
 
         sd = SensorDetect.__new__(SensorDetect)
         sd.aspect_ratio_table = TABLE
@@ -210,7 +218,10 @@ class TogglingRatioChangesSelectedTests(unittest.TestCase):
             (m["width"], m["height"])
             for m in modes["imx283"] if id(m) in matches
         }
-        self.assertEqual(matched_sizes, {(3840, 2160)})
+        # Same reasoning as the row assertions above: against this fixture's sparse
+        # table 1.50 comes home to 1.78:1, so the matcher claims it. 2.67 comes home
+        # to 2.39:1 and stays out.
+        self.assertEqual(matched_sizes, {(3840, 2160), (5472, 3648)})
 
 
 class SettingsRoundTripTests(unittest.TestCase):

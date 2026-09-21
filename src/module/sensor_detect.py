@@ -1236,6 +1236,13 @@ class SensorDetect:
             return list(ids)
         return self._derived_default_ratio_ids(camera_name)
 
+    def _ratio_selection_is_derived(self, camera_name: str) -> bool:
+        """True when nobody chose this camera's ratios and the set came from
+        _derived_default_ratio_ids. Mirrors _enabled_ratio_ids' precedence, so
+        the two cannot drift apart."""
+        cfg = getattr(self, "aspect_ratios_cfg", None) or {}
+        return not (cfg.get(camera_name) or cfg.get("default"))
+
     def _enabled_ratio_values(self, camera_name: str) -> List[tuple]:
         values_by_id = {e["id"]: e["value"] for e in self._aspect_ratio_table()}
         out = []
@@ -1288,10 +1295,18 @@ class SensorDetect:
             # the 1.29 one would vanish under the derived default -- which is
             # built from home ratios, so it would have enabled 1.33:1 precisely
             # to keep that mode. Caught by a reviewer on WP-CM-11.
+            #
+            # This holds for a CHOSEN ratio too, not just the derived default,
+            # and the reason is the pane: settings_editor.nearest_ratio labels
+            # every row with its home ratio from the full table, and the pane
+            # filters the table on that label. If the backend used a different
+            # rule, a row labelled "1.33:1" would disappear while 1.33:1 was
+            # switched on -- the selection and the labels have to agree, and the
+            # label is what the operator can actually see.
+            claimed = list(self._modes_within_ratio_tolerance(modes, rval))
             home = [m for m in modes
                     if self._mode_aspect(m) is not None
                     and self._nearest_ratio_id(self._mode_aspect(m)) == rid]
-            claimed = list(self._modes_within_ratio_tolerance(modes, rval))
             seen_ids = {id(m) for m in claimed}
             claimed.extend(m for m in home if id(m) not in seen_ids)
             for m in claimed:

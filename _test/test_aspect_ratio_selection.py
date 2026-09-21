@@ -961,8 +961,10 @@ class HomeRatioAlwaysClaimsItsModesTests(unittest.TestCase):
         )
 
     def test_an_explicit_choice_of_that_ratio_keeps_both_too(self):
-        # Same claim, chosen rather than derived: picking 1.33:1 means picking the
-        # modes that belong to it, including the one further from it.
+        # Same claim, chosen rather than derived. Picking 1.33:1 means picking the
+        # modes that belong to it, including the one further from it: the pane
+        # labels that row 1.33:1, so hiding it while 1.33:1 is on would contradict
+        # what the operator sees.
         d = _detector(aspect_ratios_cfg={"testsensor": ["1.33:1"]})
         d.sensor_modes_unfiltered = {"testsensor": [dict(m) for m in self.MODES]}
         pruned = d._finalize_modes({"testsensor": [dict(m) for m in self.MODES]})

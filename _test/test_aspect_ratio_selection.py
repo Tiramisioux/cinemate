@@ -753,5 +753,178 @@ class DerivedDefaultRatioSetTests(unittest.TestCase):
         self.assertEqual(len(pruned["imx283"]), 1)
 
 
+class LegacyShippedDefaultMigrationTests(unittest.TestCase):
+    """WP-CM-11 rework, blocking review finding: every settings.jsonc a
+    WP-CM-6/7 install actually wrote to disk carries
+    image_capture.aspect_ratios == {"default": ["1.78:1"]} -- the literal
+    pre-WP-CM-11 shipped value (`git show <this package's parent
+    commit>:settings.jsonc`), not the {} this package ships from here on.
+    ShippedDefaultFreshInstallRegressionTests/ShippedDefaultPartialMatchRegressionTests
+    above only ever load the NEW shipped {} via config_loader.load_settings()
+    on the checked-in settings.jsonc; neither exercises this pre-existing
+    on-disk shape, which is what every worktree or Pi test rig that has not
+    been reformatted since WP-CM-6/7 actually has.
+
+    WP-CM-11 deletes the exemption (_ratio_selection_is_a_choice) that used
+    to recognise this exact value as "nobody chose this" and skip the
+    matcher for it -- an explicit "default" entry is now unconditionally a
+    choice, on the premise that there is no longer a single shipped value to
+    compare against. There still is one, on disk, until config_loader.py
+    migrates it: this class constructs exactly that pre-existing shape (not
+    the new {} shipped value) and proves _apply_settings_defaults() clears
+    it back to "no opinion" before SensorDetect ever sees it, so imx477 and
+    imx283 keep every stock mode through _finalize_modes() exactly as a
+    fresh WP-CM-11 install does.
+    """
+
+    @staticmethod
+    def _legacy_on_disk_settings():
+        # A fresh dict per call -- _apply_settings_defaults may mutate its
+        # image_capture sub-dict in place, and this exact value must not
+        # leak mutated state between tests.
+        return {"image_capture": {"aspect_ratios": {"default": ["1.78:1"]}}}
+
+    def test_apply_settings_defaults_clears_the_legacy_shipped_value(self):
+        from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
+
+        out = _apply_settings_defaults(self._legacy_on_disk_settings())
+        self.assertEqual(out["image_capture"]["aspect_ratios"], {})
+
+    def test_imx477_five_modes_all_survive_the_legacy_shipped_value(self):
+        from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
+
+        image_capture_cfg = _apply_settings_defaults(
+            self._legacy_on_disk_settings()
+        )["image_capture"]
+        d = _detector(aspect_ratios_cfg=image_capture_cfg.get("aspect_ratios"))
+        pruned = d._finalize_modes({"imx477": [dict(m) for m in IMX477_FIVE_MODES]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
+        self.assertEqual(
+            sizes,
+            {(m["width"], m["height"]) for m in IMX477_FIVE_MODES},
+            "a settings.jsonc left over from before WP-CM-11, carrying the "
+            "old shipped {\"default\": [\"1.78:1\"]}, silently dropped an "
+            "imx477 mode on reload -- full resolution (4056x3040), "
+            "2028x1520 and the 120fps 1332x990 mode are all closer to "
+            "1.33:1/1.89:1 than to 1.78:1 and must survive",
+        )
+
+    def test_imx283_six_modes_all_survive_the_legacy_shipped_value(self):
+        from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
+
+        image_capture_cfg = _apply_settings_defaults(
+            self._legacy_on_disk_settings()
+        )["image_capture"]
+        d = _detector(aspect_ratios_cfg=image_capture_cfg.get("aspect_ratios"))
+        pruned = d._finalize_modes({"imx283": [dict(m) for m in IMX283_SIX_MODES]})
+        sizes = {
+            (m["width"], m["height"], m["bit_depth"])
+            for m in pruned["imx283"].values()
+        }
+        self.assertEqual(
+            sizes,
+            {(m["width"], m["height"], m["bit_depth"]) for m in IMX283_SIX_MODES},
+            "a settings.jsonc left over from before WP-CM-11 silently "
+            "dropped an imx283 mode on reload -- both full-resolution "
+            "5568x3664 modes and the 2784x1828 12-bit mode are all closer "
+            "to 1.37:1 than to 1.78:1 and must survive",
+        )
+
+    def test_a_genuine_per_camera_choice_of_178_still_narrows(self):
+        # The migration must only recognise the exact, global, pre-existing
+        # shape -- it must not defeat an operator who deliberately picks
+        # 1.78:1 for a specific camera (a per-camera key, never "default";
+        # see WORK-PACKAGES.md WP-CM-11 item 4) after this lands.
+        from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
+
+        out = _apply_settings_defaults(
+            {"image_capture": {"aspect_ratios": {"imx477": ["1.78:1"]}}}
+        )
+        self.assertEqual(out["image_capture"]["aspect_ratios"], {"imx477": ["1.78:1"]})
+
+    def test_a_default_with_extra_keys_is_not_treated_as_leftover(self):
+        # Only the exact single-key {"default": ["1.78:1"]} shape is
+        # leftover from before WP-CM-11. Anything wider -- e.g. a per-camera
+        # entry alongside "default" -- is real operator config and must
+        # survive the migration untouched.
+        from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
+
+        cfg = {"default": ["1.78:1"], "imx585": ["2.39:1"]}
+        out = _apply_settings_defaults({"image_capture": {"aspect_ratios": dict(cfg)}})
+        self.assertEqual(out["image_capture"]["aspect_ratios"], cfg)
+
+
+# ── WP-CM-11 rework, non-blocking review finding: the "covers every mode by
+# construction" guarantee (_derived_default_ratio_ids) is proven above only
+# for imx477/imx296/imx283/imx585. ASPECT-RATIOS.md names imx519 and imx708
+# in the same "unmodified driver" category as imx477/imx296, but
+# resources/sensors.json has no mode data for either (imx519: [], imx708:
+# None), so no fixture anywhere in this repo exercised them. Numbers below
+# are read from the real mainline Raspberry Pi kernel drivers (not guessed,
+# not from resources/sensors.json), same convention as IMX477_FIVE_MODES
+# above:
+#   https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.12.y/drivers/media/i2c/imx519.c
+#   https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.12.y/drivers/media/i2c/imx708.c
+# imx519's supported_modes_10bit[]: width/height verbatim; fps_max from each
+# mode's own timeperframe_default fraction (denominator/numerator). imx519
+# is the more interesting fixture of the two -- like imx477, its modes span
+# two distinct native aspects (its full 4656x3496/2328x1748 readouts are
+# ~4:3, its 3840x2160/1920x1080/1280x720 crops are 16:9), so this actually
+# exercises "a mode's own nearest ratio is in the set" for two ratios, not
+# one.
+IMX519_FIVE_MODES = [
+    {"width": 4656, "height": 3496, "bit_depth": 10, "hdr": False, "fps_max": 9},
+    {"width": 3840, "height": 2160, "bit_depth": 10, "hdr": False, "fps_max": 18},
+    {"width": 2328, "height": 1748, "bit_depth": 10, "hdr": False, "fps_max": 30},
+    {"width": 1920, "height": 1080, "bit_depth": 10, "hdr": False, "fps_max": 60},
+    {"width": 1280, "height": 720, "bit_depth": 10, "hdr": False, "fps_max": 80},
+]
+
+# imx708's supported_modes_10bit_no_hdr[]: width/height verbatim; fps_max
+# computed from each mode's own pixel_rate / line_length_pix / vblank_min
+# (the driver has no direct frame-rate field), which reproduces Raspberry
+# Pi's published Camera Module 3 spec (14 / 56 / 120 fps) exactly. Every
+# non-HDR mode is exactly 16:9 -- unlike imx519, this is the trivial
+# all-one-ratio case (same shape as imx296's single mode), kept here because
+# WORK-PACKAGES.md names imx708 explicitly and a fixture proves it rather
+# than assumes it.
+IMX708_THREE_MODES = [
+    {"width": 4608, "height": 2592, "bit_depth": 10, "hdr": False, "fps_max": 14},
+    {"width": 2304, "height": 1296, "bit_depth": 10, "hdr": False, "fps_max": 56},
+    {"width": 1536, "height": 864, "bit_depth": 10, "hdr": False, "fps_max": 120},
+]
+
+
+class Imx519Imx708DerivedDefaultRatioSetTests(unittest.TestCase):
+    """WP-CM-11 rework, non-blocking review finding: DerivedDefaultRatioSetTests
+    above only fixtures imx477/imx296/imx283/imx585. This class covers the
+    other two sensors WORK-PACKAGES.md's WP-CM-11 explicitly names in the
+    same "unmodified driver" bucket, with real mode tables read from the
+    mainline drivers (see the module-level comment above IMX519_FIVE_MODES).
+    """
+
+    def test_imx519_five_modes_all_survive_with_no_config(self):
+        d = _detector(aspect_ratios_cfg={})
+        pruned = d._finalize_modes({"imx519": [dict(m) for m in IMX519_FIVE_MODES]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx519"].values()}
+        self.assertEqual(sizes, {(m["width"], m["height"]) for m in IMX519_FIVE_MODES})
+
+    def test_imx519_derived_default_is_133_and_178(self):
+        d = _detector(aspect_ratios_cfg={})
+        d.sensor_modes_unfiltered = {"imx519": [dict(m) for m in IMX519_FIVE_MODES]}
+        self.assertEqual(set(d._enabled_ratio_ids("imx519")), {"1.33:1", "1.78:1"})
+
+    def test_imx708_three_modes_all_survive_with_no_config(self):
+        d = _detector(aspect_ratios_cfg={})
+        pruned = d._finalize_modes({"imx708": [dict(m) for m in IMX708_THREE_MODES]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx708"].values()}
+        self.assertEqual(sizes, {(m["width"], m["height"]) for m in IMX708_THREE_MODES})
+
+    def test_imx708_derived_default_is_178_only(self):
+        d = _detector(aspect_ratios_cfg={})
+        d.sensor_modes_unfiltered = {"imx708": [dict(m) for m in IMX708_THREE_MODES]}
+        self.assertEqual(set(d._enabled_ratio_ids("imx708")), {"1.78:1"})
+
+
 if __name__ == "__main__":
     unittest.main()

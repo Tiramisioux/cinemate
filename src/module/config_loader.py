@@ -684,6 +684,38 @@ def _apply_settings_defaults(settings: dict) -> dict:
     # empty entry means each camera's default is derived from its own mode
     # table, not a single hardcoded ratio) is honoured by the template, not
     # by this defaulting pass.
+    #
+    # WP-CM-11 rework, blocking review finding: the paragraph above only
+    # covers a settings.jsonc that predates WP-CM-6 (key truly absent) and a
+    # fresh WP-CM-11 install (key present but {}). It says nothing about the
+    # settings.jsonc every WP-CM-6/7 install actually wrote to disk in
+    # between: image_capture.aspect_ratios == {"default": ["1.78:1"]}, the
+    # literal value settings.jsonc/settings_default.jsonc shipped before
+    # this package (still visible in git history). That value is *present*,
+    # so aspect_ratios_cfg is not None and the matcher runs; before WP-CM-11
+    # an explicit "default" equal to the shipped constant was recognised as
+    # "nobody chose this" and exempted (_ratio_selection_is_a_choice) -- but
+    # WP-CM-11 deletes that exemption and makes any explicit "default" entry
+    # unconditionally a choice, on the premise that there is no longer a
+    # single shipped value to compare against. There still is one, on every
+    # disk that has not been reformatted since WP-CM-6/7, and left alone it
+    # would silently filter a fresh probe on next load -- e.g. dropping
+    # imx477's 4056x3040/2028x1520/1332x990 modes and imx283's two
+    # full-resolution modes, on a settings.jsonc nobody edited.
+    #
+    # No other code path could have written this exact value: it is only
+    # ever the pre-WP-CM-11 shipped constant, never something an operator's
+    # own toggle produces (the pane always writes a per-camera key, not
+    # "default" -- item 4 above), so treating it as leftover rather than a
+    # genuine choice is safe. Migrate it the same way the WP-CM-11 template
+    # now ships the key: present, empty, so it falls through to each
+    # camera's own derived default (SensorDetect._derived_default_ratio_ids)
+    # exactly as a fresh install does. An operator who explicitly re-picks
+    # 1.78:1 in the pane after this gets a per-camera key, which this check
+    # does not touch.
+    image_capture_cfg = settings["image_capture"]
+    if image_capture_cfg.get("aspect_ratios") == {"default": ["1.78:1"]}:
+        image_capture_cfg["aspect_ratios"] = {}
 
     # ── audio_capture: capture gain + timecode offset per mic path ─────────
     # Migrate old flat keys to nested per-toolchain objects.

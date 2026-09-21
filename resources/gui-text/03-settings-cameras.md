@@ -14,7 +14,7 @@ Sensor mounted on connector `cam0`.
 ### Aspect ratios
 <!-- key: card.sensors.cam0.aspect_ratios -->
 
-Sensor drive aspect ratios.
+_(no help text — the toggles and the mode table speak for themselves)_
 
 ### Rotate 180°
 <!-- key: card.sensors.cam0.geometry.rotate_180 -->
@@ -71,7 +71,7 @@ Sensor mounted on connector `cam1` — same options, independent values.
 ### Aspect ratios
 <!-- key: card.sensors.cam1.aspect_ratios -->
 
-Sensor drive aspect ratios.
+_(no help text — the toggles and the mode table speak for themselves)_
 
 ### Rotate 180°
 <!-- key: card.sensors.cam1.geometry.rotate_180 -->

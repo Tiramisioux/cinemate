@@ -900,6 +900,12 @@
   }
   .danger-zone p{ margin:0; font-size: 13px; color: var(--ink); max-width: 46ch; }
   .danger-zone .eyebrow{ color: var(--danger); }
+  /* A reboot is disruptive but recoverable, and its button already says so in
+     purple. Red belongs to the shutdown card next to it, which is the one you
+     cannot undo from the same room. Keeping the frame and the heading in the
+     button's own colour stops this card reading as the more serious of the two. */
+  .danger-zone.reboot-zone{ border-color: var(--reboot); background: var(--reboot-soft); }
+  .danger-zone.reboot-zone .eyebrow{ color: var(--reboot); }
 
   /* ---------- JSON drawer ---------- */
   .json-drawer{
@@ -1211,6 +1217,7 @@
   #app.skin-hud .btn-danger-outline{ border-color: var(--danger); color: var(--danger); }
   #app.skin-hud .btn-reboot-outline{ border-color: var(--reboot); color: var(--reboot); }
   #app.skin-hud .danger-zone{ background: var(--danger-soft); border-color: var(--danger); }
+  #app.skin-hud .danger-zone.reboot-zone{ background: var(--reboot-soft); border-color: var(--reboot); }
 
   #app.skin-hud .status-dot{ background: var(--ok); }
   #app.skin-hud .status-dot.restarting{ background: var(--restart); }
@@ -2367,7 +2374,7 @@
         <div class="console" id="console" aria-live="polite"></div>
       </div>
 
-      <div class="danger-zone" style="margin-top:16px">
+      <div class="danger-zone reboot-zone" style="margin-top:16px">
         <div>
           <div class="eyebrow">Reboot the Pi</div>
           <p>{{ t('text.system.0.body') }}</p>

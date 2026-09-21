@@ -998,12 +998,23 @@ def get_sensor_modes():
             return False
         return True
 
-    def nearest_ratio(mode):
-        """The canonical ratio this mode's own shape is closest to, from the
-        *full* table -- independent of which ratios are currently enabled.
-        This is what lets the pane filter the table client-side by toggle
-        state without a round trip: every row already carries the ratio it
-        belongs to."""
+    def nearest_ratio(camera_name, mode):
+        """The toggle this row hides behind -- independent of which ratios are
+        currently enabled. This is what lets the pane filter the table
+        client-side by toggle state without a round trip: every row already
+        carries the id it belongs to.
+
+        Delegates to SensorDetect.home_ratio_id() so the label and the backend
+        matcher cannot disagree. They must not: the pane filters rows on this
+        id, so a row labelled with a ratio the matcher does not award it would
+        vanish while its own toggle was switched on. That is why the whole
+        sensor's rows have to be resolved per camera now -- on a sensor whose
+        full frame is off-table (imx283 at 1.50) they belong to the "full"
+        toggle, not to the nearest of the fourteen.
+
+        Falls back to the local nearest-in-table computation when the detector
+        does not offer home_ratio_id -- test doubles in this suite stand in for
+        SensorDetect and only implement what they need."""
         if not aspect_ratio_table:
             return None, None, None
         aspect = SensorDetect._mode_aspect(mode)
@@ -1011,6 +1022,19 @@ def get_sensor_modes():
             return None, None, None
         best = min(aspect_ratio_table, key=lambda e: abs(e["value"] - aspect))
         err = abs(best["value"] - aspect)
+        home = getattr(sensor_detect, "home_ratio_id", None)
+        if callable(home):
+            try:
+                rid = home(camera_name, mode)
+            except Exception:
+                rid = None
+            if rid is not None and rid != best["id"]:
+                # The whole-sensor case: exact against its own shape, because
+                # the toggle is that shape rather than an approximation of a
+                # canonical one.
+                return rid, True, aspect
+            if rid is not None:
+                return rid, err <= ASPECT_RATIO_TOLERANCE, aspect
         return best["id"], err <= ASPECT_RATIO_TOLERANCE, aspect
 
     aspect_ratios_payload = {}
@@ -1068,7 +1092,7 @@ def get_sensor_modes():
             depth = mode.get("bit_depth")
             if not width or not height or not depth:
                 continue
-            ratio_id, ratio_exact, ratio_real = nearest_ratio(mode)
+            ratio_id, ratio_exact, ratio_real = nearest_ratio(camera_name, mode)
             entries.append({
                 "width": width,
                 "height": height,

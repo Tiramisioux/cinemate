@@ -9,7 +9,11 @@ from typing import Any, Dict, List
 
 from module import rp1_regime
 from module.sensor_database import load_sensor_database
-from module.aspect_ratios import PREFERRED_DEFAULT_RATIO_IDS, load_aspect_ratio_table
+from module.aspect_ratios import (
+    FULL_FRAME_RATIO_ID,
+    PREFERRED_DEFAULT_RATIO_IDS,
+    load_aspect_ratio_table,
+)
 
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
 # image_capture.min_mode_width's own default: modes narrower than this are
@@ -1252,6 +1256,81 @@ class SensorDetect:
             return None
         return min(table, key=lambda e: abs(e["value"] - aspect))["id"]
 
+    def _full_frame_modes(self, camera_name: str) -> List[Dict]:
+        """This camera's whole-sensor modes, from its raw pre-filter table.
+
+        _mode_is_full() is deliberately false when the driver reports no crop
+        geometry at all, so a stock sensor that never answers the five
+        geometry controls (imx477, imx296) has no full-frame modes as far as
+        this is concerned, and therefore gets no "full" toggle. That is the
+        honest answer rather than a guess: without geometry nothing here knows
+        which of its modes reads the whole array, and picking the largest
+        would be inventing the fact. Those sensors are not left worse off --
+        their biggest mode is 4:3, which the shipped default already selects.
+        """
+        modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
+        return [m for m in modes if self._mode_is_full(m)]
+
+    def full_frame_ratio(self, camera_name: str):
+        """(ratio_id, aspect) for this camera's whole-sensor shape, or
+        (None, None) when it has no mode known to be full frame.
+
+        The id is a TABLE id when the full frame really is one of the
+        canonical ratios -- within ASPECT_RATIO_TOLERANCE, the same test
+        "exact" uses everywhere else -- and FULL_FRAME_RATIO_ID otherwise.
+        That single decision is what drives all three behaviours the operator
+        asked for: whether a fifteenth toggle appears, what it is called, and
+        which toggle a full-frame row hides behind.
+
+        Tolerance, not the home ratio, is what "actually is one of the aspect
+        ratios" has to mean here. The imx283's 1.50 comes *home* to 1.37:1
+        because 1.37 is the nearest of the fourteen, but 1.50 plainly is not
+        1.37 -- it is 0.13 away, six times tolerance -- and calling that
+        toggle "1.37:1 (full)" would be a lie an operator could measure.
+        """
+        modes = self._full_frame_modes(camera_name)
+        aspect = None
+        for m in modes:
+            aspect = self._mode_aspect(m)
+            if aspect is not None:
+                break
+        if aspect is None:
+            return None, None
+        table = self._aspect_ratio_table()
+        if table:
+            best = min(table, key=lambda e: abs(e["value"] - aspect))
+            if abs(best["value"] - aspect) <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS:
+                return best["id"], aspect
+        return FULL_FRAME_RATIO_ID, aspect
+
+    def home_ratio_id(self, camera_name: str, mode: Dict) -> str | None:
+        """The toggle a mode belongs to: its nearest canonical ratio, except
+        that a whole-sensor mode on a camera whose full frame is off-table
+        belongs to FULL_FRAME_RATIO_ID instead.
+
+        One function because three places have to agree or the pane lies: the
+        derived default (which ratios a fresh camera selects), the matcher
+        (which modes an enabled ratio yields) and the settings page's row
+        labels (which toggle a row hides behind). They agreed before this
+        existed only because they all called _nearest_ratio_id; the "full"
+        toggle is the first thing that makes a mode's home depend on the
+        camera, so the shared rule now needs the camera too.
+
+        Note what this moves: the imx283's 5472x3648 native readouts used to
+        be filed under 1.37:1, the nearest of the fourteen to their real 1.50,
+        while the pane's own aspect column read "1.50:1". They now sit under
+        "1.50:1 (full)", where the column and the toggle finally say the same
+        thing.
+        """
+        aspect = self._mode_aspect(mode)
+        if aspect is None:
+            return None
+        if self._mode_is_full(mode):
+            full_id, _ = self.full_frame_ratio(camera_name)
+            if full_id == FULL_FRAME_RATIO_ID:
+                return FULL_FRAME_RATIO_ID
+        return self._nearest_ratio_id(aspect)
+
     def _derived_default_ratio_ids(self, camera_name: str) -> List[str]:
         """WP-CM-11: every ratio a camera's OWN modes map to, in mode-table
         order, derived at startup from its raw, pre-filter mode table
@@ -1274,10 +1353,7 @@ class SensorDetect:
         ids: List[str] = []
         seen = set()
         for m in modes:
-            aspect = self._mode_aspect(m)
-            if aspect is None:
-                continue
-            rid = self._nearest_ratio_id(aspect)
+            rid = self.home_ratio_id(camera_name, m)
             if rid is not None and rid not in seen:
                 seen.add(rid)
                 ids.append(rid)
@@ -1307,6 +1383,15 @@ class SensorDetect:
         """
         derived = self._derived_default_ratio_ids(camera_name)
         preferred = [rid for rid in PREFERRED_DEFAULT_RATIO_IDS if rid in derived]
+        # ...plus the whole sensor, always. The "full" toggle exists because a
+        # 3:2 sensor's own native readout was hidden by a default made of
+        # delivery shapes (operator, 2026-09-22), so leaving it off by default
+        # would rebuild the exact problem it was added to solve. When the full
+        # frame IS one of the preferred pair this appends nothing -- the
+        # toggle it would add is already selected.
+        full_id, _ = self.full_frame_ratio(camera_name)
+        if full_id and full_id in derived and full_id not in preferred:
+            preferred.append(full_id)
         return preferred or derived
 
     def _enabled_ratio_ids(self, camera_name: str) -> List[str]:
@@ -1331,8 +1416,16 @@ class SensorDetect:
 
     def _enabled_ratio_values(self, camera_name: str) -> List[tuple]:
         values_by_id = {e["id"]: e["value"] for e in self._aspect_ratio_table()}
+        full_id, full_aspect = self.full_frame_ratio(camera_name)
         out = []
         for rid in self._enabled_ratio_ids(camera_name):
+            # FULL_FRAME_RATIO_ID is not in the table -- it cannot be, its
+            # value is this camera's own full-frame aspect -- so it is
+            # resolved here instead of being dropped as an unknown id.
+            if rid == FULL_FRAME_RATIO_ID:
+                if full_id == FULL_FRAME_RATIO_ID and full_aspect is not None:
+                    out.append((rid, full_aspect))
+                continue
             val = values_by_id.get(rid)
             if val is not None:
                 out.append((rid, val))
@@ -1394,12 +1487,30 @@ class SensorDetect:
             # rule, a row labelled "1.33:1" would disappear while 1.33:1 was
             # switched on -- the selection and the labels have to agree, and the
             # label is what the operator can actually see.
-            claimed = list(self._modes_within_ratio_tolerance(modes, rval))
-            home = [m for m in modes
-                    if self._mode_aspect(m) is not None
-                    and self._nearest_ratio_id(self._mode_aspect(m)) == rid]
-            seen_ids = {id(m) for m in claimed}
-            claimed.extend(m for m in home if id(m) not in seen_ids)
+            #
+            # FULL_FRAME_RATIO_ID is the exception to both groups. It does not
+            # mean "modes shaped like 1.50" -- it means "modes that read the
+            # whole sensor", which is a different question with a different
+            # answer. Claiming by tolerance would sweep in any windowed crop
+            # that happens to share the native aspect (a half-height 3:2
+            # window is still 3:2), and those are not the whole sensor and
+            # must stay under their own ratio.
+            if rid == FULL_FRAME_RATIO_ID:
+                claimed = [m for m in modes if self._mode_is_full(m)]
+            else:
+                claimed = list(self._modes_within_ratio_tolerance(modes, rval))
+                home = [m for m in modes
+                        if self.home_ratio_id(camera_name, m) == rid]
+                seen_ids = {id(m) for m in claimed}
+                claimed.extend(m for m in home if id(m) not in seen_ids)
+                # A whole-sensor mode belongs to the "full" toggle alone when
+                # that toggle exists, so tolerance must not hand it back to a
+                # neighbouring ratio: the imx283's 1.50 native readouts sit
+                # within nobody's tolerance but would be swept up by the
+                # near-tie fallback in _modes_within_ratio_tolerance, and
+                # would then reappear under 1.37:1 with "full" switched off.
+                if self.full_frame_ratio(camera_name)[0] == FULL_FRAME_RATIO_ID:
+                    claimed = [m for m in claimed if not self._mode_is_full(m)]
             for m in claimed:
                 aspect = self._mode_aspect(m)
                 err = abs(aspect - rval) if aspect is not None else float("inf")
@@ -1445,7 +1556,41 @@ class SensorDetect:
                 "exact": best_err <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS,
                 "real_aspect": self._mode_aspect(best_mode),
                 "delta": round(best_err, 3),
+                "is_full": False,
+                "label": rid,
             }
+
+        # The whole-sensor toggle, in whichever of its two shapes this camera
+        # calls for (see full_frame_ratio()). Either way it is the LAST entry
+        # the operator reads as "(full)", and either way `label` is what the
+        # page prints -- the page must not have to re-derive this, because it
+        # cannot see which modes are full frame.
+        full_id, full_aspect = self.full_frame_ratio(camera_name)
+        if full_id is not None and full_aspect is not None:
+            full_label = "%.2f:1 (full)" % full_aspect
+            if full_id in result:
+                # The full frame IS one of the fourteen. No extra toggle: the
+                # existing one now says so, and it keeps its own id, value and
+                # table order -- turning it on already gives the whole sensor.
+                result[full_id]["is_full"] = True
+                result[full_id]["label"] = "%s (full)" % full_id
+            else:
+                # Off-table (imx283 at 1.50). Its own entry, which the pane
+                # sorts last because the id is not in the canonical table.
+                result[full_id] = {
+                    "id": full_id,
+                    "value": full_aspect,
+                    "name": "Full frame",
+                    # Exact in the only sense that matters for this toggle: it
+                    # is not an approximation of a canonical ratio, it is the
+                    # sensor's own shape, stated. Drawing it dashed like an
+                    # approximate match would be the wrong signal.
+                    "exact": True,
+                    "real_aspect": full_aspect,
+                    "delta": 0.0,
+                    "is_full": True,
+                    "label": full_label,
+                }
         return result
 
     def _order_modes(self, selected: List[Dict]) -> List[Dict]:

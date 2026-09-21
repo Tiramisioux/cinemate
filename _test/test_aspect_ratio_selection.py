@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from module.aspect_ratios import FULL_FRAME_RATIO_ID
 from module.sensor_detect import SensorDetect
 
 
@@ -1197,3 +1198,157 @@ class PreferredDefaultRatioPairTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FullFrameToggleTests(unittest.TestCase):
+    """The whole-sensor toggle (operator, 2026-09-22).
+
+    "among the aspect ratios, also add the full option (last). then i get the
+    full frame options for the sensor regardless of aspect ratio. unless the
+    full frame actually _is_ one of the aspect ratios. then this option should
+    read: 1.33:1 (full) ... if the full frame is not any of the standard
+    aspect ratios it should be on the lower right (last among the options) and
+    read the aspect ratio and the (full)".
+
+    Three sensor shapes exercise all of it: a 3:2 sensor whose full frame is
+    off-table (imx283, 1.50), one whose full frame is a table ratio (imx585 at
+    1.78), and a stock sensor that reports no crop geometry at all and so has
+    no knowable full frame (imx477).
+    """
+
+    SW, SH = 5472, 3648
+
+    def _mode(self, cw, ch, cx=0, cy=0, geometry=True, bx=1, by=1, sw=None, sh=None):
+        m = {"width": cw + 96, "height": ch + 16, "bit_depth": 12,
+             "aspect": round(cw / ch, 2)}
+        if geometry:
+            m.update({"crop_x": cx, "crop_y": cy, "crop_width": cw, "crop_height": ch,
+                      "sensor_width": sw or self.SW, "sensor_height": sh or self.SH,
+                      "binning_x": bx, "binning_y": by})
+        return m
+
+    def _detector(self, modes, cfg=None):
+        sd = SensorDetect.__new__(SensorDetect)
+        sd.sensor_modes_unfiltered = {"cam": modes}
+        sd.aspect_ratios_cfg = cfg or {}
+        sd.aspect_ratio_table = None
+        return sd
+
+    def _three_two_sensor(self):
+        return [
+            self._mode(5472, 3648),                       # full frame, 1.50
+            self._mode(5472, 3648, bx=2, by=2),           # full frame, binned
+            self._mode(4864, 3648, cx=304),               # 1.33 crop
+            self._mode(5016, 3648, cx=228),               # 1.37 crop
+            self._mode(5472, 3080, cy=284),               # 1.78 crop
+        ]
+
+    # ---- off-table full frame: its own toggle, last, labelled with the ratio
+
+    def test_off_table_full_frame_gets_its_own_toggle(self):
+        sd = self._detector(self._three_two_sensor())
+        self.assertEqual(sd.full_frame_ratio("cam"), (FULL_FRAME_RATIO_ID, 1.5))
+        entry = sd.available_aspect_ratios("cam")[FULL_FRAME_RATIO_ID]
+        self.assertTrue(entry["is_full"])
+        self.assertEqual(entry["label"], "1.50:1 (full)")
+        self.assertEqual(entry["value"], 1.5)
+
+    def test_the_full_toggle_sorts_after_every_table_ratio(self):
+        # The pane ranks an id the canonical table does not carry at 999, so
+        # "last" is a property of the id being off-table. Pin that it IS
+        # off-table, which is what puts it lower-right.
+        sd = self._detector(self._three_two_sensor())
+        table_ids = {e["id"] for e in sd._aspect_ratio_table()}
+        self.assertNotIn(FULL_FRAME_RATIO_ID, table_ids)
+
+    def test_the_full_toggle_claims_whole_sensor_modes_and_only_those(self):
+        modes = self._three_two_sensor()
+        sd = self._detector(modes, {"cam": [FULL_FRAME_RATIO_ID]})
+        matches = sd._ratio_matches_for_camera("cam", modes)
+        claimed = [m for m in modes if id(m) in matches]
+        self.assertEqual(len(claimed), 2, "both full-frame modes, whatever their binning")
+        for m in claimed:
+            self.assertTrue(SensorDetect._mode_is_full(m))
+            self.assertEqual(matches[id(m)][0], FULL_FRAME_RATIO_ID)
+
+    def test_a_whole_sensor_mode_does_not_also_appear_under_a_table_ratio(self):
+        # 1.50 is nearest to 1.37 of the fourteen, and _modes_within_ratio_
+        # tolerance's near-tie fallback would otherwise hand the native
+        # readouts back to 1.37:1 -- so they would reappear with "full" off.
+        modes = self._three_two_sensor()
+        sd = self._detector(modes, {"cam": ["1.37:1"]})
+        matches = sd._ratio_matches_for_camera("cam", modes)
+        for m in modes:
+            if SensorDetect._mode_is_full(m):
+                self.assertNotIn(id(m), matches,
+                                 "a full-frame mode must hide behind the full toggle alone")
+        # ...and 1.37:1 still yields its own crop, so it is not left empty.
+        self.assertTrue(any(id(m) in matches for m in modes
+                            if not SensorDetect._mode_is_full(m)))
+
+    def test_rows_are_labelled_with_the_toggle_that_shows_them(self):
+        # home_ratio_id is what settings_editor.nearest_ratio labels rows
+        # with; if it disagreed with the matcher a row would vanish while its
+        # own toggle was on.
+        modes = self._three_two_sensor()
+        sd = self._detector(modes)
+        for m in modes:
+            rid = sd.home_ratio_id("cam", m)
+            if SensorDetect._mode_is_full(m):
+                self.assertEqual(rid, FULL_FRAME_RATIO_ID)
+            else:
+                self.assertNotEqual(rid, FULL_FRAME_RATIO_ID)
+
+    def test_the_shipped_default_keeps_the_whole_sensor_reachable(self):
+        sd = self._detector(self._three_two_sensor())
+        self.assertEqual(sd._default_ratio_ids("cam"),
+                         ["1.33:1", "1.78:1", FULL_FRAME_RATIO_ID])
+
+    # ---- on-table full frame: no extra toggle, the existing one says (full)
+
+    def test_on_table_full_frame_relabels_instead_of_adding_a_toggle(self):
+        modes = [
+            self._mode(3840, 2160, sw=3856, sh=2180),              # full, 1.78
+            self._mode(2880, 2160, cx=480, sw=3856, sh=2180),      # 1.33 crop
+        ]
+        sd = self._detector(modes)
+        self.assertEqual(sd.full_frame_ratio("cam"), ("1.78:1", 1.78))
+        available = sd.available_aspect_ratios("cam")
+        self.assertNotIn(FULL_FRAME_RATIO_ID, available,
+                         "no fifteenth toggle when the full frame is one of the fourteen")
+        self.assertTrue(available["1.78:1"]["is_full"])
+        self.assertEqual(available["1.78:1"]["label"], "1.78:1 (full)")
+
+    def test_an_on_table_full_frame_adds_nothing_to_the_default(self):
+        modes = [
+            self._mode(3840, 2160, sw=3856, sh=2180),
+            self._mode(2880, 2160, cx=480, sw=3856, sh=2180),
+        ]
+        sd = self._detector(modes)
+        self.assertEqual(sd._default_ratio_ids("cam"), ["1.33:1", "1.78:1"])
+
+    # ---- no geometry: no full frame is knowable, so no toggle
+
+    def test_a_sensor_with_no_crop_geometry_gets_no_full_toggle(self):
+        modes = [self._mode(4056, 3040, geometry=False),
+                 self._mode(2028, 1080, geometry=False)]
+        sd = self._detector(modes)
+        self.assertEqual(sd.full_frame_ratio("cam"), (None, None))
+        self.assertNotIn(FULL_FRAME_RATIO_ID, sd.available_aspect_ratios("cam"))
+        self.assertEqual(sd._default_ratio_ids("cam"), ["1.33:1"])
+
+    # ---- the invariant the whole design rests on
+
+    def test_selecting_the_whole_derived_set_still_loses_no_mode(self):
+        for modes in (self._three_two_sensor(),
+                      [self._mode(3840, 2160, sw=3856, sh=2180),
+                       self._mode(2880, 2160, cx=480, sw=3856, sh=2180)],
+                      [self._mode(4056, 3040, geometry=False)]):
+            with self.subTest(modes=len(modes)):
+                probe = self._detector(modes)
+                derived = probe._derived_default_ratio_ids("cam")
+                sd = self._detector(modes, {"cam": derived})
+                matches = sd._ratio_matches_for_camera("cam", modes)
+                self.assertEqual(
+                    [m for m in modes if id(m) not in matches], [],
+                    "the derived set must cover every mode, full frame included")

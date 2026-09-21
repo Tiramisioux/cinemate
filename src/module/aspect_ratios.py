@@ -39,6 +39,38 @@ DEFAULT_ASPECT_RATIO_TABLE_FILE = "resources/aspect_ratios.json"
 # from it simply cannot be preferred.
 PREFERRED_DEFAULT_RATIO_IDS = ("1.33:1", "1.78:1")
 
+# The id of the synthetic "whole sensor" toggle, which is NOT in
+# resources/aspect_ratios.json and deliberately so: it does not name a shape,
+# it names "whatever this sensor reads when it reads everything". Its value,
+# label and very existence are per-camera, so it cannot live in a table shared
+# by every camera.
+#
+# Operator instruction, 2026-09-22: "among the aspect ratios, also add the full
+# option (last). then i get the full frame options for the sensor regardless of
+# aspect ratio. unless the full frame actually _is_ one of the aspect ratios.
+# then this option should read: 1.33:1 (full)".
+#
+# So there are two shapes this takes, decided per camera in
+# SensorDetect.full_frame_ratio():
+#
+#   - the sensor's full frame IS one of the table's ratios (within
+#     ASPECT_RATIO_TOLERANCE) -- imx585's 3840x2160 is 1.78, imx477's 4056x3040
+#     is 1.33 -- and then NO extra toggle appears. The existing one is simply
+#     labelled "1.78:1 (full)", because turning it on already gives you the
+#     whole sensor.
+#   - the sensor's full frame is a shape the table does not carry -- the
+#     imx283 is a 3:2 sensor at 1.50, and 1.50 is not one of the fourteen --
+#     and then this id appears as its own toggle, sorted last (the settings
+#     pane ranks unknown ids after every table id), labelled with the real
+#     aspect and "(full)": "1.50:1 (full)".
+#
+# Why it is not simply a fifteenth row in the table: 1.50 is the imx283's
+# native shape and nothing at all on an imx585, and a table entry would offer
+# it on every camera. The toggle has to be derived from the sensor in front of
+# you, which is the same reason available_aspect_ratios() is derived and never
+# stored.
+FULL_FRAME_RATIO_ID = "full"
+
 logger = logging.getLogger(__name__)
 
 _EMPTY: list[dict[str, Any]] = []

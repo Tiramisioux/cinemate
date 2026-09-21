@@ -437,7 +437,7 @@
         },
         "aspect_ratios": {
           "type": "object",
-          "description": "WP-CM-6 (ASPECT-RATIOS.md). Per-camera aspect-ratio selection, keyed exactly as enabled_modes above: a camera with no entry of its own uses \"default\", which ships as [\"1.78:1\"] so a fresh camera behaves as it does today. Each value names ids from the canonical ratio table (resources/aspect_ratios.json). The mode table under this selection is the modes reachable by one of these ratios (within tolerance, or the closest mode when none are, unioned across ratios), further narrowed by min_mode_width, k_steps, bit_depths and the HDR switches. Ignored for a camera with an enabled_modes entry -- that per-mode choice is authoritative.",
+          "description": "WP-CM-6 (ASPECT-RATIOS.md), WP-CM-11. Per-camera aspect-ratio selection, keyed exactly as enabled_modes above: a camera with no entry of its own uses \"default\". Ships as {} -- an absent or empty entry means each camera defaults to the ratios its own mode table actually maps to, derived at startup (one ratio per mode, its nearest), so a fresh camera never loses a mode to a default nobody chose. A \"default\" list is still supported as a deliberate global choice and narrows like any other entry once set. Each value names ids from the canonical ratio table (resources/aspect_ratios.json). The mode table under this selection is the modes reachable by one of these ratios (within tolerance, or the closest mode when none are, unioned across ratios), further narrowed by min_mode_width, k_steps, bit_depths and the HDR switches. Ignored for a camera with an enabled_modes entry -- that per-mode choice is authoritative.",
           "additionalProperties": {
             "type": "array",
             "items": {

@@ -12,10 +12,6 @@ from module.sensor_database import load_sensor_database
 from module.aspect_ratios import load_aspect_ratio_table
 
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
-# WP-CM-6 (ASPECT-RATIOS.md): the default ratio when image_capture.aspect_ratios
-# names nothing for a camera or for "default" -- a fresh camera behaves as it
-# did before the aspect family existed.
-DEFAULT_ASPECT_RATIOS = ["1.78:1"]
 # image_capture.min_mode_width's own default: modes narrower than this are
 # hidden (not removed) from the dial/GUIs unless an enabled_modes entry names
 # them.
@@ -23,6 +19,17 @@ DEFAULT_MIN_MODE_WIDTH = 1280
 # How close a mode's real aspect has to be to a ratio's value to count as
 # that ratio "exact" rather than merely the closest available shape.
 ASPECT_RATIO_TOLERANCE = 0.02
+# WP-CM-11: a floating-point noise guard on every `err <= ASPECT_RATIO_TOLERANCE`
+# comparison below. _mode_aspect() and _nearest_ratio_id() round to 2 decimal
+# places, so a mode can land a real, exact 0.02 away from a ratio's value --
+# imx477's shipped 2028x1080 (aspect 1.87) is 0.019999999999999796 from
+# "1.89:1" in resources/sensors.json today, and this package's own synthetic
+# 1332x990 fixture (aspect 1.35, nearest "1.33:1") lands on the other side,
+# 0.020000000000000018. Which side of exactly 0.02 a given pair of floats
+# lands on is not something either the derived default's "covers every mode
+# by construction" guarantee (_derived_default_ratio_ids) or an operator's
+# own explicit choice can depend on.
+_ASPECT_TOLERANCE_EPS = 1e-9
 FALLBACK_PACKING_INFO = {
     "imx296": "U",
     "imx283": "U",
@@ -1142,7 +1149,7 @@ class SensorDetect:
 
     @classmethod
     def _modes_within_ratio_tolerance(
-        cls, modes: List[Dict], ratio_value: float, additive_fallback: bool = False,
+        cls, modes: List[Dict], ratio_value: float,
     ) -> List[Dict]:
         """Modes within ASPECT_RATIO_TOLERANCE of ratio_value; when none
         are, the closest mode plus any other within tolerance of *that*
@@ -1150,33 +1157,21 @@ class SensorDetect:
         pick between them. Returns [] only when no mode has a known aspect
         at all.
 
-        additive_fallback (WP-CM-6/WP-CM-7 rework, blocking review finding
-        on tier B/C sensors like imx477 and imx283): when the camera has
-        no explicit per-camera ratio selection at all (see
-        _camera_has_explicit_ratio_selection / _ratio_matches_for_camera)
-        and so resolves to the spec's own shipped default, 1.78:1, the near-tie
-        fallback above is narrowing rather than additive -- it silently
-        drops modes that bit_depths/k_steps/enabled_modes alone would have
-        kept, which breaks WP-CM-6's own compatibility clause ("a fresh
-        camera behaves as it does today"). This is not only the
-        all-or-nothing case where *no* mode is within tolerance (imx477):
-        a camera can have *some* modes within tolerance of 1.78 and others
-        that are not (imx283, where three modes are ~1.78 and two are 1.5)
-        -- for the default selection every one of them must survive, not
-        just the exact-tolerance subset. So when additive_fallback is set,
-        skip the near-tie narrowing entirely and return every candidate
-        with a known aspect: the default selection must never narrow a
-        sensor's mode table on its own, only an operator's deliberate,
-        non-default choice may."""
+        WP-CM-11 removed this method's `additive_fallback` parameter: it
+        existed only to widen this near-tie fallback for the old shipped
+        default (a single hardcoded "1.78:1"), whose
+        own exemption in _ratio_matches_for_camera called it with
+        `additive_fallback=True`. The default is now derived per camera
+        from its own mode table (_derived_default_ratio_ids) instead of
+        being widened after the fact, so no caller ever needs the wider
+        behaviour any more."""
         scored = [
             (abs(cls._mode_aspect(m) - ratio_value), m)
             for m in modes if cls._mode_aspect(m) is not None
         ]
         if not scored:
             return []
-        if additive_fallback:
-            return [m for _, m in scored]
-        within = [m for err, m in scored if err <= ASPECT_RATIO_TOLERANCE]
+        within = [m for err, m in scored if err <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS]
         if within:
             return within
         best_err = min(err for err, _ in scored)
@@ -1186,43 +1181,60 @@ class SensorDetect:
         table = getattr(self, "aspect_ratio_table", None)
         return table if table is not None else load_aspect_ratio_table()
 
+    def _nearest_ratio_id(self, aspect: float) -> str | None:
+        """The canonical ratio id closest to `aspect`, whatever the
+        distance -- unlike _modes_within_ratio_tolerance there is no
+        tolerance gate here, because this is used to find a mode's "home"
+        ratio for the derived default (_derived_default_ratio_ids), not to
+        decide whether a match counts as exact. None only when the ratio
+        table itself is empty (see load_aspect_ratio_table's own
+        "never stop CineMate booting" fallback)."""
+        table = self._aspect_ratio_table()
+        if not table:
+            return None
+        return min(table, key=lambda e: abs(e["value"] - aspect))["id"]
+
+    def _derived_default_ratio_ids(self, camera_name: str) -> List[str]:
+        """WP-CM-11: the default ratio set for a camera with no explicit
+        selection -- no per-camera entry and no operator-chosen "default"
+        entry -- is the set of ratios its OWN modes actually map to, derived
+        at startup from the camera's raw, pre-filter mode table
+        (sensor_modes_unfiltered, the same table available_aspect_ratios()
+        walks). Never stored: it depends on the driver installed right now.
+
+        Each mode contributes the canonical ratio it is nearest to, whether
+        or not that is within ASPECT_RATIO_TOLERANCE. This covers every
+        mode by construction: a mode's own nearest ratio is always a member
+        of the set that goes on to filter it, so a default nobody chose can
+        never drop a mode from a fresh camera's table -- unlike the old
+        hardcoded single ratio ("1.78:1"), which relied on
+        an exemption to avoid exactly that on a sensor with no 16:9 mode at
+        all (imx477, imx296: see WORK-PACKAGES.md's WP-CM-11).
+        """
+        modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
+        ids: List[str] = []
+        seen = set()
+        for m in modes:
+            aspect = self._mode_aspect(m)
+            if aspect is None:
+                continue
+            rid = self._nearest_ratio_id(aspect)
+            if rid is not None and rid not in seen:
+                seen.add(rid)
+                ids.append(rid)
+        return ids
+
     def _enabled_ratio_ids(self, camera_name: str) -> List[str]:
+        """Precedence (WP-CM-11): an entry naming this camera wins; else an
+        explicit "default" entry in aspect_ratios_cfg; else the derived set
+        (_derived_default_ratio_ids) -- the shapes this camera's own modes
+        actually have. The first two narrow because someone chose them; the
+        third never narrows, by construction."""
         cfg = getattr(self, "aspect_ratios_cfg", None) or {}
         ids = cfg.get(camera_name) or cfg.get("default")
-        return list(ids) if ids else list(DEFAULT_ASPECT_RATIOS)
-
-    def _ratio_selection_is_a_choice(self, camera_name: str) -> bool:
-        """True when somebody actually chose the ratios this camera will use:
-        either an entry naming this camera, or a global "default" changed away
-        from the shipped value. See _ratio_matches_for_camera for why both."""
-        if self._camera_has_explicit_ratio_selection(camera_name):
-            return True
-        shipped = (getattr(self, "aspect_ratios_cfg", None) or {}).get("default")
-        return bool(shipped) and list(shipped) != list(DEFAULT_ASPECT_RATIOS)
-
-    def _camera_has_explicit_ratio_selection(self, camera_name: str) -> bool:
-        """True when the operator named this camera specifically in
-        aspect_ratios_cfg (settings.jsonc's image_capture.aspect_ratios).
-
-        This is the fix for the WP-CM-7 rework review finding: whether the
-        camera's enabled-ratio set is a genuine no-opinion fallback must be
-        decided by WHERE the value came from, not by what it resolves to.
-        Comparing the resolved list to DEFAULT_ASPECT_RATIOS by value is
-        wrong because an operator who deliberately narrows a camera to
-        exactly 16:9 produces {"<camera>": ["1.78:1"]}, which is
-        bit-for-bit identical to the untouched-default list -- so a
-        value-equality check can never tell the two apart and an operator
-        can never restrict a multi-ratio sensor to plain 16:9.
-
-        A per-camera key that is absent or empty means "no opinion for
-        this camera" and falls through to the "default" key or the
-        hardcoded DEFAULT_ASPECT_RATIOS -- both genuine fallbacks, so a
-        bare "default" entry (what settings_default.jsonc ships, WP-CM-6
-        item 1) does NOT count as an explicit per-camera selection here.
-        Only a non-empty entry keyed by this camera's own name does.
-        """
-        cfg = getattr(self, "aspect_ratios_cfg", None) or {}
-        return bool(cfg.get(camera_name))
+        if ids:
+            return list(ids)
+        return self._derived_default_ratio_ids(camera_name)
 
     def _enabled_ratio_values(self, camera_name: str) -> List[tuple]:
         values_by_id = {e["id"]: e["value"] for e in self._aspect_ratio_table()}
@@ -1240,37 +1252,25 @@ class SensorDetect:
         than one enabled ratio keeps the smallest-error match -- the ratio
         it actually resembles most.
 
-        This camera's ratio selection is a CHOICE when either the operator named
-        this camera in aspect_ratios_cfg, or they changed the global "default"
-        away from what the repo ships. Otherwise nobody has chosen anything for
-        this camera, and then **the matcher returns every mode: a default nobody
-        chose is not a filter.**
+        WP-CM-11: there is no exemption here any more. _enabled_ratio_ids
+        already resolves to a real, mode-derived set the moment nobody has
+        named this camera or changed the global "default" -- every mode's
+        own nearest canonical ratio (_derived_default_ratio_ids) -- so the
+        ordinary matching loop below covers every mode on its own, the same
+        way it would for an operator's explicit choice. A default nobody
+        chose is not a filter because it is built from the camera's own
+        modes, not because this method special-cases it.
 
-        Both halves of that are load-bearing, and each came from a separate
-        blocking review:
-
-        - Deciding it by VALUE is wrong. An operator who deliberately narrows one
-          camera to exactly 16:9 saves {"<camera>": ["1.78:1"]}, which resolves to
-          the same list as an untouched camera, so a value check cannot tell a
-          deliberate narrow choice from no choice at all. Presence of the
-          per-camera entry can.
-        - Widening only the near-tie FALLBACK is not enough. That fallback fires
-          only when no mode is within tolerance of the ratio. An imx283 has modes
-          at both 1.81 and 1.52, so 1.78 matches the first group exactly, the
-          fallback never fires, and the 1.52 modes -- that sensor's own full-frame
-          readouts -- were dropped from a fresh install. Verified by
-          ShippedDefaultAcrossANativelyDifferentSensorTests.
-
-        A changed "default" counts as a choice so that a global preference is not
-        silently ignored on every camera. bit_depths, k_steps, min_mode_width and
-        the HDR switches apply either way.
+        This replaces an earlier "the matcher returns every mode" exemption
+        that existed because the old shipped default was a single hardcoded
+        ratio, "1.78:1": a sensor with no mode near it, such as imx477 or
+        imx296, would otherwise lose most of its table on a fresh install
+        (WORK-PACKAGES.md's WP-CM-11; regression coverage
+        for that shape is ShippedDefaultAcrossANativelyDifferentSensorTests
+        and ShippedDefaultPartialMatchRegressionTests, both in
+        test_aspect_ratio_selection.py). bit_depths, k_steps, min_mode_width
+        and the HDR switches still apply after this, as they always have.
         """
-        if not self._ratio_selection_is_a_choice(camera_name):
-            return {
-                id(m): (self._enabled_ratio_ids(camera_name)[0], False, self._mode_aspect(m))
-                for m in modes
-            }
-
         best: Dict[int, tuple] = {}
         for rid, rval in self._enabled_ratio_values(camera_name):
             for m in self._modes_within_ratio_tolerance(modes, rval):
@@ -1279,7 +1279,7 @@ class SensorDetect:
                 key = id(m)
                 prev = best.get(key)
                 if prev is None or err < prev[3]:
-                    best[key] = (rid, err <= ASPECT_RATIO_TOLERANCE, aspect, err)
+                    best[key] = (rid, err <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS, aspect, err)
         return {k: v[:3] for k, v in best.items()}
 
     def available_aspect_ratios(self, camera_name: str) -> Dict[str, Dict[str, Any]]:
@@ -1315,7 +1315,7 @@ class SensorDetect:
                 "id": rid,
                 "value": rval,
                 "name": entry.get("name"),
-                "exact": best_err <= ASPECT_RATIO_TOLERANCE,
+                "exact": best_err <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS,
                 "real_aspect": self._mode_aspect(best_mode),
                 "delta": round(best_err, 3),
             }

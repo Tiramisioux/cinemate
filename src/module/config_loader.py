@@ -680,8 +680,10 @@ def _apply_settings_defaults(settings: dict) -> dict:
     # today" clause in WORK-PACKAGES.md's WP-CM-6. A fresh install still
     # gets both keys explicitly, because resources/settings/settings_default.jsonc
     # ships them (item 1) and that file's content becomes the new
-    # settings.jsonc verbatim -- so "ships as {"default": ["1.78:1"]}" is
-    # honoured by the template, not by this defaulting pass.
+    # settings.jsonc verbatim -- so "ships as {}" (WP-CM-11: an absent or
+    # empty entry means each camera's default is derived from its own mode
+    # table, not a single hardcoded ratio) is honoured by the template, not
+    # by this defaulting pass.
 
     # ── audio_capture: capture gain + timecode offset per mic path ─────────
     # Migrate old flat keys to nested per-toolchain objects.

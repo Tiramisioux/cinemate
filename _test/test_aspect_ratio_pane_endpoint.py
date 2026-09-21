@@ -172,11 +172,15 @@ class TogglingRatioChangesSelectedTests(unittest.TestCase):
         """Regression test for the WP-CM-7 rework's blocking review finding:
         an operator who deliberately toggles a multi-ratio camera down to
         exactly 16:9 saves {"<camera>": ["1.78:1"]} -- bit-for-bit the same
-        list DEFAULT_ASPECT_RATIOS resolves to for an untouched camera, so a
-        value-equality additive_fallback check could never tell the two
+        list the old hardcoded shipped default ("1.78:1") resolved to for an
+        untouched camera, so a value-equality check could never tell the two
         apart and this selection silently stopped narrowing anything (every
-        mode with a known aspect survived, mislabeled as 1.78:1). This saves
-        the explicit per-camera key -- never the global "default" key -- and
+        mode with a known aspect survived, mislabeled as 1.78:1). WP-CM-11
+        replaced that hardcoded default with one derived per camera from its
+        own modes, but the same trap applies to it: an explicit per-camera
+        key must still narrow even when its value happens to equal what the
+        derived default would have produced on its own. This saves the
+        explicit per-camera key -- never the global "default" key -- and
         asserts the non-1.78 mode is excluded, from both the endpoint
         (settings_editor.selected_for(), via _ratio_matches_for_camera) and
         _ratio_matches_for_camera() directly."""

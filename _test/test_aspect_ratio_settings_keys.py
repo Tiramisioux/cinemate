@@ -1,4 +1,4 @@
-"""WP-CM-6 item 1: the three settings keys, in settings.jsonc,
+"""WP-CM-6 item 1, WP-CM-11: the three settings keys, in settings.jsonc,
 resources/settings/settings_default.jsonc, settings.schema.json and
 config_loader.py's defaults.
 
@@ -6,8 +6,9 @@ image_capture.enabled_modes already exists and is already per camera name --
 this file is not about that one, only about the two new keys the aspect
 family adds: aspect_ratios and min_mode_width. A settings file with no
 aspect_ratios must behave exactly as it does today: for imx585, whose
-detected modes are already ~16:9, the shipped default ["1.78:1"] must offer
-the same modes k_steps/bit_depths alone offered before this package.
+detected modes are already ~16:9, the shipped {} -- WP-CM-11: each camera's
+own derived default, not a single hardcoded ratio -- must offer the same
+modes k_steps/bit_depths alone offered before this package.
 """
 
 import json
@@ -23,12 +24,17 @@ from module.config_loader import load_settings, strip_jsonc
 
 class SettingsKeysTests(unittest.TestCase):
     def test_settings_jsonc_and_default_both_carry_aspect_ratios(self):
+        # WP-CM-11: ships as {}, an empty dict -- present (so the key exists
+        # and behaves like a settings file that predates it never does, see
+        # test_config_loader_leaves_a_settings_file_with_neither_key_absent
+        # below), but with no "default" entry, so each camera falls to its
+        # own derived set (SensorDetect._derived_default_ratio_ids) rather
+        # than a single hardcoded ratio.
         for path in ("settings.jsonc", "resources/settings/settings_default.jsonc"):
             with self.subTest(path=path):
                 ic = load_settings(str(ROOT / path))["image_capture"]
                 self.assertIn("aspect_ratios", ic)
-                self.assertIn("default", ic["aspect_ratios"])
-                self.assertEqual(ic["aspect_ratios"]["default"], ["1.78:1"])
+                self.assertEqual(ic["aspect_ratios"], {})
 
     def test_settings_jsonc_and_default_both_carry_min_mode_width(self):
         for path in ("settings.jsonc", "resources/settings/settings_default.jsonc"):

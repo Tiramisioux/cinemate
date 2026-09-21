@@ -100,12 +100,12 @@
     }
   },
   "image_capture": {
-    // WP-CM-6. Per-camera aspect-ratio selection; see settings.jsonc's
-    // comment for the full explanation. "default" is used by any camera
-    // with no entry of its own.
-    "aspect_ratios": {
-      "default": ["1.78:1"]
-    },
+    // WP-CM-6, WP-CM-11. Per-camera aspect-ratio selection; see
+    // settings.jsonc's comment for the full explanation. Empty means each
+    // camera defaults to the shapes its own modes actually have, derived at
+    // startup -- "default" is still available as a deliberate global
+    // choice for any camera with no entry of its own.
+    "aspect_ratios": {},
     // Modes narrower than this are hidden from the dial/GUIs by default
     // (not removed); an enabled_modes entry bypasses it.
     "min_mode_width": 1280,

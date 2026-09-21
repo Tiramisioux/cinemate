@@ -197,19 +197,24 @@
 
   // ── image_capture: resolution / bit-depth / HDR filters ──────────────────
   "image_capture": {
-    // WP-CM-6 (ASPECT-RATIOS.md): per-camera aspect-ratio selection, keyed
-    // exactly as enabled_modes below -- a camera with no entry of its own
-    // uses "default". The mode table offered is the modes reachable by one
-    // of these ratios (within tolerance, or the closest mode when none
-    // are), further narrowed by min_mode_width, k_steps, bit_depths and the
-    // HDR switches below. Ignored for a camera with an enabled_modes entry
-    // -- that per-mode choice is authoritative. Ids come from the canonical
-    // ratio table, resources/aspect_ratios.json (fourteen ratios: 1:1,
-    // 1.33:1, 1.37:1, 1.78:1, 1.85:1, 1.89:1, 1.90:1, 2.00:1, 2.20:1,
-    // 2.22:1, 2.35:1, 2.39:1, 2.50:1, 2.55:1).
-    "aspect_ratios": {
-      "default": ["1.78:1"]
-    },
+    // WP-CM-6 (ASPECT-RATIOS.md), WP-CM-11: per-camera aspect-ratio
+    // selection, keyed exactly as enabled_modes below -- a camera with no
+    // entry of its own uses "default". An absent or empty entry -- what
+    // this ships as -- means "the shapes this sensor has": each camera's
+    // own default is derived at startup from its own mode table, one ratio
+    // per mode (its nearest), so a fresh camera offers every mode it has,
+    // never fewer, whatever ratios its driver actually produces. A
+    // "default" list is still supported as a deliberate global choice, and
+    // narrows like any other entry the moment it is set. The mode table
+    // offered is the modes reachable by one of the enabled ratios (within
+    // tolerance, or the closest mode when none are), further narrowed by
+    // min_mode_width, k_steps, bit_depths and the HDR switches below.
+    // Ignored for a camera with an enabled_modes entry -- that per-mode
+    // choice is authoritative. Ids come from the canonical ratio table,
+    // resources/aspect_ratios.json (fourteen ratios: 1:1, 1.33:1, 1.37:1,
+    // 1.78:1, 1.85:1, 1.89:1, 1.90:1, 2.00:1, 2.20:1, 2.22:1, 2.35:1,
+    // 2.39:1, 2.50:1, 2.55:1).
+    "aspect_ratios": {},
     // Modes narrower than this are hidden (not removed -- they stay in the
     // settings-editor's unfiltered mode table) from the dial and both GUIs
     // by default. An enabled_modes entry for a camera bypasses this floor

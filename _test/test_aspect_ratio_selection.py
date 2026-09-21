@@ -198,6 +198,12 @@ class SensorSwapScopingTests(unittest.TestCase):
     ]
 
     def test_a_per_camera_entry_does_not_affect_the_other_camera(self):
+        # WP-CM-11: an explicit "default" entry is a deliberate global choice
+        # regardless of which ids it names -- there is no more "is this
+        # value the shipped one" special case (the shipped value is now {},
+        # not ["1.78:1"]; see _enabled_ratio_ids's precedence). So a present
+        # "default": ["1.78:1"] genuinely narrows every camera with no
+        # per-camera entry of its own, same as any other explicit choice.
         d = _detector(aspect_ratios_cfg={"imx585": ["2.39:1"], "default": ["1.78:1"]})
         pruned = d._finalize_modes({
             "imx585": [dict(m) for m in self.IMX585_SET],
@@ -207,14 +213,31 @@ class SensorSwapScopingTests(unittest.TestCase):
             {(m["width"], m["height"]) for m in pruned["imx585"].values()},
             {(3840, 1608)},
         )
-        # imx283 has no entry of its own and the global "default" is still the
-        # shipped ["1.78:1"], so nobody chose anything for this camera and the
-        # matcher does not narrow at all, and both of imx283's fixture modes survive (one
-        # exactly 1.78, one exactly 2.39) -- same as if no aspect-ratio
-        # filter had ever run. WP-CM-7 rework, blocking finding: this used
-        # to assert only the 1.78 mode, which was the narrowing bug (the
-        # near-tie matcher returning early on a non-empty `within` set
-        # before the additive_fallback check ever ran).
+        # imx283 has no entry of its own, so it falls to the explicit
+        # "default" -- 1.78:1 only -- and narrows to its one exactly-1.78
+        # mode, unaffected by imx585's own separate, unrelated entry.
+        self.assertEqual(
+            {(m["width"], m["height"]) for m in pruned["imx283"].values()},
+            {(5472, 3080)},
+        )
+
+    def test_no_default_entry_at_all_falls_to_the_derived_set_per_camera(self):
+        # The case the old exemption used to cover by comparing the
+        # resolved list to a hardcoded default: no "default" key present at
+        # all, and no per-camera entry either. Each camera now gets its OWN
+        # derived set from its own modes (_derived_default_ratio_ids), not a
+        # shared hardcoded ratio, so imx283's own 2.39-aspect mode survives
+        # here even though it would not under an explicit 1.78-only default
+        # (see the test above).
+        d = _detector(aspect_ratios_cfg={"imx585": ["2.39:1"]})
+        pruned = d._finalize_modes({
+            "imx585": [dict(m) for m in self.IMX585_SET],
+            "imx283": [dict(m) for m in self.IMX283_SET],
+        })
+        self.assertEqual(
+            {(m["width"], m["height"]) for m in pruned["imx585"].values()},
+            {(3840, 1608)},
+        )
         self.assertEqual(
             {(m["width"], m["height"]) for m in pruned["imx283"].values()},
             {(5472, 3080), (5472, 2288)},
@@ -310,22 +333,26 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
     """WP-CM-6 rework, second blocking finding: ConfigLoaderDefaultRegressionTests
     above only proves the *legacy* path (a settings.jsonc written before
     WP-CM-6, where the key is truly absent and aspect_ratios_cfg ends up
-    None). It never runs the *literal shipped default*,
-    {"default": ["1.78:1"]}, through the matcher -- and that value is a
-    present key on every fresh install, because
-    resources/settings/settings_default.jsonc and settings.jsonc both ship
-    it (WP-CM-6 item 1, "Ships as {"default": ["1.78:1"]}"). A present key
-    means aspect_ratios_cfg is not None, so the ratio matcher in
-    _finalize_modes actively runs on a fresh install too.
+    None). It never runs the *literal shipped default* through the matcher
+    -- and a present key (WP-CM-11: ships as {}, an empty dict, so each
+    camera derives its own default from its own modes -- see
+    DerivedDefaultRatioSetTests above) is present on every fresh install,
+    because resources/settings/settings_default.jsonc and settings.jsonc
+    both ship it (WP-CM-6 item 1). A present key means aspect_ratios_cfg is
+    not None, so the ratio matcher in _finalize_modes actively runs on a
+    fresh install too.
 
     For imx477 (tier B), none of its three stock modes is within
-    ASPECT_RATIO_TOLERANCE of 1.78 (closest is the 2028x1080 mode at 1.87),
-    so the matcher's own near-tie fallback used to narrow the table down to
-    that one mode, silently dropping the 4:3 2028x1520 mode and the
-    sensor's fastest mode, 1332x990@120fps -- contradicting
-    ASPECT-RATIOS.md's "1.78:1 when nothing has been chosen, so a fresh
-    camera behaves as it does today" and WP-CM-6's own compatibility
-    clause.
+    ASPECT_RATIO_TOLERANCE of 1.78 (closest is the 2028x1080 mode at 1.87).
+    Before WP-CM-6's original fix this silently dropped the 4:3 2028x1520
+    mode and the sensor's fastest mode, 1332x990@120fps; before WP-CM-11
+    replaced the hardcoded "1.78:1"-plus-exemption mechanism that fix used,
+    the same three modes were only kept by an exemption that had to
+    recognise "nobody chose anything" as a special case. WP-CM-11 makes
+    this structural instead: an imx477 with no explicit selection derives
+    {1.33:1, 1.89:1} from its own three modes, and every mode is a member
+    of that set by construction -- see WORK-PACKAGES.md's WP-CM-11 and
+    _derived_default_ratio_ids's docstring.
 
     This test loads the real image_capture.aspect_ratios default the
     repo actually ships in BOTH settings.jsonc and
@@ -388,8 +415,9 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
         settings = load_settings(ROOT / "settings.jsonc")
         image_capture_cfg = settings["image_capture"]
         # The literal shipped default this finding is about -- a *present*
-        # key, not the legacy absent-key case.
-        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+        # key (WP-CM-11: an empty dict, not the old hardcoded "1.78:1"), not
+        # the legacy absent-key case.
+        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {})
         self._assert_all_stock_modes_survive(image_capture_cfg, "settings.jsonc")
 
     def test_shipped_settings_default_jsonc_keeps_every_stock_imx477_mode(self):
@@ -400,28 +428,34 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
         # not setdefault'ing the keys in _apply_settings_defaults).
         settings = load_settings(ROOT / "resources" / "settings" / "settings_default.jsonc")
         image_capture_cfg = settings["image_capture"]
-        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {})
         self._assert_all_stock_modes_survive(image_capture_cfg, "settings_default.jsonc")
 
 
 class ShippedDefaultPartialMatchRegressionTests(unittest.TestCase):
     """WP-CM-7 rework, blocking review finding: ShippedDefaultFreshInstallRegressionTests
     above only proves the all-or-nothing case (imx477: *no* mode is within
-    ASPECT_RATIO_TOLERANCE of 1.78:1), where the pre-fix additive_fallback
-    branch already engaged because `within` was empty. It never exercises
-    the more common partial-match case, where *some* of a camera's stock
-    modes are within tolerance of 1.78 and others are not -- there
-    `within` is non-empty, so the pre-fix code returned early with
-    `within` alone and silently dropped every mode outside it, even for
-    the shipped default.
+    ASPECT_RATIO_TOLERANCE of 1.78:1). It never exercises the more common
+    partial-match case, where *some* of a camera's stock modes are within
+    tolerance of a given ratio and others are not.
 
     imx283 (tier B/C) is exactly this case with real numbers from
-    resources/sensors.json: three modes are ~1.78 (within tolerance) and
-    two are 1.5 (not). Before the fix, the 1.5-aspect 2784x1828 12-bit
-    mode vanished from the default-selected table on a fresh install even
-    though it passes every pre-existing bit_depths/k_steps filter --
-    contradicting ASPECT-RATIOS.md's "1.78:1 when nothing has been chosen,
-    so a fresh camera behaves as it does today".
+    resources/sensors.json: three modes are ~1.78 and two are 1.5. Before
+    the WP-CM-7 fix, the 1.5-aspect 2784x1828 12-bit mode vanished from the
+    default-selected table on a fresh install even though it passes every
+    pre-existing bit_depths/k_steps filter -- contradicting
+    ASPECT-RATIOS.md's "1.78:1 when nothing has been chosen, so a fresh
+    camera behaves as it does today" (the shipped default at the time).
+
+    WP-CM-11 replaced that single hardcoded default with one derived per
+    camera from its own modes -- ships as {}, not {"default": ["1.78:1"]}
+    -- so this class now guards the same property (every pre-existing
+    stock mode a real install's bit_depths/k_steps already allowed keeps
+    surviving a fresh install's ratio selection) under the new mechanism:
+    imx283's own modes are self-evidently their own derived ratios
+    (1.37:1 for the three ~1.5-aspect ones, 1.78:1 for the rest), so none
+    of them needs a tolerance match against someone else's ratio to
+    survive. See DerivedDefaultRatioSetTests above for the general case.
 
     This mirrors ShippedDefaultFreshInstallRegressionTests's own method:
     the real shipped image_capture.aspect_ratios default (via config_loader
@@ -474,9 +508,9 @@ class ShippedDefaultPartialMatchRegressionTests(unittest.TestCase):
 
         # Real numbers from resources/sensors.json's imx283 entry, narrowed
         # by today's bit_depths=[10,12,16]/k_steps=[1.5,2,3,4] alone (no
-        # aspect-ratio filter): three modes at aspect 1.78 (within
-        # tolerance of the default) and one at aspect 1.5 (2784x1828,
-        # 12-bit -- the one that used to vanish).
+        # per-camera or global aspect-ratio choice): three modes at aspect
+        # 1.78 and one at aspect 1.5 (2784x1828, 12-bit -- the one that used
+        # to vanish).
         expected = {(2784, 1542, 12), (2784, 1828, 12), (3936, 2176, 10)}
         for settings_path, label in (
             (ROOT / "settings.jsonc", "settings.jsonc"),
@@ -484,7 +518,12 @@ class ShippedDefaultPartialMatchRegressionTests(unittest.TestCase):
         ):
             settings = load_settings(settings_path)
             image_capture_cfg = settings["image_capture"]
-            self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+            # WP-CM-11: ships as {}, an empty dict -- not the old hardcoded
+            # {"default": ["1.78:1"]}. A present, empty key still runs the
+            # ratio matcher (aspect_ratios_cfg is not None), but with no
+            # per-camera or "default" entry it falls to imx283's own derived
+            # set (_derived_default_ratio_ids), never a single global ratio.
+            self.assertEqual(image_capture_cfg.get("aspect_ratios"), {})
             self._assert_all_pre_existing_modes_survive(
                 "imx283", expected, image_capture_cfg, label,
             )
@@ -498,7 +537,7 @@ class ShippedDefaultPartialMatchRegressionTests(unittest.TestCase):
         expected = {(1456, 1088, 10)}
         settings = load_settings(ROOT / "settings.jsonc")
         image_capture_cfg = settings["image_capture"]
-        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {})
         self._assert_all_pre_existing_modes_survive(
             "imx296", expected, image_capture_cfg, "settings.jsonc",
         )
@@ -506,14 +545,21 @@ class ShippedDefaultPartialMatchRegressionTests(unittest.TestCase):
 
 class ShippedDefaultAcrossANativelyDifferentSensorTests(unittest.TestCase):
     """The imx477 case above is a sensor whose closest mode is 1.87, a tenth away
-    from the default's 1.78. This is the harder shape the reviewer asked for: a
-    sensor whose ENTIRE family sits at a materially different native aspect.
+    from 16:9. This is the harder shape the reviewer asked for: a sensor whose
+    ENTIRE family sits at a materially different native aspect.
 
     Every imx283 mode is about 1.5 or about 1.8, and the 5568x3664 and 2784x1828
     modes are 1.52 -- a quarter away from 1.78, and further from it than any
-    imx477 mode. If the shipped default narrows to "the closest mode", a
-    OneInchEye owner loses most of the sensor's table on a fresh install, having
-    chosen nothing. The default must not be able to do that on any sensor.
+    imx477 mode. WP-CM-11 removed the hardcoded single-ratio shipped default
+    this class's name refers to, precisely because a *hardcoded* default
+    narrowing to "the closest mode to one fixed ratio" would make a
+    OneInchEye owner lose most of the sensor's table on a fresh install,
+    having chosen nothing -- and the *derived* default this class now
+    exercises (each camera's own modes, not one hardcoded ratio) must not be
+    able to do that on any sensor either, which is what still makes this the
+    harder case: imx283's own modes are far from *any* single ratio someone
+    else might have picked, so this only passes because the default is
+    built from imx283's own modes in the first place.
     """
 
     @staticmethod
@@ -537,7 +583,8 @@ class ShippedDefaultAcrossANativelyDifferentSensorTests(unittest.TestCase):
         from module.config_loader import load_settings  # noqa: PLC0415
 
         image_capture_cfg = load_settings(settings_path)["image_capture"]
-        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+        # WP-CM-11: ships as {}, not the old hardcoded {"default": ["1.78:1"]}.
+        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {})
 
         modes = self._imx283_modes_from_database()
         self.assertGreaterEqual(
@@ -569,6 +616,141 @@ class ShippedDefaultAcrossANativelyDifferentSensorTests(unittest.TestCase):
     def test_shipped_settings_default_jsonc_keeps_every_imx283_mode(self):
         self._assert_every_mode_survives(
             ROOT / "resources" / "settings" / "settings_default.jsonc", "settings_default.jsonc")
+
+
+# ── WP-CM-11: the default ratio set is the one the sensor actually has ────
+# Real numbers, not resources/sensors.json -- WP-CM-12 records that file as
+# missing two of the imx477's five real modes, and the runtime table this
+# package's rule has to hold for comes from the probe, not the metadata
+# file. Numbers are WORK-PACKAGES.md's own WP-CM-11 table, read from the
+# mainline imx477/imx296 drivers.
+IMX477_FIVE_MODES = [
+    {"width": 4056, "height": 3040, "bit_depth": 12, "hdr": False, "fps_max": 10},
+    {"width": 4056, "height": 2160, "bit_depth": 12, "hdr": False, "fps_max": 20},
+    {"width": 2028, "height": 1520, "bit_depth": 12, "hdr": False, "fps_max": 40},
+    {"width": 2028, "height": 1080, "bit_depth": 12, "hdr": False, "fps_max": 50},
+    {"width": 1332, "height": 990, "bit_depth": 10, "hdr": False, "fps_max": 120},
+]
+
+IMX296_ONE_MODE = [
+    {"width": 1456, "height": 1088, "bit_depth": 10, "hdr": False, "fps_max": 60},
+]
+
+# imx283's real 6 modes (resources/sensors.json): three at aspect 1.78,
+# three at 1.5 -- already used above by the ShippedDefault* regression
+# classes.
+IMX283_SIX_MODES = [
+    {"width": 5568, "height": 3664, "bit_depth": 12, "hdr": False, "fps_max": 18, "aspect": 1.5},
+    {"width": 2784, "height": 1828, "bit_depth": 12, "hdr": False, "fps_max": 36, "aspect": 1.5},
+    {"width": 2784, "height": 1542, "bit_depth": 12, "hdr": False, "fps_max": 41, "aspect": 1.78},
+    {"width": 5568, "height": 3664, "bit_depth": 10, "hdr": False, "fps_max": 18, "aspect": 1.5},
+    {"width": 5568, "height": 3094, "bit_depth": 10, "hdr": False, "fps_max": 21, "aspect": 1.78},
+    {"width": 3936, "height": 2176, "bit_depth": 10, "hdr": False, "fps_max": 44, "aspect": 1.78},
+]
+
+# imx585, all-pixel (1x1) aspect family: active WxH and "achieved" aspect
+# for all fourteen ratios, from ASPECT-RATIOS.md's "imx585, all-pixel (1x1),
+# active 3840x2160" table -- read verbatim, not recomputed.
+IMX585_ASPECT_FAMILY = [
+    {"width": 2160, "height": 2160, "bit_depth": 12, "hdr": False, "fps_max": 50, "aspect": 1.000},
+    {"width": 2880, "height": 2160, "bit_depth": 12, "hdr": False, "fps_max": 50, "aspect": 1.333},
+    {"width": 2976, "height": 2160, "bit_depth": 12, "hdr": False, "fps_max": 50, "aspect": 1.378},
+    {"width": 3840, "height": 2160, "bit_depth": 12, "hdr": False, "fps_max": 50, "aspect": 1.778},
+    {"width": 3840, "height": 2072, "bit_depth": 12, "hdr": False, "fps_max": 52, "aspect": 1.853},
+    {"width": 3840, "height": 2032, "bit_depth": 12, "hdr": False, "fps_max": 53, "aspect": 1.890},
+    {"width": 3840, "height": 2024, "bit_depth": 12, "hdr": False, "fps_max": 53, "aspect": 1.897},
+    {"width": 3840, "height": 1920, "bit_depth": 12, "hdr": False, "fps_max": 56, "aspect": 2.000},
+    {"width": 3840, "height": 1744, "bit_depth": 12, "hdr": False, "fps_max": 62, "aspect": 2.202},
+    {"width": 3840, "height": 1728, "bit_depth": 12, "hdr": False, "fps_max": 62, "aspect": 2.222},
+    {"width": 3840, "height": 1632, "bit_depth": 12, "hdr": False, "fps_max": 66, "aspect": 2.353},
+    {"width": 3840, "height": 1608, "bit_depth": 12, "hdr": False, "fps_max": 67, "aspect": 2.388},
+    {"width": 3840, "height": 1536, "bit_depth": 12, "hdr": False, "fps_max": 70, "aspect": 2.500},
+    {"width": 3840, "height": 1504, "bit_depth": 12, "hdr": False, "fps_max": 71, "aspect": 2.553},
+]
+
+ALL_FOURTEEN_RATIO_IDS = {
+    "1:1", "1.33:1", "1.37:1", "1.78:1", "1.85:1", "1.89:1", "1.90:1",
+    "2.00:1", "2.20:1", "2.22:1", "2.35:1", "2.39:1", "2.50:1", "2.55:1",
+}
+
+
+class DerivedDefaultRatioSetTests(unittest.TestCase):
+    """WP-CM-11: a camera with no explicit selection defaults to the set of
+    ratios its own modes map to, derived at startup, never stored -- not
+    the old hardcoded single ratio ("1.78:1") and not the
+    "a default nobody chose is not a filter" exemption that used to widen
+    it. Every mode's own nearest canonical ratio is in the set by
+    construction, so no sensor can lose a mode to a default nobody chose
+    (WORK-PACKAGES.md's own table)."""
+
+    def test_imx477_five_modes_all_survive_with_no_config(self):
+        d = _detector(aspect_ratios_cfg={})
+        pruned = d._finalize_modes({"imx477": [dict(m) for m in IMX477_FIVE_MODES]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
+        self.assertEqual(sizes, {(m["width"], m["height"]) for m in IMX477_FIVE_MODES})
+
+    def test_imx477_derived_default_is_133_and_189(self):
+        d = _detector(aspect_ratios_cfg={})
+        d.sensor_modes_unfiltered = {"imx477": [dict(m) for m in IMX477_FIVE_MODES]}
+        self.assertEqual(set(d._enabled_ratio_ids("imx477")), {"1.33:1", "1.89:1"})
+
+    def test_imx296_single_mode_survives_with_no_config(self):
+        d = _detector(aspect_ratios_cfg={})
+        pruned = d._finalize_modes({"imx296": [dict(m) for m in IMX296_ONE_MODE]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx296"].values()}
+        self.assertEqual(sizes, {(1456, 1088)})
+
+    def test_imx296_derived_default_is_133_only(self):
+        d = _detector(aspect_ratios_cfg={})
+        d.sensor_modes_unfiltered = {"imx296": [dict(m) for m in IMX296_ONE_MODE]}
+        self.assertEqual(set(d._enabled_ratio_ids("imx296")), {"1.33:1"})
+
+    def test_imx585_aspect_family_all_fourteen_survive_with_no_config(self):
+        d = _detector(aspect_ratios_cfg={})
+        pruned = d._finalize_modes({"imx585": [dict(m) for m in IMX585_ASPECT_FAMILY]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx585"].values()}
+        self.assertEqual(sizes, {(m["width"], m["height"]) for m in IMX585_ASPECT_FAMILY})
+        self.assertEqual(len(sizes), 14)
+
+    def test_imx585_derived_default_is_all_fourteen_ratios(self):
+        d = _detector(aspect_ratios_cfg={})
+        d.sensor_modes_unfiltered = {"imx585": [dict(m) for m in IMX585_ASPECT_FAMILY]}
+        self.assertEqual(set(d._enabled_ratio_ids("imx585")), ALL_FOURTEEN_RATIO_IDS)
+
+    def test_imx283_every_mode_survives_with_no_config(self):
+        d = _detector(aspect_ratios_cfg={})
+        pruned = d._finalize_modes({"imx283": [dict(m) for m in IMX283_SIX_MODES]})
+        sizes = {
+            (m["width"], m["height"], m["bit_depth"]) for m in pruned["imx283"].values()
+        }
+        self.assertEqual(
+            sizes,
+            {(m["width"], m["height"], m["bit_depth"]) for m in IMX283_SIX_MODES},
+        )
+
+    def test_explicit_per_camera_selection_still_narrows(self):
+        d = _detector(aspect_ratios_cfg={"imx477": ["1.89:1"]})
+        pruned = d._finalize_modes({"imx477": [dict(m) for m in IMX477_FIVE_MODES]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
+        self.assertEqual(sizes, {(4056, 2160), (2028, 1080)})
+
+    def test_explicit_global_default_still_narrows(self):
+        d = _detector(aspect_ratios_cfg={"default": ["1.89:1"]})
+        pruned = d._finalize_modes({"imx477": [dict(m) for m in IMX477_FIVE_MODES]})
+        sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
+        self.assertEqual(sizes, {(4056, 2160), (2028, 1080)})
+
+    def test_a_mode_whose_nearest_ratio_is_approximate_is_still_covered(self):
+        # imx283's 1.5-aspect modes: nearest canonical is 1.37:1 (err 0.13),
+        # squarely outside ASPECT_RATIO_TOLERANCE (0.02) -- an approximate
+        # match, not a near-exact one like imx477's 1.878 ~= 1.89.
+        far_mode = {"width": 2784, "height": 1828, "bit_depth": 12, "hdr": False,
+                    "fps_max": 36, "aspect": 1.5}
+        d = _detector(aspect_ratios_cfg={})
+        d.sensor_modes_unfiltered = {"imx283": [dict(far_mode)]}
+        self.assertEqual(d._enabled_ratio_ids("imx283"), ["1.37:1"])
+        pruned = d._finalize_modes({"imx283": [dict(far_mode)]})
+        self.assertEqual(len(pruned["imx283"]), 1)
 
 
 if __name__ == "__main__":

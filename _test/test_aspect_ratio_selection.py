@@ -207,10 +207,19 @@ class SensorSwapScopingTests(unittest.TestCase):
             {(m["width"], m["height"]) for m in pruned["imx585"].values()},
             {(3840, 1608)},
         )
-        # imx283 has no entry of its own -> falls back to "default" (1.78:1).
+        # imx283 has no entry of its own, so it falls back to "default", which is
+        # the shipped ["1.78:1"] -- nothing anyone chose for this camera. A default
+        # nobody chose is not a filter, so every imx283 mode survives, including
+        # the 2.39 one. Narrowing here is what dropped three real imx283 readouts
+        # on a fresh install; see
+        # ShippedDefaultAcrossANativelyDifferentSensorTests.
+        #
+        # The point this test actually makes is unchanged and is the reason it
+        # exists: imx585's own ["2.39:1"] entry narrowed imx585 and left imx283
+        # alone.
         self.assertEqual(
             {(m["width"], m["height"]) for m in pruned["imx283"].values()},
-            {(5472, 3080)},
+            {(5472, 3080), (5472, 2288)},
         )
 
     def test_enabled_modes_scoping_is_independent_of_aspect_ratios_scoping(self):
@@ -395,6 +404,73 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
         image_capture_cfg = settings["image_capture"]
         self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
         self._assert_all_stock_modes_survive(image_capture_cfg, "settings_default.jsonc")
+
+
+class ShippedDefaultAcrossANativelyDifferentSensorTests(unittest.TestCase):
+    """The imx477 case above is a sensor whose closest mode is 1.87, a tenth away
+    from the default's 1.78. This is the harder shape the reviewer asked for: a
+    sensor whose ENTIRE family sits at a materially different native aspect.
+
+    Every imx283 mode is about 1.5 or about 1.8, and the 5568x3664 and 2784x1828
+    modes are 1.52 -- a quarter away from 1.78, and further from it than any
+    imx477 mode. If the shipped default narrows to "the closest mode", a
+    OneInchEye owner loses most of the sensor's table on a fresh install, having
+    chosen nothing. The default must not be able to do that on any sensor.
+    """
+
+    @staticmethod
+    def _imx283_modes_from_database():
+        from module.sensor_database import load_sensor_database  # noqa: PLC0415
+
+        db = load_sensor_database(str(ROOT / "resources" / "sensors.json"))
+        return [
+            {
+                "width": m["width"],
+                "height": m["height"],
+                "bit_depth": m["bit_depth"],
+                "aspect": m["aspect"],
+                "fps_max": m.get("max_fps"),
+                "hdr": False,
+            }
+            for m in db["sensors"]["imx283"]["modes"]
+        ]
+
+    def _assert_every_mode_survives(self, settings_path, label):
+        from module.config_loader import load_settings  # noqa: PLC0415
+
+        image_capture_cfg = load_settings(settings_path)["image_capture"]
+        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+
+        modes = self._imx283_modes_from_database()
+        self.assertGreaterEqual(
+            len(modes), 6,
+            "resources/sensors.json's imx283 entry changed shape -- update this test",
+        )
+        before = {(m["width"], m["height"], m["bit_depth"]) for m in modes}
+
+        d = _detector(
+            aspect_ratios_cfg=image_capture_cfg.get("aspect_ratios"),
+            min_mode_width=image_capture_cfg.get("min_mode_width"),
+            # Deliberately NOT passing bit_depths/k_steps: this test is about the
+            # ratio matcher alone. Those two filters are the operator's own and
+            # are tested elsewhere; mixing them in here would hide which filter
+            # dropped a mode.
+        )
+        pruned = d._finalize_modes({"imx283": [dict(m) for m in modes]})
+        after = {(m["width"], m["height"], m["bit_depth"]) for m in pruned["imx283"].values()}
+        self.assertEqual(
+            after, before,
+            f"{label}: the shipped default dropped an imx283 mode. Every mode in "
+            f"this sensor's family is far from 1.78, so a narrowing default takes "
+            f"most of the table away from an operator who chose nothing.",
+        )
+
+    def test_shipped_settings_jsonc_keeps_every_imx283_mode(self):
+        self._assert_every_mode_survives(ROOT / "settings.jsonc", "settings.jsonc")
+
+    def test_shipped_settings_default_jsonc_keeps_every_imx283_mode(self):
+        self._assert_every_mode_survives(
+            ROOT / "resources" / "settings" / "settings_default.jsonc", "settings_default.jsonc")
 
 
 if __name__ == "__main__":

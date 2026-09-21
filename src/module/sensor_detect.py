@@ -1202,22 +1202,36 @@ class SensorDetect:
         than one enabled ratio keeps the smallest-error match -- the ratio
         it actually resembles most.
 
-        additive_fallback is set only when this camera's enabled ratio set
-        resolves to exactly the spec's own shipped default,
-        ["1.78:1"] -- whether that is because aspect_ratios_cfg genuinely
-        names nothing for this camera/"default" (_enabled_ratio_ids' own
-        fallback), or because the operator's settings.jsonc literally
-        contains {"default": ["1.78:1"]}, which is what
-        resources/settings/settings_default.jsonc ships (WP-CM-6 item 1).
-        Either way this is not a deliberate non-default choice, so the
-        near-tie fallback in _modes_within_ratio_tolerance must not narrow
-        a stock sensor's mode table down from what bit_depths/k_steps
-        alone would offer -- see that method's docstring.
+        A camera whose enabled set resolves to the spec's own shipped
+        default, ["1.78:1"], has had nothing chosen for it: either
+        aspect_ratios names nothing for this camera and "default" (so
+        _enabled_ratio_ids falls back), or settings.jsonc literally still
+        carries what resources/settings/settings_default.jsonc ships. In
+        that case this matcher returns every mode, because **a default
+        nobody chose must not be a filter**.
+
+        That is stronger than letting the near-tie fallback widen, and it
+        has to be: the fallback only fires when NO mode is within tolerance
+        of the ratio. An imx283 has modes at both 1.81 and 1.52, so 1.78
+        matches the first group exactly, the fallback never fires, and the
+        1.52 modes -- the sensor's own full-frame readouts -- were dropped
+        from a fresh install. Verified by
+        ShippedDefaultAcrossANativelyDifferentSensorTests, which fails
+        against the narrowing version.
+
+        An operator's deliberate non-default choice still narrows, which is
+        the whole point of choosing: bit_depths, k_steps, min_mode_width and
+        the HDR switches apply either way.
         """
-        additive_fallback = self._enabled_ratio_ids(camera_name) == DEFAULT_ASPECT_RATIOS
+        if self._enabled_ratio_ids(camera_name) == DEFAULT_ASPECT_RATIOS:
+            return {
+                id(m): (DEFAULT_ASPECT_RATIOS[0], False, self._mode_aspect(m))
+                for m in modes
+            }
+
         best: Dict[int, tuple] = {}
         for rid, rval in self._enabled_ratio_values(camera_name):
-            for m in self._modes_within_ratio_tolerance(modes, rval, additive_fallback=additive_fallback):
+            for m in self._modes_within_ratio_tolerance(modes, rval):
                 aspect = self._mode_aspect(m)
                 err = abs(aspect - rval) if aspect is not None else float("inf")
                 key = id(m)

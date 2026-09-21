@@ -35,6 +35,7 @@ from markupsafe import Markup
 
 from module.app import hardware_probe
 from module.app.gui_text import load_gui_text, lookup
+from module.aspect_ratios import load_aspect_ratio_table
 from module.sensor_database import resolve_database_path
 from module.config_loader import (
     DEFAULT_CONFORM_FRAME_RATE,
@@ -50,6 +51,7 @@ from module.jsonc_edit import apply_updates
 from module.redis_controller import ParameterKey, smpte_frame_base
 from module.sensor_detect import (
     thumbnail_choice_labels,
+    ASPECT_RATIO_TOLERANCE,
     SensorDetect,
 )
 from module.tuning_files import tuning_json_problem
@@ -890,10 +892,39 @@ def get_sensor_modes():
     legacy_k = image.get("k_steps", []) or []
     legacy_depths = image.get("bit_depths", []) or []
 
-    def selected_for(camera, mode):
+    # WP-CM-7 (ASPECT-RATIOS.md steps 3/4): the aspect pane's data. The
+    # canonical ratio table and the per-camera matcher already live on
+    # SensorDetect (WP-CM-6) -- this endpoint reads them, it does not keep a
+    # second copy. A sensor_detect that predates WP-CM-6 (a minimal test
+    # double, or a real instance built before that package landed) simply
+    # lacks these methods/attributes, and every aspect field below degrades
+    # to "not offered" rather than raising.
+    has_ratio_matcher = hasattr(sensor_detect, "_ratio_matches_for_camera")
+    aspect_ratio_table = (
+        sensor_detect._aspect_ratio_table() if hasattr(sensor_detect, "_aspect_ratio_table")
+        else load_aspect_ratio_table()
+    )
+    width_floor = getattr(sensor_detect, "min_mode_width", None)
+
+    def selected_for(camera, mode, ratio_matches):
         entries = enabled_modes.get(camera) if isinstance(enabled_modes, dict) else None
         if isinstance(entries, list) and entries:
             return SensorDetect._mode_matches_enabled(mode, entries)
+        # WP-CM-6's ratio matcher is authoritative the moment a camera has
+        # an aspect_ratios opinion (aspect_ratios_cfg is not None) and no
+        # enabled_modes entry of its own -- exactly the condition under
+        # which SensorDetect._finalize_modes() itself runs the matcher (see
+        # its own comment). ratio_matches is {} both when the matcher found
+        # nothing for this ratio set and when aspect_ratios_cfg is absent
+        # (an old settings file), so the legacy fallback below still covers
+        # that file untouched.
+        if ratio_matches:
+            match = ratio_matches.get(id(mode))
+            if match is None:
+                return False
+            if width_floor and int(mode.get("width") or 0) < width_floor:
+                return False
+            return True
         # First visit of an old settings file: preserve its existing filters,
         # but otherwise default-select every mode unless the driver's own
         # annotation marks it as a windowed (non-full) crop -- i.e. binning
@@ -910,6 +941,22 @@ def get_sensor_modes():
             return False
         return True
 
+    def nearest_ratio(mode):
+        """The canonical ratio this mode's own shape is closest to, from the
+        *full* table -- independent of which ratios are currently enabled.
+        This is what lets the pane filter the table client-side by toggle
+        state without a round trip: every row already carries the ratio it
+        belongs to."""
+        if not aspect_ratio_table:
+            return None, None, None
+        aspect = SensorDetect._mode_aspect(mode)
+        if aspect is None:
+            return None, None, None
+        best = min(aspect_ratio_table, key=lambda e: abs(e["value"] - aspect))
+        err = abs(best["value"] - aspect)
+        return best["id"], err <= ASPECT_RATIO_TOLERANCE, aspect
+
+    aspect_ratios_payload = {}
     sensors = {}
     source = getattr(sensor_detect, "sensor_modes_unfiltered", {}) or {}
     for camera_name, modes in source.items():
@@ -934,12 +981,37 @@ def get_sensor_modes():
             if diagram_w is None or rw * rh > diagram_w * diagram_h:
                 diagram_w, diagram_h = rw, rh
 
+        # WP-CM-7: this camera's offered ratios (available_aspect_ratios,
+        # derived at startup from this same unfiltered table -- never
+        # stored, see WP-CM-6) and its currently enabled ones, plus the
+        # modes reachable by them, used below both to tag every row with
+        # the ratio it belongs to and to default-select the ones the
+        # operator's current choice actually offers.
+        available_ratios = (
+            sensor_detect.available_aspect_ratios(camera_name)
+            if hasattr(sensor_detect, "available_aspect_ratios") else {}
+        )
+        enabled_ratio_ids = (
+            sensor_detect._enabled_ratio_ids(camera_name)
+            if hasattr(sensor_detect, "_enabled_ratio_ids") else []
+        )
+        aspect_ratios_payload[camera_name] = {
+            "available": available_ratios,
+            "enabled": enabled_ratio_ids,
+        }
+        ratio_matches = {}
+        if has_ratio_matcher and getattr(sensor_detect, "aspect_ratios_cfg", None) is not None:
+            camera_modes = enabled_modes.get(camera_name) if isinstance(enabled_modes, dict) else None
+            if not (isinstance(camera_modes, list) and camera_modes):
+                ratio_matches = sensor_detect._ratio_matches_for_camera(camera_name, modes)
+
         entries = []
         for mode in sorted(modes, key=SensorDetect._mode_sort_key):
             width, height = mode.get("width"), mode.get("height")
             depth = mode.get("bit_depth")
             if not width or not height or not depth:
                 continue
+            ratio_id, ratio_exact, ratio_real = nearest_ratio(mode)
             entries.append({
                 "width": width,
                 "height": height,
@@ -978,7 +1050,16 @@ def get_sensor_modes():
                     "crop_x", "crop_y", "crop_width", "crop_height",
                 )),
                 "full": SensorDetect._mode_is_full(mode),
-                "selected": selected_for(camera_name, mode),
+                "selected": selected_for(camera_name, mode, ratio_matches),
+                # WP-CM-7 (ASPECT-RATIOS.md step 3): which offered ratio this
+                # row belongs to, so the pane can filter the table by toggle
+                # state without a round trip. Below the width floor is
+                # marked, not dropped -- "still reachable, visibly marked as
+                # below the floor rather than silently missing".
+                "aspect_ratio_id": ratio_id,
+                "aspect_ratio_exact": ratio_exact,
+                "aspect_ratio_real": ratio_real,
+                "below_width_floor": bool(width_floor) and int(width) < width_floor,
             })
         sensors[camera_name] = entries
 
@@ -990,6 +1071,12 @@ def get_sensor_modes():
         "preview_source": preview_source,
         "conform_frame_rate": conform,
         "available": _available_mode_categories(sensor_detect),
+        # WP-CM-7: the canonical ratio table (single source, see
+        # module.aspect_ratios) and, per camera, which ratios it can
+        # actually produce and which of those the operator currently has
+        # enabled.
+        "aspect_ratio_table": aspect_ratio_table,
+        "aspect_ratios": aspect_ratios_payload,
     })
 
 

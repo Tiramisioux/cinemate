@@ -33,6 +33,22 @@
           "aspect": 1.34,
           "bit_depth": 10,
           "max_fps": 120
+        },
+        {
+          "mode": 3,
+          "width": 4056,
+          "height": 3040,
+          "aspect": 1.33,
+          "bit_depth": 12,
+          "max_fps": 10
+        },
+        {
+          "mode": 4,
+          "width": 4056,
+          "height": 2160,
+          "aspect": 1.87,
+          "bit_depth": 12,
+          "max_fps": 10
         }
       ],
       "link_frequency": {

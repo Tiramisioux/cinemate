@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "ratios": [
+    {"id": "1:1", "value": 1.0, "name": "Square"},
+    {"id": "1.33:1", "value": 1.33, "name": "4:3 (Academy)"},
+    {"id": "1.37:1", "value": 1.37, "name": "Academy (35mm)"},
+    {"id": "1.78:1", "value": 1.78, "name": "16:9 (HD/UHD)"},
+    {"id": "1.85:1", "value": 1.85, "name": "Widescreen"},
+    {"id": "1.89:1", "value": 1.89, "name": "1.89:1"},
+    {"id": "1.90:1", "value": 1.90, "name": "Digital IMAX"},
+    {"id": "2.00:1", "value": 2.00, "name": "Univisium"},
+    {"id": "2.20:1", "value": 2.20, "name": "70mm"},
+    {"id": "2.22:1", "value": 2.22, "name": "2.22:1"},
+    {"id": "2.35:1", "value": 2.35, "name": "Anamorphic (old)"},
+    {"id": "2.39:1", "value": 2.39, "name": "Scope"},
+    {"id": "2.50:1", "value": 2.50, "name": "2.50:1"},
+    {"id": "2.55:1", "value": 2.55, "name": "CinemaScope (original)"}
+  ]
+}

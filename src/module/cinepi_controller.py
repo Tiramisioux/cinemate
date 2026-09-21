@@ -390,11 +390,25 @@ class CinePiController:
         has been re-indexed; the shape is not. Returns None when nothing
         matches, which is the caller's cue to fall back.
 
-        An exact match is preferred. Failing that, the same resolution and
-        HDR state at a DIFFERENT bit depth is accepted, because that is what
-        hiding the 12-bit ClearHDR modes leaves behind: a camera parked on
-        4K 12-bit ClearHDR should land on 4K 16-bit ClearHDR, which is the
-        same picture from the same sensor area, not on 4K SDR.
+        Matched on the same full-signature matcher the per-sensor mode memory
+        uses (`_mode_memory_signature_matches`): width, height, bit depth and
+        HDR must all agree exactly. Width matters because the crop family
+        makes height alone ambiguous (1920x1080 and 1440x1080 share a
+        height), and height is now demanded exactly rather than within a
+        tolerance, because RAW16 padding puts several real modes within a
+        few rows of each other (1080/1100/1120).
+
+        Failing that, the same width and HDR state at a nearby height and a
+        DIFFERENT bit depth is accepted, because that is what hiding the
+        12-bit ClearHDR modes leaves behind: a camera parked on 4K 12-bit
+        ClearHDR should land on 4K 16-bit ClearHDR, whose RAW16 padding
+        reports a few rows taller -- the same picture from the same sensor
+        area, not on 4K SDR.
+
+        Only when Redis has no stored width at all (a record from before
+        CineMate persisted it) does this fall back to the old loose,
+        height-only match -- which can suffer both collisions above -- and
+        it says so when it does.
         """
         r = self.redis_controller
         try:
@@ -402,19 +416,46 @@ class CinePiController:
         except (TypeError, ValueError):
             return None
         try:
+            width = int(r.get_value(ParameterKey.WIDTH.value))
+        except (TypeError, ValueError):
+            width = None
+        try:
             bit_depth = int(r.get_value(ParameterKey.BIT_DEPTH.value))
         except (TypeError, ValueError):
             bit_depth = None
         hdr = str(r.get_value(ParameterKey.HDR.value) or "0") == "1"
 
-        # Heights differ between depths on this sensor (2160 vs 2200, 1080 vs
-        # 1100), so compare on the nearest height rather than demanding it.
         def height_close(info):
             try:
                 return abs(int(info.get("height") or 0) - height) <= 64
             except (TypeError, ValueError):
                 return False
 
+        if width is not None:
+            signature = {"width": width, "height": height, "hdr": hdr}
+            if bit_depth is not None:
+                signature["bit_depth"] = bit_depth
+            exact = [
+                m for m, i in self.sensor_detect.res_modes.items()
+                if self._mode_memory_signature_matches(i, signature)
+            ]
+            if exact:
+                return min(exact)
+
+            same_shape = [
+                m for m, i in self.sensor_detect.res_modes.items()
+                if i.get("width") == width and height_close(i)
+                and bool(i.get("hdr", False)) == hdr
+            ]
+            if same_shape:
+                return min(same_shape)
+            return None
+
+        logging.warning(
+            "_sensor_mode_from_stored_shape: no stored width -- falling "
+            "back to height-only match, which can collide across the crop "
+            "family and across RAW16-padded heights"
+        )
         exact = [m for m, i in self.sensor_detect.res_modes.items()
                  if height_close(i) and bool(i.get("hdr", False)) == hdr
                  and (bit_depth is None or i.get("bit_depth") == bit_depth)]
@@ -2757,15 +2798,43 @@ class CinePiController:
     def get_current_sensor_mode(self):
         current_height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
         try:
+            current_width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
+        except (TypeError, ValueError):
+            current_width = None
+        try:
             current_bd = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value))
         except (TypeError, ValueError):
             current_bd = None
         current_hdr = str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
 
-        # Height alone is ambiguous on the imx585: the 12-bit HDR modes share
-        # dimensions with the plain 12-bit ones (and with the 16-bit HDR
-        # modes), so a height-only match used to select the SDR sibling of a
-        # chosen HDR mode. Match bit depth and the HDR flag as well.
+        # Height alone is ambiguous: it does not distinguish the crop family
+        # (1920x1080 vs 1440x1080 share a height), and on the imx585 the
+        # 12-bit HDR modes share dimensions with the plain 12-bit ones (and
+        # with the 16-bit HDR modes). Match the full signature -- width,
+        # height, bit depth and HDR -- the same way the per-sensor mode
+        # memory does (`_mode_memory_signature_matches`).
+        if current_width is not None:
+            signature = {"width": current_width, "height": current_height,
+                         "hdr": current_hdr}
+            if current_bd is not None:
+                signature["bit_depth"] = current_bd
+            for mode, info in self.sensor_detect.res_modes.items():
+                if not self._mode_memory_signature_matches(info, signature):
+                    continue
+                fps_max_value = info.get('fps_max', None)
+                self.redis_controller.set_value(ParameterKey.FPS_MAX.value, fps_max_value)
+                self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, mode)
+                return mode
+            return None
+
+        # No stored width (a record from before CineMate persisted it): fall
+        # back to the old height-only match, and say so -- it can collide
+        # across the crop family and across HDR/SDR siblings that share a
+        # height.
+        logging.warning(
+            "get_current_sensor_mode: no stored width -- falling back to "
+            "height-only match, which can collide across the crop family"
+        )
         for mode, info in self.sensor_detect.res_modes.items():
             if info.get('height') != current_height:
                 continue

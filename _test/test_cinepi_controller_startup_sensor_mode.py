@@ -191,5 +191,122 @@ class StartupSensorModeTests(unittest.TestCase):
         self.assertEqual(mode, 2)
 
 
+class StoredShapeIdentityTests(unittest.TestCase):
+    """WP-CM-2 / finding M4: `_sensor_mode_from_stored_shape` used to match
+    on height (+-64), bit depth and HDR only, so 1920x1080 and 1440x1080
+    were the same mode to it, and 1080/1100/1120 collided. It must now
+    match the stored capture's full shape (width included, height exact)
+    the same way the per-sensor mode memory does, falling back to the old
+    loose height match -- and saying so -- only for a record that predates
+    width being stored."""
+
+    def controller(self, sensor_mode, res_modes, width=None, height=None,
+                    bit_depth=None, hdr="0"):
+        controller = CinePiController.__new__(CinePiController)
+        controller.redis_controller = FakeRedis(sensor_mode)
+        controller.sensor_detect = FakeSensorDetect(res_modes)
+        if height is not None:
+            controller.redis_controller.values[ParameterKey.HEIGHT.value] = height
+        if width is not None:
+            controller.redis_controller.values[ParameterKey.WIDTH.value] = width
+        if bit_depth is not None:
+            controller.redis_controller.values[ParameterKey.BIT_DEPTH.value] = bit_depth
+        controller.redis_controller.values[ParameterKey.HDR.value] = hdr
+        return controller
+
+    def test_same_height_different_widths_resolve_distinctly(self):
+        controller = self.controller(
+            sensor_mode="9",  # not in res_modes -- forces shape-based recovery
+            res_modes={
+                0: {"width": 1920, "height": 1080, "bit_depth": 12, "hdr": False},
+                1: {"width": 1440, "height": 1080, "bit_depth": 12, "hdr": False},
+            },
+            width=1440, height=1080, bit_depth=12, hdr="0",
+        )
+
+        with self.assertLogs(level="INFO"):
+            mode = controller._get_startup_sensor_mode()
+
+        self.assertEqual(mode, 1)
+
+    def test_1080_1100_1120_resolve_distinctly(self):
+        controller = self.controller(
+            sensor_mode="9",
+            res_modes={
+                0: {"width": 1920, "height": 1080, "bit_depth": 12, "hdr": False},
+                1: {"width": 1920, "height": 1100, "bit_depth": 12, "hdr": False},
+                2: {"width": 1920, "height": 1120, "bit_depth": 12, "hdr": False},
+            },
+            width=1920, height=1100, bit_depth=12, hdr="0",
+        )
+
+        with self.assertLogs(level="INFO"):
+            mode = controller._get_startup_sensor_mode()
+
+        self.assertEqual(mode, 1)
+
+    def test_old_record_without_width_still_resolves_and_says_so(self):
+        controller = self.controller(
+            sensor_mode="9",
+            res_modes={
+                0: {"width": 1920, "height": 1080, "bit_depth": 12, "hdr": False},
+            },
+            height=1080, bit_depth=12, hdr="0",  # no width -- predates it
+        )
+
+        with self.assertLogs(level="WARNING") as cm:
+            mode = controller._get_startup_sensor_mode()
+
+        self.assertEqual(mode, 0)
+        self.assertTrue(any("width" in message for message in cm.output))
+
+
+class GetCurrentSensorModeTests(unittest.TestCase):
+    """Same finding (M4) for the sibling lookup, `get_current_sensor_mode`,
+    which matched height, bit depth and HDR only and so had the same
+    1920x1080 vs 1440x1080 blind spot."""
+
+    def controller(self, res_modes, width, height, bit_depth, hdr="0"):
+        controller = CinePiController.__new__(CinePiController)
+        controller.redis_controller = FakeRedis()
+        controller.sensor_detect = FakeSensorDetect(res_modes)
+        controller.redis_controller.values[ParameterKey.HEIGHT.value] = height
+        controller.redis_controller.values[ParameterKey.WIDTH.value] = width
+        controller.redis_controller.values[ParameterKey.BIT_DEPTH.value] = bit_depth
+        controller.redis_controller.values[ParameterKey.HDR.value] = hdr
+        return controller
+
+    def test_same_height_different_widths_resolve_distinctly(self):
+        controller = self.controller(
+            res_modes={
+                0: {"width": 1920, "height": 1080, "bit_depth": 12, "hdr": False},
+                1: {"width": 1440, "height": 1080, "bit_depth": 12, "hdr": False},
+            },
+            width=1440, height=1080, bit_depth=12, hdr="0",
+        )
+
+        mode = controller.get_current_sensor_mode()
+
+        self.assertEqual(mode, 1)
+
+    def test_old_record_without_width_still_resolves_and_says_so(self):
+        controller = CinePiController.__new__(CinePiController)
+        controller.redis_controller = FakeRedis()
+        controller.sensor_detect = FakeSensorDetect({
+            0: {"width": 1920, "height": 1080, "bit_depth": 12, "hdr": False},
+        })
+        controller.redis_controller.values[ParameterKey.HEIGHT.value] = 1080
+        controller.redis_controller.values[ParameterKey.BIT_DEPTH.value] = 12
+        controller.redis_controller.values[ParameterKey.HDR.value] = "0"
+        # No WIDTH key at all -- simulates a record from before CineMate
+        # stored it.
+
+        with self.assertLogs(level="WARNING") as cm:
+            mode = controller.get_current_sensor_mode()
+
+        self.assertEqual(mode, 0)
+        self.assertTrue(any("width" in message for message in cm.output))
+
+
 if __name__ == "__main__":
     unittest.main()

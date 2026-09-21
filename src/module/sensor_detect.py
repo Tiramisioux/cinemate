@@ -1567,13 +1567,18 @@ class SensorDetect:
         # cannot see which modes are full frame.
         full_id, full_aspect = self.full_frame_ratio(camera_name)
         if full_id is not None and full_aspect is not None:
-            full_label = "%.2f:1 (full)" % full_aspect
+            # No "(full)" suffix on the label (operator, 2026-09-22, revising
+            # their own earlier request for one): on the row it reads as a
+            # ratio like the other fourteen, because that is what it is --
+            # this sensor's native shape. `is_full` still travels, so the
+            # tooltip can say what the toggle covers and so the default can
+            # keep it selected on a camera nobody has configured.
+            full_label = "%.2f:1" % full_aspect
             if full_id in result:
-                # The full frame IS one of the fourteen. No extra toggle: the
-                # existing one now says so, and it keeps its own id, value and
-                # table order -- turning it on already gives the whole sensor.
+                # The full frame IS one of the fourteen (imx585 at 1.78).
+                # Nothing to add and nothing to rename -- that toggle already
+                # yields the whole sensor, and it is already in the default.
                 result[full_id]["is_full"] = True
-                result[full_id]["label"] = "%s (full)" % full_id
             else:
                 # Off-table (imx283 at 1.50). Its own entry, which the pane
                 # sorts last because the id is not in the canonical table.

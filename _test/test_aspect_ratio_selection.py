@@ -1250,7 +1250,10 @@ class FullFrameToggleTests(unittest.TestCase):
         self.assertEqual(sd.full_frame_ratio("cam"), (FULL_FRAME_RATIO_ID, 1.5))
         entry = sd.available_aspect_ratios("cam")[FULL_FRAME_RATIO_ID]
         self.assertTrue(entry["is_full"])
-        self.assertEqual(entry["label"], "1.50:1 (full)")
+        # No "(full)" suffix -- the operator dropped it on 2026-09-22. It
+        # reads as a plain ratio because that is what it is: this sensor's
+        # native shape. `is_full` is what the tooltip and the default use.
+        self.assertEqual(entry["label"], "1.50:1")
         self.assertEqual(entry["value"], 1.5)
 
     def test_the_full_toggle_is_off_table_and_carries_its_own_value(self):
@@ -1311,6 +1314,17 @@ class FullFrameToggleTests(unittest.TestCase):
             else:
                 self.assertNotEqual(rid, FULL_FRAME_RATIO_ID)
 
+    def test_the_native_ratio_is_always_on_for_a_new_camera(self):
+        """"make sure this native aspect ratio is always active for newly
+        connected cameras" -- operator, 2026-09-22. A camera nobody has
+        configured yet resolves through _default_ratio_ids, and the native
+        shape has to be in it however odd that shape is."""
+        sd = self._detector(self._three_two_sensor())
+        full_id, _ = sd.full_frame_ratio("cam")
+        self.assertIn(full_id, sd._enabled_ratio_ids("cam"))
+        self.assertTrue(sd._ratio_selection_is_derived("cam"),
+                        "nobody chose these, so this is the new-camera path")
+
     def test_the_shipped_default_keeps_the_whole_sensor_reachable(self):
         sd = self._detector(self._three_two_sensor())
         self.assertEqual(sd._default_ratio_ids("cam"),
@@ -1329,7 +1343,8 @@ class FullFrameToggleTests(unittest.TestCase):
         self.assertNotIn(FULL_FRAME_RATIO_ID, available,
                          "no fifteenth toggle when the full frame is one of the fourteen")
         self.assertTrue(available["1.78:1"]["is_full"])
-        self.assertEqual(available["1.78:1"]["label"], "1.78:1 (full)")
+        self.assertEqual(available["1.78:1"]["label"], "1.78:1",
+                         "an on-table full frame is not renamed")
 
     def test_an_on_table_full_frame_adds_nothing_to_the_default(self):
         modes = [

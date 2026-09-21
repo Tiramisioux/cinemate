@@ -3713,12 +3713,11 @@
     // approximate one states what it will actually get" -- WP-CM-7. The
     // operator should never discover the approximation only after a take.
     //
-    // `label` comes from the server (available_aspect_ratios) and is the only
-    // thing that can spell the whole-sensor toggle, because only the server
-    // knows which modes read the full frame: "1.78:1 (full)" when the full
-    // frame is one of the fourteen, "1.50:1 (full)" on a sensor whose native
-    // shape is not (imx283). Everything else keeps its id as its label, so
-    // this changes nothing for the fourteen.
+    // `label` comes from the server (available_aspect_ratios), which is the
+    // only side that can name a ratio the canonical table does not carry --
+    // the imx283's native 1.50:1. It reads as a plain ratio like the other
+    // fourteen; what makes it special (it selects every mode that reads the
+    // whole sensor) is in the tooltip, not the label.
     if(info.exact) return info.label || id;
     var real=(typeof info.real_aspect==='number') ? info.real_aspect.toFixed(2) : '?';
     return (info.label || id)+' — nearest '+real;

@@ -1483,9 +1483,21 @@ install_imx585_support() {
         return 0
     fi
 
-    ensure_repo "$IMX585_DRIVER_DIR" "$IMX585_DRIVER_REPO_URL" "$IMX585_DRIVER_REPO_REF"
+    # Both drivers install unconditionally by default regardless of SENSOR_MODEL. Warn-don't-die
+    # on the clone/checkout and the build, same as the imx283 path below: a clone failure of the
+    # freshly-cut cinemate-modes branch (not yet propagated, transient network, auth hiccup) must
+    # not abort installs for imx477/imx296/imx519/imx708 users who never asked for imx585 support.
+    if ! ensure_repo "$IMX585_DRIVER_DIR" "$IMX585_DRIVER_REPO_URL" "$IMX585_DRIVER_REPO_REF"; then
+        warn "IMX585 driver checkout failed -- imx585 recording will be unavailable until this"
+        warn "is resolved. Other sensors are unaffected. See docs/installation-steps.md."
+        return 0
+    fi
     log "Installing IMX585 driver"
-    run_as_pi_clean_shell "cd '$IMX585_DRIVER_DIR' && ./setup.sh"
+    if ! run_as_pi_clean_shell "cd '$IMX585_DRIVER_DIR' && ./setup.sh"; then
+        warn "IMX585 driver setup failed -- imx585 recording will be unavailable until this"
+        warn "is resolved. Other sensors are unaffected. See docs/installation-steps.md."
+        return 0
+    fi
     if is_rpi2712_platform; then
         detail "Ensuring DKMS builds IMX585 for the pinned Pi 5 kernel baseline"
         sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"
@@ -1511,14 +1523,20 @@ install_imx283_support() {
         return 0
     fi
 
-    ensure_repo "$IMX283_DRIVER_DIR" "$IMX283_DRIVER_REPO_URL" "$IMX283_DRIVER_REPO_REF"
-    log "Installing IMX283 driver"
     # Both drivers install unconditionally by default regardless of SENSOR_MODEL, and the
     # imx283 cinemate-modes branch is desk-checked only (its DKMS build has not run on real
     # hardware -- gate G8 is unrun, see development/experimental-crop-modes/STATE.md). Warn-
-    # don't-die here, the same as the mono rp1-cfe patch below: a build problem in an unverified
-    # imx283 driver must not abort installs for imx477/imx296/imx519/imx708 users who never
-    # asked for imx283 support.
+    # don't-die on the clone/checkout as well as the build below: a clone failure of the
+    # freshly-cut cinemate-modes branch (not yet propagated, transient network, auth hiccup) is
+    # at least as plausible as a build failure, and a build problem in an unverified imx283
+    # driver must not abort installs for imx477/imx296/imx519/imx708 users who never asked for
+    # imx283 support.
+    if ! ensure_repo "$IMX283_DRIVER_DIR" "$IMX283_DRIVER_REPO_URL" "$IMX283_DRIVER_REPO_REF"; then
+        warn "IMX283 driver checkout failed -- imx283 recording will be unavailable until this"
+        warn "is resolved. Other sensors are unaffected. See docs/installation-steps.md."
+        return 0
+    fi
+    log "Installing IMX283 driver"
     if ! run_as_pi_clean_shell "cd '$IMX283_DRIVER_DIR' && ./setup.sh"; then
         warn "IMX283 driver setup failed -- imx283 recording will be unavailable until this"
         warn "is resolved. Other sensors are unaffected. See docs/installation-steps.md."

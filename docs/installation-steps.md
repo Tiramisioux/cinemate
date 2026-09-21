@@ -325,7 +325,7 @@ sudo apt install dkms -y
 ```
 
 ```shell
-git clone https://github.com/Tiramisioux/imx283-v4l2-driver.git --branch 6.12.y
+git clone https://github.com/Tiramisioux/imx283-v4l2-driver.git --branch cinemate-modes
 cd imx283-v4l2-driver/
 ./setup.sh
 sudo dkms autoinstall -k "$(uname -r)"
@@ -333,7 +333,7 @@ cd
 ```
 
 ```shell
-git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git --branch cinemate-7modes
+git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git --branch cinemate-modes
 cd imx585-v4l2-driver/
 ./setup.sh
 sudo dkms autoinstall -k "$(uname -r)"
@@ -342,9 +342,14 @@ cd
 
 !!! note ""
     The IMX283 and IMX585 DKMS drivers are Tiramisioux forks of Will Whang's
-    ([imx283](https://github.com/Tiramisioux/imx283-v4l2-driver) `6.12.y`, adding UHD 4K 10-bit and
-    2.7K 16:9 12-bit; [imx585](https://github.com/Tiramisioux/imx585-v4l2-driver) `cinemate-7modes`,
-    three SDR and four ClearHDR modes). Both pins are verified on CineMate hardware. For
+    ([imx283](https://github.com/Tiramisioux/imx283-v4l2-driver) `cinemate-modes`, merging `6.12.y`
+    and adding UHD 4K 10-bit and 2.7K 16:9 12-bit; [imx585](https://github.com/Tiramisioux/imx585-v4l2-driver)
+    `cinemate-modes`, three SDR and four ClearHDR modes). Both forks' `cinemate-modes` branch also adds
+    a 14-ratio aspect-ratio crop family; on the imx585 the 16-bit ClearHDR modes in that family are
+    unbinned only, because a cropped binned 16-bit ClearHDR readout returns the sensor's black-level
+    pedestal instead of an image (confirmed on hardware 2026-09-21, see
+    `cinemate-handbook/lessons/hardware-log.md`) -- the original, non-cropped 1920x1100 binned HD entry
+    is unaffected. Both pins are verified on CineMate hardware. For
     `imx585_mono` the installer also applies `scripts/patch-rp1-cfe.sh`, without which mono 16-bit
     capture records garbage — see [ClearHDR](clear-hdr.md#mono-sensor-imx585_mono).
 

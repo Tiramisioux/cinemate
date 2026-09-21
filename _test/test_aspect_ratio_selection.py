@@ -207,10 +207,18 @@ class SensorSwapScopingTests(unittest.TestCase):
             {(m["width"], m["height"]) for m in pruned["imx585"].values()},
             {(3840, 1608)},
         )
-        # imx283 has no entry of its own -> falls back to "default" (1.78:1).
+        # imx283 has no entry of its own -> falls back to "default"
+        # (1.78:1), which is the shipped default ratio set, so this is the
+        # additive_fallback case: the near-tie matcher does not narrow the
+        # table at all, and both of imx283's fixture modes survive (one
+        # exactly 1.78, one exactly 2.39) -- same as if no aspect-ratio
+        # filter had ever run. WP-CM-7 rework, blocking finding: this used
+        # to assert only the 1.78 mode, which was the narrowing bug (the
+        # near-tie matcher returning early on a non-empty `within` set
+        # before the additive_fallback check ever ran).
         self.assertEqual(
             {(m["width"], m["height"]) for m in pruned["imx283"].values()},
-            {(5472, 3080)},
+            {(5472, 3080), (5472, 2288)},
         )
 
     def test_enabled_modes_scoping_is_independent_of_aspect_ratios_scoping(self):
@@ -395,6 +403,106 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
         image_capture_cfg = settings["image_capture"]
         self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
         self._assert_all_stock_modes_survive(image_capture_cfg, "settings_default.jsonc")
+
+
+class ShippedDefaultPartialMatchRegressionTests(unittest.TestCase):
+    """WP-CM-7 rework, blocking review finding: ShippedDefaultFreshInstallRegressionTests
+    above only proves the all-or-nothing case (imx477: *no* mode is within
+    ASPECT_RATIO_TOLERANCE of 1.78:1), where the pre-fix additive_fallback
+    branch already engaged because `within` was empty. It never exercises
+    the more common partial-match case, where *some* of a camera's stock
+    modes are within tolerance of 1.78 and others are not -- there
+    `within` is non-empty, so the pre-fix code returned early with
+    `within` alone and silently dropped every mode outside it, even for
+    the shipped default.
+
+    imx283 (tier B/C) is exactly this case with real numbers from
+    resources/sensors.json: three modes are ~1.78 (within tolerance) and
+    two are 1.5 (not). Before the fix, the 1.5-aspect 2784x1828 12-bit
+    mode vanished from the default-selected table on a fresh install even
+    though it passes every pre-existing bit_depths/k_steps filter --
+    contradicting ASPECT-RATIOS.md's "1.78:1 when nothing has been chosen,
+    so a fresh camera behaves as it does today".
+
+    This mirrors ShippedDefaultFreshInstallRegressionTests's own method:
+    the real shipped image_capture.aspect_ratios default (via config_loader
+    .load_settings()) and the real per-camera mode table (via
+    sensor_database.load_sensor_database()), run through the real
+    _finalize_modes() exactly as SensorDetect would on a fresh install.
+    """
+
+    @staticmethod
+    def _modes_from_database(camera_name):
+        from module.sensor_database import load_sensor_database  # noqa: PLC0415
+
+        db = load_sensor_database(str(ROOT / "resources" / "sensors.json"))
+        raw_modes = db["sensors"][camera_name]["modes"]
+        return [
+            {
+                "width": m["width"],
+                "height": m["height"],
+                "bit_depth": m["bit_depth"],
+                "aspect": m["aspect"],
+                "fps_max": m["max_fps"],
+                "hdr": False,
+            }
+            for m in raw_modes
+        ]
+
+    def _assert_all_pre_existing_modes_survive(self, camera_name, expected_sizes,
+                                                image_capture_cfg, source_label):
+        modes = self._modes_from_database(camera_name)
+        d = _detector(
+            aspect_ratios_cfg=image_capture_cfg.get("aspect_ratios"),
+            min_mode_width=image_capture_cfg.get("min_mode_width"),
+            bit_depths=image_capture_cfg.get("bit_depths"),
+            k_steps=image_capture_cfg.get("k_steps"),
+        )
+        pruned = d._finalize_modes({camera_name: [dict(m) for m in modes]})
+        sizes = {
+            (m["width"], m["height"], m["bit_depth"])
+            for m in pruned[camera_name].values()
+        }
+        self.assertEqual(
+            sizes, expected_sizes,
+            f"{source_label}/{camera_name}: fresh-install default silently "
+            f"dropped a stock mode that passed bit_depths/k_steps -- the "
+            f"default ratio selection must be additive, never narrowing",
+        )
+
+    def test_shipped_default_keeps_every_pre_existing_imx283_mode(self):
+        from module.config_loader import load_settings  # noqa: PLC0415
+
+        # Real numbers from resources/sensors.json's imx283 entry, narrowed
+        # by today's bit_depths=[10,12,16]/k_steps=[1.5,2,3,4] alone (no
+        # aspect-ratio filter): three modes at aspect 1.78 (within
+        # tolerance of the default) and one at aspect 1.5 (2784x1828,
+        # 12-bit -- the one that used to vanish).
+        expected = {(2784, 1542, 12), (2784, 1828, 12), (3936, 2176, 10)}
+        for settings_path, label in (
+            (ROOT / "settings.jsonc", "settings.jsonc"),
+            (ROOT / "resources" / "settings" / "settings_default.jsonc", "settings_default.jsonc"),
+        ):
+            settings = load_settings(settings_path)
+            image_capture_cfg = settings["image_capture"]
+            self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+            self._assert_all_pre_existing_modes_survive(
+                "imx283", expected, image_capture_cfg, label,
+            )
+
+    def test_shipped_default_keeps_the_stock_imx296_mode(self):
+        from module.config_loader import load_settings  # noqa: PLC0415
+
+        # imx296's only stock mode (1456x1088, aspect 1.33) -- the
+        # all-or-nothing case, kept here as a stock-sensor sanity check
+        # alongside imx283's partial-match case.
+        expected = {(1456, 1088, 10)}
+        settings = load_settings(ROOT / "settings.jsonc")
+        image_capture_cfg = settings["image_capture"]
+        self.assertEqual(image_capture_cfg.get("aspect_ratios"), {"default": ["1.78:1"]})
+        self._assert_all_pre_existing_modes_survive(
+            "imx296", expected, image_capture_cfg, "settings.jsonc",
+        )
 
 
 if __name__ == "__main__":

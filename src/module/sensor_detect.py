@@ -1150,30 +1150,34 @@ class SensorDetect:
         pick between them. Returns [] only when no mode has a known aspect
         at all.
 
-        additive_fallback (WP-CM-6 rework, blocking review finding on tier
-        B/C sensors like imx477): when the *only* enabled ratio is the
-        spec's own shipped default, 1.78:1 (see DEFAULT_ASPECT_RATIOS /
-        _ratio_matches_for_camera), and this camera has no mode within
-        tolerance of it, the near-tie fallback above is narrowing rather
-        than additive -- it silently drops modes that
-        bit_depths/k_steps/enabled_modes alone would have kept, which
-        breaks WP-CM-6's own compatibility clause ("a fresh camera behaves
-        as it does today") for every stock sensor that isn't natively
-        16:9. In that specific case only, fall through to every candidate
-        with a known aspect instead of the near-tie subset: the default
-        selection must never narrow a sensor's mode table on its own,
-        only an operator's deliberate, non-default choice may."""
+        additive_fallback (WP-CM-6/WP-CM-7 rework, blocking review finding
+        on tier B/C sensors like imx477 and imx283): when the *only*
+        enabled ratio is the spec's own shipped default, 1.78:1 (see
+        DEFAULT_ASPECT_RATIOS / _ratio_matches_for_camera), the near-tie
+        fallback above is narrowing rather than additive -- it silently
+        drops modes that bit_depths/k_steps/enabled_modes alone would have
+        kept, which breaks WP-CM-6's own compatibility clause ("a fresh
+        camera behaves as it does today"). This is not only the
+        all-or-nothing case where *no* mode is within tolerance (imx477):
+        a camera can have *some* modes within tolerance of 1.78 and others
+        that are not (imx283, where three modes are ~1.78 and two are 1.5)
+        -- for the default selection every one of them must survive, not
+        just the exact-tolerance subset. So when additive_fallback is set,
+        skip the near-tie narrowing entirely and return every candidate
+        with a known aspect: the default selection must never narrow a
+        sensor's mode table on its own, only an operator's deliberate,
+        non-default choice may."""
         scored = [
             (abs(cls._mode_aspect(m) - ratio_value), m)
             for m in modes if cls._mode_aspect(m) is not None
         ]
         if not scored:
             return []
+        if additive_fallback:
+            return [m for _, m in scored]
         within = [m for err, m in scored if err <= ASPECT_RATIO_TOLERANCE]
         if within:
             return within
-        if additive_fallback:
-            return [m for _, m in scored]
         best_err = min(err for err, _ in scored)
         return [m for err, m in scored if err <= best_err + ASPECT_RATIO_TOLERANCE]
 

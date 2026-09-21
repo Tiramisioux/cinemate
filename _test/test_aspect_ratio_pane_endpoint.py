@@ -148,10 +148,17 @@ class TogglingRatioChangesSelectedTests(unittest.TestCase):
                  "hdr": False, "aspect": 2.39},
             ],
         }
-        only_wide = _detector(TABLE, {"default": ["1.78:1"]}, modes)
-        by_size_wide = {(m["width"], m["height"]): m for m in _get(only_wide)["sensors"]["imx585"]}
-        self.assertTrue(by_size_wide[(1920, 1080)]["selected"])
-        self.assertFalse(by_size_wide[(1920, 804)]["selected"])
+        # Narrowing to a *non-default* single ratio (2.39, not the shipped
+        # 1.78 default) demonstrates the toggle: WP-CM-7 rework made
+        # {"default": ["1.78:1"]} -- the shipped default -- an additive
+        # no-op (never narrows, see _modes_within_ratio_tolerance's
+        # additive_fallback), so narrowing to *only* the default can no
+        # longer be told apart from an untouched fresh install and must not
+        # be used to prove narrowing here; 2.39 is unambiguous.
+        only_scope = _detector(TABLE, {"default": ["2.39:1"]}, modes)
+        by_size_scope = {(m["width"], m["height"]): m for m in _get(only_scope)["sensors"]["imx585"]}
+        self.assertFalse(by_size_scope[(1920, 1080)]["selected"])
+        self.assertTrue(by_size_scope[(1920, 804)]["selected"])
 
         both = _detector(TABLE, {"default": ["1.78:1", "2.39:1"]}, modes)
         by_size_both = {(m["width"], m["height"]): m for m in _get(both)["sensors"]["imx585"]}

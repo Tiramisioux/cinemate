@@ -3762,10 +3762,17 @@
     var showSmaller=showSmallerSensorModes();
     var enabled=selectedAspectRatiosByCamera[camera]||[];
     var enabledSet={}; enabled.forEach(function(id){ enabledSet[id]=true; });
+    // Whether this camera has ratio data at all -- the WP-CM-6-absent
+    // degrade path -- is a different question from whether the operator
+    // has zero ratios *enabled*. Gate the no-op on the former (available),
+    // not the latter (enabled.length), so turning every toggle off hides
+    // every ratio-tagged row instead of reverting to "show everything".
+    var available=(aspectRatiosByCamera[camera] && aspectRatiosByCamera[camera].available) || {};
+    var hasAvailableRatios = Object.keys(available).length>0;
     var rows=document.querySelectorAll('tr[data-mode-row][data-camera="'+camera+'"]');
     rows.forEach(function(row){
       var ratioId=row.getAttribute('data-aspect-ratio-id');
-      var ratioOff = enabled.length>0 && ratioId && !enabledSet[ratioId];
+      var ratioOff = hasAvailableRatios && ratioId && !enabledSet[ratioId];
       var belowFloor = row.getAttribute('data-small-mode')==='1' && !showSmaller;
       row.hidden = ratioOff || belowFloor;
     });

@@ -349,9 +349,10 @@ cd
     unbinned only, because a cropped binned 16-bit ClearHDR readout returns the sensor's black-level
     pedestal instead of an image (confirmed on hardware 2026-09-21, see
     `cinemate-handbook/lessons/hardware-log.md`) -- the original, non-cropped 1920x1100 binned HD entry
-    is unaffected. Both pins are verified on CineMate hardware. For
-    `imx585_mono` the installer also applies `scripts/patch-rp1-cfe.sh`, without which mono 16-bit
-    capture records garbage — see [ClearHDR](clear-hdr.md#mono-sensor-imx585_mono).
+    is unaffected. The imx585 pin is verified on CineMate hardware, including the 2026-09-21
+    WP-585-8 takes; the imx283 pin is desk-checked only and its hardware gate has not run yet.
+    For `imx585_mono` the installer also applies `scripts/patch-rp1-cfe.sh`, without which mono
+    16-bit capture records garbage — see [ClearHDR](clear-hdr.md#mono-sensor-imx585_mono).
 
 #### CineMate IMX283 and IMX585 tuning overrides
 

@@ -926,5 +926,48 @@ class Imx519Imx708DerivedDefaultRatioSetTests(unittest.TestCase):
         self.assertEqual(set(d._enabled_ratio_ids("imx708")), {"1.78:1"})
 
 
+class HomeRatioAlwaysClaimsItsModesTests(unittest.TestCase):
+    """The derived default is built from each mode's home ratio, so a ratio has to
+    claim the modes that come home to it -- not only the ones sitting within
+    tolerance of it.
+
+    Found by a reviewer on WP-CM-11. _modes_within_ratio_tolerance returns just
+    the within-tolerance group as soon as that group is non-empty, so a mode whose
+    nearest ratio is R, but which is further than the tolerance from R, is dropped
+    the moment a sibling mode sits closer to R. Both modes below come home to
+    1.33:1, which is therefore the whole derived default, and the further one used
+    to vanish -- breaking the very property the derived default exists to provide.
+    """
+
+    MODES = [
+        {"width": 1600, "height": 1200, "bit_depth": 12, "hdr": False,
+         "fps_max": 30, "aspect": 1.333},   # within tolerance of 1.33:1
+        {"width": 1620, "height": 1256, "bit_depth": 12, "hdr": False,
+         "fps_max": 30, "aspect": 1.290},   # same home ratio, outside tolerance
+    ]
+
+    def test_both_modes_survive_the_derived_default(self):
+        d = _detector(aspect_ratios_cfg={})
+        d.sensor_modes_unfiltered = {"testsensor": [dict(m) for m in self.MODES]}
+        self.assertEqual(d._enabled_ratio_ids("testsensor"), ["1.33:1"],
+                         "both modes come home to 1.33:1, so that is the whole "
+                         "derived default")
+        pruned = d._finalize_modes({"testsensor": [dict(m) for m in self.MODES]})
+        self.assertEqual(
+            {(m["width"], m["height"]) for m in pruned["testsensor"].values()},
+            {(1600, 1200), (1620, 1256)},
+            "the mode outside tolerance was dropped even though the default "
+            "enabled its own home ratio to keep it",
+        )
+
+    def test_an_explicit_choice_of_that_ratio_keeps_both_too(self):
+        # Same claim, chosen rather than derived: picking 1.33:1 means picking the
+        # modes that belong to it, including the one further from it.
+        d = _detector(aspect_ratios_cfg={"testsensor": ["1.33:1"]})
+        d.sensor_modes_unfiltered = {"testsensor": [dict(m) for m in self.MODES]}
+        pruned = d._finalize_modes({"testsensor": [dict(m) for m in self.MODES]})
+        self.assertEqual(len(pruned["testsensor"]), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

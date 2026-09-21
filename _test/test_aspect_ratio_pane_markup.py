@@ -39,10 +39,23 @@ class AspectRatioPanelMarkupTests(unittest.TestCase):
                 self.assertIn(f'id="{slot}-ratio-list"', self.html)
 
     def test_ratio_panel_copy_comes_from_gui_text_not_hard_coded(self):
+        """The card's label comes from gui-text, and nothing is hard-coded beside it.
+
+        The help paragraph was removed at the operator's request (2026-09-21): the
+        toggles and the mode table under them carry their own meaning, and the card
+        was the only one in this pane with a three-sentence explanation. So this
+        asserts the label is looked up, and that no help string sneaks back as
+        literal markup -- if the paragraph is ever wanted again it must come from
+        resources/gui-text/ like every other string, which the copy checker gates.
+        """
         for slot in ("cam0", "cam1"):
             with self.subTest(slot=slot):
                 self.assertIn(f"t('card.sensors.{slot}.aspect_ratios.label')", self.html)
-                self.assertIn(f"t('card.sensors.{slot}.aspect_ratios.help')", self.html)
+                panel = self.html[self.html.index(f'id="{slot}-ratio-panel"'):
+                                  self.html.index(f'id="{slot}-mode-panel"')]
+                self.assertNotIn('class="card-help"', panel,
+                                 f"{slot}'s ratio card has help markup again; it must come "
+                                 f"from resources/gui-text/, not the template")
 
     def test_gui_text_defines_the_keys_the_template_asks_for(self):
         md = GUI_TEXT.read_text(encoding="utf-8")

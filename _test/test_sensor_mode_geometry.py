@@ -63,15 +63,14 @@ class SensorModeGeometryTests(unittest.TestCase):
         self.assertFalse(SensorDetect._mode_is_full(by_size[(1440, 1080)]))
 
     def test_geometry_on_continuation_line_is_attached_to_previous_mode(self):
-        # NOTE (WP-CM-10): left byte-for-byte as found. Its failure on this
-        # base branch is pre-existing and unrelated to the crop-domain
-        # defect this package fixes -- see the worker report for WP-CM-10.
-        # It is not touched here: rewriting its fixture to exercise the
-        # domain contract runs into a separate, pre-existing continuation-
-        # line parsing defect (a crop/binning annotation's own "NxM" text
-        # satisfies the same-line resolution regex, so the "attach to
-        # last_mode" branch is never reached), which is outside this
-        # package's spec.
+        """Geometry printed on its own line belongs to the mode above it.
+
+        Red from WP-CM-10 until 2026-09-25: a crop annotation's own "/WxH" and
+        a "binning NxN" token satisfied the same-line resolution search, so a
+        continuation line carrying only geometry read as a brand-new mode and
+        the "attach to last_mode" branch was never reached. The output size is
+        now the first WxH that is neither (_output_size_on_line).
+        """
         d = self._detector()
         out = """
 0 : imx585 [3856x2180] (/base/imx585@1a)
@@ -149,6 +148,27 @@ class SensorModeGeometryTests(unittest.TestCase):
         matching = [m for m in modes.values() if (m["width"], m["height"]) == (1440, 1100)]
         self.assertEqual(len(matching), 1)
         self.assertEqual(matching[0]["fps_max"], 25)
+
+
+class OutputSizeOnLineTests(unittest.TestCase):
+    """_output_size_on_line: the first WxH that is an output size."""
+
+    def test_crop_and_binning_sizes_are_not_output_sizes(self):
+        for line in (
+            "                              (0, 0)/3840x2160 crop binning 1x1",
+            "                              mode-crop (480, 0)/2880x2160 crop",
+            "                              binning: 1x1",
+            "                              binning factor 2x2",
+        ):
+            self.assertIsNone(SensorDetect._output_size_on_line(line), line)
+
+    def test_the_output_size_is_found_ahead_of_the_annotations(self):
+        line = ("                             2784x1828 [51.80 fps - (0, 0)/5472x3648 crop;"
+                " binning 2x2; mode-crop (0,0)/5472x3648]")
+        m = SensorDetect._output_size_on_line(line)
+        self.assertEqual(tuple(map(int, m.groups())), (2784, 1828))
+        m = SensorDetect._output_size_on_line("    Modes: 'SRGGB16' : 3840x2200 [21.90 fps]")
+        self.assertEqual(tuple(map(int, m.groups())), (3840, 2200))
 
 
 if __name__ == "__main__":

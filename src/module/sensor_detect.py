@@ -662,6 +662,24 @@ class SensorDetect:
     # ────────────────────────────────────────────────────────────────
     #  1.  Parse *all* cameras and all modes that cinepi-raw reports    
     # ────────────────────────────────────────────────────────────────
+    # A mode line's OUTPUT size is the first "WxH" on it that is neither the
+    # "/WxH" of a crop annotation nor the "NxN" of a binning token. Both
+    # used to satisfy the plain (\d+)x(\d+) search, so a continuation line
+    # carrying only geometry read as a brand-new WxH mode and the "attach
+    # to the previous mode" branch was never reached (WP-CM-10's own note).
+    _BINNING_TOKEN_RE = re.compile(
+        r"\bbinning(?:\s+(?:factor|mode))?\s*[:=]?\s*\d+\s*[x×]\s*\d+\b",
+        re.IGNORECASE,
+    )
+    _OUTPUT_SIZE_RE = re.compile(r"(?<![/\d])(\d+)x(\d+)")
+
+    @classmethod
+    def _output_size_on_line(cls, line: str):
+        """The first WxH on *line* that is an output size, as a match with
+        groups (width, height), or None when the line carries no output
+        size -- only a crop and/or binning annotation, or nothing."""
+        return cls._OUTPUT_SIZE_RE.search(cls._BINNING_TOKEN_RE.sub(" ", line))
+
     def _parse_cinepi_output(
         self,
         output: str,
@@ -842,8 +860,9 @@ class SensorDetect:
                         comp1_sdr_warned = True
                     continue
 
-            # ── first resolution on the line (if any)
-            res = re.search(r"(\d+)x(\d+)", line)
+            # ── first OUTPUT resolution on the line (if any): never the crop
+            # annotation's own /WxH, never a binning token's NxN.
+            res = self._output_size_on_line(line)
             if not res:
                 # Some drivers print mode geometry on a continuation line.
                 # Attach explicitly reported crop/binning metadata to the

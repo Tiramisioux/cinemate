@@ -250,6 +250,31 @@
   .cinepi-launch:focus-visible{ outline:none; box-shadow:var(--focus); }
   .cinepi-launch svg{ width:24px; height:24px; }
 
+  /* Keep the camera control interface one tap away while editing settings.
+     The expand glyph signals that this leaves the editor for CinePi's
+     full-screen control surface, rather than opening another editor panel. */
+  .cinepi-launch{
+    position:fixed;
+    right:max(18px, env(safe-area-inset-right));
+    bottom:max(18px, env(safe-area-inset-bottom));
+    z-index:40;
+    width:52px;
+    height:52px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--accent-ink);
+    background:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:50%;
+    box-shadow:0 4px 16px rgba(0,0,0,.42);
+    transition:filter .12s ease, transform .05s ease;
+  }
+  .cinepi-launch:hover{ filter:brightness(1.08); }
+  .cinepi-launch:active{ transform:translateY(1px); }
+  .cinepi-launch:focus-visible{ outline:none; box-shadow:var(--focus); }
+  .cinepi-launch svg{ width:24px; height:24px; }
+
   /* ---------- Rail ---------- */
   .rail{
     grid-area: rail;

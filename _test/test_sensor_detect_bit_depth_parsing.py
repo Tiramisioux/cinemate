@@ -134,10 +134,10 @@ CLEAR HDR / SENSOR HDR
     def test_pisp_comp1_in_the_clearhdr_state_is_sixteen_bit(self):
         """The imx585 RAW16 case, in the two-state shape the probe really emits.
 
-        Uses the SDR-then-ClearHDR listing rather than an HDR-only one: the
-        single-header HDR path has a separate, pre-existing defect on `dev` that
-        leaves `current_hdr` False, and this test is about the COMP1 branch, not
-        about that.
+        Uses the SDR-then-ClearHDR listing rather than an HDR-only one because
+        this test is about the COMP1 branch, not about the parser's state
+        handling (which test_clearhdr_probe_state.py and
+        test_clearhdr_16bit_modes_survive_the_probe.py cover).
         """
         output = """\
 0 : imx585 [3856x2180 12-bit RGGB]

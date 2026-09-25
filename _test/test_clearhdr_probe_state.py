@@ -28,27 +28,33 @@ class ClearHdrProbeStateTests(unittest.TestCase):
         d.packing_info = {}
         return d
 
-    def test_hdr_only_probe_marks_every_mode_hdr(self):
-        # NOTE (CM-1, 2026-09-22): left byte-for-byte as found, and still red
-        # on this branch. It asserts the contract _parse_cinepi_output() was
-        # deliberately moved off -- "the whole --hdr invocation is HDR" -- see
-        # that method's own closing comment. Two separate things keep it red:
-        # the 12-bit mode is not promoted by the parser any more (it is
-        # _normalize_hdr_probe_modes' decision now, and this test never calls
-        # it), and the 'R16' mode is dropped outright by the "16-bit in the SDR
-        # state" guard, because an unmarked probe leaves the parser in that
-        # state. The second one is a real defect -- a ClearHDR sensor on a
-        # formatter that prints no CLEAR HDR marker loses its 16-bit modes
-        # before anything downstream could promote them -- but fixing it means
-        # changing when the parser believes it is in the HDR state, which is
-        # outside CM-1's two defects and needs its own change.
+    def test_hdr_only_probe_keeps_the_16bit_mode_and_tags_it_hdr(self):
+        """An unmarked --hdr sensor listing: one section, no CLEAR HDR marker,
+        no repeated header. The parser has no state evidence for the 12-bit
+        line -- that is _normalize_hdr_probe_modes' decision, from timings,
+        and this test never calls it -- but the 'R16' line is evidence on its
+        own: the imx585 driver enumerates RAW16 only with wide_dynamic_range
+        on. So it is tagged ClearHDR and kept.
+
+        Until 2026-09-25 it was dropped outright here by a "16-bit in the SDR
+        state" guard, because an unmarked probe left the parser in that
+        state -- and so was every 16-bit line of the marked probe, whose
+        post-marker section was parsed in the SDR state too. That is how the
+        16-bit ClearHDR modes vanished from the mode table while the 12-bit
+        ones survived (CM-1 left this red and called it a real defect; see
+        test_clearhdr_16bit_modes_survive_the_probe.py for the whole chain).
+        """
         output = """\
 0 : imx585 [3856x2180]
     Modes: 'SRGGB12_CSI2P' : 3840x2160 [22.00 fps - (0, 0)/3856x2180 crop]
     Modes: 'R16' : 3840x2200 [22.00 fps - (0, 0)/3856x2180 crop]
 """
         modes = self._detector()._parse_cinepi_output(output, hdr=True)["imx585"]
-        self.assertTrue(all(m["hdr"] for m in modes))
+        by_depth = {m["bit_depth"]: m for m in modes}
+        self.assertIn(16, by_depth, "the RAW16 mode must survive the parse")
+        self.assertTrue(by_depth[16]["hdr"])
+        self.assertIn(12, by_depth)
+        self.assertFalse(by_depth[12]["hdr"], "left to _normalize_hdr_probe_modes")
 
     def test_two_state_probe_keeps_sdr_and_marks_only_second_state_hdr(self):
         output = """\

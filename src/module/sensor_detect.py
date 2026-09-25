@@ -15,6 +15,16 @@ from module.aspect_ratios import (
     load_aspect_ratio_table,
 )
 
+# The state boundary cinepi-raw prints between the SDR listing and the
+# ClearHDR listing of the same cameras. It appears on EVERY
+# --list-cameras run of a build that knows the sensor has ClearHDR, with
+# or without --hdr sensor (cinepi-raw core/options.cpp, print_modes):
+# the plain probe therefore contains the ClearHDR state too, and reads
+# only what comes before this line.
+CLEAR_HDR_MARKER_RE = re.compile(
+    r"CLEAR\s+HDR\s*/\s*SENSOR\s+HDR", re.IGNORECASE,
+)
+
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
 # image_capture.min_mode_width's own default: modes narrower than this are
 # hidden (not removed) from the dial/GUIs unless an enabled_modes entry names
@@ -652,12 +662,40 @@ class SensorDetect:
     # ────────────────────────────────────────────────────────────────
     #  1.  Parse *all* cameras and all modes that cinepi-raw reports    
     # ────────────────────────────────────────────────────────────────
-    def _parse_cinepi_output(self, output: str, hdr: bool = False) -> Dict[str, List[Dict]]:
+    def _parse_cinepi_output(
+        self,
+        output: str,
+        hdr: bool = False,
+        *,
+        clear_hdr_section: bool = False,
+    ) -> Dict[str, List[Dict]]:
         """
         Return a mapping   {camera_model → [mode_dict, …]}   covering every
         camera found in a single *cinepi-raw --list-cameras* run. A mono sensor
-        is reported as “<model>_mono”. ``hdr`` tags every mode parsed from a
-        ``--hdr sensor`` run; the caller merges the plain and HDR runs.
+        is reported as “<model>_mono”.
+
+        ``hdr`` says the text came from a ``--hdr sensor`` run: the parser
+        then watches for the ``CLEAR HDR / SENSOR HDR`` marker and for a
+        repeated camera header, and tags what follows either as ClearHDR.
+        The caller merges the plain and HDR runs.
+
+        ``clear_hdr_section`` says the text IS the ClearHDR section -- the
+        caller already cut the marker off -- so every camera in it starts
+        in the ClearHDR state and a new camera header does not reset it.
+
+        Without ``hdr`` the text is the plain probe, and the plain probe is
+        the SDR state only: cinepi-raw prints the ClearHDR section on every
+        --list-cameras run, so parsing stops at the marker rather than
+        reading the ClearHDR state's timings back as SDR duplicates.
+
+        A 16-bit line is ClearHDR whatever state the parser is in: the
+        imx585 driver enumerates RAW16 only with wide_dynamic_range on, so
+        the line is itself evidence of the ClearHDR state. Such lines used
+        to be dropped when the parser believed it was still in the SDR
+        state -- which it was for the whole of a pre-cut ClearHDR section
+        and for any single-section listing -- and that is how every 16-bit
+        ClearHDR mode vanished from the mode table while the 12-bit ones
+        survived.
         """
 
         sensors: Dict[str, List[Dict]] = {}
@@ -668,7 +706,9 @@ class SensorDetect:
         sensor_width = None
         sensor_height = None
         parsing_modes = False                     # inside a “Modes:” block?
-        current_hdr = False                       # --hdr sensor may print SDR then HDR, or HDR only
+        # --hdr sensor may print SDR then HDR, or HDR only; a pre-cut
+        # ClearHDR section starts, and stays, in the ClearHDR state.
+        current_hdr = bool(clear_hdr_section)
         last_mode = None
 
         for raw in output.splitlines():
@@ -699,7 +739,7 @@ class SensorDetect:
                 # right below re-sets it True again for that camera's own
                 # ClearHDR section only.
                 if next_cam != current_cam:
-                    current_hdr = False
+                    current_hdr = bool(clear_hdr_section)
 
                 if hdr and next_cam in sensors and sensors.get(next_cam):
                     current_hdr = True
@@ -728,6 +768,15 @@ class SensorDetect:
             # we can’t do anything without a current camera
             if current_cam is None:
                 continue
+
+            # A plain probe is the SDR state and nothing else. cinepi-raw
+            # prints the ClearHDR section on every --list-cameras run, so
+            # stop at its marker: what follows is the other sensor state,
+            # which the --hdr sensor probe reads on its own terms. Reading
+            # on would file every ClearHDR-state 12-bit timing as an SDR
+            # duplicate at half the ceiling.
+            if not hdr and CLEAR_HDR_MARKER_RE.search(line):
+                break
 
             # --hdr sensor is a two-state listing: cinepi-raw first
             # prints the ordinary SDR sensor state, then toggles the sensor
@@ -858,15 +907,19 @@ class SensorDetect:
                 bx, by = map(int, binning.groups())
                 mode_extra["binning_x"] = bx
                 mode_extra["binning_y"] = by
-            # RAW16 is a ClearHDR-only IMX585 format. If a probe
-            # formatter ever emits it while the parser is still in the SDR
-            # state, do not expose it as a false "STANDARD · 16-BIT" mode.
-            if current_bit_depth == 16 and not current_hdr:
-                continue
+            # RAW16 is a ClearHDR-only imx585 format: the driver enumerates
+            # it only with wide_dynamic_range on, so a 16-bit line is evidence
+            # of the ClearHDR state on its own, whatever state the parser is
+            # in. Tag it, never drop it. This used to `continue` whenever the
+            # parser believed it was still in the SDR state -- which it was
+            # for the whole of a pre-cut ClearHDR section, and for any
+            # single-section listing -- and that is how every 16-bit ClearHDR
+            # mode vanished from the mode table while the 12-bit ones survived.
+            line_hdr = current_hdr or current_bit_depth == 16
 
             last_mode = self._mode_from_metadata_or_detected(
                 camera_name=current_cam, width=width, height=height,
-                bit_depth=current_bit_depth, fps_max=fps_max, hdr=current_hdr,
+                bit_depth=current_bit_depth, fps_max=fps_max, hdr=line_hdr,
                 extra=mode_extra,
             )
             sensors[current_cam].append(last_mode)
@@ -1637,7 +1690,13 @@ class SensorDetect:
                 w, h = int(extra["width"]), int(extra["height"])
                 bd   = int(extra["bit_depth"])
                 fps  = extra.get("fps_max")
-                hdr_flag = bool(extra.get("hdr", False))
+                # A 16-bit entry that says nothing about ClearHDR is a
+                # ClearHDR entry: RAW16 exists on the imx585 only with
+                # wide_dynamic_range on, the same rule the parser applies to
+                # a 16-bit line. Without it a hand-written 16-bit fps ceiling
+                # could never match the detected 16-bit mode and would be
+                # added as a second, SDR-tagged copy of it instead.
+                hdr_flag = bool(extra.get("hdr", bd == 16))
                 def custom_match(m):
                     if (
                         int(m.get("width") or 0) != w or
@@ -1941,6 +2000,9 @@ class SensorDetect:
             if hdr_out.strip():
                 logging.info("cinepi-raw --hdr sensor output:\n%s", hdr_out)
 
+            # The plain probe is the SDR state: the parser stops at the
+            # ClearHDR marker cinepi-raw prints on every --list-cameras run,
+            # so the ClearHDR section is read only below, as ClearHDR.
             base_modes = self._parse_cinepi_output(out, hdr=False)
 
             # Parse the HDR probe by its explicit state boundary. The
@@ -1950,19 +2012,16 @@ class SensorDetect:
             # unambiguous and avoids depending on camera-header repetition.
             hdr_modes = {}
             if hdr_out.strip():
-                marker = re.search(
-                    r"CLEAR\s+HDR\s*/\s*SENSOR\s+HDR",
-                    hdr_out,
-                    re.IGNORECASE,
-                )
+                marker = CLEAR_HDR_MARKER_RE.search(hdr_out)
                 if marker:
-                    hdr_section = hdr_out[marker.end():]
+                    # Everything after the marker is the ClearHDR state, and
+                    # the parser is told so up front (clear_hdr_section)
+                    # instead of being run in the SDR state and re-tagged
+                    # afterwards: run that way it dropped every 16-bit line
+                    # before the re-tag could reach it.
                     hdr_modes = self._parse_cinepi_output(
-                        hdr_section, hdr=False
+                        hdr_out[marker.end():], hdr=True, clear_hdr_section=True,
                     )
-                    for modes in hdr_modes.values():
-                        for mode in modes:
-                            mode["hdr"] = True
                     logging.info(
                         "ClearHDR marker found: parsed %d modes across %d cameras",
                         sum(len(m) for m in hdr_modes.values()),

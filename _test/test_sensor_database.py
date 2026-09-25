@@ -292,6 +292,10 @@ class SensorDatabaseTests(unittest.TestCase):
         --list-cameras runs, mirroring detect_camera_model()."""
         base = detector._parse_cinepi_output(output, hdr=False)
         hdr = detector._parse_cinepi_output(hdr_output, hdr=True) if hdr_output else {}
+        if hdr:
+            # The unmarked-probe path of detect_camera_model(): a 12-bit line's
+            # state is decided from timings here, a 16-bit line's by the parser.
+            detector._normalize_hdr_probe_modes(base, hdr)
         return detector._finalize_modes(detector._merge_mode_lists(base, hdr))
 
     def test_imx585_mode_table_is_stable(self):
@@ -305,8 +309,9 @@ class SensorDatabaseTests(unittest.TestCase):
         self.assertEqual(table, {(3856, 2180, 12, False), (1928, 1090, 12, False)})
 
     def test_imx585_clearhdr_modes_merged_and_ordered(self):
-        """The plain and --hdr sensor runs merge into one table ordered plain →
-        12-bit HDR → 16-bit HDR, and the HDR modes carry hdr=True.
+        """The plain and --hdr sensor runs merge into one table in the order the
+        settings pane presents the classes -- 16-bit HDR, 12-bit HDR, plain
+        (SensorDetect._mode_sort_key) -- and the HDR modes carry hdr=True.
 
         Both frame sizes of each ClearHDR depth come through: settings.jsonc's
         k_steps ([1.5, 2, 3, 4]) admits 1928 and 3856 alike, and there is no
@@ -322,12 +327,12 @@ class SensorDatabaseTests(unittest.TestCase):
         self.assertEqual(
             ordered,
             [
-                (1928, 12, False),
-                (3856, 12, False),
-                (1928, 12, True),
-                (3856, 12, True),
                 (1928, 16, True),
                 (3856, 16, True),
+                (1928, 12, True),
+                (3856, 12, True),
+                (1928, 12, False),
+                (3856, 12, False),
             ],
         )
 

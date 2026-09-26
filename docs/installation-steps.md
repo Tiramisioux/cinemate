@@ -354,21 +354,21 @@ cd
     For `imx585_mono` the installer also applies `scripts/patch-rp1-cfe.sh`, without which mono
     16-bit capture records garbage — see [ClearHDR](clear-hdr.md#mono-sensor-imx585_mono).
 
-#### CineMate IMX283 and IMX585 tuning overrides
+#### CineMate IMX585 tuning overrides
 
-These commands overlay CineMate's local IMX283, IMX585 and IMX585 mono tuning files into the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with CineMate's defaults. All three override files are `pisp`-target (Pi 5 / PiSP ISP), so they are installed only into the `pisp` dirs — copying them into the `vc4` (Pi 4) dirs would apply the wrong hardware config and overwrite the stock `bcm2835`-target `imx283.json` that Pi 4 needs.
+These commands overlay CineMate's local IMX585 and IMX585 mono tuning files into the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with CineMate's defaults. Both override files are `pisp`-target (Pi 5 / PiSP ISP), so they are installed only into the `pisp` dirs — copying them into the `vc4` (Pi 4) dirs would apply the wrong hardware config.
+
+IMX283 is deliberately **not** overridden: libcamera already ships a calibrated `imx283.json` (14 algorithms, measured CCMs, a 16-point `ct_curve`) at `$LIBCAMERA_DIR/src/ipa/rpi/pisp/data/imx283.json`, and CineMate must not clobber it. An earlier CineMate release did install a 5-algorithm stub there (`bayes: 0`, no `ct_curve`) that produced a 2.70x blue AWB gain and a magenta image in both the preview and the DNG — see `development/imx283-active-size/ROUND2.md`, Defect A. If you installed that release, restore the calibrated file per sensor tuning file below.
 
 ```bash
 for dir in /home/pi/libcamera/src/ipa/rpi/pisp/data; do
   install -d -m 755 "$dir"
-  install -m 644 /home/pi/cinemate/resources/tuning_files/imx283.json "$dir/imx283.json"
   install -m 644 /home/pi/cinemate/resources/tuning_files/imx585.json "$dir/imx585.json"
   install -m 644 /home/pi/cinemate/resources/tuning_files/imx585_mono.json "$dir/imx585_mono.json"
 done
 
 for dir in /usr/local/share/libcamera/ipa/rpi/pisp; do
   sudo install -d -m 755 "$dir"
-  sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx283.json "$dir/imx283.json"
   sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx585.json "$dir/imx585.json"
   sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx585_mono.json "$dir/imx585_mono.json"
 done

@@ -283,6 +283,66 @@ def compute_frame_size_mb(width: int, height: int, bit_depth: int,
     return round((pixel_bytes + DNG_HEADER_OVERHEAD_BYTES) / compression_ratio / 1_000_000, 2)
 
 
+def active_picture_size(mode: dict, fallback_width, fallback_height) -> tuple[float, float]:
+    """The best-known size of *mode*'s delivered active picture -- the
+    optical-black-excluded image a DNG or a preview frame actually shows,
+    as opposed to the padded transport frame cinepi-raw allocates for it.
+
+    Round 2, Defect D/B2. This is the ONE place that arithmetic lives; every
+    caller that used to compute its own aspect or active size from crop/
+    binning (sensor_detect._mode_from_metadata_or_detected,
+    compute_preview_geometry, settings_editor._active_dimension) now calls
+    this instead, so a future evidence source (tier 1 below) only has to be
+    taught once.
+
+    Three tiers, best evidence first, never interpolated or invented:
+
+    1. ``active_width``/``active_height`` -- an explicit annotation of the
+       delivered active picture, when cinepi-raw's ``--list-cameras`` reports
+       one (see _parse_cinepi_output's "active" annotation parsing). This is
+       the only tier that is exactly right at any binning, because it
+       already IS the delivered picture -- no arithmetic needed.
+    2. ``crop_width``/``crop_height`` divided by ``binning_x``/``binning_y``
+       -- an approximation. WP-CM-10's domain contract: crop_* is the
+       sensor-side readout window, in NATIVE sensor coordinates, at any
+       binning. Dividing by the binning factor reaches the recorded picture
+       size, but can still differ from the true active picture by a few
+       pixels when the transport buffer is itself padded beyond it (a RAW16
+       ClearHDR mode) -- exactly why tier 1 exists.
+    3. ``crop_width``/``crop_height`` alone, when binning is not known. Only
+       ratio-correct when binning_x == binning_y: a mode with asymmetric
+       binning silently drifts from its true active aspect here (this was
+       Defect B2 -- the sensor-WINDOW aspect standing in for the picture
+       aspect). Kept only because a driver can report crop without binning,
+       and no better evidence exists in that case.
+    4. *fallback_width*/*fallback_height* -- the transport frame. Provably
+       wrong whenever the transport carries optical-black padding rows or
+       columns (Defect D's 1.02:1 for a 1:1 mode is exactly this), but the
+       only thing left when the driver reports no geometry at all -- a stock
+       sensor (imx477, imx296), or a cinepi-raw build that predates the crop
+       annotation.
+
+    Returns floats; a caller wanting whole pixels rounds itself. Never
+    averages tiers or fills a partial one -- an incomplete tier is skipped
+    outright, exactly like every other geometry field in this module.
+    """
+    aw, ah = mode.get("active_width"), mode.get("active_height")
+    if aw and ah:
+        return float(aw), float(ah)
+
+    cw, ch = mode.get("crop_width"), mode.get("crop_height")
+    if cw and ch:
+        bx, by = mode.get("binning_x"), mode.get("binning_y")
+        if (
+            isinstance(bx, (int, float)) and bx > 0
+            and isinstance(by, (int, float)) and by > 0
+        ):
+            return float(cw) / bx, float(ch) / by
+        return float(cw), float(ch)
+
+    return float(fallback_width), float(fallback_height)
+
+
 # Preview canvas defaults, shared with simple_gui.py's own
 # PREVIEW_PADDING_X/Y (94/50) and cinepi_multi.py's inline px, py = 94, 50.
 PREVIEW_TARGET_LINES = 720
@@ -307,18 +367,38 @@ def compute_preview_geometry(
     WP-CM-1 (findings C3, M2). *mode* is a resolution-info dict shaped like
     get_resolution_info()'s return value -- 'width'/'height' are the
     transport frame (a RAW16 mode's optical-black padding included) and
-    'crop_width'/'crop_height' are the driver-reported active image, when
-    the driver annotated one. This one helper replaces three previously
-    separate, drifting copies of the same arithmetic: SensorDetect's own
-    lores getters, CinePiProcess._build_args() and
-    simple_gui._calculate_preview_guide_rect().
+    'crop_width'/'crop_height' (and, when the driver reports it, the exact
+    'active_width'/'active_height') describe the driver-reported active
+    image. This one helper replaces three previously separate, drifting
+    copies of the same arithmetic: SensorDetect's own lores getters,
+    CinePiProcess._build_args() and simple_gui._calculate_preview_guide_rect().
 
-    Aspect comes from the crop when the driver reported one -- computing it
-    from the padded transport size instead stretches a ClearHDR preview and
-    stops excluding the optical-black rows (M2). Absent crop annotation (a
-    stock sensor -- see the campaign's DEC-4: no annotation means *unknown*,
-    never *full frame*) falls back to the mode's own width/height, exactly
-    as every caller already did.
+    Aspect comes from active_picture_size() -- the delivered active picture,
+    never the padded transport size, which used to stretch a ClearHDR
+    preview and include the optical-black rows (M2). Round 2 (Defect B2)
+    tightened this further: the sensor-WINDOW aspect (raw crop_width/
+    crop_height) is only accidentally equal to the delivered picture's own
+    aspect, and silently drifts from it whenever binning_x != binning_y --
+    that drift, not a pillarbox from a real aspect mismatch, is what put a
+    1-2px sliver on both preview edges. active_picture_size() divides by
+    binning before taking the ratio, so the -p window, the lores request and
+    the buffer this function sizes all agree with the same delivered shape.
+    Absent any crop annotation (a stock sensor -- see the campaign's DEC-4:
+    no annotation means *unknown*, never *full frame*) this still falls back
+    to the mode's own width/height, exactly as every caller already did.
+
+    ASSUMPTION (Defect B2, stated explicitly per the brief): this function
+    only fixes the REQUESTED aspect -- the -p window and the lores size
+    cinepi-raw is launched with. It assumes the ISP's ScalerCrop is, or will
+    be, set to the active rectangle by cinepi-raw itself (a parallel worker's
+    job, ROUND2.md "The fix, and why ScalerCrop rather than the DRM source
+    rect"); this function does not touch ScalerCrop and never will. If that
+    ISP crop is NOT yet in place, the lores buffer's actual content still
+    carries the optical-black band this function cannot see or remove --
+    only its outer aspect. Once the ISP crop lands, the buffer's real content
+    matches the aspect requested here exactly, with no double-correction: no
+    factor here is scaled by whether the ISP crop is active, so there is
+    nothing to double up.
 
     Both outputs are clamped to *mode*'s own width/height, not just to the
     padded canvas: a mode shorter than 720 rows (e.g. a small imx585 crop
@@ -332,9 +412,8 @@ def compute_preview_geometry(
     """
     width = mode.get('width') or canvas_width
     height = mode.get('height') or canvas_height
-    crop_width = mode.get('crop_width') or width
-    crop_height = mode.get('crop_height') or height
-    aspect = (crop_width / crop_height) if crop_height else 1.0
+    active_width, active_height = active_picture_size(mode, width, height)
+    aspect = (active_width / active_height) if active_height else 1.0
 
     aw = canvas_width - 2 * padding_x
     ah = canvas_height - 2 * padding_y
@@ -594,17 +673,34 @@ class SensorDetect:
         # dynamically in cinepi_controller instead.
         file_size = compute_frame_size_mb(width, height, bit_depth) if bit_depth else None
         fps_max_value = fps_max if fps_max is not None else extra.get("fps_max", metadata.get("max_fps"))
-        # Aspect ratio is an image property, not a transport-frame
-        # property.  In particular, IMX585 ClearHDR RAW16 modes include
-        # optical-black rows (e.g. 3840×2200 carrying a 3840×2160 active
-        # image), and some modes have binned/cropped transport geometry.
-        # The settings table must therefore use the reported active crop
-        # dimensions whenever geometry is known.  Falling back to width/height
-        # keeps this correct for drivers that do not report crop metadata.
-        aspect_width = extra.get("crop_width") or width
-        aspect_height = extra.get("crop_height") or height
+        binning_x = extra.get("binning_x", metadata.get("binning_x"))
+        binning_y = extra.get("binning_y", metadata.get("binning_y"))
+        # Aspect ratio is an image property, not a transport-frame property.
+        # In particular, IMX585 ClearHDR RAW16 modes include optical-black
+        # rows (e.g. 3840x2200 carrying a 3840x2160 active image), and some
+        # modes have binned/cropped transport geometry. The settings table
+        # must therefore use the reported active picture whenever geometry
+        # is known, and never the raw sensor-side crop on its own: that
+        # ratio only coincides with the active picture's own aspect when
+        # binning_x == binning_y, and silently drifts from it otherwise
+        # (Round 2, Defect B2/D) -- active_picture_size() divides by binning
+        # (or uses an explicit active-size annotation, when the driver
+        # reports one) before ever taking the ratio. Falling back to
+        # width/height keeps this correct for drivers that report no crop
+        # metadata at all.
+        aspect_width, aspect_height = active_picture_size(
+            {
+                "active_width": extra.get("active_width"),
+                "active_height": extra.get("active_height"),
+                "crop_width": extra.get("crop_width"),
+                "crop_height": extra.get("crop_height"),
+                "binning_x": binning_x,
+                "binning_y": binning_y,
+            },
+            width, height,
+        )
         detected_aspect = (
-            round(float(aspect_width) / float(aspect_height), 2)
+            round(aspect_width / aspect_height, 2)
             if aspect_height else None
         )
 
@@ -640,8 +736,22 @@ class SensorDetect:
             "crop_height": extra.get("crop_height"),
             "sensor_width": extra.get("sensor_width"),
             "sensor_height": extra.get("sensor_height"),
-            "binning_x": extra.get("binning_x", metadata.get("binning_x")),
-            "binning_y": extra.get("binning_y", metadata.get("binning_y")),
+            "binning_x": binning_x,
+            "binning_y": binning_y,
+            # The delivered active picture, in OUTPUT (post-binning,
+            # optical-black-excluded) coordinates -- unlike crop_x/crop_y/
+            # crop_width/crop_height above, which stay in native sensor
+            # coordinates. Round 2, Defect D item 3: cinepi-raw does not
+            # print this yet on any build this package has seen; a parallel
+            # worker is adding it to --list-cameras. Parsed defensively (see
+            # _parse_cinepi_output's "active" regex) and left None, never
+            # guessed, when the running cinepi-raw predates it -- every
+            # reader goes through active_picture_size(), which already knows
+            # how to fall back.
+            "active_left": extra.get("active_left"),
+            "active_top": extra.get("active_top"),
+            "active_width": extra.get("active_width"),
+            "active_height": extra.get("active_height"),
             # ClearHDR flag (imx585). A mode is HDR when it is reported only
             # by `cinepi-raw --list-cameras --hdr sensor`; selecting it makes
             # cinepi-raw launch with --hdr sensor. See detect_camera_model().
@@ -649,8 +759,60 @@ class SensorDetect:
         }
         return mode
 
+    # Round 2, Defect D item 3. The label a parallel cinepi-raw worker's new
+    # active-rectangle annotation is assumed to use, mirroring the existing
+    # "mode-crop"/"crop" label this parser already accepts (see
+    # _search_labeled_rect): "active", "mode-active", "active-size" or
+    # "active-window" -- deliberately NOT "active-crop", which would also
+    # satisfy the "crop" label above and be misread as a crop annotation on
+    # the same line. Assumed full shape, same as mode-crop's:
+    #   "active (48, 0)/2736x1824"   or   "mode-active (48,0)/2736x1824"
+    #   "(48, 0)/2736x1824 active"   (trailing-label form, like plain "crop")
+    # This is a documented ASSUMPTION, not read from the other worker's
+    # code (unavailable to this session) -- report it back so the two
+    # halves can be reconciled once both land. If cinepi-raw instead prints
+    # a bare size with no origin ("active 2736x1824"), _ACTIVE_SIMPLE_RE
+    # below is tried as a fallback whenever the rect form does not match.
+    _ACTIVE_LABEL = r"active(?:[-_](?:size|window))?"
+    _ACTIVE_SIMPLE_RE = r"\bactive(?:[-_](?:size|window))?\s*[:=]?\s*(\d+)\s*x\s*(\d+)\b"
+
+    @staticmethod
+    def _search_labeled_rect(line: str, label: str):
+        """Find a `(left,top)/WxH` rectangle on *line* that is unambiguously
+        labeled -- either a `mode-<label>`/`<label>` prefix (e.g.
+        "mode-crop (108,40)/5472x3648") or a trailing `<label>` suffix (e.g.
+        "(0, 0)/3840x2160 crop") -- and never a bare, unlabeled
+        `(left,top)/WxH`.
+
+        Round 2, Defect D item 3. More than one annotation can share this
+        exact shape on the same probe line once a parallel cinepi-raw change
+        adds an "active" rectangle alongside the existing "mode-crop" one
+        (ROUND2.md: "the two halves can be reconciled" once this parses).
+        Requiring the label is what keeps the two from being read as each
+        other -- the previous crop regex made both the prefix and the
+        suffix optional, so a bare `(x,y)/WxH` belonging to any OTHER
+        labeled rectangle on the same line would have been misread as a
+        crop. Every crop annotation this parser has ever seen (driver
+        output and every test fixture) carries the literal word "crop" as
+        one or the other, so this is not a behaviour change for crop itself.
+
+        *label* is a regex fragment (already alternation-safe, no capturing
+        groups) such as ``"crop"`` or ``"active(?:[-_](?:size|window))?"``.
+        Returns (left, top, width, height) as ints, or None.
+        """
+        m = re.search(
+            rf"(?:mode-)?{label}\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)"
+            rf"|\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)\s*(?:mode-)?{label}\b",
+            line, re.IGNORECASE,
+        )
+        if not m:
+            return None
+        g = m.groups()
+        chosen = g[0:4] if g[0] is not None else g[4:8]
+        return tuple(int(v) for v in chosen)
+
     # ────────────────────────────────────────────────────────────────
-    #  1.  Parse *all* cameras and all modes that cinepi-raw reports    
+    #  1.  Parse *all* cameras and all modes that cinepi-raw reports
     # ────────────────────────────────────────────────────────────────
     def _parse_cinepi_output(self, output: str, hdr: bool = False) -> Dict[str, List[Dict]]:
         """
@@ -802,12 +964,9 @@ class SensorDetect:
                 # dimensions. rpicam's normal --list-cameras formatter keeps
                 # the crop on the same line, but cinepi-raw variants that
                 # probe a mode can emit it separately.
-                crop_only = re.search(
-                    r"(?:mode-crop\s*)?\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)\s*(?:crop)?",
-                    line, re.IGNORECASE,
-                )
+                crop_only = self._search_labeled_rect(line, "crop")
                 if crop_only and last_mode is not None:
-                    cx, cy, cw, ch = map(int, crop_only.groups())
+                    cx, cy, cw, ch = crop_only
                     last_mode["crop_x"] = cx
                     last_mode["crop_y"] = cy
                     last_mode["crop_width"] = cw
@@ -823,24 +982,62 @@ class SensorDetect:
                 if binning_only and last_mode is not None:
                     last_mode["binning_x"] = int(binning_only.group(1))
                     last_mode["binning_y"] = int(binning_only.group(2))
+
+                # Round 2, Defect D item 3: the active-picture annotation a
+                # parallel cinepi-raw worker is adding to --list-cameras.
+                # Its exact format is not visible from this session, so this
+                # is parsed defensively -- see _ACTIVE_LABEL's own comment
+                # (just above _search_labeled_rect) for the shape assumed
+                # and the fallback order (active annotation, then crop/
+                # binning, then transport) that active_picture_size()
+                # applies when this finds nothing.
+                active_only = self._search_labeled_rect(line, self._ACTIVE_LABEL)
+                if active_only and last_mode is not None:
+                    al, at, aw, ah = active_only
+                    last_mode["active_left"] = al
+                    last_mode["active_top"] = at
+                    last_mode["active_width"] = aw
+                    last_mode["active_height"] = ah
+                elif last_mode is not None:
+                    active_simple = re.search(self._ACTIVE_SIMPLE_RE, line, re.IGNORECASE)
+                    if active_simple:
+                        last_mode["active_width"] = int(active_simple.group(1))
+                        last_mode["active_height"] = int(active_simple.group(2))
                 continue
 
             width, height = map(int, res.groups())
             fps = re.search(r"\[(\d+(?:\.\d+)?)\s*fps", line)
             fps_max = int(float(fps.group(1))) if fps else None
             mode_extra = {}
-            crop = re.search(
-                r"(?:mode-crop\s*)?\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*/\s*(\d+)x(\d+)\s*(?:crop)?",
-                line, re.IGNORECASE,
-            )
+            crop = self._search_labeled_rect(line, "crop")
             if crop:
-                cx, cy, cw, ch = map(int, crop.groups())
+                cx, cy, cw, ch = crop
                 mode_extra.update({
                     "crop_x": cx, "crop_y": cy,
                     "crop_width": cw, "crop_height": ch,
                     "sensor_width": sensor_width,
                     "sensor_height": sensor_height,
                 })
+
+            # Round 2, Defect D item 3: parse the active-picture annotation
+            # defensively -- see _ACTIVE_LABEL's own comment (just above
+            # _search_labeled_rect) for the exact shape assumed. Absent this
+            # annotation (every cinepi-raw build this package has actually
+            # seen), active_width/active_height simply stay unset and
+            # active_picture_size() falls back to crop/binning, then to the
+            # transport frame, exactly as before this fix.
+            active = self._search_labeled_rect(line, self._ACTIVE_LABEL)
+            if active:
+                al, at, aw, ah = active
+                mode_extra.update({
+                    "active_left": al, "active_top": at,
+                    "active_width": aw, "active_height": ah,
+                })
+            else:
+                active_simple = re.search(self._ACTIVE_SIMPLE_RE, line, re.IGNORECASE)
+                if active_simple:
+                    mode_extra["active_width"] = int(active_simple.group(1))
+                    mode_extra["active_height"] = int(active_simple.group(2))
 
             # The driver annotation is authoritative. Keep this parser deliberately
             # permissive because the human-readable libcamera/rpicam formatter has

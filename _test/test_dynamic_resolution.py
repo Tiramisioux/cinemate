@@ -11,6 +11,7 @@ from module.dynamic_resolution import (
     PRIORITY_MODE,
     PRIORITY_NONE,
     PRIORITY_RESOLUTION,
+    _mode_aspect,
     choose_resolution,
     dynamic_resolution_indicator_active,
     dynamic_resolution_is_lower_substitute,
@@ -617,6 +618,41 @@ class DynamicResolutionTests(unittest.TestCase):
         self.assertEqual(choice.mode, 7)
         self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 12)
         self.assertTrue(choice.dynamic_active)
+
+
+class ModeAspectFallbackTests(unittest.TestCase):
+    """Round 2, Defect B2: _mode_aspect()'s own fallback (for a hand-built
+    mode dict with no ``aspect`` field, i.e. one that skipped sensor_detect)
+    now goes through active_picture_size() instead of a fourth
+    ``crop_width or width`` copy. In production sensor_detect always sets
+    ``aspect`` first, so this fallback exists for fixtures/tests only."""
+
+    def test_prefers_the_precomputed_aspect_field_when_present(self):
+        self.assertEqual(_mode_aspect({"aspect": 1.78, "width": 1, "height": 1}), 1.78)
+
+    def test_falls_back_to_crop_divided_by_binning(self):
+        mode = {
+            "width": 1440, "height": 1080,
+            "crop_width": 2880, "crop_height": 2160,
+            "binning_x": 2, "binning_y": 2,
+        }
+        self.assertEqual(_mode_aspect(mode), 1440 / 1080)
+
+    def test_asymmetric_binning_no_longer_uses_the_raw_crop_ratio(self):
+        # Before this fix: crop_width/crop_height (5472/3648 = 1.5)
+        # unconditionally, ignoring that binning differs per axis.
+        mode = {
+            "width": 2736, "height": 3648,
+            "crop_width": 5472, "crop_height": 3648,
+            "binning_x": 2, "binning_y": 1,
+        }
+        self.assertEqual(_mode_aspect(mode), 2736 / 3648)
+
+    def test_transport_fallback_with_no_geometry_at_all(self):
+        self.assertEqual(_mode_aspect({"width": 1332, "height": 990}), 1332 / 990)
+
+    def test_none_when_no_dimensions_at_all(self):
+        self.assertIsNone(_mode_aspect({}))
 
 
 if __name__ == "__main__":

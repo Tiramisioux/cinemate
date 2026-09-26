@@ -50,6 +50,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from module.config_loader import as_bool
+from module.sensor_detect import active_picture_size
 
 
 PRIORITY_MODE = "mode"
@@ -168,21 +169,28 @@ def _mode_aspect(mode_info: dict[str, Any]) -> float | None:
     """The mode's real image aspect, from whatever geometry it carries.
 
     sensor_detect already computes this onto every mode as ``aspect``
-    (crop-based when a crop is known, width/height otherwise), so this
-    reads that field first and only falls back to recomputing it from crop
-    or output dimensions for a mode dict that skipped sensor_detect
-    entirely, such as a hand-built fixture.
+    (via active_picture_size(): an explicit active-size annotation, else
+    crop/binning, else width/height), so this reads that field first and
+    only falls back to recomputing it for a mode dict that skipped
+    sensor_detect entirely, such as a hand-built fixture. The fallback goes
+    through the same shared helper (Round 2, Defect B2) rather than its own
+    ``crop_width or width`` copy: that copy used the raw crop ratio
+    unconditionally, which drifts from the true active aspect whenever
+    binning_x != binning_y.
     """
     aspect = mode_info.get("aspect")
     if aspect is not None:
         aspect_value = _as_float(aspect)
         if aspect_value is not None:
             return aspect_value
-    width = _as_int(mode_info.get("crop_width")) or _as_int(mode_info.get("width"))
-    height = _as_int(mode_info.get("crop_height")) or _as_int(mode_info.get("height"))
+    width = _as_int(mode_info.get("width"))
+    height = _as_int(mode_info.get("height"))
     if not width or not height:
         return None
-    return width / height
+    active_width, active_height = active_picture_size(mode_info, width, height)
+    if not active_height:
+        return None
+    return active_width / active_height
 
 
 def _mode_is_windowed_crop(mode_info: dict[str, Any]) -> bool | None:

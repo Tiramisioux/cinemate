@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.modules.setdefault("gpiozero", types.SimpleNamespace(CPUTemperature=object))
 sys.modules.setdefault("psutil", types.SimpleNamespace())
 
-from module.sensor_detect import SensorDetect, compute_preview_geometry
+from module.sensor_detect import SensorDetect, active_picture_size, compute_preview_geometry
 
 
 # Canvas used throughout: the 1920x1080 default HDMI canvas with the
@@ -90,6 +90,97 @@ class ComputePreviewGeometryLoresTests(unittest.TestCase):
         # before this fix (no even-rounding here -- that stays a job for
         # SensorDetect._calc_lores()'s own two callers, not this core).
         self.assertEqual(geometry["lores_width"], 1693)
+
+
+class ActivePictureSizeTests(unittest.TestCase):
+    """The shared helper Round 2 introduced for Defect D/B2 -- one place for
+    "what is the delivered active picture", in priority order: an explicit
+    active-size annotation, then crop/binning, then crop alone, then the
+    transport frame. See its own docstring in module.sensor_detect for the
+    full rationale; this is the tier order asserted directly."""
+
+    def test_explicit_active_annotation_is_used_as_is(self):
+        # The annotation already IS the delivered picture -- never divided
+        # by binning again, even though binning is also present here.
+        mode = {
+            "active_width": 2736, "active_height": 1824,
+            "crop_width": 5472, "crop_height": 3648,
+            "binning_x": 2, "binning_y": 2,
+        }
+        self.assertEqual(active_picture_size(mode, 2784, 1828), (2736.0, 1824.0))
+
+    def test_crop_divided_by_binning_when_no_active_annotation(self):
+        mode = {"crop_width": 5472, "crop_height": 3648, "binning_x": 2, "binning_y": 2}
+        self.assertEqual(active_picture_size(mode, 0, 0), (2736.0, 1824.0))
+
+    def test_asymmetric_binning_is_not_averaged_or_ignored(self):
+        # Defect B2's root cause: hbin != vbin means the raw crop ratio
+        # (5472/3648 = 1.5) is NOT the delivered picture's aspect. Dividing
+        # each axis by its own binning factor is what makes this differ from
+        # naively using the crop rectangle's own ratio.
+        mode = {"crop_width": 5472, "crop_height": 3648, "binning_x": 2, "binning_y": 1}
+        self.assertEqual(active_picture_size(mode, 0, 0), (2736.0, 3648.0))
+
+    def test_crop_alone_when_binning_unknown(self):
+        # A driver that reports crop but no binning at all: only ratio-
+        # correct when the (unknown) binning is symmetric, but it is the
+        # only evidence available, so it is used rather than discarded.
+        mode = {"crop_width": 2664, "crop_height": 1980}
+        self.assertEqual(active_picture_size(mode, 0, 0), (2664.0, 1980.0))
+
+    def test_transport_fallback_when_no_geometry_at_all(self):
+        # Defect D: a mode with no crop/active annotation at all (the
+        # operator's Pi, on the 1:1 rows that showed 1.02:1) has nothing
+        # better than the transport frame.
+        mode = {}
+        self.assertEqual(active_picture_size(mode, 3744, 3664), (3744.0, 3664.0))
+
+    def test_zero_binning_does_not_divide_by_zero(self):
+        # A stray/unset binning control (0) must not crash or be treated as
+        # "no binning" in a way that divides by it.
+        mode = {"crop_width": 3840, "crop_height": 2160, "binning_x": 0, "binning_y": 0}
+        self.assertEqual(active_picture_size(mode, 0, 0), (3840.0, 2160.0))
+
+
+class ComputePreviewGeometryActivePictureTests(unittest.TestCase):
+    """Round 2, Defect B2: the -p window and the lores request must come
+    from the delivered active picture, not from the sensor-window aspect
+    (raw crop_width/crop_height) -- the two only coincide when
+    binning_x == binning_y, which is what made this bug look like a pure
+    aspect-mismatch pillarbox instead of a binning-direction bug."""
+
+    def test_asymmetric_binning_uses_the_active_picture_aspect_not_the_crop_window(self):
+        # crop 5472x3648 (aspect 1.5) at binning 2x1 delivers 2736x3648
+        # (aspect 0.375) -- a portrait picture from a landscape crop window.
+        # Before this fix, aspect was taken from the raw crop ratio (1.5)
+        # and every output below would come out landscape instead.
+        mode = {
+            "width": 2736, "height": 3648,
+            "crop_width": 5472, "crop_height": 3648,
+            "binning_x": 2, "binning_y": 1,
+        }
+        geometry = compute_preview_geometry(mode, CANVAS_W, CANVAS_H)
+        self.assertEqual(geometry["lores_width"], 540)
+        self.assertEqual(geometry["lores_height"], 720)
+        self.assertEqual(geometry["preview_width"], 735)
+        self.assertEqual(geometry["preview_height"], 980)
+
+    def test_explicit_active_annotation_is_preferred_over_crop_binning(self):
+        # A future cinepi-raw build reports the active picture directly;
+        # it must win even when crop/binning would suggest something else.
+        mode = {
+            "width": 2784, "height": 1828,
+            "crop_width": 5472, "crop_height": 3648,
+            "binning_x": 2, "binning_y": 2,
+            "active_width": 2736, "active_height": 1824,
+        }
+        geometry = compute_preview_geometry(mode, CANVAS_W, CANVAS_H)
+        # 2736/1824 == 1.5 exactly, same as the symmetric-binning crop
+        # ratio here -- the point is that the code path used active_width/
+        # active_height at all, checked by the previous test where they
+        # differ from the raw crop ratio.
+        self.assertEqual(geometry["lores_width"], 1080)
+        self.assertEqual(geometry["lores_height"], 720)
 
 
 class CalcLoresBackwardCompatTests(unittest.TestCase):

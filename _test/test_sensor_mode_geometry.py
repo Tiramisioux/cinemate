@@ -132,6 +132,50 @@ class SensorModeGeometryTests(unittest.TestCase):
             self.assertIsNone(mode.get("binning_x"))
             self.assertFalse(SensorDetect._mode_is_full(mode))
 
+    def test_1to1_mode_with_no_crop_metadata_reports_the_transport_aspect(self):
+        """Round 2, Defect D: with no crop annotation at all, the aspect
+        field still has to fall back to the transport frame -- there is
+        nothing better to fall back to. This is not "the fix" for that
+        row (nothing can fix it until cinepi-raw reports geometry); it
+        documents the floor active_picture_size() falls to, and pins the
+        exact 1.02 the operator saw so a future geometry-reporting build is
+        the only thing that can change it."""
+        d = self._detector()
+        d.settings = {}
+        built = d._mode_from_metadata_or_detected(
+            camera_name="imx283", width=3744, height=3664, bit_depth=12, fps_max=None,
+        )
+        self.assertEqual(round(built["width"] / built["height"], 2), 1.02)
+        self.assertEqual(built["aspect"], 1.02)
+
+    def test_aspect_divides_crop_by_binning_not_the_raw_crop_ratio(self):
+        """Round 2, Defect B2's root cause, exercised through the real
+        parse->mode path: asymmetric binning (2x1) means the sensor-window
+        ratio (5472/3648 = 1.5) is NOT the delivered picture's aspect
+        (2736/3648 = 0.75). Before this fix the aspect field used the raw
+        crop ratio directly and would have reported 1.5 here."""
+        d = self._detector()
+        d.settings = {}
+        built = d._mode_from_metadata_or_detected(
+            camera_name="imx283", width=2736, height=3648, bit_depth=12, fps_max=None,
+            extra={
+                "crop_x": 0, "crop_y": 0, "crop_width": 5472, "crop_height": 3648,
+                "binning_x": 2, "binning_y": 1,
+            },
+        )
+        self.assertEqual(built["aspect"], 0.75)
+
+    def test_explicit_active_annotation_drives_the_aspect_field(self):
+        d = self._detector()
+        d.settings = {}
+        built = d._mode_from_metadata_or_detected(
+            camera_name="imx283", width=2784, height=1828, bit_depth=12, fps_max=None,
+            extra={"active_width": 2736, "active_height": 1824},
+        )
+        self.assertEqual(built["aspect"], round(2736 / 1824, 2))
+        self.assertEqual(built["active_width"], 2736)
+        self.assertEqual(built["active_height"], 1824)
+
     def test_custom_fps_override_does_not_duplicate_a_now_described_mode(self):
         d = self._detector()
         d.custom_modes = {
@@ -169,6 +213,81 @@ class OutputSizeOnLineTests(unittest.TestCase):
         self.assertEqual(tuple(map(int, m.groups())), (2784, 1828))
         m = SensorDetect._output_size_on_line("    Modes: 'SRGGB16' : 3840x2200 [21.90 fps]")
         self.assertEqual(tuple(map(int, m.groups())), (3840, 2200))
+
+
+class ActiveAnnotationParsingTests(unittest.TestCase):
+    """Round 2, Defect D item 3: defensive parsing of the active-picture
+    annotation a parallel cinepi-raw worker is adding to --list-cameras.
+    Its exact wire format is not visible from this session -- see
+    SensorDetect._ACTIVE_LABEL's own comment for the shape assumed
+    ("active (left,top)/WxH", mirroring the existing "mode-crop" shape, or
+    a bare "active WxH" with no origin). These tests pin that assumption
+    and, more importantly, that it cannot be mistaken for the pre-existing
+    "mode-crop" annotation when both share a line."""
+
+    def _detector(self):
+        d = SensorDetect.__new__(SensorDetect)
+        d.custom_modes = {}
+        d.k_steps = []
+        d.bit_depths = []
+        d.hdr_modes = {False, True}
+        d.sensor_database_file = "resources/sensors.json"
+        d.sensor_database = d._load_sensor_database()
+        d.packing_info = d._packing_info_from_database()
+        return d
+
+    def test_active_rect_annotation_same_line_as_crop(self):
+        d = self._detector()
+        out = """
+0 : imx283 [5472x3648] (/base/imx283@1a)
+    Modes: 'SRGGB12_CSI2P' : 2784x1828 [36.00 fps - (108, 40)/5472x3648 crop] binning 2x2; active (48,0)/2736x1824
+"""
+        modes = d._parse_cinepi_output(out)["imx283"]
+        mode = modes[0]
+        # The pre-existing crop/binning parsing must still work unchanged.
+        self.assertEqual((mode["crop_x"], mode["crop_y"]), (108, 40))
+        self.assertEqual((mode["crop_width"], mode["crop_height"]), (5472, 3648))
+        self.assertEqual((mode["binning_x"], mode["binning_y"]), (2, 2))
+        # And the new active annotation must be read too, not swallowed by
+        # the crop regex or vice versa.
+        self.assertEqual((mode["active_left"], mode["active_top"]), (48, 0))
+        self.assertEqual((mode["active_width"], mode["active_height"]), (2736, 1824))
+
+    # NOTE: a continuation-line variant of this test (active on its own
+    # line, separate from the resolution) is not included here. It would
+    # exercise the exact same pre-existing, out-of-scope defect documented
+    # on test_geometry_on_continuation_line_is_attached_to_previous_mode
+    # above: any crop/binning/active annotation's own "NxM" text satisfies
+    # the parser's same-line resolution regex, so the "not res" continuation
+    # branch this package also feeds (see _parse_cinepi_output) is never
+    # reached for realistic content. The parsing code added here still
+    # populates that branch for when that defect is eventually fixed, but
+    # it cannot be exercised until then.
+
+    def test_bare_active_size_with_no_origin_is_accepted(self):
+        d = self._detector()
+        out = """
+0 : imx283 [5472x3648] (/base/imx283@1a)
+    Modes: 'SRGGB12_CSI2P' : 2784x1828 [36.00 fps - (108, 40)/5472x3648 crop] binning 2x2; active 2736x1824
+"""
+        modes = d._parse_cinepi_output(out)["imx283"]
+        mode = modes[0]
+        self.assertEqual((mode["active_width"], mode["active_height"]), (2736, 1824))
+        self.assertIsNone(mode.get("active_left"))
+
+    def test_no_active_annotation_leaves_it_unset(self):
+        # Every cinepi-raw build this package has actually seen -- the
+        # common case, and it must not crash or invent a value.
+        d = self._detector()
+        out = """
+0 : imx283 [5472x3648] (/base/imx283@1a)
+    Modes: 'SRGGB12_CSI2P' : 2784x1828 [36.00 fps - (108, 40)/5472x3648 crop] binning 2x2
+"""
+        modes = d._parse_cinepi_output(out)["imx283"]
+        mode = modes[0]
+        self.assertIsNone(mode.get("active_width"))
+        self.assertIsNone(mode.get("active_height"))
+        self.assertEqual((mode["crop_width"], mode["crop_height"]), (5472, 3648))
 
 
 if __name__ == "__main__":

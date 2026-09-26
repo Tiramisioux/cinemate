@@ -1554,12 +1554,19 @@ install_sensor_tuning_overrides() {
     # All current Cinemate tuning overrides are pisp-target (Pi 5 / PiSP ISP),
     # so they are installed ONLY into the pisp data dirs. libcamera matches a
     # tuning file's "target" against the active pipeline; dropping a pisp tuning
-    # into the vc4 (Pi 4) data dir applies the wrong hardware config and also
-    # clobbers the stock bcm2835-target imx283.json that Pi 4 needs. (imx585 has
-    # no vc4 cam_helper either, so it never runs on Pi 4 regardless.) If a
+    # into the vc4 (Pi 4) data dir applies the wrong hardware config. (imx585
+    # has no vc4 cam_helper either, so it never runs on Pi 4 regardless.) If a
     # bcm2835-target override is added later, install it into the vc4 dirs here.
+    #
+    # imx283 is deliberately NOT in this list. Unlike imx585, libcamera already
+    # ships a calibrated imx283 tuning (14 algorithms, measured CCMs, a 16-point
+    # ct_curve) at $LIBCAMERA_DIR/src/ipa/rpi/pisp/data/imx283.json. Overriding
+    # it used to install resources/tuning_files/imx283.json instead, which is a
+    # 5-algorithm stub with rpi.awb bayes:0 and no ct_curve (byte-identical to
+    # libcamera's uncalibrated.json except for black_level) -- it produced a
+    # 2.70x blue AWB gain and a magenta render in both the preview and the DNG.
+    # See development/imx283-active-size/ROUND2.md, Defect A.
     local -a tuning_files=(
-        imx283.json
         imx585.json
         imx585_mono.json
     )

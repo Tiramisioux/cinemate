@@ -155,5 +155,56 @@ class NativeModeDefaultSelectionTests(unittest.TestCase):
         self.assertTrue(self._selected(mode))
 
 
+class ActiveWidthHeightFieldTests(unittest.TestCase):
+    """Round 2, Defect D: the pane's active_width/active_height fields go
+    through the one shared helper (active_picture_size) instead of the
+    settings_editor-only _active_dimension this package retired."""
+
+    def _entry(self, mode):
+        app = flask.Flask(__name__)
+        app.register_blueprint(settings_editor_bp)
+        app.config["SENSOR_DETECT"] = FakeSensorDetectUnfiltered({"cam": [mode]})
+        app.config["SETTINGS"] = {}
+        res = app.test_client().get("/settings-editor/api/sensor-modes")
+        body = res.get_json()
+        return body["sensors"]["cam"][0]
+
+    def test_crop_divided_by_binning_when_no_active_annotation(self):
+        mode = {
+            "width": 1440, "height": 1080, "bit_depth": 12, "hdr": False,
+            "fps_max": 50,
+            "binning_x": 2, "binning_y": 2,
+            "crop_x": 0, "crop_y": 0,
+            "crop_width": 2880, "crop_height": 2160,
+        }
+        entry = self._entry(mode)
+        self.assertEqual(entry["active_width"], 1440)
+        self.assertEqual(entry["active_height"], 1080)
+
+    def test_explicit_active_annotation_wins_over_crop_binning(self):
+        # The active annotation is the delivered picture already -- it must
+        # be used as-is, not further divided by binning.
+        mode = {
+            "width": 2784, "height": 1828, "bit_depth": 12, "hdr": False,
+            "fps_max": 36,
+            "binning_x": 2, "binning_y": 2,
+            "crop_x": 108, "crop_y": 40,
+            "crop_width": 5472, "crop_height": 3648,
+            "active_width": 2736, "active_height": 1824,
+        }
+        entry = self._entry(mode)
+        self.assertEqual(entry["active_width"], 2736)
+        self.assertEqual(entry["active_height"], 1824)
+
+    def test_transport_fallback_when_no_geometry_at_all(self):
+        mode = {
+            "width": 1332, "height": 990, "bit_depth": 12, "hdr": False,
+            "fps_max": 120,
+        }
+        entry = self._entry(mode)
+        self.assertEqual(entry["active_width"], 1332)
+        self.assertEqual(entry["active_height"], 990)
+
+
 if __name__ == "__main__":
     unittest.main()

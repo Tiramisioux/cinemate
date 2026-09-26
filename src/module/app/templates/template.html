@@ -1377,6 +1377,29 @@
     //    matching the lores stream the guide box wraps in simple_gui.
     let previewAspect = 16 / 9;
 
+    // V.aspect is what CineMate ASKED cinepi-raw for (--lores-width/-height,
+    // module.sensor_detect.compute_preview_geometry). It is not necessarily
+    // what arrives: libcamera's validate() aligns an ISP output size up or
+    // down to the hardware's own constraint, so a 1080x720 request can be
+    // delivered as, say, 1088x720. The frame is then a fraction of a percent
+    // off the JPEG inside it and `object-fit: contain` pillarboxes the
+    // difference -- a thin black bar on each side that no amount of fixing
+    // the REQUEST can remove, because the request was granted and then
+    // adjusted.
+    //
+    // So measure the frame instead of predicting it. naturalWidth/Height on
+    // a live MJPEG <img> is the decoded frame's true size, which is the one
+    // thing here that cannot be wrong. Recorded per <img> on `load` (below)
+    // and preferred over V.aspect for a single-source preview. A combined
+    // (side-by-side / PIP) preview keeps deriving its aspect from V.aspect,
+    // because there the frame holds a composition rather than one stream.
+    function streamNaturalAspect(img) {
+        if (!img) { return null; }
+        const w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { return null; }
+        return w / h;
+    }
+
     function sizePreview() {
         const wrap = $('preview-wrap');
         const frame = $('preview-frame');
@@ -1479,9 +1502,16 @@
 
         const aspect = parseFloat(V.aspect);
         const ana = parseFloat(String(V.anamorphic_factor || '1').replace(/[^0-9.]/g, ''));
-        if (aspect > 0) {
-            const combined = dual && source !== 'cam0' && source !== 'cam1';
-            previewAspect = aspect * (ana > 0 ? ana : 1) * (combined ? 2 : 1);
+        const combined = dual && source !== 'cam0' && source !== 'cam1';
+        // Measured frame first, requested geometry as the fallback -- before
+        // the first frame arrives there is nothing to measure, and a combined
+        // preview is a composition of two streams rather than one.
+        const measured = combined
+            ? null
+            : streamNaturalAspect(source === 'cam1' ? $('stream-cam1') : $('stream'));
+        const base = measured || aspect;
+        if (base > 0) {
+            previewAspect = base * (ana > 0 ? ana : 1) * (combined ? 2 : 1);
         }
         frame.style.borderColor = V.zoom_is_default === false
             ? 'var(--zoom-hi)' : 'var(--guide)';
@@ -2552,6 +2582,16 @@
         });
         img.addEventListener('load', () => {
             img._gotFrame = true;
+            // The decoded size can change without any CineMate-side event:
+            // a mode switch reloads the stream, and libcamera may align the
+            // new ISP output size differently. Re-fit on every frame whose
+            // measured aspect actually moved, so the frame keeps hugging the
+            // picture instead of pillarboxing it (see streamNaturalAspect).
+            const measured = streamNaturalAspect(img);
+            if (measured && Math.abs(measured - (img._lastAspect || 0)) > 1e-4) {
+                img._lastAspect = measured;
+                render();
+            }
             clearTimeout(img._watchTimer);
             img._watchTimer = null;
             clearTimeout(img._reloadTimerA);

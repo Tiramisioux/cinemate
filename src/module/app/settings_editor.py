@@ -52,6 +52,7 @@ from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
 from module.redis_controller import ParameterKey, smpte_frame_base
 from module.sensor_detect import (
+    active_picture_size,
     thumbnail_choice_labels,
     ASPECT_RATIO_TOLERANCE,
     SensorDetect,
@@ -878,27 +879,6 @@ def get_actions():
     return jsonify({"ok": True, "actions": actions})
 
 
-def _active_dimension(mode, crop_key, binning_key, fallback):
-    """The recorded picture's width or height (WP-CM-10).
-
-    ``crop_width``/``crop_height`` is the sensor-domain readout window
-    (see the domain contract in sensor_detect._mode_from_metadata_or_
-    detected), so dividing it by the matching binning factor reaches the
-    recorded picture -- never multiplying, and never using the crop as
-    given. This also corrects for a padded CSI buffer (a RAW16 ClearHDR
-    mode's own ``width``/``height`` may include buffer rows/columns the
-    crop excludes), which is why crop/binning is preferred over
-    ``fallback`` whenever both the crop and the binning factor are known.
-    A sensor that reports no crop at all (every stock sensor) falls back
-    to ``fallback`` (``width``/``height``) unchanged.
-    """
-    crop = mode.get(crop_key)
-    binning = mode.get(binning_key)
-    if crop is not None and isinstance(binning, (int, float)) and binning > 0:
-        return int(round(int(crop) / binning))
-    return int(fallback)
-
-
 @settings_editor_bp.route("/api/sensor-modes", methods=["GET"])
 def get_sensor_modes():
     """Return every currently detected driver mode for the dynamic mode table.
@@ -1093,19 +1073,20 @@ def get_sensor_modes():
             if not width or not height or not depth:
                 continue
             ratio_id, ratio_exact, ratio_real = nearest_ratio(camera_name, mode)
+            # The recorded active picture (WP-CM-10, Round 2 Defect D):
+            # active_picture_size() is the one shared helper for this --
+            # an explicit active-size annotation when the driver reports
+            # one, else crop_width/crop_height (the sensor-domain readout
+            # window) divided by binning, else width/height unchanged. See
+            # its own docstring in module.sensor_detect for the full tier
+            # order; this used to be a fourth, settings_editor-only copy of
+            # that same arithmetic (_active_dimension), now retired.
+            active_width, active_height = active_picture_size(mode, width, height)
             entries.append({
                 "width": width,
                 "height": height,
-                # The recorded picture (WP-CM-10): crop_width/crop_height is
-                # the sensor-domain readout window, so dividing it by binning
-                # -- not multiplying it -- reaches the recorded picture. This
-                # still differs from width/height for a padded CSI buffer
-                # (RAW16 ClearHDR modes may advertise extra buffer rows the
-                # driver's crop excludes), which is why crop/binning is
-                # preferred over width/height whenever both crop and binning
-                # are known.
-                "active_width": _active_dimension(mode, "crop_width", "binning_x", width),
-                "active_height": _active_dimension(mode, "crop_height", "binning_y", height),
+                "active_width": int(round(active_width)),
+                "active_height": int(round(active_height)),
                 "bit_depth": depth,
                 "aspect": round(float(mode.get("aspect") or (width / height)), 3),
                 "hdr": bool(mode.get("hdr", False)),

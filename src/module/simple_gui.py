@@ -12,7 +12,7 @@ import re
 from module.utils import Utils
 from module.redis_controller import ParameterKey, smpte_frame_base
 from module.dynamic_resolution import dynamic_resolution_indicator_active
-from module.sensor_detect import compute_preview_geometry
+from module.sensor_detect import compute_preview_geometry, active_picture_size
 from module.design_tokens import DESIGN_TOKENS
 import json
 import re
@@ -743,9 +743,13 @@ class SimpleGUI(threading.Thread):
                 display_bit_depth,
             )
 
-        sensor_left  = ""   
+        sensor_left  = ""
         sensor_right = ""
         cam1         = None
+        # Read once, shared by the CAM0 aspect below and the CAM1 aspect
+        # further down -- both need it to look up that camera's own mode
+        # dict for active_picture_size().
+        sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
 
         if cam_list:
             cam_list.sort(key=lambda c: c.get("port", ""))
@@ -760,9 +764,25 @@ class SimpleGUI(threading.Thread):
         height = self.redis_controller.get_value(ParameterKey.HEIGHT.value)
         try:
             w_int, h_int = int(width), int(height)
-            aspect_ratio = round(w_int / h_int, 2) if h_int else "N/A"
         except (TypeError, ValueError):
-            aspect_ratio = "N/A"
+            w_int, h_int = None, None
+
+        # The aspect shown here is the delivered ACTIVE picture (WP-CM-10 /
+        # Round 2 Defect D), not the transport frame WIDTH/HEIGHT publishes
+        # -- those still carry the sensor's optical-black padding (e.g.
+        # imx283 MODE_1C: 3936x2176 transport vs 3840x2160 active, 1.81 vs
+        # the settings pane's correct 1.78). active_picture_size() is the
+        # one shared helper; WIDTH/HEIGHT is passed only as its last-resort
+        # fallback tier, same as every other caller.
+        aspect_ratio = "N/A"
+        if cam_list and w_int and h_int:
+            pk0 = cam0["model"] + ("_mono" if cam0["mono"] else "")
+            mode0 = self.sensor_detect.get_resolution_info(pk0, sensor_mode)
+            active_w, active_h = active_picture_size(mode0, w_int, h_int)
+            if active_h:
+                aspect_ratio = round(active_w / active_h, 2)
+        elif w_int and h_int:
+            aspect_ratio = round(w_int / h_int, 2)
 
         # ───────────── build shutter_speed display value ─────────────
         actual_angle = self.redis_controller.get_value(ParameterKey.SHUTTER_A_ACTUAL.value)
@@ -1158,17 +1178,19 @@ class SimpleGUI(threading.Thread):
 
         # ── add right-column data when CAM1 exists ────────────────
         if sensor_right and cam1:
-            sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
             pk   = cam1["model"] + ("_mono" if cam1["mono"] else "")
             res1 = self.sensor_detect.get_resolution_info(pk, sensor_mode)
             w1   = res1.get("width", 1920)
             h1   = res1.get("height", 1080)
             bd1  = res1.get("bit_depth", 12)
+            # Active picture, not transport -- same defect/fix as CAM0's
+            # "aspect" above.
+            active_w1, active_h1 = active_picture_size(res1, w1, h1)
 
             values.update({
                 "sensor_cam1":     sensor_right,
                 "resolution_cam1": self.estimate_resolution_in_k(),
-                "aspect_cam1":     round(w1 / h1, 2),
+                "aspect_cam1":     round(active_w1 / active_h1, 2) if active_h1 else "N/A",
                 "bit_depth_cam1":  f"{bd1}b",
             })
 

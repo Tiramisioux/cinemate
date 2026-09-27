@@ -551,7 +551,7 @@
   .recording-mode-table th:nth-child(1),
   .recording-mode-table td:nth-child(1){ width:24%; }
   .recording-mode-table th:nth-child(2),
-  .recording-mode-table td:nth-child(2){ width:10%; text-align:left; }
+  .recording-mode-table td:nth-child(2){ width:10%; }
   .recording-mode-table th:nth-child(3),
   .recording-mode-table td:nth-child(3){ width:9%; }
   .recording-mode-table th:nth-child(4),
@@ -561,10 +561,20 @@
   .recording-mode-table th:nth-child(6),
   .recording-mode-table td:nth-child(6){ width:17%; }
   .recording-mode-table th:nth-child(7),
-  .recording-mode-table td:nth-child(7){ width:9%; text-align:right; }
+  .recording-mode-table td:nth-child(7){ width:9%; }
+  /* Operator request, 2026-09-27: every column but the leftmost reads centred.
+     Mode stays flush left because it is the only prose cell -- a title plus a
+     "Cropped"/"Full frame"/"Geometry not reported" sub-line -- and a ragged left
+     edge is what makes a dense table scannable downwards. Columns 2-7 each hold
+     one short value, a diagram or a control, which centre cleanly. The group
+     header rows keep their own text-align:left !important further down. */
+  .recording-mode-table th:not(:first-child),
+  .recording-mode-table td:not(:first-child){ text-align:center; }
   .recording-mode-table .mode-crop-cell{ padding-left:4px; padding-right:4px; }
   .recording-mode-table .mode-crop-diagram{
     width:min(86px,100%); height:auto; aspect-ratio:86 / 54;
+    /* A fixed-width block; text-align on the cell cannot centre it. */
+    margin-inline:auto;
   }
   .recording-mode-table .mode-crop-frame{
     width:100%; height:100%;
@@ -632,8 +642,8 @@
     border-style:dashed; border-color:var(--muted); background:transparent;
   }
   .recording-mode-table tr.mode-off .mode-crop-window{ opacity:.55; }
-  .camera-recording-mode-table td:last-child{ text-align:right; width:54px; }
-  .camera-recording-mode-table td:last-child .mode-toggle{ margin-left:auto; }
+  .camera-recording-mode-table td:last-child{ text-align:center; width:54px; }
+  .camera-recording-mode-table td:last-child .mode-toggle{ margin-inline:auto; }
   .mode-small-controls{ display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:8px; }
   .mode-small-toggle{ border:1px solid var(--line); background:var(--panel-2); color:var(--muted); padding:5px 9px; font-size:10px; letter-spacing:.04em; cursor:pointer; }
   .mode-small-toggle:hover{ color:var(--ink); border-color:var(--muted); }

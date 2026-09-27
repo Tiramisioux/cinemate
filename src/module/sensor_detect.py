@@ -1246,8 +1246,71 @@ class SensorDetect:
         marked path above is what imx585 actually takes.
         """
         for cam, modes in hdr_modes.items():
+            plain = base_modes.get(cam) or []
+            # WHOLE-LISTING ECHO TEST, before any per-mode reasoning.
+            #
+            # A sensor with no ClearHDR ignores --hdr sensor and prints its
+            # plain listing back. The per-mode rules below then have to infer
+            # that from each row in isolation, and they infer it from the fps
+            # ceiling and the crop fields -- both of which can differ between
+            # two probes for reasons that have nothing to do with HDR (the
+            # ceiling is re-read per configure, and the crop fields come from
+            # driver controls sampled during enumeration). Any such jitter makes
+            # every row look like "a timing the plain probe never reported", and
+            # the whole listing is promoted: 2026-09-27, the imx283 showed every
+            # one of its modes twice, once as STANDARD and once as CLEAR HDR.
+            #
+            # The listing as a whole cannot jitter that way. ClearHDR is a
+            # different sensor STATE, so a sensor that has one always offers at
+            # least one readout the plain probe does not -- imx585's 16-bit
+            # geometries. Comparing readout sets (geometry, depth, crop,
+            # binning; fps deliberately excluded) answers "did this probe change
+            # anything at all" without depending on the values that jitter.
+            #
+            # No new readout means the probe is an echo and nothing in it is
+            # ClearHDR. Explicitly marked rows are still honoured -- the parser
+            # saw a CLEAR HDR section, which is evidence this test cannot
+            # override -- so imx585's marked path is untouched.
+            # The key is deliberately COARSE -- width, height, depth, fps --
+            # because the two probes do not always agree on the rest. crop_* and
+            # binning_* come from driver controls sampled during enumeration,
+            # and a probe that fails to read them reports None for every mode,
+            # which makes every fine-grained key differ and every row look new.
+            # That, not fps, is what promoted the imx283's whole table: the
+            # operator's listing showed each mode twice at the SAME ceiling
+            # (32 fps and 32 fps), so the ceilings matched and only the crop
+            # fields did not.
+            def robust(m):
+                return (int(m.get("width") or 0), int(m.get("height") or 0),
+                        int(m.get("bit_depth") or 0), m.get("fps_max"))
+
+            # Two keys, and the difference matters. The SUBSET test uses the
+            # timing key (fps included): a genuine ClearHDR listing offers a
+            # ceiling the plain probe does not, so it is not a subset. The
+            # REPEAT test uses the readout key (fps excluded): one readout
+            # listed at two ceilings inside a single probe is the
+            # SDR-then-ClearHDR listing with its separator missing, and that
+            # stays the per-mode rules' job however the subset test comes out.
+            def readout_only(m):
+                return (int(m.get("width") or 0), int(m.get("height") or 0),
+                        int(m.get("bit_depth") or 0))
+
+            plain_timings_coarse = {robust(m) for m in plain}
+            probe_timings_coarse = [robust(m) for m in modes]
+            probe_readouts_only = [readout_only(m) for m in modes]
+            repeated = len(probe_readouts_only) != len(set(probe_readouts_only))
+            if (probe_timings_coarse and not repeated
+                    and set(probe_timings_coarse) <= plain_timings_coarse):
+                if not any(m.get("hdr") is True for m in modes):
+                    logging.info(
+                        "%s: --hdr sensor echoed the plain listing (%d modes, "
+                        "no new readout) -- no ClearHDR on this sensor",
+                        cam, len(modes),
+                    )
+                    continue
+
             plain_timings = {
-                cls._mode_timing_key(m) for m in (base_modes.get(cam) or [])
+                cls._mode_timing_key(m) for m in plain
             }
             # Readout (_mode_key: geometry and depth, no fps) -> the ceilings
             # this probe has already listed for it. Built as we go, so "seen

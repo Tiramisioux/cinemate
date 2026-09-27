@@ -90,7 +90,7 @@ Where it is selectable, CineMate offers it per port on the settings editor's
 | --- | --- | --- | --- |
 | IMX585 | 4 | 720 MHz | yes — 297 / 360 / 445.5 / 594 / 720 / 891 / 1039.5 MHz |
 | IMX283 | 4 | 720 MHz | yes — 360 or 720 MHz, where 720 is also the ceiling |
-| IMX477 | 2 | 450 MHz | not yet |
+| IMX477 | 2 | 450 MHz | yes — 450 / 720 / 750 / 891 / 909 / 918 / 945 / 972 MHz |
 | IMX296 | 1 | 594 MHz | no |
 | IMX519 | 2 | 408 MHz | no |
 
@@ -98,15 +98,23 @@ How far a raise pays off depends on the mode: the wide all-pixel modes hit the R
 bound before the link bound, so on a Pi 5 they also need the receiver overclocked — see
 [Overclocking the Pi](overclocking.md).
 
+!!! warning "IMX477 above 750 MHz is unverified on this stack, and two values sit above a documented corruption threshold"
+    IMX477's link frequency is not a hardware-fixed choice — the driver accepts any exact
+    multiple of 3 MHz — but nothing above 750 MHz has been measured on this stack (the 750 MHz
+    hardware gate itself hasn't run yet). The menu is offered anyway because the operator asked
+    for it by number; that doesn't make the higher values verified.
+
+    Raspberry Pi's own testing found ~909 MHz stable and reported white/corrupt frames starting
+    around ~939 MHz in binned modes. **945 and 972 MHz are above that reported corruption
+    threshold** — 891, 909 and 918 MHz are not, but none of the five is confirmed on this stack.
+    Pick 945 or 972 MHz expecting to test for corrupt frames, not assuming they'll behave like
+    909 MHz.
+
 ??? note "Why the other sensors are fixed"
     **IMX283** — Sony ships register sequences for only these two values, and 720 MHz is both the
     default and the silicon ceiling, so the alternative is slower. Selecting it needs the
     `link-frequency` overlay parameter added in `Tiramisioux/imx283-v4l2-driver` `6.12.y` at
     `257c9cf`.
-
-    **IMX477** — not a hardware limit. The driver accepts any exact multiple of 3 MHz and
-    Raspberry Pi's own testing found ~909 MHz stable, but no upper bound is vouched for, so
-    CineMate keeps the menu hidden until the values are verified on this stack.
 
     **IMX296** — its 60 fps cap is readout-limited, not link-limited. A faster link buys nothing.
 

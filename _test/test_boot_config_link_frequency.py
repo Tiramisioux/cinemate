@@ -10,9 +10,11 @@ list the driver actually vouches for, and the read path round-trips it.
 
 Which values each sensor takes, and whether it gets a menu at all, comes from
 resources/sensors.json -- so these tests double as assertions about the
-database. imx585 and imx283 have menus; imx296 and imx519 have fixed links;
-imx477's values are recorded but its menu is gated off until the 750 MHz
-hardware gate passes.
+database. imx585, imx283 and imx477 have menus; imx296 and imx519 have fixed
+links. imx477's menu was enabled 2026-09-27 by explicit operator request,
+ahead of the 750 MHz hardware gate ever running -- everything above its
+450 MHz default is unverified on this stack, and 945/972 MHz sit above a
+corruption threshold Raspberry Pi's own testing reported at ~939 MHz.
 """
 
 import sys
@@ -83,10 +85,21 @@ class LinkFrequencyMenuTests(unittest.TestCase):
         self.assertEqual(link_frequency_default(sensor_database(), "imx283"), 720000000)
 
     def test_sensors_with_no_menu_are_reported_as_such(self):
-        # imx296/imx519 have fixed links. imx477's values are recorded but its
-        # menu is gated off until the 750 MHz hardware gate passes.
-        for model in ("imx296", "imx519", "imx477"):
+        # imx296/imx519 have fixed links.
+        for model in ("imx296", "imx519"):
             self.assertFalse(supports_link_frequency(model), model)
+
+    def test_imx477_now_offers_a_menu_with_the_five_added_overclock_values(self):
+        # 2026-09-27: the operator asked for these by number. The menu was
+        # gated off pending Gate 2 (750 MHz on this stack); that gate still
+        # hasn't run, so this is the menu opening ahead of verification, not
+        # because of it.
+        self.assertTrue(supports_link_frequency("imx477"))
+        self.assertEqual([o["hz"] for o in link_frequency_options("imx477")], [
+            450000000, 720000000, 750000000, 891000000, 909000000,
+            918000000, 945000000, 972000000,
+        ])
+        self.assertEqual(link_frequency_default(sensor_database(), "imx477"), 450000000)
 
 
 class OverlayLineTests(unittest.TestCase):
@@ -112,13 +125,19 @@ class OverlayLineTests(unittest.TestCase):
         )
 
     def test_sensors_without_a_menu_never_get_the_parameter(self):
-        for model in ("imx477", "imx296"):
-            self.assertEqual(overlay_line_for(model, "cam0", 891000000), f"dtoverlay={model},cam0")
+        self.assertEqual(overlay_line_for("imx296", "cam0", 891000000), "dtoverlay=imx296,cam0")
 
     def test_imx283_gets_the_parameter_only_below_its_default(self):
         self.assertEqual(overlay_line_for("imx283", "cam0", 360000000),
                          "dtoverlay=imx283,cam0,link-frequency=360000000")
         self.assertEqual(overlay_line_for("imx283", "cam0", 720000000), "dtoverlay=imx283,cam0")
+
+    def test_imx477_gets_the_parameter_now_its_menu_is_on(self):
+        # 2026-09-27: imx477 grew a menu, so a non-default pick is now
+        # written out for it the same as for imx585/imx283.
+        self.assertEqual(overlay_line_for("imx477", "cam0", 972000000),
+                         "dtoverlay=imx477,cam0,link-frequency=972000000")
+        self.assertEqual(overlay_line_for("imx477", "cam0", 450000000), "dtoverlay=imx477,cam0")
 
 
 class RoundTripTests(unittest.TestCase):
@@ -209,6 +228,46 @@ class ValidationTests(unittest.TestCase):
             apply_config_txt_state(
                 config_txt("dtoverlay=imx585,cam0"), {**BASE, "cam0_link_frequency": "fast"},
             )
+
+
+class Imx477LinkFrequencyTests(unittest.TestCase):
+    """2026-09-27: imx477's menu was enabled with five added overclock values
+    (720/891/918/945/972 MHz). Each one has to actually validate and
+    round-trip through config.txt the same way imx585's and imx283's do --
+    the menu being *on* is only half the change; the write path has to accept
+    what it now offers."""
+
+    IMX477_ADDED = (720000000, 891000000, 918000000, 945000000, 972000000)
+
+    def test_every_added_value_is_accepted(self):
+        for hz in self.IMX477_ADDED:
+            with self.subTest(hz=hz):
+                out = apply_config_txt_state(
+                    config_txt("dtoverlay=imx477,cam0"),
+                    {"cam0_sensor": "imx477", "cam0_link_frequency": hz, "cam1_sensor": "none"},
+                )
+                parsed = parse_config_txt(out)
+                self.assertEqual(parsed["cam0_link_frequency"], hz)
+                self.assertIn(f"dtoverlay=imx477,cam0,link-frequency={hz}", out)
+
+    def test_the_default_still_omits_the_parameter_from_the_line(self):
+        out = apply_config_txt_state(
+            config_txt("dtoverlay=imx477,cam0"),
+            {"cam0_sensor": "imx477", "cam0_link_frequency": 450000000, "cam1_sensor": "none"},
+        )
+        self.assertNotIn("link-frequency", out)
+        self.assertIn("dtoverlay=imx477,cam0", out)
+
+    def test_a_value_the_driver_does_not_list_is_still_refused(self):
+        # Not every 3 MHz multiple is on the curated list, even though the
+        # driver itself would accept one -- resources/sensors.json's options
+        # are what the menu vouches for.
+        with self.assertRaises(ValueError) as caught:
+            apply_config_txt_state(
+                config_txt("dtoverlay=imx477,cam0"),
+                {"cam0_sensor": "imx477", "cam0_link_frequency": 900000000, "cam1_sensor": "none"},
+            )
+        self.assertIn("not a supported imx477 link frequency", str(caught.exception))
 
 
 if __name__ == "__main__":

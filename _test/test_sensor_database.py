@@ -428,13 +428,47 @@ class LinkFrequencyBlockTests(unittest.TestCase):
                 self.assertEqual(len(block["options"]), 1)
                 self.assertTrue(block.get("notes"))
 
-    def test_imx477_data_is_present_but_its_menu_is_gated_off(self):
+    def test_imx477_menu_is_enabled_with_five_added_overclock_options(self):
+        # 2026-09-27: the operator asked for these five by number, which is
+        # the "enabling it is an operator decision" the block's notes had been
+        # waiting on -- ahead of Gate 2 ever measuring 750 MHz on this stack.
         block = self.sensors["imx477"]["link_frequency"]
         self.assertEqual(block["default_hz"], 450000000)
-        self.assertFalse(block["menu_enabled"])
+        self.assertTrue(block["menu_enabled"])
+        self.assertEqual([o["hz"] for o in block["options"]], [
+            450000000, 720000000, 750000000, 891000000, 909000000,
+            918000000, 945000000, 972000000,
+        ])
         # The driver takes any ~3 MHz multiple, so these are curated presets
         # rather than a list it vouches for -- record the step so that stays clear.
         self.assertEqual(block["arbitrary"]["step_hz"], 3000000)
+
+    def test_imx477_values_over_rp1_spec_are_flagged_experimental(self):
+        # Everything above the 750 MHz spec limit is unverified on this
+        # stack -- the flags say so with the same vocabulary imx585's 891/
+        # 1039.5 MHz options use, not a new one invented for this sensor.
+        block = self.sensors["imx477"]["link_frequency"]
+        by_hz = {o["hz"]: o for o in block["options"]}
+        for hz in (891000000, 909000000, 918000000, 945000000, 972000000):
+            with self.subTest(hz=hz):
+                self.assertTrue(by_hz[hz].get("experimental"), hz)
+                self.assertTrue(by_hz[hz].get("over_rp1_spec"), hz)
+        for hz in (450000000, 720000000):
+            with self.subTest(hz=hz):
+                self.assertFalse(by_hz[hz].get("experimental"), hz)
+                self.assertFalse(by_hz[hz].get("over_rp1_spec"), hz)
+        self.assertTrue(by_hz[750000000].get("pi5_spec_limit"))
+
+    def test_imx477_notes_name_the_two_values_above_the_corruption_threshold(self):
+        # RPi's own testing reported white/corrupt frames from ~939 MHz in
+        # binned modes. 945 and 972 MHz sit above that; 891/909/918 MHz do
+        # not. The JSON flags don't distinguish the two groups (same
+        # experimental/over_rp1_spec vocabulary applies to all of them), so
+        # the notes -- and docs/sensors.md -- are what carry that distinction.
+        notes = self.sensors["imx477"]["link_frequency"]["notes"]
+        self.assertIn("945", notes)
+        self.assertIn("972", notes)
+        self.assertIn("corruption", notes)
 
 
 if __name__ == "__main__":

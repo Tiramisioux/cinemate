@@ -54,7 +54,7 @@
       "link_frequency": {
         "lanes": 2,
         "selectable": true,
-        "menu_enabled": false,
+        "menu_enabled": true,
         "default_hz": 450000000,
         "options": [
           {
@@ -62,13 +62,41 @@
             "mbps_per_lane": 900
           },
           {
+            "hz": 720000000,
+            "mbps_per_lane": 1440
+          },
+          {
             "hz": 750000000,
             "mbps_per_lane": 1500,
             "pi5_spec_limit": true
           },
           {
+            "hz": 891000000,
+            "mbps_per_lane": 1782,
+            "experimental": true,
+            "over_rp1_spec": true
+          },
+          {
             "hz": 909000000,
             "mbps_per_lane": 1818,
+            "experimental": true,
+            "over_rp1_spec": true
+          },
+          {
+            "hz": 918000000,
+            "mbps_per_lane": 1836,
+            "experimental": true,
+            "over_rp1_spec": true
+          },
+          {
+            "hz": 945000000,
+            "mbps_per_lane": 1890,
+            "experimental": true,
+            "over_rp1_spec": true
+          },
+          {
+            "hz": 972000000,
+            "mbps_per_lane": 1944,
             "experimental": true,
             "over_rp1_spec": true
           }
@@ -83,11 +111,11 @@
             "confidence": "suggested"
           },
           "pi5": {
-            "max_hz": 909000000,
+            "max_hz": 972000000,
             "confidence": "probable"
           }
         },
-        "notes": "menu_enabled is false until Gate 2 measures 750 MHz on this stack; enabling it is an operator decision. Since kernel 6.12.49 the driver computes PLL settings for any ~3 MHz multiple passed via the overlay parameter, so these are curated presets, not the driver's own list -- it vouches for no upper bound, which is why a menu rather than a free field. 750 MHz is the Pi 5 RP1 spec limit and officially sanctioned. RPi's own testing found ~909 MHz stable and white/corrupt frames from ~939 MHz in binned modes."
+        "notes": "menu_enabled was flipped to true on 2026-09-27 by explicit operator request for five named overclock frequencies (720/891/918/945/972 MHz) -- this is the operator decision the previous note was waiting on, made ahead of Gate 2 ever measuring 750 MHz on this stack, so every value above the default remains unverified on this stack rather than merely unenabled. Since kernel 6.12.49 the driver computes PLL settings for any ~3 MHz multiple passed via the overlay parameter, so these are curated presets, not the driver's own list -- it vouches for no upper bound, which is why a menu rather than a free field. 750 MHz is the Pi 5 RP1 spec limit and officially sanctioned. RPi's own testing found ~909 MHz stable and white/corrupt frames from ~939 MHz in binned modes; 945 and 972 MHz sit above that reported corruption threshold and are offered because the operator named them by number, not because they are believed safe -- see docs/sensors.md for the operator-facing warning."
       }
     },
     "imx296": {

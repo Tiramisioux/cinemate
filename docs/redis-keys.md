@@ -76,6 +76,7 @@ transition instead of a stale value.
 | tc_hole_count | CineMate (RedisListener) | Number of TC gap events this take — frames that arrived late enough to create a timecode hole (inter-frame gap ≥ 1.5× frame period); file may still be present | No |
 | missing_frame_count | CineMate (RedisListener) | Frames confirmed absent from disk: `max(0, expected − recorded)` at end of take; authoritative signal for genuine data loss | No |
 | frames_in_sync | CineMate (RedisListener) | `1` if live/final expected vs recorded frame counts are within configured sync tolerance; defaults are +/- 2 frames live and +/- 1 frame after buffered writes flush | No |
+| sync_warnings_enabled | CineMate | Display-only: `1` lets the SYNC box/flash show on the HDMI and web GUIs. `frames_in_sync` above is judged, logged and analysed the same either way — this never suppresses that, only the on-screen indicator. `set sync warnings [0/1]` | Yes |
 | recording_time | CineMate (RedisController timer) | Elapsed record time in seconds | No |
 | recording_tc_rec | CineMate (RedisController timer) | Elapsed record timecode | No |
 | recording_time_tod | CineMate (RedisController timer) | Time-of-day timecode updated during recording | No |

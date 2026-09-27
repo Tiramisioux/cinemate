@@ -956,7 +956,16 @@ class SimpleGUI(threading.Thread):
             values["frames_in_sync"] = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 1) == 1
         except (TypeError, ValueError):
             values["frames_in_sync"] = True
-        values["frames_off_sync"] = not values["frames_in_sync"]
+        # Display-only gate (settings.sync_warnings_enabled / `set sync
+        # warnings`): frames_in_sync above is always the real, unsuppressed
+        # judgement -- redis_listener.py keeps latching, logging, and running
+        # its end-of-take analysis whether or not this is on. Off just stops
+        # the SYNC box/flash (both draw sites below, and the magenta flash in
+        # draw_gui()) from surfacing it to the operator; frames_in_sync itself
+        # is untouched, so nothing about the recorded evidence changes.
+        # getattr guards a controller built without running __init__ (tests).
+        sync_warnings_enabled = bool(getattr(self.cinepi_controller, "sync_warnings_enabled", True))
+        values["frames_off_sync"] = (not values["frames_in_sync"]) and sync_warnings_enabled
 
         # ── audio stats ─────────────────────────────────────────────────
         # WAV recording/saved state is checked independently of mic connection:

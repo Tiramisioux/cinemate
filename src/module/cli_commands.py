@@ -130,6 +130,10 @@ class CommandExecutor(threading.Thread):
 
             # ── Locks & sync modes ────────────────────────────────────────────────
             'set shutter a sync'     : (cinepi_controller.set_shutter_a_sync_mode, [int, None]),
+            # Different "sync" than the line above: display-only toggle for the
+            # SYNC box/flash (frame-count sync, not exposure-sync mode). See
+            # CinePiController.set_sync_warnings_enabled.
+            'set sync warnings'      : (cinepi_controller.set_sync_warnings_enabled, [int, None]),
             'set iso lock'           : (cinepi_controller.set_iso_lock,   [int, None]),
             'set shutter a nom lock' : (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
             'set shutter a nom fps lock': (cinepi_controller.set_shu_fps_lock, [int, None]),

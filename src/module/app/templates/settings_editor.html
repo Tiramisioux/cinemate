@@ -1762,6 +1762,15 @@
         <p class="group-sub">{{ t('pane.sync.sub') }}</p>
       </header>
       <div class="cards">
+        <div class="card" data-search="sync warnings enable disable sync box flash toggle">
+          <div class="card-main">
+            <label class="card-label" for="f-syncwarn">{{ t('card.settings.sync_warnings_enabled.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_warnings_enabled.help') }}</p>
+          </div>
+          <div class="card-control">
+            <button class="toggle" id="f-syncwarn" data-path="settings.sync_warnings_enabled" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
+          </div>
+        </div>
         <div class="card" data-search="auto storage preroll wait before recording">
           <div class="card-main">
             <label class="card-label" for="f-preroll">{{ t('card.system.storage.auto_preroll.label') }}</label>

@@ -148,24 +148,7 @@
           }
         }
       },
-      "modes": [
-        {
-          "mode": 0,
-          "width": 1928,
-          "height": 1090,
-          "aspect": 1.77,
-          "bit_depth": 12,
-          "max_fps": 87
-        },
-        {
-          "mode": 1,
-          "width": 3856,
-          "height": 2180,
-          "aspect": 1.77,
-          "bit_depth": 12,
-          "max_fps": 40
-        }
-      ],
+      "modes_note": "No static 'modes' array here on purpose (closeout 2026-09-27, dev-track C-item clearhdr16-visibility): the two entries this used to carry (1928x1090, 3856x2180, both 12-bit) matched no current driver branch -- cinemate-7modes gives 1920x1080/3840x2160/1920x1100/3840x2200 -- and had no 16-bit entry at all, so _sensor_mode_metadata() never matched and silently returned {} for every imx585 mode. That was harmless (max_fps/binning_* just stayed unset; the live cinepi-raw listing's own fps always wins in _mode_from_metadata_or_detected) but was a dead branch that would mislead the next reader. imx585's mode geometry already changes across driver branches (see the fps x link-rate matrix work), so a static list here would only go stale again; the live --list-cameras probe in sensor_detect.py is the sole source of truth for this sensor's modes. See test_sensor_database_imx585_has_no_stale_modes_array in _test/test_sensor_database.py.",
       "link_frequency": {
         "lanes": 4,
         "selectable": true,

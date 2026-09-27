@@ -65,6 +65,57 @@ class SensorDatabaseTests(unittest.TestCase):
         )
         self.assertEqual(built["fps_max"], 10)
 
+    def test_sensor_database_imx585_has_no_stale_modes_array(self):
+        """Closeout 2026-09-27 (clearhdr16-visibility-closeout): imx585 used
+        to carry a static "modes" array (1928x1090, 3856x2180, both 12-bit)
+        that matched no current driver branch -- cinemate-7modes gives
+        1920x1080/3840x2160/1920x1100/3840x2200, and had no 16-bit entry at
+        all -- so _sensor_mode_metadata() never matched and always returned
+        {} for this sensor. Harmless (the live cinepi-raw listing's own
+        fps/binning always wins in _mode_from_metadata_or_detected via
+        `fps_max if fps_max is not None else ...`), but a dead branch that
+        would mislead the next reader.
+
+        Decision: drop the static array rather than update its geometry
+        (option (b) in the closeout brief), because imx585's mode set
+        already changes across driver branches/campaigns and nothing else
+        reads it (unlike imx477's five-mode enrichment, which
+        _mode_from_metadata_or_detected genuinely relies on -- see the test
+        above). The live --list-cameras probe is the sole source of truth
+        for imx585 modes.
+
+        This test pins the decision: it fails the moment someone adds a
+        "modes" array back to imx585 without a matching update here, which
+        is the drift-guard the brief asked for.
+        """
+        detector = self._detector_without_probe()
+        imx585 = detector.sensor_database["sensors"]["imx585"]
+
+        self.assertNotIn(
+            "modes", imx585,
+            "imx585 must not carry a static modes array -- it always drifts "
+            "from the driver's real geometry (see modes_note); the live "
+            "cinepi-raw probe in sensor_detect.py is the only source of "
+            "truth for this sensor's modes.",
+        )
+        self.assertIn("modes_note", imx585)
+
+        # The metadata lookup must still behave exactly as it did with the
+        # stale array present: a harmless miss, not an error, and the live
+        # probe path must not depend on it for fps/binning.
+        detector.settings = {}
+        for width, height, bit_depth in (
+            (3840, 2160, 12), (1920, 1080, 12), (1920, 1100, 16), (3840, 2200, 16),
+        ):
+            self.assertEqual(
+                detector._sensor_mode_metadata("imx585", width, height, bit_depth), {},
+            )
+            built = detector._mode_from_metadata_or_detected(
+                camera_name="imx585", width=width, height=height, bit_depth=bit_depth,
+                fps_max=42,
+            )
+            self.assertEqual(built["fps_max"], 42)
+
     def _detector_with_modes(self):
         detector = self._detector_without_probe()
         detector.settings = {}

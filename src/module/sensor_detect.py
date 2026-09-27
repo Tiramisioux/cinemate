@@ -420,34 +420,57 @@ def compute_preview_geometry(
     Returns unrounded values (no even-alignment) -- that stays each caller's
     own choice, because simple_gui._calculate_preview_guide_rect() must
     match DrmPreview::Show()'s own unrounded fit exactly.
+
+    Round 3 (operator issue 4, "anamorphic fills the web UI but not HDMI"):
+    the `-p` window used to be sized from the un-desqueezed *aspect* while
+    the lores buffer it frames was already desqueezed
+    (lores_w = lores_h * aspect * anamorphic_factor). DrmPreview::Show()
+    fits that buffer into the window by preserving the BUFFER's aspect, so
+    a too-narrow-for-its-height window doesn't crop or stretch anything --
+    it just leaves the window under-filled on whichever axis the buffer
+    turned out wider than the window's own shape assumed, which reads as a
+    letterboxed picture that never reaches the edges of the padded canvas.
+    Sizing the window from the same desqueezed aspect the buffer already
+    carries removes that daylight: the window's own shape now matches the
+    buffer's, so Show()'s fit has (at most, from int rounding) a pixel or
+    two of slack rather than a deliberate margin. Both blocks below now
+    share one `desqueezed_aspect` instead of one using `aspect` and the
+    other `aspect * anamorphic_factor` for what is meant to be the same
+    quantity -- the C3 clamp branch was the easiest place for those two to
+    silently drift apart again, since it recomputes lores_h from whichever
+    divisor it's handed.
     """
     width = mode.get('width') or canvas_width
     height = mode.get('height') or canvas_height
     active_width, active_height = active_picture_size(mode, width, height)
     aspect = (active_width / active_height) if active_height else 1.0
+    desqueezed_aspect = aspect * anamorphic_factor
 
     aw = canvas_width - 2 * padding_x
     ah = canvas_height - 2 * padding_y
 
-    # -p preview window: raw aspect, centred in the padded canvas area.
-    if ah and (aw / ah) > aspect:
+    # -p preview window: desqueezed aspect -- the same shape the lores
+    # buffer below is actually requested at -- centred in the padded canvas
+    # area. Using the un-desqueezed `aspect` here (pre-Round-3) left the
+    # window narrower or shorter than the buffer DrmPreview::Show() fits
+    # into it, so the picture never reached the padded canvas's own edges.
+    if ah and (aw / ah) > desqueezed_aspect:
         preview_h = ah
-        preview_w = int(preview_h * aspect)
+        preview_w = int(preview_h * desqueezed_aspect)
     else:
         preview_w = aw
-        preview_h = int(preview_w / aspect) if aspect else ah
+        preview_h = int(preview_w / desqueezed_aspect) if desqueezed_aspect else ah
     preview_x = (canvas_width - preview_w) // 2
     preview_y = (canvas_height - preview_h) // 2
 
     # Lores stream: target `target_lines`, clamped to the padded canvas AND
     # to the mode's own delivered size -- the fix for C3.
     lores_h = min(target_lines, ah, height)
-    lores_w = int(lores_h * aspect * anamorphic_factor)
+    lores_w = int(lores_h * desqueezed_aspect)
     max_lores_w = min(aw, width)
     if lores_w > max_lores_w:
         lores_w = max_lores_w
-        divisor = aspect * anamorphic_factor
-        lores_h = int(round(lores_w / divisor)) if divisor else lores_h
+        lores_h = int(round(lores_w / desqueezed_aspect)) if desqueezed_aspect else lores_h
 
     return {
         "lores_width": lores_w,

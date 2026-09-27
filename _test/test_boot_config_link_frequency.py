@@ -90,10 +90,16 @@ class LinkFrequencyMenuTests(unittest.TestCase):
 
 
 class OverlayLineTests(unittest.TestCase):
+    # imx585 always carries `ccmp` (see boot_config.py's overlay_line_for()
+    # docstring / _CAMERA_AUTO_DETECT_BY_MODEL comment) -- matches
+    # cinemate-install.sh's resolve_sensor_overlay(), confirmed against
+    # imx585-v4l2-driver/imx585-overlay.dts's `ccmp` override. These
+    # expectations were written before that fix landed and are updated here
+    # to the now-correct shape rather than the installer-disagreeing one.
     def test_a_non_default_frequency_is_written_onto_the_overlay_line(self):
         self.assertEqual(
             overlay_line_for("imx585", "cam0", 1039500000),
-            "dtoverlay=imx585,cam0,link-frequency=1039500000",
+            "dtoverlay=imx585,cam0,ccmp,link-frequency=1039500000",
         )
 
     def test_the_default_frequency_is_left_off_the_line(self):
@@ -102,13 +108,13 @@ class OverlayLineTests(unittest.TestCase):
         # "unchanged".
         self.assertEqual(
             overlay_line_for("imx585", "cam0", IMX585_DEFAULT_LINK_FREQUENCY),
-            "dtoverlay=imx585,cam0",
+            "dtoverlay=imx585,cam0,ccmp",
         )
 
     def test_mono_and_link_frequency_coexist(self):
         self.assertEqual(
             overlay_line_for("imx585_mono", "cam1", 891000000),
-            "dtoverlay=imx585,cam1,mono,link-frequency=891000000",
+            "dtoverlay=imx585,cam1,mono,ccmp,link-frequency=891000000",
         )
 
     def test_sensors_without_a_menu_never_get_the_parameter(self):

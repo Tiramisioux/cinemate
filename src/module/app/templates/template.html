@@ -2380,6 +2380,15 @@
         V = Object.assign({}, data);
         absorbSteps(data);
         steps.resolutions = data.sensor_resolutions || [];
+        // The mode list can be wider than the operator asked for -- a saved
+        // selection whose geometry no longer matches, or filters that excluded
+        // everything. Say so rather than letting it look like the setting was
+        // ignored. Toast once per connect; the console keeps it for later.
+        if (data.mode_selection_notice && data.mode_selection_notice.text) {
+            console.warn('mode selection: ' + data.mode_selection_notice.kind +
+                         ' -- ' + data.mode_selection_notice.text);
+            toast(data.mode_selection_notice.text);
+        }
         prevResolutionSwitching = truthy(V.resolution_switching);
         const ranges = data.control_ranges || {};
         steps.anamorphic = ranges.anamorphic_steps || [];

@@ -569,6 +569,10 @@ class SensorDetect:
         self.sensor_database = self._load_sensor_database()
         # Detected resolutions per camera will be stored here
         self.sensor_resolutions = {}
+        # cam -> {"kind": str, "text": str} whenever _finalize_modes had to
+        # offer something other than what the operator's own settings asked
+        # for. Empty when every camera's selection resolved cleanly.
+        self.mode_selection_notices: Dict[str, Dict[str, str]] = {}
         # Pre-filter counterpart of the above; see _finalize_modes().
         self.sensor_modes_unfiltered: Dict[str, List[Dict]] = {}
 
@@ -1346,10 +1350,63 @@ class SensorDetect:
             mode.get("crop_width"), mode.get("crop_height"),
         )
 
+    @staticmethod
+    def _mode_identity_coarse(mode: Dict) -> tuple:
+        """The part of a mode's identity that survives a driver geometry change.
+
+        _mode_identity below is the full key and includes crop_x/crop_y/
+        crop_width/crop_height, deliberately: two modes can deliver the same
+        width x height at different crops, and only the crop tells them apart.
+        But that makes a saved enabled_modes entry unmatchable the moment a
+        driver moves its windows -- and the imx283 campaign moved EVERY one of
+        them (the corrected active area shifted crop_x from 40 to 108 across the
+        table, and MODE_1C's family from 236 to 924). The operator's single
+        chosen mode then matched nothing and _finalize_modes fell back to
+        showing all 73, which reads as "my setting was ignored".
+        """
+        return (
+            int(mode.get("width") or 0), int(mode.get("height") or 0),
+            int(mode.get("bit_depth") or 0), bool(mode.get("hdr")),
+        )
+
     @classmethod
     def _mode_matches_enabled(cls, mode: Dict, entries: List[Dict]) -> bool:
         ident = cls._mode_identity(mode)
         return any(isinstance(e, dict) and cls._mode_identity(e) == ident for e in (entries or []))
+
+    @classmethod
+    def _match_enabled_modes(cls, modes: List[Dict], entries: List[Dict]):
+        """(modes to keep, tier) for an explicit enabled_modes selection.
+
+        Tier "exact"  - full identity, crop geometry included. Unchanged
+                        behaviour, and the only tier that can run when the
+                        driver still reports the geometry the choice was saved
+                        against.
+        Tier "coarse" - tried ONLY when "exact" matched nothing at all, i.e.
+                        the saved choice has been invalidated wholesale rather
+                        than the operator having deselected everything. Falls
+                        back to width/height/depth/hdr, which is what survives a
+                        geometry change.
+        Tier "none"   - neither matched. The caller decides what to do; it must
+                        not silently widen to the whole table.
+
+        The coarse tier can keep MORE modes than were chosen, when two modes
+        share a size at different crops. That is honest -- the saved entry no
+        longer carries anything that could tell them apart -- and it is a far
+        smaller surprise than the whole table. The tier is returned rather than
+        swallowed so the caller can say which one it used.
+        """
+        exact_keys = {cls._mode_identity(e) for e in (entries or []) if isinstance(e, dict)}
+        keep = [m for m in modes if cls._mode_identity(m) in exact_keys]
+        if keep:
+            return keep, "exact"
+
+        coarse_keys = {cls._mode_identity_coarse(e) for e in (entries or []) if isinstance(e, dict)}
+        keep = [m for m in modes if cls._mode_identity_coarse(m) in coarse_keys]
+        if keep:
+            return keep, "coarse"
+
+        return [], "none"
 
     @staticmethod
     def _mode_binning(mode: Dict) -> tuple:
@@ -2124,13 +2181,23 @@ class SensorDetect:
             if not use_individual_selection and getattr(self, "aspect_ratios_cfg", None) is not None:
                 ratio_matches = self._ratio_matches_for_camera(cam, modes)
 
+            # An explicit enabled_modes choice is resolved once, for the whole
+            # camera, because the exact-then-coarse fallback is a property of
+            # the SELECTION and not of any single mode: "did anything match at
+            # all" cannot be answered inside a per-mode test.
+            enabled_ids: set = set()
+            enabled_tier = "exact"
+            if use_individual_selection:
+                keep, enabled_tier = self._match_enabled_modes(modes, mode_entries)
+                enabled_ids = {id(m) for m in keep}
+
             for m in modes:
                 # Individual mode selection is authoritative.  Do not
                 # impose a separate resolution floor here: small sensor modes
                 # are valid modes and must reach the resolution picker when the
                 # operator enables them in settings.jsonc.
                 if use_individual_selection:
-                    if not self._mode_matches_enabled(m, mode_entries):
+                    if id(m) not in enabled_ids:
                         continue
                 else:
                     if ratio_matches:
@@ -2178,11 +2245,69 @@ class SensorDetect:
                 if floor:
                     selected = [m for m in selected if int(m.get("width") or 0) >= floor]
 
-            # ⚑ NEW: never leave a camera without modes
+            # Never leave a camera without modes -- but never do it silently
+            # either. Swapping the operator's chosen selection for the ENTIRE
+            # table reads as "my setting was ignored", which is exactly how this
+            # surfaced: one mode selected in the settings page, seventy-three in
+            # the dial. The notice below is what the GUI shows so the widening
+            # is visible instead of mysterious.
+            notice = None
+            if use_individual_selection and enabled_tier == "coarse":
+                notice = {
+                    "kind": "geometry_changed",
+                    "text": (
+                        "Your saved mode selection was matched by size only: "
+                        "the driver now reports different crop geometry than "
+                        "when it was saved. Re-pick your modes to store the "
+                        "current geometry."
+                    ),
+                }
+                logging.warning(
+                    "%s: enabled_modes matched by size only (crop geometry "
+                    "changed since it was saved) -- %d mode(s) kept",
+                    cam, len(selected),
+                )
+            elif use_individual_selection and enabled_tier == "none":
+                notice = {
+                    "kind": "selection_unmatched",
+                    "text": (
+                        "None of your saved modes exist in this driver's mode "
+                        "table, so every mode is being offered. Re-pick your "
+                        "modes in the settings page."
+                    ),
+                }
+                logging.warning(
+                    "%s: enabled_modes matched NOTHING (not even by size) -- "
+                    "falling back to the full table of %d modes",
+                    cam, len(modes),
+                )
+
             if not selected:
-                logging.warning("No modes passed the filters for %s – "
-                                "keeping full list instead", cam)
+                if notice is None:
+                    notice = {
+                        "kind": "filters_excluded_everything",
+                        "text": (
+                            "No mode passed the current filters, so every mode "
+                            "is being offered. Check the aspect-ratio, bit-depth "
+                            "and resolution filters in the settings page."
+                        ),
+                    }
+                    logging.warning("No modes passed the filters for %s – "
+                                    "keeping full list instead", cam)
                 selected = modes
+
+            # getattr: _finalize_modes is reachable on an instance built with
+            # __new__ (many tests do exactly that, setting only the filter
+            # attributes they care about), and the same "no opinion" convention
+            # the other optional attributes use applies here.
+            notices = getattr(self, "mode_selection_notices", None)
+            if notices is None:
+                notices = {}
+                self.mode_selection_notices = notices
+            if notice is not None:
+                notices[cam] = notice
+            else:
+                notices.pop(cam, None)
 
             pruned[cam] = {i: m for i, m in enumerate(self._order_modes(selected))}
         return pruned
@@ -2427,6 +2552,12 @@ class SensorDetect:
     def check_camera(self):
         self.detect_camera_model()
         return self.camera_model
+
+    def mode_selection_notice(self, camera_name: str):
+        """The notice for *camera_name*, or None when its selection resolved
+        cleanly. See _finalize_modes: a notice means the operator is being shown
+        something other than what their own settings asked for."""
+        return (getattr(self, "mode_selection_notices", None) or {}).get(camera_name)
 
     def load_sensor_resolutions(self):
         if self.camera_model in self.sensor_resolutions:

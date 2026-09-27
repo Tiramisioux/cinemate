@@ -83,6 +83,15 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         }
 
         initial_values['sensor_resolutions'] = sensor_detect.get_available_resolutions()
+        # Published beside the list it explains: non-null whenever the mode
+        # list above is NOT what the operator's own settings asked for --
+        # a saved enabled_modes selection that no longer matches the
+        # driver's geometry, or filters that excluded everything. Widening
+        # silently reads as "my setting was ignored"; see
+        # SensorDetect._finalize_modes.
+        initial_values['mode_selection_notice'] = sensor_detect.mode_selection_notice(
+            sensor_detect.camera_model,
+        )
         initial_values['current_sensor'] = sensor_detect.camera_model
         initial_values['selected_resolution_mode'] = selected_resolution_mode()
         initial_values['resolution_switching'] = redis_controller.get_value(

@@ -57,6 +57,38 @@ CAMERA_SECTION_END = "# ---- End camera section ----"
 # sensors don't get a separate "_mono" option here.
 SENSOR_MODELS = ["none", "imx477", "imx296", "imx283", "imx585", "imx585_mono"]
 
+# Mirrors cinemate-install.sh's resolve_sensor_overlay() (SENSOR_MODEL case,
+# ~line 1016): the CAMERA_AUTO_DETECT value the installer assigns per sensor
+# when that model is the one being installed active. Two writers touch the
+# same camera section -- the installer regenerating the whole file on
+# install, this module rewriting the section in place from the settings
+# editor -- and until this fix they disagreed: _render_camera_section()
+# always wrote camera_auto_detect=1 regardless of model, which is wrong for
+# imx283/imx585/imx585_mono. See CONFIG-TXT-FINDINGS.md.
+#
+# Why these particular values -- confirmed as the installer's VALUE, not as
+# a reason written down anywhere in this codebase: camera_auto_detect is a
+# stock Raspberry Pi config.txt directive (documented by Raspberry Pi, not
+# by this project) that tells the GPU firmware to auto-probe for and
+# auto-load an overlay for a *recognised official* Raspberry Pi camera
+# module. imx477 (HQ Camera) and imx296 (Global Shutter Camera) are
+# Raspberry Pi's own modules, so auto-detect finding and matching them is
+# redundant but harmless alongside the explicit overlay this module also
+# always writes. imx283 and imx585 (colour and mono) are third-party
+# modules with no official auto-detect signature -- and every third-party
+# driver README in this workspace (imx283-v4l2-driver/README.md,
+# imx585-v4l2-driver/README.md) independently instructs setting this to 0
+# specifically when hand-adding their overlay, which is strong
+# corroborating evidence for the same intent the installer's table encodes,
+# even though no comment in this codebase states the reason outright.
+_CAMERA_AUTO_DETECT_BY_MODEL = {
+    "imx477": True,
+    "imx296": True,
+    "imx283": False,
+    "imx585": False,
+    "imx585_mono": False,
+}
+
 _TOGGLE_LINES = {
     "i2c": "dtparam=i2c_arm=on",
     "i2s": "dtparam=i2s=on",
@@ -158,6 +190,16 @@ def overlay_line_for(model: str, port: str, link_frequency: int | None = None) -
         return None
     base = model[:-len("_mono")] if model.endswith("_mono") else model
     mono_suffix = ",mono" if model == "imx585_mono" else ""
+    # Matches cinemate-install.sh's resolve_sensor_overlay(): both imx585
+    # variants always carry `ccmp`, a real __overrides__ entry in
+    # imx585-overlay.dts (`sony,clearhdr-ccmp?`, confirmed against the
+    # pinned imx585-v4l2-driver branch). imx585-v4l2-driver/README.md
+    # documents 12-bit CCMP ClearHDR as "default-on for colour" (so `ccmp`
+    # is redundant-but-harmless there) and "opt-in on mono via the `ccmp`
+    # dtoverlay parameter" -- its presence is what the installer's shipped
+    # mono default actually depends on. Unconditional because the installer
+    # never makes it conditional either. See CONFIG-TXT-FINDINGS.md.
+    ccmp_suffix = ",ccmp" if base == "imx585" else ""
     link_suffix = ""
     default_hz = link_frequency_default(sensor_database(), model)
     if (
@@ -166,7 +208,7 @@ def overlay_line_for(model: str, port: str, link_frequency: int | None = None) -
         and link_frequency != default_hz
     ):
         link_suffix = f",{_LINK_FREQUENCY_TOKEN}{link_frequency}"
-    return f"dtoverlay={base},{port}{mono_suffix}{link_suffix}"
+    return f"dtoverlay={base},{port}{mono_suffix}{ccmp_suffix}{link_suffix}"
 
 
 def _model_from_overlay_value(value: str) -> tuple[str | None, str | None, int | None]:
@@ -315,6 +357,31 @@ def parse_config_txt(full_text: str) -> dict:
     }
 
 
+def _resolve_camera_auto_detect(cam0_sensor: str, cam1_sensor: str) -> str:
+    """"1" or "0" for config.txt's single, board-wide camera_auto_detect
+    line -- matches the installer's per-model value (see
+    _CAMERA_AUTO_DETECT_BY_MODEL) when exactly one port is populated, which
+    is the only case the installer itself ever has to solve (it has no
+    concept of a second port at all).
+
+    A dual-port pick that mixes an official model (wants 1) and a
+    third-party one (wants 0) has no single value that is correct for both,
+    since this is one line for the whole board. Resolved conservatively: 0
+    wins if *either* populated port needs it. 0 only ever disables an
+    optional firmware auto-probe that this module's own explicit overlay
+    line never depended on to begin with, whereas 1 next to a third-party
+    sensor's explicit overlay is the actual defect this function exists to
+    avoid. This combination rule is this module's own judgement call, not
+    something the installer or any doc states -- it has never had to be
+    made before, because the installer never supports two active sensors at
+    once."""
+    models = [m for m in (cam0_sensor, cam1_sensor) if m != "none"]
+    if not models:
+        return "0"
+    wants_one = all(_CAMERA_AUTO_DETECT_BY_MODEL.get(m, False) for m in models)
+    return "1" if wants_one else "0"
+
+
 def _render_camera_section(
     cam0_sensor: str,
     cam1_sensor: str,
@@ -326,7 +393,7 @@ def _render_camera_section(
         overlay_line_for(cam1_sensor, "cam1", cam1_link_frequency),
     ]
     lines = [l for l in lines if l]
-    auto_detect = "1" if lines else "0"
+    auto_detect = _resolve_camera_auto_detect(cam0_sensor, cam1_sensor)
     if not lines:
         lines = ["# no camera overlay selected"]
     return "\n".join([

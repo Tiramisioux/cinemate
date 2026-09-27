@@ -4160,7 +4160,15 @@
   }
   function cfgOverlayLine(value, port, linkFreq){
     if (value === 'none') return null;
-    var line = 'dtoverlay=' + value.replace('_mono', '') + ',' + port + (value === 'imx585_mono' ? ',mono' : '');
+    var base = value.replace('_mono', '');
+    var line = 'dtoverlay=' + base + ',' + port + (value === 'imx585_mono' ? ',mono' : '');
+    /* Both imx585 variants always carry `ccmp` -- matches
+       cinemate-install.sh's resolve_sensor_overlay() and
+       boot_config.py's overlay_line_for(), whose docstring names this
+       function as the one that has to mirror it exactly. See
+       CONFIG-TXT-FINDINGS.md: this preview used to omit it, showing the
+       operator a line that wasn't what the save actually wrote. */
+    if (base === 'imx585') line += ',ccmp';
     /* The overlay's own default is this same value, so writing it would put a
        number in config.txt that reads as a choice when it isn't. */
     if (cfgSupportsLinkFreq(value) && linkFreq && linkFreq !== cfgLinkFreqDefaultFor(value)) {
@@ -4225,6 +4233,20 @@
     });
   }
   function cfgLine(on, text){ return (on ? '' : '#') + text; }
+  /* Mirrors boot_config.py's _CAMERA_AUTO_DETECT_BY_MODEL / cinemate-install.sh's
+     resolve_sensor_overlay(): 1 for Raspberry Pi's own official modules,
+     0 for third-party sensors with no auto-detect signature. See
+     _resolve_camera_auto_detect()'s docstring in boot_config.py for the
+     reasoning and for the mixed-port combination rule this copies. */
+  var CFG_AUTO_DETECT_BY_MODEL = {
+    imx477: true, imx296: true, imx283: false, imx585: false, imx585_mono: false
+  };
+  function cfgResolveAutoDetect(cam0, cam1){
+    var models = [cam0, cam1].filter(function(m){ return m !== 'none'; });
+    if (!models.length) return '0';
+    var wantsOne = models.every(function(m){ return CFG_AUTO_DETECT_BY_MODEL[m] === true; });
+    return wantsOne ? '1' : '0';
+  }
   function currentConfigText(){
     var cam0 = document.getElementById('cfg-cam0-sensor').value;
     var cam1 = document.getElementById('cfg-cam1-sensor').value;
@@ -4253,7 +4275,7 @@
       cfgLine(audio, 'dtparam=audio=on'),
       '',
       '# ---- Camera section ----',
-      'camera_auto_detect=' + (camLines.length && camLines[0].indexOf('#') !== 0 ? '1' : '0'),
+      'camera_auto_detect=' + cfgResolveAutoDetect(cam0, cam1),
       camLines.join('\n'),
       '# ---- End camera section ----',
       '',

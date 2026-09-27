@@ -11,7 +11,8 @@ from module import rp1_regime
 from module.sensor_database import load_sensor_database
 from module.aspect_ratios import (
     FULL_FRAME_RATIO_ID,
-    PREFERRED_DEFAULT_RATIO_IDS,
+    PREFERRED_DELIVERY_RATIO_ID,
+    PREFERRED_SHAPE_RATIO_ID,
     load_aspect_ratio_table,
 )
 
@@ -1628,40 +1629,110 @@ class SensorDetect:
                 ids.append(rid)
         return ids
 
+    def _stand_in_ratio_id(self, derived: List[str], target_id: str) -> str | None:
+        """The id in *derived* that may stand in for *target_id*, or None.
+
+        target_id itself when the camera has it. Otherwise the nearest derived
+        ratio, but ONLY if the pairing is mutual: that ratio's own nearest
+        preference must be target_id too. Mutual-nearest is the test because it
+        needs no threshold, and a threshold here would be a number nobody could
+        defend -- imx477's 1.89:1 stands in for 1.78:1 across a gap of 0.119,
+        which no tolerance in this file would have admitted.
+
+        What mutuality buys: on a camera whose only shapes are 2.39:1 and
+        2.00:1, 2.00:1 is the nearest derived ratio to BOTH preferences, but its
+        own nearest preference is 1.78:1 -- so it stands in for the delivery
+        slot and not for the shape slot, and _default_ratio_ids can see that the
+        camera has no 4:3-ish shape at all rather than quietly filing a 2:1 mode
+        under "4:3".
+
+        FULL_FRAME_RATIO_ID can be a member of *derived* and is skipped: it does
+        not name a shape, it names "whatever this sensor reads when it reads
+        everything", so it has no table value to measure a distance against. The
+        full frame is chosen separately in _default_ratio_ids below.
+        """
+        if target_id in derived:
+            return target_id
+        values = {e["id"]: e["value"] for e in self._aspect_ratio_table()}
+        target = values.get(target_id)
+        if target is None:
+            return None
+        preferences = [v for v in (values.get(PREFERRED_SHAPE_RATIO_ID),
+                                   values.get(PREFERRED_DELIVERY_RATIO_ID))
+                       if v is not None]
+        candidates = [(abs(values[rid] - target), rid) for rid in derived if rid in values]
+        if not candidates:
+            return None
+        _, nearest = min(candidates)
+        # Mutual? The candidate's own nearest preference has to be this one.
+        own = min(preferences, key=lambda v: abs(values[nearest] - v))
+        return nearest if abs(own - target) < 1e-9 else None
+
     def _default_ratio_ids(self, camera_name: str) -> List[str]:
-        """The selection for a camera nobody has chosen ratios for: the
-        preferred pair (aspect_ratios.PREFERRED_DEFAULT_RATIO_IDS -- 1.33:1 and
-        1.78:1) restricted to the ones this camera actually has a mode for,
-        and the whole derived set when it has neither.
+        """The selection for a camera nobody has chosen ratios for: this
+        camera's own FULL FRAME, plus the delivery shape
+        aspect_ratios.PREFERRED_DELIVERY_RATIO_ID (1.78:1) or the nearest ratio
+        this camera actually has.
 
-        "Has a mode for" is membership of _derived_default_ratio_ids, i.e. some
-        mode comes *home* to that ratio (its nearest canonical ratio), not
-        merely that some mode is within tolerance of it. That is the same rule
-        _ratio_matches_for_camera and the settings pane's row labels use, so a
-        preferred ratio is enabled only when at least one row is labelled with
-        it, and enabling it therefore always yields modes.
+        Operator instruction, 2026-09-26 -- see PREFERRED_DELIVERY_RATIO_ID's
+        comment for the full derivation, including why imx477 needs no special
+        case (its full frame IS 1.33:1) and what each shipped sensor ends up
+        with.
 
-        The result is never empty for a camera with any mode at all, and the
-        fallback is the reason: a sensor with neither 1.33 nor 1.78 -- imx477
-        and imx296 have no 16:9 mode at all, which is what WP-CM-11's
-        derive-everything default was built for -- still shows its whole table
-        rather than nothing. This narrows where WP-CM-11 deliberately did not,
-        so unlike _derived_default_ratio_ids it does hide modes: on a camera
-        that has both preferred ratios, every other ratio family starts hidden
-        and is one toggle away in the settings page.
+        Both halves are drawn from _derived_default_ratio_ids, i.e. ratios some
+        mode comes *home* to, which is the same rule _ratio_matches_for_camera
+        and the settings pane's row labels use. So an enabled default always has
+        rows behind it and the pane can never show a toggle that yields nothing.
+
+        The two halves often name the same id -- imx585's full frame is 1.769,
+        which IS 1.78:1 -- and then this returns one toggle, not two. That is
+        the honest answer: there is no second shape to offer.
+
+        Never empty for a camera with any mode at all: a camera whose derived
+        set somehow contains neither falls back to the whole derived set, so it
+        shows its entire table rather than nothing.
         """
         derived = self._derived_default_ratio_ids(camera_name)
-        preferred = [rid for rid in PREFERRED_DEFAULT_RATIO_IDS if rid in derived]
-        # ...plus the whole sensor, always. The "full" toggle exists because a
-        # 3:2 sensor's own native readout was hidden by a default made of
-        # delivery shapes (operator, 2026-09-22), so leaving it off by default
-        # would rebuild the exact problem it was added to solve. When the full
-        # frame IS one of the preferred pair this appends nothing -- the
-        # toggle it would add is already selected.
+        if not derived:
+            return []
+
+        # Slot one, the SHAPE slot: this camera's whole frame when the driver
+        # reports enough crop geometry to know what that is, and 4:3-or-closest
+        # when it does not. A 3:2 sensor's own native readout was once hidden by
+        # a default made only of delivery shapes (operator, 2026-09-22), and
+        # leading with the full frame is what stops that recurring -- but
+        # full_frame_ratio() answers (None, None) for every sensor that reports
+        # no crop annotation, which is every stock sensor. Falling back to
+        # PREFERRED_SHAPE_RATIO_ID there is what keeps imx477 on 1.33:1.
         full_id, _ = self.full_frame_ratio(camera_name)
-        if full_id and full_id in derived and full_id not in preferred:
-            preferred.append(full_id)
-        return preferred or derived
+        full_known = bool(full_id and full_id in derived)
+
+        # A STAND-IN MAY FILL A SLOT BUT MAY NOT, ON ITS OWN, HIDE THE TABLE.
+        # This is the WP-CM-11 guarantee ("no sensor can lose a mode to a
+        # default nobody chose") in the only form it still needs: "or closest"
+        # always finds something, so a rule that narrowed on a stand-in alone
+        # would narrow on every camera and the old fallback would be dead code.
+        # A camera the preferences genuinely do not describe -- no knowable full
+        # frame, and neither 1.33:1 nor 1.78:1 among its own shapes -- keeps its
+        # whole table. An all-anamorphic sensor with 2.39:1 and 2.00:1 would
+        # otherwise open on 2.00:1 alone, with 2.39:1 hidden behind a preference
+        # that never matched it.
+        exact = (PREFERRED_SHAPE_RATIO_ID in derived
+                 or PREFERRED_DELIVERY_RATIO_ID in derived)
+        if not full_known and not exact:
+            return derived
+
+        shape = full_id if full_known else self._stand_in_ratio_id(
+            derived, PREFERRED_SHAPE_RATIO_ID)
+
+        selected: List[str] = [shape] if shape else []
+
+        # Slot two, the DELIVERY slot.
+        delivery = self._stand_in_ratio_id(derived, PREFERRED_DELIVERY_RATIO_ID)
+        if delivery and delivery not in selected:
+            selected.append(delivery)
+
+        return selected
 
     def _enabled_ratio_ids(self, camera_name: str) -> List[str]:
         """Precedence (WP-CM-11): an entry naming this camera wins; else an

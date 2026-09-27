@@ -417,7 +417,11 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
     # CM-2: of those five, the ones the shipped 1.33:1/1.78:1 default selects.
     # imx477 has nothing at 1.78, so this is its 1.33 family: the two 4:3
     # readouts and the 1332x990 crop (aspect 1.35, home ratio 1.33:1).
-    DEFAULT_SELECTED_IMX477_SIZES = {(2028, 1520), (1332, 990), (4056, 3040)}
+    # All five: the 4:3 readouts plus the 1332x990 crop from the SHAPE slot,
+    # and the two 1.878 modes that 1.89:1 brings in standing for 16:9
+    # (operator, 2026-09-26 -- "the 1.33 and 1.78 (or closest) for imx477").
+    DEFAULT_SELECTED_IMX477_SIZES = {(2028, 1520), (1332, 990), (4056, 3040),
+                                     (4056, 2160), (2028, 1080)}
 
     def _assert_the_default_selects_the_133_family(self, image_capture_cfg, source_label):
         modes = self._imx477_modes_from_database()
@@ -438,20 +442,21 @@ class ShippedDefaultFreshInstallRegressionTests(unittest.TestCase):
         self.assertEqual(
             sizes,
             self.DEFAULT_SELECTED_IMX477_SIZES,
-            f"{source_label}: the fresh-install default is 1.33:1 on this "
-            f"sensor (no 16:9 mode exists), so its 4:3 readouts and the "
-            f"1332x990@120fps crop must all be selected",
+            f"{source_label}: the fresh-install default on this sensor is "
+            f"1.33:1 plus 1.89:1 standing in for 16:9 (it has no true "
+            f"16:9 mode), so every one of its five modes must be selected",
         )
         self.assertEqual(
             {(m["width"], m["height"]) for m in d.sensor_modes_unfiltered["imx477"]},
             self.ALL_STOCK_IMX477_SIZES,
-            f"{source_label}: the 1.89 modes are unselected, not lost -- the "
-            f"settings page offers them from the unfiltered table",
+            f"{source_label}: every stock mode stays reachable in the "
+            f"unfiltered table the settings page offers",
         )
         self.assertEqual(
-            set(d._enabled_ratio_ids("imx477")), {"1.33:1"},
-            f"{source_label}: 1.78:1 must not be selected on a sensor with no "
-            f"mode that comes home to it",
+            set(d._enabled_ratio_ids("imx477")), {"1.33:1", "1.89:1"},
+            f"{source_label}: 1.78:1 itself must never be selected on a sensor "
+            f"with no mode that comes home to it -- 1.89:1 stands in for it "
+            f"instead, which is the shape this sensor actually has",
         )
 
     def test_shipped_settings_jsonc_default_selects_the_imx477_133_family(self):
@@ -573,14 +578,16 @@ class ShippedDefaultPartialMatchRegressionTests(unittest.TestCase):
         # Real numbers from resources/sensors.json's imx283 entry, narrowed
         # by today's bit_depths=[10,12,16]/k_steps=[1.5,2,3,4] and then by the
         # shipped default. That entry's modes are ~1.5 (home ratio 1.37:1) or
-        # ~1.8 (home ratio 1.78:1) and it has nothing at 4:3, so the default
-        # resolves to 1.78:1 alone and the 1.5-aspect 2784x1828 12-bit mode is
-        # hidden until the operator ticks 1.37:1 in the settings page. The
-        # driver actually shipped for this sensor reports a full 14-ratio crop
-        # family, where the same rule selects 1.33:1 and 1.78:1 -- this fixture
-        # is the metadata table, which is deliberately a different, smaller
-        # shape (see DerivedDefaultRatioSetTests' own note).
-        expected = {(2784, 1542, 12), (3936, 2176, 10)}
+        # ~1.8 (home ratio 1.78:1) and it has nothing at 4:3.
+        #
+        # This fixture carries no crop geometry, so full_frame_ratio() cannot
+        # say what the whole frame is and the SHAPE slot falls back to
+        # 4:3-or-closest -- which here is 1.37:1, the home ratio of the sensor's
+        # own 1.5 readouts. So the 1.5-aspect 2784x1828 12-bit mode is now
+        # selected rather than hidden, which is the right outcome and the same
+        # one the geometry path reaches directly: the native readout is on by
+        # default (operator, 2026-09-22 and again 2026-09-26).
+        expected = {(2784, 1542, 12), (3936, 2176, 10), (2784, 1828, 12)}
         for settings_path, label in (
             (ROOT / "settings.jsonc", "settings.jsonc"),
             (ROOT / "resources" / "settings" / "settings_default.jsonc", "settings_default.jsonc"),
@@ -691,22 +698,29 @@ class ShippedDefaultAcrossANativelyDifferentSensorTests(unittest.TestCase):
         self.assertEqual(
             after, expected,
             f"{label}: the shipped default selected something other than this "
-            f"sensor's 16:9 family. It has no 4:3 mode, so 1.33:1 must not be "
-            f"selected, and the selection must not be empty either.",
+            f"sensor's own two shapes. It has no 4:3 mode, so 1.33:1 must not "
+            f"be selected, and the selection must not be empty either.",
         )
-        self.assertEqual(set(d._enabled_ratio_ids("imx283")), {"1.78:1"})
+        # 1.37:1 is the SHAPE slot standing in for 4:3 -- it is the home ratio
+        # of this fixture's 1.5 native readouts, and its own nearest preference
+        # is 4:3, so the pairing is mutual. 1.78:1 is the delivery slot.
+        self.assertEqual(
+            set(d._enabled_ratio_ids("imx283")), {"1.37:1", "1.78:1"},
+        )
 
     def test_shipped_settings_jsonc_selects_the_imx283_16x9_family(self):
         self._assert_the_default_selects(
             ROOT / "settings.jsonc", "settings.jsonc",
-            {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10)},
+            {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10),
+             (5568, 3664, 10), (5568, 3664, 12), (2784, 1828, 12)},
         )
 
     def test_shipped_settings_default_jsonc_selects_the_imx283_16x9_family(self):
         self._assert_the_default_selects(
             ROOT / "resources" / "settings" / "settings_default.jsonc",
             "settings_default.jsonc",
-            {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10)},
+            {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10),
+             (5568, 3664, 10), (5568, 3664, 12), (2784, 1828, 12)},
         )
 
     def test_a_sensor_with_neither_preferred_ratio_keeps_its_whole_table(self):
@@ -798,24 +812,34 @@ class DerivedDefaultRatioSetTests(unittest.TestCase):
     guarantee stays under test independently of what the default does with it.
     """
 
-    def test_imx477_default_selects_its_133_family_only(self):
-        # One preferred ratio present. imx477 has no 16:9 mode (its widest is
-        # 1.88, home ratio 1.89:1), so 1.33:1 is selected alone and the two
-        # 1.88 modes start hidden.
+    def test_imx477_default_selects_both_of_its_families(self):
+        # Operator, 2026-09-26: "expose the 1.33 and 1.78 (or closest) for
+        # imx477 as default." imx477 has no 16:9 mode at all -- its widest is
+        # 2028x1080 = 1.878, home ratio 1.89:1 -- so the delivery slot is filled
+        # by 1.89:1 standing in for 16:9, and ALL FIVE modes are selected.
+        # Under the previous "if present" rule the delivery slot went empty and
+        # the two 1.88 modes started hidden.
         d = _detector(aspect_ratios_cfg={})
         pruned = d._finalize_modes({"imx477": [dict(m) for m in IMX477_FIVE_MODES]})
         sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
-        self.assertEqual(sizes, {(4056, 3040), (2028, 1520), (1332, 990)})
+        self.assertEqual(
+            sizes,
+            {(4056, 3040), (2028, 1520), (1332, 990), (4056, 2160), (2028, 1080)},
+        )
 
     def test_imx477_derived_set_is_still_133_and_189(self):
-        # The derived set -- what "if present" is checked against, and the
-        # fallback -- is every ratio the camera's modes come home to.
+        # The derived set -- what a preference is checked against, and what
+        # "or closest" searches -- is every ratio the camera's modes come home
+        # to. Unchanged; what changed is that BOTH of its members are now
+        # selected by default rather than just 1.33:1.
         d = _detector(aspect_ratios_cfg={})
         d.sensor_modes_unfiltered = {"imx477": [dict(m) for m in IMX477_FIVE_MODES]}
         self.assertEqual(
             set(d._derived_default_ratio_ids("imx477")), {"1.33:1", "1.89:1"},
         )
-        self.assertEqual(set(d._enabled_ratio_ids("imx477")), {"1.33:1"})
+        self.assertEqual(
+            set(d._enabled_ratio_ids("imx477")), {"1.33:1", "1.89:1"},
+        )
 
     def test_imx296_single_mode_survives_with_no_config(self):
         d = _detector(aspect_ratios_cfg={})
@@ -852,16 +876,21 @@ class DerivedDefaultRatioSetTests(unittest.TestCase):
     def test_imx283_default_selects_its_16x9_family(self):
         # Neither-nor is covered by
         # ShippedDefaultAcrossANativelyDifferentSensorTests' all-1.5 fixture;
-        # this metadata table has ~1.8 modes but no 4:3 one, so 1.78:1 alone is
-        # selected and the three 1.5-aspect modes (home ratio 1.37:1) are
-        # hidden -- including both full-resolution 5568x3664 readouts.
+        # this metadata table has ~1.8 modes but no 4:3 one. The delivery slot
+        # takes 1.78:1, and the SHAPE slot takes this sensor's own full frame
+        # rather than 4:3 -- "for other sensors, default should be full frame
+        # and 1.78" (operator, 2026-09-26). So both 5568x3664 readouts and the
+        # binned 2784x1828 full frame are selected now, where the previous rule
+        # hid every 1.5-aspect mode including the sensor's native readout.
         d = _detector(aspect_ratios_cfg={})
         pruned = d._finalize_modes({"imx283": [dict(m) for m in IMX283_SIX_MODES]})
         sizes = {
             (m["width"], m["height"], m["bit_depth"]) for m in pruned["imx283"].values()
         }
         self.assertEqual(
-            sizes, {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10)},
+            sizes,
+            {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10),
+             (5568, 3664, 10), (5568, 3664, 12), (2784, 1828, 12)},
         )
 
     def test_explicit_per_camera_selection_still_narrows(self):
@@ -926,13 +955,17 @@ class LegacyShippedDefaultMigrationTests(unittest.TestCase):
         out = _apply_settings_defaults(self._legacy_on_disk_settings())
         self.assertEqual(out["image_capture"]["aspect_ratios"], {})
 
-    # CM-2: the migration's effect is no longer "every mode survives" -- the
-    # shipped default narrows to 1.33:1/1.78:1 where the camera has them -- so
-    # what these two assert is that a migrated file behaves exactly like a
-    # camera nobody has chosen ratios for, and specifically NOT like the stale
-    # 1.78:1-only value. On imx477 the two answers are disjoint, which is what
-    # makes the assertion load-bearing: the stale value keeps only the 1.88
-    # modes, the migrated one only the 1.33 family.
+    # The migration's effect is not "every mode survives" -- the shipped default
+    # still narrows -- so what these two assert is that a migrated file behaves
+    # exactly like a camera nobody has chosen ratios for, and specifically NOT
+    # like the stale 1.78:1-only value.
+    #
+    # On imx477 the two answers are no longer disjoint (2026-09-26: the delivery
+    # slot is now filled by 1.89:1 standing in for 16:9, so the fresh-camera
+    # answer includes the 1.88 modes the stale value kept). The assertion stays
+    # load-bearing on the count instead: the stale value keeps TWO modes, a
+    # fresh camera keeps all FIVE, and the resolved ratio set below distinguishes
+    # them outright.
     def test_imx477_after_the_legacy_shipped_value_matches_a_fresh_camera(self):
         from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
 
@@ -944,13 +977,16 @@ class LegacyShippedDefaultMigrationTests(unittest.TestCase):
         sizes = {(m["width"], m["height"]) for m in pruned["imx477"].values()}
         self.assertEqual(
             sizes,
-            {(4056, 3040), (2028, 1520), (1332, 990)},
+            {(4056, 3040), (2028, 1520), (1332, 990), (4056, 2160), (2028, 1080)},
             "a settings.jsonc left over from before WP-CM-11, carrying the "
             "old shipped {\"default\": [\"1.78:1\"]}, still narrows imx477 to "
-            "the modes nearest 1.78 on reload -- it must instead behave like a "
-            "camera nobody chose ratios for, which on this sensor is 1.33:1",
+            "the two modes nearest 1.78 on reload -- it must instead behave "
+            "like a camera nobody chose ratios for, which on this sensor is "
+            "1.33:1 plus 1.89:1 standing in for 16:9",
         )
-        self.assertEqual(set(d._enabled_ratio_ids("imx477")), {"1.33:1"})
+        self.assertEqual(
+            set(d._enabled_ratio_ids("imx477")), {"1.33:1", "1.89:1"},
+        )
 
     def test_imx283_after_the_legacy_shipped_value_matches_a_fresh_camera(self):
         from module.config_loader import _apply_settings_defaults  # noqa: PLC0415
@@ -970,7 +1006,8 @@ class LegacyShippedDefaultMigrationTests(unittest.TestCase):
         # itself: derived from imx283's own modes, not carried over from a
         # global entry that no longer exists.
         self.assertEqual(
-            sizes, {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10)},
+            sizes, {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10),
+             (5568, 3664, 10), (5568, 3664, 12), (2784, 1828, 12)},
         )
         self.assertEqual(image_capture_cfg.get("aspect_ratios"), {})
         self.assertTrue(d._ratio_selection_is_derived("imx283"))
@@ -1117,15 +1154,23 @@ class HomeRatioAlwaysClaimsItsModesTests(unittest.TestCase):
 
 
 class PreferredDefaultRatioPairTests(unittest.TestCase):
-    """CM-2, the rule in one place: _default_ratio_ids returns the preferred
-    pair restricted to what the camera has, and the whole derived set when it
-    has neither. The three shapes are asserted here on minimal fixtures so the
-    rule is readable without a sensor's full mode table; the per-sensor classes
-    above are what prove it on the real ones.
+    """The rule in one place: _default_ratio_ids fills two slots -- a SHAPE slot
+    (this camera's full frame when the driver reports crop geometry, otherwise
+    4:3-or-closest) and a DELIVERY slot (16:9-or-closest).
 
-    The ids come from aspect_ratios.PREFERRED_DEFAULT_RATIO_IDS, read here
-    rather than typed again, so this test cannot pass while the constant says
-    something else.
+    Operator instruction, 2026-09-26: "expose the 1.33 and 1.78 (or closest) for
+    imx477 as default. for other sensors, default should be full frame and
+    1.78." One rule covers both halves, because imx477's own full frame IS
+    1.33:1.
+
+    What changed from the previous "preferred pair, if present" rule is the "or
+    closest": a camera with no 16:9 mode used to match only 4:3 and the delivery
+    slot went empty. Now the nearest shape it actually has stands in -- but only
+    when the pairing is mutual (see _stand_in_ratio_id), and a stand-in alone is
+    never enough to hide the rest of the table (see the fallback test below).
+
+    The ids come from aspect_ratios' own constants, read here rather than typed
+    again, so these tests cannot pass while the constants say something else.
     """
 
     @staticmethod
@@ -1138,34 +1183,50 @@ class PreferredDefaultRatioPairTests(unittest.TestCase):
         d.sensor_modes_unfiltered = {"cam": [self._mode(a) for a in aspects]}
         return d
 
-    def test_the_constant_is_4x3_and_16x9_in_table_order(self):
+    def test_the_constants_are_4x3_and_16x9_and_are_in_the_table(self):
         from module.aspect_ratios import (  # noqa: PLC0415
-            PREFERRED_DEFAULT_RATIO_IDS, load_aspect_ratio_table,
+            PREFERRED_DELIVERY_RATIO_ID, PREFERRED_SHAPE_RATIO_ID,
+            load_aspect_ratio_table,
         )
 
-        self.assertEqual(PREFERRED_DEFAULT_RATIO_IDS, ("1.33:1", "1.78:1"))
+        self.assertEqual(PREFERRED_SHAPE_RATIO_ID, "1.33:1")
+        self.assertEqual(PREFERRED_DELIVERY_RATIO_ID, "1.78:1")
         table_ids = [e["id"] for e in load_aspect_ratio_table()]
-        self.assertEqual(
-            [rid for rid in table_ids if rid in PREFERRED_DEFAULT_RATIO_IDS],
-            list(PREFERRED_DEFAULT_RATIO_IDS),
-            "a preferred id that is not in the canonical table could never be "
-            "selected, and the order here is the order the pane shows",
-        )
+        for rid in (PREFERRED_SHAPE_RATIO_ID, PREFERRED_DELIVERY_RATIO_ID):
+            self.assertIn(
+                rid, table_ids,
+                "a preference that is not in the canonical table has no value "
+                "to measure 'or closest' against, so it could never be filled",
+            )
 
     def test_both_present(self):
         d = self._detector_with([1.33, 1.78, 2.39])
         self.assertEqual(d._default_ratio_ids("cam"), ["1.33:1", "1.78:1"])
         self.assertEqual(d._enabled_ratio_ids("cam"), ["1.33:1", "1.78:1"])
 
-    def test_only_4x3_present(self):
+    def test_no_16x9_mode_gets_the_nearest_shape_instead(self):
+        # THE imx477 CASE, in miniature. 1.89:1 is 0.119 from 16:9 -- far
+        # outside any tolerance in the codebase -- but it is the nearest thing
+        # this camera has and its own nearest preference is 16:9, so it stands
+        # in. Under the old "if present" rule the delivery slot went empty and
+        # the camera opened on 4:3 alone.
         d = self._detector_with([1.33, 1.89])
-        self.assertEqual(d._default_ratio_ids("cam"), ["1.33:1"])
+        self.assertEqual(d._default_ratio_ids("cam"), ["1.33:1", "1.89:1"])
 
-    def test_only_16x9_present(self):
+    def test_no_4x3_mode_leaves_the_shape_slot_empty(self):
+        # 1.78:1 is present exactly, so the table may be narrowed; 2.39:1 is
+        # nearest to 4:3 but its OWN nearest preference is 16:9, so the pairing
+        # is not mutual and nothing stands in for the shape slot. Filing a
+        # 2.39:1 mode under "4:3" would be worse than leaving the slot empty.
         d = self._detector_with([1.78, 2.39])
         self.assertEqual(d._default_ratio_ids("cam"), ["1.78:1"])
 
-    def test_neither_present_falls_back_to_every_derived_ratio(self):
+    def test_a_stand_in_alone_does_not_narrow_the_table(self):
+        # Neither preference is present exactly and there is no crop geometry to
+        # give a full frame, so this camera is not one the preferences describe.
+        # 2.00:1 would stand in for 16:9 -- but narrowing on that alone would
+        # hide 2.39:1 behind a preference that never matched it, which is the
+        # "no sensor can lose a mode to a default nobody chose" guarantee.
         d = self._detector_with([2.39, 2.00])
         self.assertEqual(
             d._default_ratio_ids("cam"), d._derived_default_ratio_ids("cam"),
@@ -1325,10 +1386,20 @@ class FullFrameToggleTests(unittest.TestCase):
         self.assertTrue(sd._ratio_selection_is_derived("cam"),
                         "nobody chose these, so this is the new-camera path")
 
-    def test_the_shipped_default_keeps_the_whole_sensor_reachable(self):
+    def test_the_shipped_default_leads_with_the_whole_sensor(self):
+        """"for other sensors, default should be full frame and 1.78" --
+        operator, 2026-09-26.
+
+        The full frame now OCCUPIES the shape slot rather than being appended
+        after 4:3. On this 3:2 sensor that means the native 1.50 readout is the
+        first thing selected, not the third, and 1.33:1 is no longer selected by
+        default -- it is a crop like any other, one toggle away. The 2026-09-22
+        guarantee this class exists for is unaffected and is asserted by
+        test_the_native_ratio_is_always_on_for_a_new_camera above: the native
+        shape is still always on for a camera nobody has configured."""
         sd = self._detector(self._three_two_sensor())
         self.assertEqual(sd._default_ratio_ids("cam"),
-                         ["1.33:1", "1.78:1", FULL_FRAME_RATIO_ID])
+                         [FULL_FRAME_RATIO_ID, "1.78:1"])
 
     # ---- on-table full frame: no extra toggle, the existing one says (full)
 
@@ -1346,13 +1417,18 @@ class FullFrameToggleTests(unittest.TestCase):
         self.assertEqual(available["1.78:1"]["label"], "1.78:1",
                          "an on-table full frame is not renamed")
 
-    def test_an_on_table_full_frame_adds_nothing_to_the_default(self):
+    def test_an_on_table_full_frame_fills_both_slots_at_once(self):
+        # This sensor's full frame IS 1.78:1, so the shape slot and the delivery
+        # slot name the same id and the default is ONE toggle, not two. That is
+        # the honest answer -- "full frame and 1.78" has nothing else to offer
+        # here -- and the 1.33:1 crop starts hidden like every other crop.
         modes = [
             self._mode(3840, 2160, sw=3856, sh=2180),
             self._mode(2880, 2160, cx=480, sw=3856, sh=2180),
         ]
         sd = self._detector(modes)
-        self.assertEqual(sd._default_ratio_ids("cam"), ["1.33:1", "1.78:1"])
+        self.assertEqual(sd.full_frame_ratio("cam")[0], "1.78:1")
+        self.assertEqual(sd._default_ratio_ids("cam"), ["1.78:1"])
 
     # ---- no geometry: no full frame is knowable, so no toggle
 
@@ -1362,7 +1438,11 @@ class FullFrameToggleTests(unittest.TestCase):
         sd = self._detector(modes)
         self.assertEqual(sd.full_frame_ratio("cam"), (None, None))
         self.assertNotIn(FULL_FRAME_RATIO_ID, sd.available_aspect_ratios("cam"))
-        self.assertEqual(sd._default_ratio_ids("cam"), ["1.33:1"])
+        # No knowable full frame, so the shape slot falls back to 4:3-or-closest
+        # -- here 1.33:1 exactly. The delivery slot takes 1.89:1, the nearest
+        # thing this camera has to 16:9. These are imx477's own two shapes, and
+        # this pair is what the operator asked for by name on 2026-09-26.
+        self.assertEqual(sd._default_ratio_ids("cam"), ["1.33:1", "1.89:1"])
 
     # ---- the invariant the whole design rests on
 

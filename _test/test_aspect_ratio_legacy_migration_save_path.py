@@ -165,21 +165,25 @@ class LegacyDefaultSurvivesASingleCameraSaveTests(unittest.TestCase):
     def test_imx477_is_left_as_a_fresh_camera_after_that_save(self):
         self._assert_unaffected_by_the_save(
             "imx477", IMX477_FIVE_MODES,
-            # imx477 has no 16:9 mode, so its default is 1.33:1: the two 4:3
-            # readouts and the 1332x990 crop. The stale "default" would have
-            # kept the other two instead, which is what makes this disjoint
-            # from the bug's own outcome.
-            {(4056, 3040), (2028, 1520), (1332, 990)},
+            # imx477 has no true 16:9 mode, so its default is 1.33:1 for the
+            # shape slot plus 1.89:1 standing in for 16:9 -- all five modes
+            # (operator, 2026-09-26). The stale "default" would have kept only
+            # the two 1.878 modes, so this still separates the two outcomes,
+            # now by count rather than by disjointness.
+            {(4056, 3040), (2028, 1520), (1332, 990), (4056, 2160), (2028, 1080)},
             lambda m: (m["width"], m["height"]),
         )
 
     def test_imx283_is_left_as_a_fresh_camera_after_that_save(self):
         self._assert_unaffected_by_the_save(
             "imx283", IMX283_SIX_MODES,
-            # This metadata table has no 4:3 mode either, so 1.78:1 alone: the
-            # three ~1.8 modes. Its 1.5-aspect modes come home to 1.37:1 and
-            # start hidden, on a fresh camera and after this save alike.
-            {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10)},
+            # This metadata table has no 4:3 mode and no crop geometry, so the
+            # shape slot falls back to 4:3-or-closest, which here is 1.37:1 --
+            # the home ratio of its own 1.5 native readouts. Delivery takes
+            # 1.78:1. Both the ~1.8 modes and the 1.5-aspect 2784x1828 are
+            # selected, on a fresh camera and after this save alike.
+            {(2784, 1542, 12), (5568, 3094, 10), (3936, 2176, 10),
+             (2784, 1828, 12), (5568, 3664, 10), (5568, 3664, 12)},
             lambda m: (m["width"], m["height"], m["bit_depth"]),
         )
 

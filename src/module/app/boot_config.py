@@ -79,7 +79,16 @@ RP1_OVERCLOCK_LINE = "dtoverlay=rp1-overclock"
 # around 43.8 fps at 4K no matter what the sensor is told to do.
 _LINK_FREQUENCY_TOKEN = "link-frequency="
 
-_DTOVERLAY_LINE_RE = re.compile(r"^(#?)dtoverlay=(\S+)\s*$", re.MULTILINE)
+# Tolerant of the shapes a hand-edited or firmware-written file can actually
+# hold and the stock config.txt parser accepts: leading indentation (real on
+# a line under a `[cm4]`/`[cm5]`/filter section), and spaces around `=`. Does
+# NOT strip a trailing inline comment (`dtoverlay=imx283,cam0  # note`) --
+# the Raspberry Pi firmware's own config.txt parser has no such-comment
+# syntax either, so a line shaped like that is not "an overlay with a
+# comment" to the real bootloader, it is a broken overlay value. Reading it
+# as the clean overlay here would silently disagree with what the hardware
+# actually does with the line.
+_DTOVERLAY_LINE_RE = re.compile(r"^[ \t]*(#?)[ \t]*dtoverlay[ \t]*=[ \t]*(\S+)[ \t]*$", re.MULTILINE)
 
 _database_cache: dict | None = None
 
@@ -205,6 +214,9 @@ def default_config_state() -> dict:
         "audio": True,
         "rp1_overclock": False,
         "rp1_available": is_rpi2712_platform(),
+        # See _markers_duplicated()'s docstring. False here because a
+        # from-scratch default state has no file to be duplicated in.
+        "camera_section_duplicated": False,
         # Per-model menus, straight from the database, so the page never
         # carries its own copy of the values.
         "link_frequency_menus": link_frequency_menus(),
@@ -222,6 +234,24 @@ def _extract(text: str, begin: str, end: str) -> tuple[str | None, int, int]:
     return text[start:stop], start, stop
 
 
+def _markers_duplicated(text: str, begin: str, end: str) -> bool:
+    """True if *begin* or *end* appears more than once in *text*.
+
+    `_extract()` always resolves to the first `begin ... end` span it finds.
+    That is fine for the normal one-pair case, but a config.txt that somehow
+    ended up with two `# ---- Camera section ----` ... `# ---- End camera
+    section ----` pairs -- a hand-merge of two snapshots, a stray paste while
+    editing, a restored backup layered on top of a live file -- has a second,
+    completely invisible span sitting after the first `end`. Every read
+    reports only the first span's sensor, and every write only ever touches
+    the first span, so whatever dtoverlay line the second span holds stays
+    active and untouched forever. That is a config.txt with two live camera
+    overlays and nothing in this module ever noticing. See
+    CONFIG-TXT-FINDINGS.md for how this was reproduced.
+    """
+    return text.count(begin) > 1 or text.count(end) > 1
+
+
 def parse_config_txt(full_text: str) -> dict:
     block, _start, _end = _extract(full_text, MANAGED_BEGIN, MANAGED_END)
     if block is None:
@@ -230,6 +260,14 @@ def parse_config_txt(full_text: str) -> dict:
         return state
 
     cam_section, _cs, _ce = _extract(block, CAMERA_SECTION_BEGIN, CAMERA_SECTION_END)
+    # See _markers_duplicated(): a second camera-section pair further down
+    # `block` holds a dtoverlay line neither this read nor a later write will
+    # ever see via cam_section above -- report it so the editor can say so
+    # rather than showing one confident answer while a second, live overlay
+    # sits unreported in the same file.
+    camera_section_duplicated = bool(cam_section) and _markers_duplicated(
+        block, CAMERA_SECTION_BEGIN, CAMERA_SECTION_END,
+    )
     cam0_sensor = "none"
     cam1_sensor = "none"
     cam0_link_frequency = None
@@ -268,6 +306,7 @@ def parse_config_txt(full_text: str) -> dict:
         "i2s": _line_on(_TOGGLE_LINES["i2s"]),
         "spi": _line_on(_TOGGLE_LINES["spi"]),
         "audio": _line_on(_TOGGLE_LINES["audio"]),
+        "camera_section_duplicated": camera_section_duplicated,
         "rp1_overclock": _line_on(RP1_OVERCLOCK_LINE),
         "rp1_available": rp1_present,
         # Per-model menus, straight from the database, so the page never
@@ -356,10 +395,43 @@ def apply_config_txt_state(full_text: str, state: dict) -> str:
     cam1_link = _validated_link_frequency(state.get("cam1_link_frequency"), cam1_sensor, "cam1")
 
     cam_section, cs, ce = _extract(block, CAMERA_SECTION_BEGIN, CAMERA_SECTION_END)
-    new_block = block
-    if cam_section is not None:
-        replacement = _render_camera_section(cam0_sensor, cam1_sensor, cam0_link, cam1_link)
-        new_block = block[:cs] + replacement + block[ce:]
+    if cam_section is None:
+        # This used to fall through silently: the toggle lines below would
+        # still be rewritten, write_config_txt() would still run, and
+        # put_config_txt() would still answer "Saved." -- while the camera
+        # pick the operator just made never reached the file at all, because
+        # there was no `# ---- Camera section ----` ... `# ---- End camera
+        # section ----` pair to rewrite it into. A save that reports success
+        # and changes nothing the operator asked for is exactly the failure
+        # mode the RP1 overclock branch below already refuses to allow: raise
+        # here for the same reason, with the same shape.
+        raise ValueError(
+            f"No camera section ({CAMERA_SECTION_BEGIN} ... {CAMERA_SECTION_END}) "
+            f"found inside the managed block in {CONFIG_TXT_PATH} -- refusing to "
+            f"save a camera pick with nowhere to write it. Re-run cinemate-install.sh "
+            f"to restore the managed block, or add the markers back by hand."
+        )
+    if _markers_duplicated(block, CAMERA_SECTION_BEGIN, CAMERA_SECTION_END):
+        # See _markers_duplicated()'s docstring. `_extract()` above resolved
+        # to the FIRST `# ---- Camera section ----` ... `# ---- End camera
+        # section ----` pair; rewriting only that one and leaving a second,
+        # identically-marked pair untouched is exactly how a file ends up
+        # with two simultaneously active `dtoverlay=` camera lines -- the
+        # save reports success on the first pair while the second pair's
+        # overlay, whatever it is, stays live and invisible to every future
+        # read. Refuse rather than write a "successful" save that can't
+        # actually be correct.
+        raise ValueError(
+            f"Found more than one {CAMERA_SECTION_BEGIN!r} / {CAMERA_SECTION_END!r} "
+            f"marker pair inside the managed block in {CONFIG_TXT_PATH} -- refusing "
+            f"to save, because only the first pair would be rewritten and any "
+            f"dtoverlay line inside a later pair would stay active untouched. Edit "
+            f"the file by hand to remove the extra camera-section markers (keeping "
+            f"only the pair that reflects the sensor(s) actually wired up), then "
+            f"try the save again."
+        )
+    replacement = _render_camera_section(cam0_sensor, cam1_sensor, cam0_link, cam1_link)
+    new_block = block[:cs] + replacement + block[ce:]
 
     for key, marker in _TOGGLE_LINES.items():
         if key not in state:

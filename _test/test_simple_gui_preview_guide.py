@@ -36,14 +36,25 @@ class PreviewGuideGeometryTests(unittest.TestCase):
         # Todo batch 2026-09-27, issue 4: compute_preview_geometry()'s `-p`
         # window is now sized from the same desqueezed aspect as the lores
         # buffer it frames (previously the window used the un-desqueezed
-        # aspect alone). For this particular mode the un-desqueezed aspect
-        # (1928/1090 ~= 1.77) is already close to the 1920x1080 canvas's own
-        # padded-area ratio, so the window was already width-bound before
-        # and after the fix and the visible rect barely moves -- off by a
-        # rounding pixel or two, not the mode where the fix matters
-        # visually (see test_preview_geometry.py's
-        # ComputePreviewGeometryPreviewWindowAnamorphicTests for a mode
-        # where the window was genuinely too narrow before this fix).
+        # aspect alone).
+        #
+        # The window this mode gets DID move a long way -- 1732x979 before,
+        # 1732x736 after, because 1.77 x 1.33 = 2.35 is far from the raw
+        # 1.77 the old code used. What barely moves is the rect this
+        # function returns, because that wraps the PICTURE and not the
+        # window: at 1.77 the buffer was already wider than the old window's
+        # shape, so Show() letterboxed it to 1732x736 and left 243 rows of
+        # the window unused. The fix removes that dead band rather than
+        # enlarging the picture -- 1732x736 becomes 1730x736, off by the
+        # rounding pixel the pillarbox branch now takes instead of the
+        # letterbox one.
+        #
+        # So this golden case pins "the fix did not disturb an
+        # already-width-bound mode", not "the fix does nothing". The picture
+        # genuinely grows on a mode whose old window was narrower than the
+        # padded area -- see test_preview_geometry.py's
+        # ComputePreviewGeometryPreviewWindowAnamorphicTests, which covers a
+        # 4:3 mode for exactly that reason.
         self.assertEqual(
             _calculate_preview_guide_rect(
                 frame_width=1920,

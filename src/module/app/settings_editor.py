@@ -1031,7 +1031,18 @@ def get_sensor_modes():
         # extent at any binning (see the domain contract in
         # sensor_detect._mode_from_metadata_or_detected) -- use it as given,
         # never multiplied by binning again.
+        # The diagram's canvas is the largest full-frame mode's RECTANGLE --
+        # its origin as well as its size. The origin is the half that was
+        # missing, and it matters as soon as a driver's active area does not
+        # start at (0, 0): the imx283's starts at (108, 40) in native sensor
+        # coordinates, so every crop_x is at least 108. Drawing those against a
+        # canvas that ran 0..5472 pushed every window right by 108/5472 = 2% and
+        # overflowed the full-frame ones past the right edge, and it put the
+        # MODE_1C family at 16.9% when centred is 14.9% -- visibly off-centre
+        # while being exactly centred in the sensor's own active area.
+        # (imx585's full frame starts at (0, 0), so nothing changes for it.)
         diagram_w = diagram_h = None
+        diagram_x = diagram_y = 0
         for candidate in modes:
             if not SensorDetect._mode_is_full(candidate):
                 continue
@@ -1041,6 +1052,8 @@ def get_sensor_modes():
             rw, rh = int(cw), int(ch)
             if diagram_w is None or rw * rh > diagram_w * diagram_h:
                 diagram_w, diagram_h = rw, rh
+                diagram_x = int(candidate.get("crop_x") or 0)
+                diagram_y = int(candidate.get("crop_y") or 0)
 
         # WP-CM-7: this camera's offered ratios (available_aspect_ratios,
         # derived at startup from this same unfiltered table -- never
@@ -1104,6 +1117,10 @@ def get_sensor_modes():
                 "sensor_height": mode.get("sensor_height"),
                 "diagram_sensor_width": diagram_w,
                 "diagram_sensor_height": diagram_h,
+                # Where the diagram's canvas starts in the same native sensor
+                # coordinates crop_x/crop_y use -- see the comment above.
+                "diagram_origin_x": diagram_x,
+                "diagram_origin_y": diagram_y,
                 # crop_known is true only when the driver supplied the
                 # complete crop tuple.  Do not use sensor database metadata as a
                 # substitute: the mode table is specifically a readout of the

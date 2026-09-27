@@ -3641,8 +3641,16 @@
       var sw=mode.crop_width, sh=mode.crop_height;
       var sensorW=mode.diagram_sensor_width || mode.sensor_width || Math.max(mode.width || sw, sx+sw);
       var sensorH=mode.diagram_sensor_height || mode.sensor_height || Math.max(mode.height || sh, sy+sh);
-      crop.style.left=(sx/sensorW*100)+'%';
-      crop.style.top=(sy/sensorH*100)+'%';
+      // crop_x/crop_y are NATIVE sensor coordinates and the canvas is the full
+      // frame's rectangle, which need not start at (0, 0) -- the imx283's
+      // active area starts at (108, 40). Subtracting the canvas origin is what
+      // makes a centred crop draw centred; without it every window on that
+      // sensor sat 2% right of where it belongs and the full-frame ones ran off
+      // the edge. Defaults to 0, so a sensor whose full frame starts at the
+      // origin is unaffected.
+      var originX=mode.diagram_origin_x || 0, originY=mode.diagram_origin_y || 0;
+      crop.style.left=((sx-originX)/sensorW*100)+'%';
+      crop.style.top=((sy-originY)/sensorH*100)+'%';
       crop.style.width=(sw/sensorW*100)+'%';
       crop.style.height=(sh/sensorH*100)+'%';
       crop.title='Crop '+mode.crop_width+'×'+mode.crop_height+' at '+mode.crop_x+','+mode.crop_y+' ('+bx+'×'+by+' readout)';

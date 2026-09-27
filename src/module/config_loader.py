@@ -620,6 +620,17 @@ def _apply_settings_defaults(settings: dict) -> dict:
     settings_cfg = settings.setdefault("settings", {})
     settings_cfg.setdefault("conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     settings_cfg.setdefault("light_hz", [50, 60])
+    # Display-only: whether the SYNC box/flash may show on the HDMI and web
+    # GUIs. The judgement itself (frames_in_sync, logging, end-of-take
+    # analysis in redis_listener.py) always runs -- this never suppresses it,
+    # only the operator-facing indicator -- so it is a sibling of
+    # sync_tolerances rather than a member: the tolerances tune *when* the
+    # judgement latches, this decides *whether it is shown*, and mixing an
+    # on/off display switch into a block of frame-count tuning knobs would
+    # make sync_tolerances a mixed-type block for no benefit. Defaults on: an
+    # operator silencing a distracting box on set should not accidentally
+    # believe recording integrity is being silenced too.
+    settings_cfg.setdefault("sync_warnings_enabled", True)
 
     tol_cfg = settings_cfg.setdefault("sync_tolerances", {})
     tolerance_defaults = {

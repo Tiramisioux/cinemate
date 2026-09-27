@@ -134,6 +134,11 @@
   "settings": {
     "conform_frame_rate": 25,
     "light_hz": [50, 60], // mains frequencies to derive flicker-free shutter angles from
+    // Show the SYNC box/flash on the HDMI and web GUIs. Off does NOT stop the
+    // judgement -- frames_in_sync keeps being computed, logged, and used by
+    // the end-of-take analysis either way; this only silences the operator-
+    // facing indicator. See `set sync warnings` (docs/cli-commands.md).
+    "sync_warnings_enabled": true,
     "sync_tolerances": {
       "live_sync_warning_frames": 5,
       "live_sync_startup_guard_frames": 10,

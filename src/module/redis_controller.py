@@ -117,6 +117,7 @@ class ParameterKey(Enum):
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
     FRAMES_IN_SYNC      = "frames_in_sync"
+    SYNC_WARNINGS_ENABLED = "sync_warnings_enabled"  # display-only: gates the SYNC box/flash on both GUIs; frames_in_sync is still judged, logged and analysed regardless (settings.sync_warnings_enabled, CinePiController.set_sync_warnings_enabled)
     USER_CHANGING_FPS   = "user_changing_fps"
     FSCK_STATUS         = "FSCK_STATUS"  # ssd_monitor's own fsck result; cinepi-raw never reads this one
 

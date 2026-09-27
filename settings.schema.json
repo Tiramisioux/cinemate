@@ -232,6 +232,11 @@
           },
           "description": "Mains frequencies to derive flicker-free shutter angles from."
         },
+        "sync_warnings_enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the SYNC box/flash on the HDMI and web GUIs. Off does not stop the frames_in_sync judgement, its logging, or the end-of-take analysis -- only the operator-facing indicator."
+        },
         "sync_tolerances": {
           "type": "object",
           "properties": {

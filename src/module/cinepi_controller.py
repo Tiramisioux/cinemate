@@ -136,6 +136,25 @@ class CinePiController:
         except Exception as exc:
             logging.warning("Could not apply phase_lock setting: %s", exc)
 
+        # Sync-warning display toggle (settings.sync_warnings_enabled,
+        # default True). This gates ONLY whether the SYNC box/flash may
+        # appear on the HDMI and web GUIs (SimpleGUI.populate_values() reads
+        # this attribute directly, same process, same shape as
+        # shutter_a_sync_mode below). It never reaches redis_listener.py:
+        # frames_in_sync keeps being judged, latched, logged, and used by the
+        # end-of-take analysis exactly as if this were always on -- an
+        # operator silencing a distracting box on set must not also silence
+        # the evidence that a take was out of sync. Published to Redis too,
+        # like every other live toggle here, so `redis-cli get
+        # sync_warnings_enabled` reflects the operator's current choice.
+        self.sync_warnings_enabled = bool(
+            (self.settings.get("settings") or {}).get("sync_warnings_enabled", True)
+        )
+        self.redis_controller.set_value(
+            ParameterKey.SYNC_WARNINGS_ENABLED.value,
+            1 if self.sync_warnings_enabled else 0,
+        )
+
         # Dynamic resolution substitutes a lower-resolution sensor mode when
         # the requested fps exceeds what the desired mode's own declared
         # fps_max (the value cinepi-raw --list-cameras reports, see
@@ -1518,6 +1537,26 @@ class CinePiController:
 
         self.redis_controller.set_value(ParameterKey.SHUTTER_A_SYNC_MODE.value, self.shutter_a_sync_mode)
         logging.info(f"Shutter angle sync mode {self.shutter_a_sync_mode}")
+
+    def set_sync_warnings_enabled(self, value=None):
+        """Show/hide the SYNC box+flash on both GUIs. Display-only -- see the
+        long comment on self.sync_warnings_enabled in __init__: this never
+        touches frames_in_sync, its logging, or the end-of-take analysis."""
+        if value is not None:
+            if value in (0, False):
+                self.sync_warnings_enabled = False
+            elif value in (1, True):
+                self.sync_warnings_enabled = True
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
+        else:
+            self.sync_warnings_enabled = not self.sync_warnings_enabled
+
+        self.redis_controller.set_value(
+            ParameterKey.SYNC_WARNINGS_ENABLED.value,
+            1 if self.sync_warnings_enabled else 0,
+        )
+        logging.info(f"Sync warning display {'enabled' if self.sync_warnings_enabled else 'disabled'}")
 
     def calculate_exposure(self):
         fps = self.redis_controller.get_value(ParameterKey.FPS.value)

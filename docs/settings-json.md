@@ -108,6 +108,7 @@ Frame-timing tolerances, the conform frame rate, and storage warm-up.
 
 | Control | What it does |
 | --- | --- |
+| Sync warnings | Shows the SYNC box and screen flash on both GUIs when a take drifts out of sync. Default on. Off is display-only: `frames_in_sync` is still judged, logged, and used by the end-of-take analysis exactly the same either way, so nothing about recording integrity changes. `settings.sync_warnings_enabled`, CLI `set sync warnings [0/1]`. |
 | Auto storage pre-roll | Records and discards a short test clip at startup and on each storage mount, priming the card. Never becomes the "latest recording". Default on. Off skips only the automatic runs; CLI `storage preroll` still works ([Storage pre-roll](storage-preroll.md)). |
 | Local mains frequency | Frequencies used for flicker-free shutter angles. Ships 50 and 60. Enter adds a chip, × removes one, drag to reorder. |
 | Conform frame rate | What everything is timecode-conformed to. 24, 25 or 30; default 25. |
@@ -121,8 +122,8 @@ Frame-timing tolerances, the conform frame rate, and storage warm-up.
     and the Playback pane's speed, so a take shot above it plays slow motion unless **Use conform
     frame rate** is off there. DNG timecode uses the actual capture rate.
 
-These map to `system.storage.auto_preroll`, `settings.conform_frame_rate`, `settings.light_hz` and
-`settings.sync_tolerances`.
+These map to `system.storage.auto_preroll`, `settings.conform_frame_rate`, `settings.light_hz`,
+`settings.sync_warnings_enabled` and `settings.sync_tolerances`.
 
 ## Value steps
 

@@ -11,6 +11,13 @@ they are what the GUI looks each string up by when CineMate starts.
 
 How strictly the recorder watches frame timing before it warns you or flags a take.
 
+### Sync warnings
+<!-- key: card.settings.sync_warnings_enabled -->
+
+Shows the SYNC warning box and screen flash when a take drifts out of sync. Turning this off only
+hides the warning — the take is still checked and logged exactly the same, so nothing about
+recording integrity changes, only what you see on screen.
+
 ### Auto storage pre‑roll
 <!-- key: card.system.storage.auto_preroll -->
 

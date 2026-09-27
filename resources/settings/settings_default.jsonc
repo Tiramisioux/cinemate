@@ -49,6 +49,7 @@
   "settings": {
     "conform_frame_rate": 25,
     "light_hz": [50, 60],
+    "sync_warnings_enabled": true,
     "sync_tolerances": {
       "live_sync_warning_frames": 5,
       "live_sync_startup_guard_frames": 10,

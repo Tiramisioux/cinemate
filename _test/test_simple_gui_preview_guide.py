@@ -33,8 +33,17 @@ class PreviewGuideGeometryTests(unittest.TestCase):
         )
 
     def test_preview_guide_adapts_to_anamorphic_preview_height(self):
-        # See note above -- golden value matches the current (post-1e3efb0a,
-        # hardware-verified) formula, not the pre-fix even-rounded one.
+        # Todo batch 2026-09-27, issue 4: compute_preview_geometry()'s `-p`
+        # window is now sized from the same desqueezed aspect as the lores
+        # buffer it frames (previously the window used the un-desqueezed
+        # aspect alone). For this particular mode the un-desqueezed aspect
+        # (1928/1090 ~= 1.77) is already close to the 1920x1080 canvas's own
+        # padded-area ratio, so the window was already width-bound before
+        # and after the fix and the visible rect barely moves -- off by a
+        # rounding pixel or two, not the mode where the fix matters
+        # visually (see test_preview_geometry.py's
+        # ComputePreviewGeometryPreviewWindowAnamorphicTests for a mode
+        # where the window was genuinely too narrow before this fix).
         self.assertEqual(
             _calculate_preview_guide_rect(
                 frame_width=1920,
@@ -43,7 +52,7 @@ class PreviewGuideGeometryTests(unittest.TestCase):
                 sensor_height=1090,
                 anamorphic_factor=1.33,
             ),
-            [92, 169, 1827, 908],
+            [93, 170, 1826, 909],
         )
 
 

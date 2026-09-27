@@ -1509,9 +1509,20 @@
         const measured = combined
             ? null
             : streamNaturalAspect(source === 'cam1' ? $('stream-cam1') : $('stream'));
-        const base = measured || aspect;
-        if (base > 0) {
-            previewAspect = base * (ana > 0 ? ana : 1) * (combined ? 2 : 1);
+        // `measured` is the decoded MJPEG frame's own naturalWidth/Height --
+        // the lores buffer module.sensor_detect.compute_preview_geometry()
+        // already sized with anamorphic_factor baked in (see its docstring),
+        // so it carries the desqueeze already. `aspect` (V.aspect) does not:
+        // it's simple_gui.py's round(w_int / h_int, 2) over the raw sensor
+        // WIDTH/HEIGHT Redis keys, with no anamorphic term at all. Multiply
+        // `ana` into the fallback only -- multiplying it into `measured` too
+        // applied it twice, stretching the white frame past the picture it
+        // wraps (operator report: "the white frame suggests [anamorphic]
+        // but the image is normal").
+        if (measured) {
+            previewAspect = measured * (combined ? 2 : 1);
+        } else if (aspect > 0) {
+            previewAspect = aspect * (ana > 0 ? ana : 1) * (combined ? 2 : 1);
         }
         frame.style.borderColor = V.zoom_is_default === false
             ? 'var(--zoom-hi)' : 'var(--guide)';

@@ -92,6 +92,78 @@ class ComputePreviewGeometryLoresTests(unittest.TestCase):
         self.assertEqual(geometry["lores_width"], 1693)
 
 
+class ComputePreviewGeometryPreviewWindowAnamorphicTests(unittest.TestCase):
+    """Todo batch 2026-09-27, issue 4 ("anamorphic fills the web UI but not
+    HDMI"). Before this fix the `-p` window was sized from the un-desqueezed
+    `aspect` while the lores buffer it frames was already desqueezed
+    (lores_w = lores_h * aspect * anamorphic_factor). DrmPreview::Show()
+    (preview/drm_preview.cpp, read-only in cinepi-raw) fits that buffer into
+    the window by preserving the BUFFER's own aspect -- so a window sized to
+    the wrong (narrower) aspect just left the picture short of the padded
+    canvas's own edges on whatever axis the buffer turned out wider than the
+    window assumed, which reads as "not filling the screen". Sizing the
+    window from the same desqueezed aspect the lores buffer already carries
+    is the fix.
+    """
+
+    def _geometry(self, mode, anamorphic_factor=1.0):
+        return compute_preview_geometry(mode, CANVAS_W, CANVAS_H, anamorphic_factor=anamorphic_factor)
+
+    def test_preview_window_widens_to_the_desqueezed_aspect_not_the_raw_one(self):
+        # A 4:3 mode (1600x1200, aspect 1.3333) with no anamorphic factor is
+        # narrower than the padded canvas and the window is height-bound,
+        # leaving margin left and right -- correct, nothing anamorphic here.
+        mode = {"width": 1600, "height": 1200, "crop_width": 1600, "crop_height": 1200}
+        unsqueezed = self._geometry(mode, anamorphic_factor=1.0)
+        self.assertEqual(
+            (unsqueezed["preview_width"], unsqueezed["preview_height"]),
+            (1306, 980),
+        )
+
+        # The same sensor mode behind a 2x anamorphic lens desqueezes to
+        # aspect 2.6667 -- wider than the canvas itself, so the window
+        # should now be width-bound (full padded width) and shorter, not
+        # still the narrow 1306-wide box the un-desqueezed aspect produced.
+        squeezed = self._geometry(mode, anamorphic_factor=2.0)
+        self.assertEqual(
+            (squeezed["preview_width"], squeezed["preview_height"]),
+            (1732, 649),
+        )
+        # The window's own aspect must now match what the lores buffer was
+        # actually requested at -- not drift from it by the anamorphic
+        # factor, which is exactly the bug being fixed here.
+        window_aspect = squeezed["preview_width"] / squeezed["preview_height"]
+        lores_aspect = squeezed["lores_width"] / squeezed["lores_height"]
+        self.assertAlmostEqual(window_aspect, lores_aspect, delta=0.01)
+
+    def test_preview_window_matches_the_lores_clamp_case(self):
+        # Same 4:3 mode and 2x factor: lores_w = 720 * 1.3333 * 2 = 1920,
+        # which exceeds max_lores_w = min(aw=1732, width=1600) = 1600, so
+        # the C3 clamp recomputes lores_h from the divisor. This is the
+        # "easiest place to introduce a silent aspect error" the prompt
+        # warns about -- assert both the lores clamp AND the window still
+        # agree on the same desqueezed aspect afterwards.
+        mode = {"width": 1600, "height": 1200, "crop_width": 1600, "crop_height": 1200}
+        geometry = self._geometry(mode, anamorphic_factor=2.0)
+        self.assertEqual(geometry["lores_width"], 1600)
+        self.assertEqual(geometry["lores_height"], 600)
+        self.assertEqual(
+            (geometry["preview_width"], geometry["preview_height"]),
+            (1732, 649),
+        )
+
+    def test_preview_window_is_unchanged_at_the_default_anamorphic_factor(self):
+        # anamorphic_factor=1.0 (the default -- no lens attached) must
+        # reproduce the pre-fix arithmetic exactly, since
+        # desqueezed_aspect == aspect in that case.
+        mode = {"width": 3840, "height": 2200, "crop_width": 3840, "crop_height": 2160}
+        geometry = self._geometry(mode, anamorphic_factor=1.0)
+        self.assertEqual(
+            (geometry["preview_width"], geometry["preview_height"]),
+            (1732, 974),
+        )
+
+
 class ActivePictureSizeTests(unittest.TestCase):
     """The shared helper Round 2 introduced for Defect D/B2 -- one place for
     "what is the delivered active picture", in priority order: an explicit

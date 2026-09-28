@@ -209,6 +209,12 @@ src/logs/*.log
 # Cinemate settings file
 settings.json
 
+# Per-sensor settings files, written by the settings editor next to
+# settings.jsonc (see development/sensor-settings-2026-09-28/PLAN.md).
+# Root-anchored: resources/settings/settings_*.jsonc are tracked templates
+# (settings_default.jsonc, settings_komodo.jsonc) and must stay tracked.
+/settings_*.jsonc
+
 # Local Codex staging scratch
 .codex-skill-staging/
 staging/

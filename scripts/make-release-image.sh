@@ -6,7 +6,7 @@
 # whatever sensor, hotspot and GPIO configuration the operator has been
 # shooting with, and everyone who flashes the release then inherits it.
 #
-# So this script brackets the documented dd/pishrink/xz with a swap of the two
+# So this script brackets the documented dd/pishrink/xz with a swap of the
 # files that hold that configuration:
 #
 #   settings.jsonc  ->  the copy tracked at the checked-out commit, comments
@@ -19,8 +19,16 @@
 #                       calls the real function, so there is one definition of
 #                       "stock config.txt" and it cannot drift from what a
 #                       clean install actually writes.
+#   settings_*.jsonc -> removed outright. These hold an operator's per-sensor
+#                       choices (aspect ratios, enabled modes, custom modes --
+#                       see development/sensor-settings-2026-09-28/PLAN.md).
+#                       They are untracked (.gitignore), so `git checkout` does
+#                       not touch them the way it does settings.jsonc; "stock"
+#                       for a per-sensor file is simply "absent", which is what
+#                       a camera that has never had the settings editor save to
+#                       it looks like.
 #
-# Afterwards both files go back exactly as they were.
+# Afterwards every file goes back exactly as it was.
 #
 # Restoring is the part that has to be reliable, so it is defended three ways:
 # an EXIT/INT/TERM trap covers a failed or interrupted run, the operator's
@@ -100,9 +108,10 @@ usage() {
     cat <<'EOF'
 Usage: sudo ~/cinemate/scripts/make-release-image.sh [--dry-run] [--restore-only]
 
-Swaps settings.jsonc and /boot/firmware/config.txt to their stock values, makes
-the image the way docs/backing-up-sd-card.md describes, then puts both files
-back. Does not change which branch either repository is on.
+Swaps settings.jsonc and /boot/firmware/config.txt to their stock values and
+removes any per-sensor settings_*.jsonc, makes the image the way
+docs/backing-up-sd-card.md describes, then puts everything back. Does not
+change which branch either repository is on.
 
 Options:
   --dry-run        Do the whole swap and restore, but print the dd/pishrink
@@ -221,6 +230,20 @@ ri_set_mtime() {
     ri_warn "Could not restore $path's timestamp -- reboot before using wide 16-bit modes"
 }
 
+# Root-level settings_<sensor>.jsonc files only -- never
+# resources/settings/settings_*.jsonc, which are tracked templates
+# (settings_default.jsonc, settings_komodo.jsonc) and must ship in the image.
+# One function so the stash side and the restore side can never disagree about
+# what counts.
+ri_sensor_settings_files() {
+    local f
+    shopt -s nullglob
+    for f in "$CINEMATE_DIR"/settings_*.jsonc; do
+        printf '%s\n' "$f"
+    done
+    shopt -u nullglob
+}
+
 # ── Stash ────────────────────────────────────────────────────────────────────
 RI_STASH_DIR="$IMAGE_DEST_DIR/.cinemate-release-image"
 RI_STATE="$RI_STASH_DIR/state.env"
@@ -272,6 +295,33 @@ ri_restore() {
         # See ri_mtime(): without this the board silently loses its wide
         # 16-bit modes until the next reboot, having changed not one byte.
         ri_set_mtime "$BOOT_CONFIG" "$RI_CONFIG_MTIME"
+    fi
+
+    # Per-sensor settings files. Each stashed copy carries its own sidecar
+    # <name>.jsonc.meta ("owner mode mtime", one line) rather than a state.env
+    # field, because the set of files is per-camera and dynamic -- state.env's
+    # fixed RI_SETTINGS_*/RI_CONFIG_* variables have nowhere to hold an
+    # unbounded list. A stash from before this feature existed simply has no
+    # sensor-settings directory, so this is a no-op for it.
+    if [[ -d "$RI_STASH_DIR/sensor-settings" ]]; then
+        local ri_sf ri_sf_base ri_sf_owner ri_sf_mode ri_sf_mtime
+        shopt -s nullglob
+        for ri_sf in "$RI_STASH_DIR"/sensor-settings/*.jsonc; do
+            ri_sf_base="$(basename "$ri_sf")"
+            ri_sf_owner="$PI_USER:$PI_GROUP" ri_sf_mode=644 ri_sf_mtime=''
+            if [[ -f "$ri_sf.meta" ]]; then
+                read -r ri_sf_owner ri_sf_mode ri_sf_mtime < "$ri_sf.meta"
+            fi
+            ri_detail "$ri_sf_base -> $CINEMATE_DIR/$ri_sf_base"
+            install -o "${ri_sf_owner%%:*}" -g "${ri_sf_owner##*:}" \
+                -m "$ri_sf_mode" \
+                "$ri_sf" "$CINEMATE_DIR/$ri_sf_base" || {
+                ri_warn "Could not restore $ri_sf_base -- your copy is still at $ri_sf"
+                ri_failed=1
+            }
+            ri_set_mtime "$CINEMATE_DIR/$ri_sf_base" "$ri_sf_mtime"
+        done
+        shopt -u nullglob
     fi
 
     if ri_is_true "$RI_CINEMATE_WAS_ACTIVE"; then
@@ -402,6 +452,28 @@ fi
 cp "$CINEMATE_DIR/settings.jsonc" "$RI_STASH_DIR/settings.jsonc"
 cp "$BOOT_CONFIG" "$RI_STASH_DIR/config.txt"
 
+# Per-sensor settings files -- see ri_sensor_settings_files() above. Each gets
+# a plain cp (exFAT-safe, same reasoning as settings.jsonc/config.txt above)
+# plus a sidecar recording the attributes that have to come back with it.
+RI_SENSOR_SETTINGS_COUNT=0
+while IFS= read -r ri_sf; do
+    [[ -n "$ri_sf" ]] || continue
+    if (( RI_SENSOR_SETTINGS_COUNT == 0 )); then
+        mkdir -p "$RI_STASH_DIR/sensor-settings"
+    fi
+    RI_SENSOR_SETTINGS_COUNT=$((RI_SENSOR_SETTINGS_COUNT + 1))
+    ri_sf_base="$(basename "$ri_sf")"
+    printf '%s %s %s\n' \
+        "$(ri_owner "$ri_sf" "$PI_USER:$PI_GROUP")" \
+        "$(ri_mode "$ri_sf" 644)" \
+        "$(ri_mtime "$ri_sf" '')" \
+        > "$RI_STASH_DIR/sensor-settings/$ri_sf_base.meta"
+    cp "$ri_sf" "$RI_STASH_DIR/sensor-settings/$ri_sf_base"
+done < <(ri_sensor_settings_files)
+if (( RI_SENSOR_SETTINGS_COUNT > 0 )); then
+    ri_detail "Stashed $RI_SENSOR_SETTINGS_COUNT per-sensor settings file(s)"
+fi
+
 # Armed as soon as anything is stashed: from here every exit path restores.
 # INT/TERM exit explicitly -- a bare handler would return and let the script
 # carry on into dd as if nothing had happened.
@@ -423,6 +495,16 @@ if ri_as_pi git -C "$CINEMATE_DIR" diff --quiet -- settings.jsonc; then
 else
     ri_detail "settings.jsonc -> tracked copy at $(ri_as_pi git -C "$CINEMATE_DIR" rev-parse --short HEAD)"
     ri_as_pi git -C "$CINEMATE_DIR" checkout -- settings.jsonc
+fi
+
+# Stock for a per-sensor file is "absent" -- there is no tracked copy to check
+# out, so remove what was just stashed above rather than overwrite it.
+if (( RI_SENSOR_SETTINGS_COUNT > 0 )); then
+    ri_detail "settings_*.jsonc -> removed ($RI_SENSOR_SETTINGS_COUNT stashed, none shipped)"
+    while IFS= read -r ri_sf; do
+        [[ -n "$ri_sf" ]] || continue
+        rm -f "$ri_sf"
+    done < <(ri_sensor_settings_files)
 fi
 
 # The installer's own generator, aimed at the real path. BACKUP_DIR is where
@@ -461,6 +543,7 @@ RI_MANIFEST="$IMAGE_DEST_DIR/cinemate_${RI_TS}.txt"
     printf 'cinepi-raw     %s\n' "$(ri_rev "$CINEPI_RAW_DIR")"
     printf 'settings.jsonc tracked copy, unmodified\n'
     printf 'config.txt     stock block from cinemate-install.sh (SENSOR_MODEL=%s, CAM_PORT=%s)\n' "$SENSOR_MODEL" "$CAM_PORT"
+    printf 'settings_*.jsonc  none shipped (%d stashed)\n' "$RI_SENSOR_SETTINGS_COUNT"
 } > "$RI_MANIFEST"
 
 ri_detail "What this image will contain:"

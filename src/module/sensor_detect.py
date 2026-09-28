@@ -678,7 +678,15 @@ class SensorDetect:
         if not camera_key:
             return None
 
-        sensors = self.sensor_database.get("sensors", {})
+        # getattr: a real SensorDetect always sets this in __init__, but this
+        # is now also reached from _default_ratio_ids()/_stock_mode_selected()
+        # (stock_selection.extra_modes, 2026-09-28) through mode_selected(),
+        # which most of test_aspect_ratio_selection.py's fixtures call on a
+        # SensorDetect.__new__ instance that never sets sensor_database at
+        # all -- same "no opinion on an instance built with __new__"
+        # convention as aspect_ratios_cfg/clear_hdr_depths elsewhere here.
+        sensor_database = getattr(self, "sensor_database", None) or {}
+        sensors = sensor_database.get("sensors", {}) if isinstance(sensor_database, dict) else {}
         direct = sensors.get(camera_key)
         if isinstance(direct, dict):
             return direct
@@ -1592,9 +1600,166 @@ class SensorDetect:
                 }
                 return self._mode_identity_coarse(mode) in coarse_keys
             return False
-        return self._stock_mode_selected(mode)
+        return self._stock_mode_selected(camera_name, mode)
 
-    def _stock_mode_selected(self, mode: Dict) -> bool:
+    # ────────────────────────────────────────────────────────────────
+    #  stock_selection.extra_modes (operator, 2026-09-28): imx477 should
+    #  also open on 2028x1080, not only 4056x3040/2028x1520/1332x990.
+    # ────────────────────────────────────────────────────────────────
+    def _warn_extra_stock_once(self, key: tuple, msg: str, *args) -> None:
+        """logging.warning(msg, *args), once per *key* per instance.
+
+        _extra_stock_mode_entries()/_extra_stock_modes() below are reached
+        from mode_selected(), i.e. once per mode per camera per call to
+        _finalize_modes() or the settings-editor endpoint -- without this
+        guard a malformed database entry or an extra_modes row matching
+        nothing would log once per mode instead of once, ever. Same "warn
+        once" shape as _default_ratio_warned elsewhere in this class.
+        """
+        warned = getattr(self, "_extra_stock_mode_warned", None)
+        if warned is None:
+            warned = set()
+            self._extra_stock_mode_warned = warned
+        if key in warned:
+            return
+        warned.add(key)
+        logging.warning(msg, *args)
+
+    def _extra_stock_mode_entries(self, camera_name: str) -> List[Dict[str, Any]]:
+        """resources/sensors.json's optional per-sensor
+        ``stock_selection.extra_modes`` list for *camera_name*, or []
+        when the sensor has none.
+
+        PLAN.md's addendum, 2026-09-28 ("imx477 should also open with
+        2028x1080"): data, not a Python special case -- the per-sensor
+        database is the source of truth (module.sensor_database), not a
+        hardcoded camera name here. A missing block means "no extras",
+        the same convention link_frequency/packing already use; a
+        present-but-malformed one warns once rather than passing as an
+        absence, matching sensor_database.py's own stated rule for a
+        capability block someone edited and got wrong.
+        """
+        sensor_info = self._sensor_database_entry(camera_name) or {}
+        block = sensor_info.get("stock_selection")
+        if block is None:
+            return []
+        if not isinstance(block, dict):
+            self._warn_extra_stock_once(
+                ("stock_selection_shape", camera_name),
+                "%s: stock_selection is %s, expected an object -- ignoring it.",
+                camera_name, type(block).__name__,
+            )
+            return []
+        entries = block.get("extra_modes")
+        if entries is None:
+            return []
+        if not isinstance(entries, list):
+            self._warn_extra_stock_once(
+                ("extra_modes_shape", camera_name),
+                "%s: stock_selection.extra_modes is %s, expected a list -- "
+                "ignoring it.", camera_name, type(entries).__name__,
+            )
+            return []
+        valid: List[Dict[str, Any]] = []
+        for entry in entries:
+            if not isinstance(entry, dict) or "width" not in entry or "height" not in entry:
+                self._warn_extra_stock_once(
+                    ("extra_modes_entry_shape", camera_name, repr(entry)),
+                    "%s: stock_selection.extra_modes has an entry with no "
+                    "width/height (%r) -- ignoring it.", camera_name, entry,
+                )
+                continue
+            valid.append(entry)
+        return valid
+
+    @staticmethod
+    def _extra_mode_entry_matches(entry: Dict[str, Any], mode: Dict) -> bool:
+        """PLAN.md: "extra_modes entries match a mode by width x height (any
+        bit depth/HDR; optional bit_depth/hdr keys narrow it if present)"."""
+        try:
+            if int(mode.get("width") or 0) != int(entry["width"]):
+                return False
+            if int(mode.get("height") or 0) != int(entry["height"]):
+                return False
+        except (KeyError, TypeError, ValueError):
+            return False
+        if entry.get("bit_depth") is not None:
+            try:
+                if int(mode.get("bit_depth") or 0) != int(entry["bit_depth"]):
+                    return False
+            except (TypeError, ValueError):
+                return False
+        if entry.get("hdr") is not None and bool(mode.get("hdr")) != bool(entry["hdr"]):
+            return False
+        return True
+
+    def _extra_stock_modes(self, camera_name: str) -> List[Dict]:
+        """This camera's own sensor_modes_unfiltered rows matched by any
+        stock_selection.extra_modes entry. Matches against the raw,
+        pre-filter table (never invents a mode, PLAN.md) and warns once
+        per entry that matches nothing at all."""
+        entries = self._extra_stock_mode_entries(camera_name)
+        if not entries:
+            return []
+        modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
+        matched: List[Dict] = []
+        for entry in entries:
+            hits = [m for m in modes if self._extra_mode_entry_matches(entry, m)]
+            if hits:
+                matched.extend(hits)
+            else:
+                self._warn_extra_stock_once(
+                    ("extra_modes_unmatched", camera_name, entry.get("width"),
+                     entry.get("height"), entry.get("bit_depth"), entry.get("hdr")),
+                    "%s: stock_selection.extra_modes entry %r matches no "
+                    "detected mode -- ignoring it.", camera_name, entry,
+                )
+        return matched
+
+    def _extra_stock_ratio_ids(self, camera_name: str) -> List[str]:
+        """Home ratio ids of this camera's matched extra_modes rows,
+        filtered to ratios the camera actually offers, in match order,
+        deduplicated. [] when the sensor has no extra_modes at all."""
+        offered = self.available_aspect_ratios(camera_name)
+        ids: List[str] = []
+        for m in self._extra_stock_modes(camera_name):
+            rid = self.home_ratio_id(camera_name, m)
+            if rid and rid in offered and rid not in ids:
+                ids.append(rid)
+        return ids
+
+    def _stock_added_ratio_ids(self, camera_name: str) -> set:
+        """Ratio ids the STOCK rule turns on ONLY because of
+        stock_selection.extra_modes -- present in _default_ratio_ids()'s
+        result but absent from the plain PREFERRED_SHAPE/PREFERRED_DELIVERY/
+        full-frame rule (_base_stock_ratio_ids()). {} when the sensor has no
+        extra_modes, so this is a no-op for every other sensor.
+
+        {} whenever this camera's ratio selection is NOT derived
+        (_ratio_selection_is_derived) -- "only the stock path changes"
+        (05-imx477-stock-2k.md): an operator (or a per-sensor file) that
+        explicitly turned 1.89:1 on for imx477 gets the ordinary stock-mode
+        rule for every mode behind it, 4056x2160 included, exactly as before
+        this package. The extras-only restriction below exists only to keep
+        a ratio the STOCK RULE ITSELF chose to add from also silently
+        pulling in a mode nobody asked for -- it has no opinion once a human
+        (or a saved choice) made that call directly.
+
+        _stock_mode_selected() uses this to restrict such a ratio's OTHER
+        modes -- imx477's real 4056x2160, home to the same "1.89:1" toggle
+        the 2028x1080 extra_modes entry turns on -- to the extras
+        themselves, so turning the toggle on does not also silently select
+        a mode nobody asked for (PLAN.md: "4056x2160 is visible but
+        unticked").
+        """
+        if not self._extra_stock_mode_entries(camera_name):
+            return set()
+        if not self._ratio_selection_is_derived(camera_name):
+            return set()
+        base = set(self._base_stock_ratio_ids(camera_name))
+        return {rid for rid in self._extra_stock_ratio_ids(camera_name) if rid not in base}
+
+    def _stock_mode_selected(self, camera_name: str, mode: Dict) -> bool:
         """The stock rule for a camera with no explicit enabled_modes entry:
         1x1 binning, or binning simply not reported (never an INFERRED one --
         see active_picture_size()'s tier 3 and PLAN.md D1; a mode's binning
@@ -1615,7 +1780,29 @@ class SensorDetect:
         and from the settings-editor endpoint, whose own, more minimal test
         doubles may not -- same convention _finalize_modes itself already
         uses for clear_hdr_depths/aspect_ratios_cfg.
+
+        Extended 2026-09-28 for stock_selection.extra_modes: when this
+        mode's home ratio is one the stock rule turns on ONLY because of an
+        extra_modes entry (_stock_added_ratio_ids), the ordinary rule below
+        is not enough on its own -- the mode is stock-selected only if it is
+        itself one of the modes an extra_modes entry matched. Without this,
+        turning on imx477's 1.89:1 toggle (added solely to reach 2028x1080)
+        would also select every OTHER mode that toggle covers (4056x2160,
+        same home ratio, no binning reported either) -- exactly the
+        "visible but unticked" case the addendum asks for instead. A mode
+        that DOES match an extra_modes entry still has to pass the ordinary
+        filters below: an extra_modes entry names a shape, not a bit-depth
+        exemption -- see the module docstring's imx477 example (12- and
+        10-bit "as the global bit_depths filter allows").
         """
+        added_ratio_ids = self._stock_added_ratio_ids(camera_name)
+        if added_ratio_ids and self.home_ratio_id(camera_name, mode) in added_ratio_ids:
+            extra_keys = {
+                self._mode_identity(m) for m in self._extra_stock_modes(camera_name)
+            }
+            if self._mode_identity(mode) not in extra_keys:
+                return False
+
         bx, by = self._mode_binning(mode)
         if bx is not None and by is not None and (bx, by) != (1, 1):
             return False
@@ -1881,14 +2068,12 @@ class SensorDetect:
 
         return f"{NATIVE_RATIO_PREFIX}{aspect:.2f}"
 
-    def _default_ratio_ids(self, camera_name: str) -> List[str]:
-        """The stock rule for a camera nobody has chosen ratios for (operator,
-        2026-09-28, PLAN.md -- superseding 2026-09-26's "1.78:1 or closest";
-        see aspect_ratios.PREFERRED_DELIVERY_RATIO_ID's comment for the full
-        rationale and worked examples): PREFERRED_SHAPE_RATIO_ID ("1.33:1")
-        if this camera OFFERS it, PREFERRED_DELIVERY_RATIO_ID ("1.78:1") if
-        it offers that, then this camera's own full frame if it is known,
-        offered, and not already selected.
+    def _base_stock_ratio_ids(self, camera_name: str) -> List[str]:
+        """The plain stock rule, before stock_selection.extra_modes is
+        unioned in below: PREFERRED_SHAPE_RATIO_ID ("1.33:1") if this camera
+        OFFERS it, PREFERRED_DELIVERY_RATIO_ID ("1.78:1") if it offers that,
+        then this camera's own full frame if it is known, offered, and not
+        already selected.
 
         "Offers" means literal membership in available_aspect_ratios(camera)
         -- a mode whose own home_ratio_id() is that id -- never a stand-in
@@ -1897,10 +2082,12 @@ class SensorDetect:
         _stand_in_ratio_id) is gone: this is three plain membership checks in
         a fixed order.
 
-        Never empty for a camera that offers any ratio at all: falls back to
-        every ratio it offers when none of the three checks add anything (a
-        camera with neither preferred ratio and no knowable full frame, e.g.
-        an all-anamorphic sensor at 2.39:1/2.00:1 alone).
+        Split out of _default_ratio_ids() (2026-09-28) so
+        _stock_added_ratio_ids() can tell an extras-only ratio (1.89:1 on an
+        imx477 that reaches it ONLY through a 2028x1080 extra_modes entry)
+        apart from a ratio this plain rule already turns on for an unrelated
+        reason. May be empty; _default_ratio_ids() is the one with the
+        "never leave a camera empty" fallback.
         """
         offered = self.available_aspect_ratios(camera_name)
         if not offered:
@@ -1914,6 +2101,33 @@ class SensorDetect:
         full_id, _ = self.full_frame_ratio(camera_name)
         if full_id and full_id in offered and full_id not in selected:
             selected.append(full_id)
+        return selected
+
+    def _default_ratio_ids(self, camera_name: str) -> List[str]:
+        """The stock rule for a camera nobody has chosen ratios for (operator,
+        2026-09-28, PLAN.md -- superseding 2026-09-26's "1.78:1 or closest";
+        see aspect_ratios.PREFERRED_DELIVERY_RATIO_ID's comment for the full
+        rationale and worked examples): _base_stock_ratio_ids() (the
+        PREFERRED_SHAPE/PREFERRED_DELIVERY/full-frame membership checks),
+        UNIONED with the home ratio ids of this camera's matched
+        stock_selection.extra_modes rows, if it has any (operator addendum,
+        2026-09-28, "imx477 should also open with 2028x1080") -- existing
+        order kept, new ids appended.
+
+        Never empty for a camera that offers any ratio at all: falls back to
+        every ratio it offers when none of the checks above add anything (a
+        camera with neither preferred ratio, no knowable full frame and no
+        matched extra_modes row, e.g. an all-anamorphic sensor at
+        2.39:1/2.00:1 alone).
+        """
+        offered = self.available_aspect_ratios(camera_name)
+        if not offered:
+            return []
+
+        selected = list(self._base_stock_ratio_ids(camera_name))
+        for rid in self._extra_stock_ratio_ids(camera_name):
+            if rid not in selected:
+                selected.append(rid)
 
         return selected or list(offered.keys())
 

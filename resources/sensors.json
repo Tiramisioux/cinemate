@@ -9,6 +9,11 @@
         "pi4": "P"
       },
       "aliases": [],
+      "stock_selection": {
+        "extra_modes": [
+          {"width": 2028, "height": 1080}
+        ]
+      },
       "modes": [
         {
           "mode": 0,

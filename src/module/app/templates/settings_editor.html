@@ -530,7 +530,14 @@
     background:var(--accent); border-color:var(--accent); color:var(--accent-ink);
   }
   .aspect-ratio-toggle-label{ white-space:nowrap; }
-  .aspect-ratio-toggle-label.aspect-ratio-approx{ font-style:italic; }
+  /* WP-CM-7 -> per-sensor settings: `available` now only ever carries ratios
+     the sensor actually offers (no "closest" substitution), so there is no
+     approximate variant left to style differently -- see
+     aspectRatioToggleLabel()/aspectRatioSvg() below. */
+  .aspect-ratio-meta{ margin-top:10px; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+  .aspect-ratio-source-line{ margin:0; color:var(--muted); font-size:12.8px; }
+  .aspect-ratio-source-line .mono{ color:var(--ink); }
+  .aspect-ratio-dropped-note{ margin:0; color:var(--muted); font-size:12.8px; }
   .recording-mode-table{
     width:100%; min-width:0; table-layout:fixed;
     border-collapse:collapse; font-size:12px; line-height:1.25;
@@ -1550,6 +1557,18 @@
         </div>
       </div>
     </section>
+    <!-- WP-CM-7 -> per-sensor settings: the three "where do this sensor's
+         choices live" sentences and the "dropped ratios" notice, shared by
+         both camera slots since the wording never differs by camera. Read
+         once by renderSensorSourceMeta() and reused for every render; the
+         file name and the dropped ratio ids are data, appended after this
+         gui-text prose at render time, not prose themselves -- see
+         resources/gui-text/README.md's "what is not in here" for why a
+         runtime value never goes through t(). -->
+    <span id="tpl-sensor-source-stock" hidden>{{ t('text.sensors.aspect_ratios.source_stock.body') }}</span>
+    <span id="tpl-sensor-source-file" hidden>{{ t('text.sensors.aspect_ratios.source_file.body') }}</span>
+    <span id="tpl-sensor-source-legacy" hidden>{{ t('text.sensors.aspect_ratios.source_legacy.body') }}</span>
+    <span id="tpl-sensor-dropped-notice" hidden>{{ t('text.sensors.aspect_ratios.dropped.body') }}</span>
     <section class="group" id="cam0" data-page="settings">
       <header class="group-head">
         <h2>{{ t('pane.cam0.heading') }}</h2>
@@ -1561,6 +1580,11 @@
             <label class="card-label">{{ t('card.sensors.cam0.aspect_ratios.label') }}</label>
           </div>
           <div class="aspect-ratio-toggles" id="cam0-ratio-list"></div>
+          <div class="aspect-ratio-meta" id="cam0-ratio-meta">
+            <p class="aspect-ratio-source-line" id="cam0-ratio-source"></p>
+            <p class="aspect-ratio-dropped-note" id="cam0-ratio-dropped" hidden></p>
+            <button type="button" class="btn btn-ghost aspect-ratio-reset-btn" id="cam0-ratio-reset" hidden>Reset to stock</button>
+          </div>
         </div>
       </div>
       <div class="camera-mode-panel" id="cam0-mode-panel" hidden>
@@ -1676,6 +1700,11 @@
             <label class="card-label">{{ t('card.sensors.cam1.aspect_ratios.label') }}</label>
           </div>
           <div class="aspect-ratio-toggles" id="cam1-ratio-list"></div>
+          <div class="aspect-ratio-meta" id="cam1-ratio-meta">
+            <p class="aspect-ratio-source-line" id="cam1-ratio-source"></p>
+            <p class="aspect-ratio-dropped-note" id="cam1-ratio-dropped" hidden></p>
+            <button type="button" class="btn btn-ghost aspect-ratio-reset-btn" id="cam1-ratio-reset" hidden>Reset to stock</button>
+          </div>
         </div>
       </div>
       <div class="camera-mode-panel" id="cam1-mode-panel" hidden>
@@ -3614,25 +3643,62 @@
     state.hardware_controls = buildHardwareControlsState();
     if (!state.input_peripherals) state.input_peripherals = {};
     state.input_peripherals.quad_rotary_controller = buildQuadRotaryState();
-    if (!state.image_capture) state.image_capture = {};
-    state.image_capture.enabled_modes = buildEnabledModesState();
-    state.image_capture.custom_modes = buildCustomModesState();
-    state.image_capture.aspect_ratios = buildAspectRatiosState();
+    /* WP-CM-7 -> per-sensor settings, PLAN.md's W1<->W2 contract: these three
+       keys no longer travel as a whole-file, every-camera dict under
+       image_capture. They move to a top-level sensor_settings entry, one per
+       camera the operator actually touched this page-load (dirtySensorCameras),
+       so saving an unrelated setting never creates a sensor file and a camera
+       this page never rendered is never even mentioned in the payload -- the
+       backend leaves an untouched camera's own file (or legacy entries)
+       exactly as they were. Delete rather than leave stale: lastLoadedSettings
+       may still carry old-format per-camera entries under image_capture (a
+       camera the operator hasn't saved through this page yet), and the
+       contract is explicit that the page stops sending all three, unconditionally. */
+    if (state.image_capture){
+      delete state.image_capture.enabled_modes;
+      delete state.image_capture.aspect_ratios;
+      delete state.image_capture.custom_modes;
+    }
+    // Cleared unconditionally first: after a save, lastLoadedSettings becomes
+    // this same payload (see the saveBtn handler below), so a saved sensor's
+    // entry would otherwise ride along into every later save forever, long
+    // after dirtySensorCameras -- the only thing that should decide this --
+    // has moved on.
+    delete state.sensor_settings;
+    var sensorSettings = {};
+    dirtySensorCameras.forEach(function(camera){
+      sensorSettings[camera] = {
+        aspect_ratios: buildAspectRatiosStateFor(camera),
+        enabled_modes: buildEnabledModesStateFor(camera),
+        custom_modes: buildCustomModesStateFor(camera)
+      };
+    });
+    if (Object.keys(sensorSettings).length) state.sensor_settings = sensorSettings;
     applyGpioOutToState(state);
     return state;
   }
 
   /* ---------- B11.8: per-mode fps ceiling overrides ------------------
-     image_capture.custom_modes is sparse -- only modes the operator has
-     actually typed a value for get an entry, so nothing goes stale when
-     the sensor changes (F-298). A row with a blank field, or one whose
-     value matches the detected fps_max exactly, means "no override": its
-     entry (if any) is dropped rather than written out redundantly.
-     Any pre-existing custom_modes entry that does NOT match one of the
-     modes this pane lists (a genuinely new, undetected mode someone added
-     by hand) is left completely untouched -- same reasoning as B11.5's
-     hardware_controls fix: a pane must never silently drop what it
-     doesn't itself represent. */
+     custom_modes is sparse -- only a row the operator has actually typed a
+     value into gets an entry, so nothing goes stale when the sensor changes
+     (F-298). A row with a blank field, or one whose value matches the
+     detected fps_max exactly, means "no override": its entry is left out
+     rather than written redundantly.
+
+     Per-sensor settings, 2026-09-28: buildCustomModesStateFor(camera) (below
+     buildEnabledModesStateFor) now builds this camera's array from its
+     currently-rendered rows alone, on a save that touches this camera. A
+     custom_modes entry for a mode this pane doesn't list -- one an operator
+     added straight to the per-sensor file by hand -- no longer survives that
+     camera's own save; it does survive on every OTHER camera, and on this
+     one for as long as the operator never saves a change to it, because
+     buildState() only sends a sensor_settings entry for a camera actually in
+     dirtySensorCameras (an untouched camera's file is not even named in the
+     payload). That is a narrower guarantee than B11.5's hardware_controls
+     fix, which this comment used to liken it to -- one file with one owner
+     is the whole point of the per-sensor file (PLAN.md: "one truth per
+     camera"), so once that owner (this pane) saves it, the file is what the
+     pane said, not a merge. */
   function modeKey(mode){
     return [mode.width, mode.height, mode.bit_depth, !!mode.hdr,
       mode.crop_x, mode.crop_y, mode.crop_width, mode.crop_height].join(':');
@@ -3732,7 +3798,7 @@
     catch(e){}
   }
 
-  /* ---------- WP-CM-7: the aspect pane, ASPECT-RATIOS.md steps 3/4 ----------
+  /* ---------- WP-CM-7 -> per-sensor settings: the aspect pane ----------
      Per camera, the ratio toggles are the first section and the mode table
      under them is filtered to whichever ratios are on. aspectRatioTable and
      aspectRatiosByCamera come straight off GET /api/sensor-modes
@@ -3740,45 +3806,57 @@
      file adds no ratio numbers of its own. selectedAspectRatiosByCamera is
      this page's working copy of the operator's choice: seeded from the
      server's resolved "enabled" list on first render, then owned by clicks
-     on the toggles until saved. */
+     on the toggles until saved.
+
+     Per-sensor settings, 2026-09-28: `available` now only ever carries
+     ratios this sensor actually has a mode for -- the "or closest" fallback
+     that used to substitute a near ratio (and mislabel it) is gone, so every
+     entry here is exact. A ratio the canonical table does not carry -- the
+     off-table full-frame id, or a "native:<a.aa>" shape with no home ratio
+     -- is still placed by its own VALUE among the table ratios (rankOf()
+     below), not appended at the end or drawn any differently; see
+     aspectRatioToggleLabel()/aspectRatioSvg() for why there is nothing left
+     to draw differently. */
   var aspectRatioTable = [];
   var aspectRatiosByCamera = {};
   var selectedAspectRatiosByCamera = {};
+  var dirtySensorCameras = new Set();
   var lastMinModeWidth = null;
 
-  function aspectRatioSvg(value, exact){
+  function aspectRatioSvg(value){
     // A small fixed box; the rectangle is the only thing that varies, drawn
     // from the two numbers the ratio actually is -- no image asset, so it
-    // cannot drift from the table and it themes with currentColor.
+    // cannot drift from the table and it themes with currentColor. Every
+    // offered ratio is exact now (see the block comment above), so there is
+    // no dashed "approximate" variant to draw.
     var boxW=30, boxH=22, pad=3, innerW=boxW-2*pad, innerH=boxH-2*pad;
     var w=innerW, h=innerW/(value||1);
     if(h>innerH){ h=innerH; w=innerH*(value||1); }
     var x=(boxW-w)/2, y=(boxH-h)/2;
-    var dash = exact ? '' : ' stroke-dasharray="2,2"';
     return '<svg class="aspect-ratio-swatch" width="'+boxW+'" height="'+boxH+'" viewBox="0 0 '+boxW+' '+boxH+'" aria-hidden="true">'
-      +'<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(w,1).toFixed(1)+'" height="'+Math.max(h,1).toFixed(1)+'" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"'+dash+'/>'
+      +'<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(w,1).toFixed(1)+'" height="'+Math.max(h,1).toFixed(1)+'" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/>'
       +'</svg>';
   }
 
   function aspectRatioToggleLabel(id, info){
-    // "An exact ratio and an approximate one look different, and an
-    // approximate one states what it will actually get" -- WP-CM-7. The
-    // operator should never discover the approximation only after a take.
-    //
     // `label` comes from the server (available_aspect_ratios), which is the
     // only side that can name a ratio the canonical table does not carry --
-    // the imx283's native 1.50:1. It reads as a plain ratio like the other
-    // fourteen; what makes it special (it selects every mode that reads the
-    // whole sensor) is in the tooltip, not the label.
-    if(info.exact) return info.label || id;
-    var real=(typeof info.real_aspect==='number') ? info.real_aspect.toFixed(2) : '?';
-    return (info.label || id)+' — nearest '+real;
+    // the imx283's native 1.50:1, or an off-table "native:<a.aa>" shape. It
+    // reads as a plain ratio like the other fourteen; what makes the
+    // whole-sensor one special (it selects every mode that reads the whole
+    // sensor) is in the tooltip, not the label. Per-sensor settings,
+    // 2026-09-28: `available` never carries a ratio this sensor does not
+    // offer any more, so there is no "-- nearest x.xx" qualifier to compute.
+    return info.label || id;
   }
 
   function renderAspectRatioToggles(slot, camera, data){
     var panel=document.getElementById(slot+'-ratio-panel');
     var host=document.getElementById(slot+'-ratio-list');
     if(!panel||!host) return;
+    // Independent of whether this sensor has any ratio to offer -- a camera
+    // that is entirely absent still clears its own meta line below.
+    renderSensorSourceMeta(slot, camera, data);
     var available=(data && data.available) || {};
     var ids=Object.keys(available);
     if(!ids.length){ panel.hidden=true; host.innerHTML=''; return; }
@@ -3809,8 +3887,12 @@
 
     if(!selectedAspectRatiosByCamera[camera]){
       // First render for this camera this page-load: seed from the
-      // server's own resolution of image_capture.aspect_ratios (per-camera
-      // entry, falling back to "default"), not a hard-coded 1.78 here.
+      // server's own resolved `enabled` list -- file, then legacy
+      // settings.jsonc, then the stock rule (PLAN.md's W1<->W2 contract) --
+      // not a hard-coded 1.78 here. `aspect_ratios.default` no longer has a
+      // say (that cross-sensor carrier is what caused an imx477 to inherit
+      // another sensor's 1.78:1 choice; see PLAN.md D2), so there is nothing
+      // for this page to read from besides `enabled`.
       selectedAspectRatiosByCamera[camera]=((data && data.enabled) || []).slice();
     }
     var enabledSet={};
@@ -3827,11 +3909,10 @@
       var titleId = info.label || id;
       btn.title = info.is_full
         ? titleId+' ('+info.name+') — every mode that reads the whole sensor'
-        : (info.exact ? titleId+' ('+info.name+')'
-                      : titleId+' ('+info.name+') — this sensor gets '+info.real_aspect.toFixed(2)+':1');
-      btn.innerHTML = aspectRatioSvg(info.value, info.exact);
+        : titleId+' ('+info.name+')';
+      btn.innerHTML = aspectRatioSvg(info.value);
       var label=document.createElement('span');
-      label.className='aspect-ratio-toggle-label'+(info.exact?'':' aspect-ratio-approx');
+      label.className='aspect-ratio-toggle-label';
       label.textContent=aspectRatioToggleLabel(id, info);
       btn.appendChild(label);
       btn.addEventListener('click', function(){
@@ -3841,11 +3922,90 @@
         set = nowOn ? set.concat(set.indexOf(id)===-1?[id]:[]) : set.filter(function(x){return x!==id;});
         selectedAspectRatiosByCamera[camera]=set;
         markDirty(btn, true);
+        dirtySensorCameras.add(camera);
         refreshModeRowVisibility(camera);
       });
       host.appendChild(btn);
     });
   }
+
+  /* WP-CM-7 -> per-sensor settings: where this camera's ratio/mode/fps
+     choices actually live, and the way back to stock. The three sentences
+     (stock/file/legacy) and the dropped-ratios intro are gui-text -- read
+     once from the hidden #tpl-sensor-* spans above cam0's section -- with
+     the file name and the dropped ratio ids appended as data, the same
+     reasoning resources/gui-text/README.md gives for JS-owned runtime
+     strings ("i2c device detail lines, toast messages..."): a file name or
+     an id list is not prose, so it does not go through t(). */
+  var sensorSourceTextCache = null;
+  function sensorSourceText(){
+    if(sensorSourceTextCache) return sensorSourceTextCache;
+    function html(id){ var el=document.getElementById(id); return el ? el.innerHTML : ''; }
+    sensorSourceTextCache = {
+      stock: html('tpl-sensor-source-stock'),
+      file: html('tpl-sensor-source-file'),
+      legacy: html('tpl-sensor-source-legacy'),
+      dropped: html('tpl-sensor-dropped-notice')
+    };
+    return sensorSourceTextCache;
+  }
+  function renderSensorSourceMeta(slot, camera, data){
+    var sourceEl=document.getElementById(slot+'-ratio-source');
+    var droppedEl=document.getElementById(slot+'-ratio-dropped');
+    var resetBtn=document.getElementById(slot+'-ratio-reset');
+    if(!sourceEl||!droppedEl||!resetBtn) return;
+    if(!data || !data.source){
+      sourceEl.innerHTML=''; droppedEl.hidden=true; droppedEl.innerHTML='';
+      resetBtn.hidden=true; resetBtn.removeAttribute('data-camera');
+      return;
+    }
+    var text=sensorSourceText();
+    var sentence=text[data.source] || '';
+    sourceEl.innerHTML = sentence
+      ? sentence+' <code class="mono">'+escapeHtml(data.file || '')+'</code>'
+      : '';
+    var dropped=data.dropped || [];
+    if(dropped.length){
+      droppedEl.innerHTML = text.dropped+' '+dropped.map(escapeHtml).join(', ');
+      droppedEl.hidden=false;
+    } else {
+      droppedEl.hidden=true; droppedEl.innerHTML='';
+    }
+    // Stock has no file to reset -- there is nothing on disk yet to delete.
+    resetBtn.hidden = (data.source === 'stock');
+    resetBtn.setAttribute('data-camera', camera || '');
+  }
+
+  /* DELETE /settings-editor/api/sensor-settings/<camera>: backs up and
+     deletes the per-sensor file, drops that camera's legacy settings.jsonc
+     entries, restarts -- same {ok, restarting, message} shape and the same
+     toast idiom the settings PUT below already uses, reused rather than
+     invented fresh. */
+  function resetSensorToStock(camera){
+    if(!camera) return;
+    if(!window.confirm('Delete the saved settings for this sensor and restart CineMate?')) return;
+    fetch('/settings-editor/api/sensor-settings/'+encodeURIComponent(camera), { method:'DELETE' })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if(!res.ok){ showToast((res && res.message) || 'Could not reset this sensor'); return; }
+        showToast(res.restarting ? 'Reset. Restarting CineMate…' : (res.message || 'Reset to stock.'));
+        dirtySensorCameras.delete(camera);
+        // This camera's selection is now the server's stock rule, not
+        // whatever the operator had toggled -- forget the cached copy so
+        // the next render reseeds from the fresh `enabled` list instead of
+        // keeping what a deleted file used to say.
+        delete selectedAspectRatiosByCamera[camera];
+        loadFpsCeilings();
+      })
+      .catch(function(err){ showToast('Reset failed: ' + err); });
+  }
+  ['cam0','cam1'].forEach(function(slot){
+    var btn=document.getElementById(slot+'-ratio-reset');
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      resetSensorToStock(btn.getAttribute('data-camera'));
+    });
+  });
 
   /* Recompute which mode rows show, for one camera: a row is out when its
      ratio is not among the camera's currently-enabled toggles (removed from
@@ -3987,6 +4147,7 @@
           }
           tog.setAttribute('aria-checked',String(!on)); syncRow();
           markDirty(tog,!on!==(String(mode.selected)==='true'));
+          dirtySensorCameras.add(camera);
         }
         tog.addEventListener('click',function(e){
           e.stopPropagation();
@@ -4001,6 +4162,7 @@
           var v=input.value.trim(),n=parseFloat(v),sensor=parseFloat(mode.fps_max_detected);
           if(v!==''&&(!isFinite(n)||n<0||n>sensor)) input.classList.add('invalid'); else input.classList.remove('invalid');
           markDirty(input,v!==String(mode.fps_max_effective==null?'':mode.fps_max_effective));
+          dirtySensorCameras.add(camera);
         });
         syncRow();
         body.appendChild(tr);
@@ -4077,73 +4239,51 @@
     }
   }
 
-  function buildEnabledModesState(){
-    var out = {};
-    var existing = (lastLoadedSettings && lastLoadedSettings.image_capture && lastLoadedSettings.image_capture.enabled_modes) || {};
-    Object.keys(existing).forEach(function(camera){ out[camera] = (existing[camera] || []).slice(); });
-    var cameras = {};
-    document.querySelectorAll('.camera-mode-list [data-mode-row]').forEach(function(row){
-      var camera=row.getAttribute('data-camera');
-      (cameras[camera] || (cameras[camera]=[])).push(row);
-    });
-    Object.keys(cameras).forEach(function(camera){
-      var selected=[];
-      cameras[camera].forEach(function(row){
-        var tog=row.querySelector('.mode-toggle');
-        if(!tog || tog.getAttribute('aria-checked')!=='true') return;
-        var entry={
-          width:Number(row.getAttribute('data-width')), height:Number(row.getAttribute('data-height')),
-          bit_depth:Number(row.getAttribute('data-bit-depth')), hdr:row.getAttribute('data-hdr')==='true'
-        };
-        ['x','y','width','height'].forEach(function(k){
-          var v=row.getAttribute('data-crop-'+k);
-          if(v!=='') entry['crop_'+k]=Number(v);
-        });
-        selected.push(entry);
+  /* WP-CM-7 -> per-sensor settings: the three builders below each return
+     ONE camera's own array, built straight from what the pane currently
+     shows for that camera's rows/toggles -- not a whole-file, every-camera
+     dict merged against lastLoadedSettings any more. That merge-in-the-page
+     convention existed because the old payload replaced the whole
+     image_capture.enabled_modes/aspect_ratios/custom_modes dict in one PUT,
+     so a camera this page never rendered had to have its prior entry copied
+     forward by hand or the save would erase it. Per-sensor settings removes
+     the reason for that: buildState() now sends a sensor_settings entry only
+     for the camera(s) actually in dirtySensorCameras, so a camera this page
+     didn't touch is simply absent from the payload, and the backend leaves
+     its file (or its legacy settings.jsonc entries) alone. Reading
+     lastLoadedSettings here would be actively wrong: it would seed a fresh
+     per-sensor file from whatever this page happened to load with, rather
+     than from this camera's own current rows. */
+  function buildEnabledModesStateFor(camera){
+    var selected=[];
+    document.querySelectorAll('.camera-mode-list [data-mode-row][data-camera="'+camera+'"]').forEach(function(row){
+      var tog=row.querySelector('.mode-toggle');
+      if(!tog || tog.getAttribute('aria-checked')!=='true') return;
+      var entry={
+        width:Number(row.getAttribute('data-width')), height:Number(row.getAttribute('data-height')),
+        bit_depth:Number(row.getAttribute('data-bit-depth')), hdr:row.getAttribute('data-hdr')==='true'
+      };
+      ['x','y','width','height'].forEach(function(k){
+        var v=row.getAttribute('data-crop-'+k);
+        if(v!=='') entry['crop_'+k]=Number(v);
       });
-      if(selected.length) out[camera]=selected;
+      selected.push(entry);
     });
-    return out;
+    return selected;
   }
 
-  /* WP-CM-7: image_capture.aspect_ratios, same shape and same "start from
-     what was already on disk" convention buildEnabledModesState() uses
-     above -- every camera the settings file already named keeps its
-     selection, and only the camera(s) actually rendered on this page
-     (selectedAspectRatiosByCamera, owned by the toggle clicks in
-     renderAspectRatioToggles) overwrite theirs. This is what lets the save
-     touch one camera's ratios without a merge depending on it: the payload
-     already carries every camera's own array. */
-  function buildAspectRatiosState(){
-    var out = {};
-    var existing = (lastLoadedSettings && lastLoadedSettings.image_capture && lastLoadedSettings.image_capture.aspect_ratios) || {};
-    Object.keys(existing).forEach(function(camera){ out[camera] = (existing[camera] || []).slice(); });
-    Object.keys(selectedAspectRatiosByCamera).forEach(function(camera){
-      out[camera] = selectedAspectRatiosByCamera[camera].slice();
-    });
-    return out;
+  function buildAspectRatiosStateFor(camera){
+    return (selectedAspectRatiosByCamera[camera] || []).slice();
   }
 
-  function buildCustomModesState(){
-    var out = {};
-    var customModes = (lastLoadedSettings && lastLoadedSettings.image_capture
-      && lastLoadedSettings.image_capture.custom_modes) || {};
-    Object.keys(customModes).forEach(function(camera){ out[camera] = (customModes[camera] || []).slice(); });
-
-    document.querySelectorAll('.camera-mode-list [data-mode-row]').forEach(function(row){
-      var camera=row.getAttribute('data-camera');
+  function buildCustomModesStateFor(camera){
+    var out=[];
+    document.querySelectorAll('.camera-mode-list [data-mode-row][data-camera="'+camera+'"]').forEach(function(row){
       var w=parseInt(row.getAttribute('data-width'),10), h=parseInt(row.getAttribute('data-height'),10);
       var bd=parseInt(row.getAttribute('data-bit-depth'),10), hdr=row.getAttribute('data-hdr')==='true';
       var detected=parseFloat(row.getAttribute('data-detected') || '0');
       var input=row.querySelector('.mode-fps-input'); if(!input) return;
       var raw=(input.value || '').trim();
-      out[camera]=(out[camera] || []).filter(function(entry){
-        var sameCrop=['x','y','width','height'].every(function(k){
-          var rv=row.getAttribute('data-crop-'+k), ev=entry['crop_'+k];
-          return rv==='' ? ev==null : Number(ev)===Number(rv);
-        });
-        return !(Number(entry.width)===w && Number(entry.height)===h && Number(entry.bit_depth)===bd && !!entry.hdr===hdr && sameCrop);
-      });
       if(raw==='') return;
       var val=parseFloat(raw);
       if(!isFinite(val) || val===detected) return;
@@ -4153,9 +4293,8 @@
         var v=row.getAttribute('data-crop-'+k);
         if(v!=='') entry['crop_'+k]=Number(v);
       });
-      out[camera].push(entry);
+      out.push(entry);
     });
-    Object.keys(out).forEach(function(camera){ if(out[camera].length===0) delete out[camera]; });
     return out;
   }
 
@@ -5088,6 +5227,11 @@
 
   function clearSettingsDirtyState(){
     dirtyEls.clear();
+    // WP-CM-7 -> per-sensor settings: covers every caller of this function
+    // (initial load, Revert to defaults, Upload, and a successful Save
+    // below) with one reset, the same way dirtyEls.clear() already does for
+    // the rest of the page's dirty state.
+    dirtySensorCameras.clear();
     document.querySelectorAll('[data-path]').forEach(function(el){
       el.setAttribute('data-original', el.getAttribute('data-type') === 'bool' ? el.getAttribute('aria-checked') : String(el.value));
     });

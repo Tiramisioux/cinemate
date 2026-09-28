@@ -1770,11 +1770,11 @@ class SensorDetect:
 
     def _nearest_ratio_id(self, aspect: float) -> str | None:
         """The canonical ratio id closest to `aspect`, whatever the
-        distance -- unlike _modes_within_ratio_tolerance there is no
-        tolerance gate here, because this is used to find a mode's "home"
-        ratio for the derived default (_derived_default_ratio_ids), not to
-        decide whether a match counts as exact. None only when the ratio
-        table itself is empty (see load_aspect_ratio_table's own
+        distance -- no tolerance gate here, because home_ratio_id() (the
+        only caller) applies that separately and needs the nearest id
+        either way, to test whether it is close enough to count or to fold
+        into an off-table full frame's rounded aspect. None only when the
+        ratio table itself is empty (see load_aspect_ratio_table's own
         "never stop CineMate booting" fallback)."""
         table = self._aspect_ratio_table()
         if not table:

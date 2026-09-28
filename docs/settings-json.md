@@ -296,13 +296,15 @@ Filters which ratios the resolution dial offers, independent of *Resolutions off
 | --- | --- |
 | Stored per sensor | A ratio or per-mode choice you save is written to `settings_<sensor>.jsonc`, next to `settings.jsonc` on the Pi. Swap the physical sensor and its own file applies — nothing carries over from a different sensor. |
 | The file appears on save, not before | With no `settings_<sensor>.jsonc` yet, the sensor runs on the stock rule below. Change and save a ratio or mode for that sensor and the file is written for the first time. |
-| Stock rule | Ratios: 1.33:1 and 1.78:1, whichever the sensor's own modes actually reach, plus its full frame. Modes: on when the driver reports 1×1 binning, or when it reports no binning at all — the HQ camera (IMX477) reports none, so every one of its modes is on by default. |
+| Stock rule | Ratios: 1.33:1 and 1.78:1, whichever the sensor's own modes actually reach, plus its full frame — plus, on a sensor whose only way to reach a useful 2K mode is a ratio it otherwise wouldn't offer by default, that ratio too (see the IMX477 example). Modes: on when the driver reports 1×1 binning, or when it reports no binning at all — the HQ camera (IMX477) reports none, so every one of its modes is on by default, except as that same example describes. |
 | Only what the sensor offers | The ratio list shows only ratios at least one of the sensor's own modes reaches. There is no "nearest" stand-in for a ratio it does not have. |
 | Reset to stock | Deletes `settings_<sensor>.jsonc` for that sensor. It goes back to the stock rule above on the next start. |
 
 !!! example "IMX477 (HQ camera), stock"
 
-    1.33:1 is on by default. Turn on 1.89:1 and it offers 2028×1080 and 4056×2160.
+    1.33:1 and 1.89:1 are on by default. 2028×1080 is on; its sibling 4056×2160 (same 1.89:1 ratio, the 4K mode) is offered but off until you tick it yourself.
+
+
 
 !!! note "settings.jsonc still carries the old per-camera lists"
 

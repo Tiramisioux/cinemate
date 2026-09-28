@@ -381,6 +381,11 @@
   /* Present but not pickable — the link-frequency cards while the RP1
      overclock is off. The select's own [disabled] handles the control. */
   .card.is-disabled .card-main{ opacity:.45; }
+  /* A card whose setting only matters while a switch above it is on -- the
+     live SYNC tolerances under "show sync warnings". Greyed, not disabled:
+     frames_in_sync is still judged and logged with these values while the
+     warning is hidden, so they still save and still apply. */
+  .card.is-dependent-off{ opacity:.45; }
   /* A peripheral that is not answering on the bus right now. Its settings
      still load, still save and still apply the moment the board is plugged
      back in -- this only says the hardware is not there to obey them, so the
@@ -1800,6 +1805,42 @@
             <button class="toggle" id="f-syncwarn" data-path="settings.sync_warnings_enabled" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
           </div>
         </div>
+        <div class="card" data-depends-on="f-syncwarn" data-search="live sync warning tolerance frames">
+          <div class="card-main">
+            <label class="card-label" for="f-livewarn">{{ t('card.settings.sync_tolerances.live_sync_warning_frames.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_tolerances.live_sync_warning_frames.help') }}</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" id="f-livewarn" data-path="settings.sync_tolerances.live_sync_warning_frames" data-type="number" data-original="5" value="5"> fr
+          </div>
+        </div>
+        <div class="card" data-depends-on="f-syncwarn" data-search="live sync startup guard frames">
+          <div class="card-main">
+            <label class="card-label" for="f-startguard">{{ t('card.settings.sync_tolerances.live_sync_startup_guard_frames.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_tolerances.live_sync_startup_guard_frames.help') }}</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" id="f-startguard" data-path="settings.sync_tolerances.live_sync_startup_guard_frames" data-type="number" data-original="10" value="10"> fr
+          </div>
+        </div>
+        <div class="card" data-search="final sync analysis tolerance frames end of take">
+          <div class="card-main">
+            <label class="card-label" for="f-finalsync">{{ t('card.settings.sync_tolerances.final_sync_analysis_frames.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_tolerances.final_sync_analysis_frames.help') }}</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" id="f-finalsync" data-path="settings.sync_tolerances.final_sync_analysis_frames" data-type="number" data-original="1" value="1"> fr
+          </div>
+        </div>
+        <div class="card" data-search="timecode drop jitter tolerance frames">
+          <div class="card-main">
+            <label class="card-label" for="f-tcjitter">{{ t('card.settings.sync_tolerances.tc_drop_jitter_frames.label') }}</label>
+            <p class="card-help">{{ t('card.settings.sync_tolerances.tc_drop_jitter_frames.help') }}</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" id="f-tcjitter" data-path="settings.sync_tolerances.tc_drop_jitter_frames" data-type="number" data-original="1" value="1"> fr
+          </div>
+        </div>
         <div class="card" data-search="auto storage preroll wait before recording">
           <div class="card-main">
             <label class="card-label" for="f-preroll">{{ t('card.system.storage.auto_preroll.label') }}</label>
@@ -1831,42 +1872,6 @@
               <option value="25" selected>25</option>
               <option value="30">30</option>
             </select>
-          </div>
-        </div>
-        <div class="card" data-search="live sync warning tolerance frames">
-          <div class="card-main">
-            <label class="card-label" for="f-livewarn">{{ t('card.settings.sync_tolerances.live_sync_warning_frames.label') }}</label>
-            <p class="card-help">{{ t('card.settings.sync_tolerances.live_sync_warning_frames.help') }}</p>
-          </div>
-          <div class="card-control">
-            <input class="field-input num-input" type="number" id="f-livewarn" data-path="settings.sync_tolerances.live_sync_warning_frames" data-type="number" data-original="5" value="5"> fr
-          </div>
-        </div>
-        <div class="card" data-search="live sync startup guard frames">
-          <div class="card-main">
-            <label class="card-label" for="f-startguard">{{ t('card.settings.sync_tolerances.live_sync_startup_guard_frames.label') }}</label>
-            <p class="card-help">{{ t('card.settings.sync_tolerances.live_sync_startup_guard_frames.help') }}</p>
-          </div>
-          <div class="card-control">
-            <input class="field-input num-input" type="number" id="f-startguard" data-path="settings.sync_tolerances.live_sync_startup_guard_frames" data-type="number" data-original="10" value="10"> fr
-          </div>
-        </div>
-        <div class="card" data-search="final sync analysis tolerance frames end of take">
-          <div class="card-main">
-            <label class="card-label" for="f-finalsync">{{ t('card.settings.sync_tolerances.final_sync_analysis_frames.label') }}</label>
-            <p class="card-help">{{ t('card.settings.sync_tolerances.final_sync_analysis_frames.help') }}</p>
-          </div>
-          <div class="card-control">
-            <input class="field-input num-input" type="number" id="f-finalsync" data-path="settings.sync_tolerances.final_sync_analysis_frames" data-type="number" data-original="1" value="1"> fr
-          </div>
-        </div>
-        <div class="card" data-search="timecode drop jitter tolerance frames">
-          <div class="card-main">
-            <label class="card-label" for="f-tcjitter">{{ t('card.settings.sync_tolerances.tc_drop_jitter_frames.label') }}</label>
-            <p class="card-help">{{ t('card.settings.sync_tolerances.tc_drop_jitter_frames.help') }}</p>
-          </div>
-          <div class="card-control">
-            <input class="field-input num-input" type="number" id="f-tcjitter" data-path="settings.sync_tolerances.tc_drop_jitter_frames" data-type="number" data-original="1" value="1"> fr
           </div>
         </div>
       </div>
@@ -4546,6 +4551,16 @@
   });
 
   /* ---------- toggles ---------- */
+  /* Grey every card marked data-depends-on="<toggle id>" while that toggle is
+     off. Called after a click and after the form is populated, because
+     populate writes aria-checked without a click. */
+  function syncDependentCards(){
+    document.querySelectorAll('.card[data-depends-on]').forEach(function(card){
+      var sw = document.getElementById(card.getAttribute('data-depends-on'));
+      var off = !!sw && sw.getAttribute('aria-checked') !== 'true';
+      card.classList.toggle('is-dependent-off', off);
+    });
+  }
   document.querySelectorAll('.toggle[data-path]').forEach(function(t){
     t.addEventListener('click', function(){
       var checked = t.getAttribute('aria-checked') === 'true';
@@ -4554,6 +4569,7 @@
       // No change/input event fires for a .toggle, so the steplist has to be
       // repainted from inside the handler that flipped it.
       if (typeof syncAllFreeSteppingChips === 'function') syncAllFreeSteppingChips();
+      syncDependentCards();
     });
     t.addEventListener('keydown', function(e){
       if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); t.click(); }
@@ -5265,6 +5281,7 @@
     // Same reason: the thumbnail toggle mirrors a hidden input that was just
     // written straight from settings, with no click to notice it.
     syncThumbnailToggle();
+    syncDependentCards();
   }
 
   function loadSettings(){

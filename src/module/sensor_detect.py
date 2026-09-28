@@ -11,10 +11,12 @@ from module import rp1_regime
 from module.sensor_database import load_sensor_database
 from module.aspect_ratios import (
     FULL_FRAME_RATIO_ID,
+    NATIVE_RATIO_PREFIX,
     PREFERRED_DELIVERY_RATIO_ID,
     PREFERRED_SHAPE_RATIO_ID,
     load_aspect_ratio_table,
 )
+from module import sensor_settings
 
 # The state boundary cinepi-raw prints between the SDR listing and the
 # ClearHDR listing of the same cameras. It appears on EVERY
@@ -320,12 +322,22 @@ def active_picture_size(mode: dict, fallback_width, fallback_height) -> tuple[fl
        size, but can still differ from the true active picture by a few
        pixels when the transport buffer is itself padded beyond it (a RAW16
        ClearHDR mode) -- exactly why tier 1 exists.
-    3. ``crop_width``/``crop_height`` alone, when binning is not known. Only
-       ratio-correct when binning_x == binning_y: a mode with asymmetric
-       binning silently drifts from its true active aspect here (this was
-       Defect B2 -- the sensor-WINDOW aspect standing in for the picture
-       aspect). Kept only because a driver can report crop without binning,
-       and no better evidence exists in that case.
+    3. ``crop_width``/``crop_height`` divided by an INFERRED binning factor,
+       when binning is not reported but crop/fallback lands within 0.01 of
+       the same integer n >= 1 in both dimensions (PLAN.md D1, 2026-09-28) --
+       else ``crop_width``/``crop_height`` alone. The plain-crop fallback is
+       only ratio-correct when binning_x == binning_y (this was Defect B2 --
+       the sensor-WINDOW aspect standing in for the picture aspect) and, for
+       a binned mode reported with no binning annotation at all, is
+       positively misleading: it relabels the mode with its sensor-domain
+       window size, identical to whatever OTHER mode reads that same window
+       unbinned. That is exactly the operator report this package fixes --
+       imx477's binned 2028x1080 mode, reported with crop 4056x2160 and no
+       binning, showed in the settings pane as "4056x2160", indistinguishable
+       from the real 4056x2160 mode. The inferred factor is never written
+       back into binning_x/binning_y: it is evidence good enough for THIS
+       calculation, not a fact this module is in a position to assert about
+       the driver.
     4. *fallback_width*/*fallback_height* -- the transport frame. Provably
        wrong whenever the transport carries optical-black padding rows or
        columns (Defect D's 1.02:1 for a 1:1 mode is exactly this), but the
@@ -349,6 +361,13 @@ def active_picture_size(mode: dict, fallback_width, fallback_height) -> tuple[fl
             and isinstance(by, (int, float)) and by > 0
         ):
             return float(cw) / bx, float(ch) / by
+
+        fw, fh = float(fallback_width), float(fallback_height)
+        if fw > 0 and fh > 0:
+            nx, ny = float(cw) / fw, float(ch) / fh
+            n = round(nx)
+            if n >= 1 and abs(nx - n) <= 0.01 and abs(ny - n) <= 0.01:
+                return float(cw) / n, float(ch) / n
         return float(cw), float(ch)
 
     return float(fallback_width), float(fallback_height)
@@ -523,10 +542,27 @@ def pi_family() -> str:
 
 
 class SensorDetect:
-    def __init__(self, settings=None):
+    def __init__(self, settings=None, settings_dir=None):
         self.camera_model = None
         self.res_modes = {}
         self.settings = settings or {}
+        # Per-sensor settings.py file layer (settings_<camera>.jsonc):
+        # None disables it entirely, leaving legacy/stock resolution only --
+        # this keeps every existing unit test hermetic, since a test built
+        # with SensorDetect(settings) and no settings_dir must never read a
+        # real /home/pi/cinemate/settings_*.jsonc just because one happens to
+        # exist on the machine running the suite. main.py passes
+        # Path(SETTINGS_FILE).parent -- the same directory settings.jsonc
+        # itself lives in and the settings editor already writes into.
+        self.settings_dir = settings_dir
+        # cam -> "file" | "legacy" | "stock", set once per camera inside
+        # _finalize_modes by resolve_sensor_settings(). Read by the
+        # settings-editor endpoint's per-camera `source` field.
+        self.sensor_settings_source: Dict[str, str] = {}
+        # cam -> [ratio ids], the saved-but-not-offered ids _finalize_modes
+        # dropped for that camera. Read by the settings-editor endpoint's
+        # per-camera `dropped` field. See dropped_ratio_ids().
+        self.sensor_settings_dropped: Dict[str, List[str]] = {}
         res_cfg = self.settings.get("image_capture", {})
         self.k_steps = res_cfg.get("k_steps", [])
         self.bit_depths = res_cfg.get("bit_depths", [])
@@ -535,24 +571,30 @@ class SensorDetect:
         # legacy k_steps/bit_depths filters for backward compatibility.
         self.enabled_modes = res_cfg.get("enabled_modes", {})
         # WP-CM-6: per-camera aspect-ratio selection, keyed exactly as
-        # enabled_modes is keyed above (a camera with no entry of its own
-        # uses "default"). Availability -- which ratios a camera can
-        # actually produce -- is derived at startup from the mode table
+        # enabled_modes is keyed above. Availability -- which ratios a camera
+        # can actually produce -- is derived at startup from the mode table
         # (see available_aspect_ratios()), never stored here: it depends on
         # the driver installed right now, and a cached answer would outlive
         # it. An enabled_modes entry for the camera is still authoritative
         # and skips this filter outright, same as it already skips
         # k_steps/bit_depths above.
         #
-        # No default here (None, not {}): config_loader.py deliberately does
-        # not setdefault this key either, so an absent key really means
-        # "the operator has no opinion" -- WP-CM-6's compatibility clause,
-        # "a settings file with no aspect_ratios must behave exactly as it
-        # does today". {} (key present, empty map) is a real, if odd,
-        # operator choice and is left alone; only a genuinely missing key
-        # reads as None, which _finalize_modes() checks for to skip the
-        # ratio matcher entirely.
-        self.aspect_ratios_cfg = res_cfg.get("aspect_ratios")
+        # A camera with no entry of its own falls to the STOCK rule
+        # (_default_ratio_ids), computed fresh from this camera's own modes
+        # -- never to a "default" entry (PLAN.md D2, 2026-09-28): a settings.
+        # jsonc left with a stray global "default" key from before per-sensor
+        # settings files existed is exactly the cross-sensor carrier that let
+        # an imx585 ratio choice silently narrow an imx477 after a swap. See
+        # _enabled_ratio_ids()/legacy_sensor_settings() -- a bare "default"
+        # entry is surfaced as a one-time warning notice in _finalize_modes,
+        # never read as a value, at any precedence level.
+        #
+        # _finalize_modes() overwrites this dict's per-camera entries in
+        # place with whatever sensor_settings.resolve_sensor_settings() finds
+        # for that camera (a per-sensor file beats this legacy value, which
+        # is otherwise used as-is) -- see its own "resolve per-sensor
+        # settings" section.
+        self.aspect_ratios_cfg = res_cfg.get("aspect_ratios") or {}
         # Modes narrower than this are hidden (not removed -- they stay in
         # sensor_modes_unfiltered) from the dial/GUIs by default. An
         # enabled_modes entry bypasses this floor too: an explicit choice
@@ -1494,6 +1536,86 @@ class SensorDetect:
 
         return [], "none"
 
+    def mode_selected(self, camera_name: str, mode: Dict) -> bool:
+        """This mode's own selection, IGNORING the ratio gate entirely
+        (PLAN.md's W1<->W2 contract: "the mode's own selection, IGNORING the
+        ratio gate (explicit enabled_modes match, else the stock mode
+        rule)").
+
+        The one public predicate both _finalize_modes' dial and the
+        settings-editor endpoint's "selected" column now call, replacing two
+        separate reimplementations of the same question (settings_editor.
+        selected_for(), _finalize_modes' own inline use_individual_selection
+        branch) that had already drifted from each other on the ratio-gate
+        bypass PLAN.md's D4 finding describes: enabled_modes used to skip the
+        ratio matcher entirely, so a mode explicitly enabled under a ratio
+        the operator later hid stayed selected and reachable in the dial. The
+        actual ratio gate is applied by the CALLER, uniformly for both the
+        explicit and stock paths -- see _finalize_modes' "filter & index"
+        section -- so this function answers only "does the operator want
+        this mode at all", never "and is its toggle currently on".
+
+        An explicit enabled_modes entry for this camera is authoritative
+        (the exact -> coarse tiers _match_enabled_modes already implements,
+        including the notices _finalize_modes raises when neither tier
+        matches). With no such entry, falls to the stock mode rule: 1x1
+        binning, or binning not reported at all (PLAN.md's "1x1 modes on,
+        every mode when the driver does not report binning" -- explicitly
+        NOT the D1 tier-3 INFERRED binning active_picture_size() computes for
+        display purposes only), passed through the same global filters
+        (bit_depths, k_steps, the HDR switches) the non-explicit path in
+        _finalize_modes has always applied. min_mode_width is deliberately
+        not checked here -- see _stock_mode_selected()'s own docstring.
+        """
+        modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
+        entries = (getattr(self, "enabled_modes", None) or {}).get(camera_name)
+        if isinstance(entries, list) and entries:
+            keep, _tier = self._match_enabled_modes(modes, entries)
+            return id(mode) in {id(m) for m in keep}
+        return self._stock_mode_selected(mode)
+
+    def _stock_mode_selected(self, mode: Dict) -> bool:
+        """The stock rule for a camera with no explicit enabled_modes entry:
+        1x1 binning, or binning simply not reported (never an INFERRED one --
+        see active_picture_size()'s tier 3 and PLAN.md D1; a mode's binning
+        being unknown must not be conflated with a display-only guess about
+        it), plus the same bit_depths/k_steps/HDR filters the non-explicit
+        path in _finalize_modes already applies today.
+
+        min_mode_width is NOT checked here on purpose: the width floor has
+        always hidden a narrow mode from the dial/GUIs without touching
+        whether it counts as "selected" (settings_editor's own
+        below_width_floor field marks it instead), and mode_selected() exists
+        to answer exactly the same question selected_for() used to, not to
+        widen it.
+
+        Every filter attribute is read through getattr with a "no opinion"
+        default: mode_selected() is called both from _finalize_modes (where a
+        real SensorDetect and this file's own test doubles always set them)
+        and from the settings-editor endpoint, whose own, more minimal test
+        doubles may not -- same convention _finalize_modes itself already
+        uses for clear_hdr_depths/aspect_ratios_cfg.
+        """
+        bx, by = self._mode_binning(mode)
+        if bx is not None and by is not None and (bx, by) != (1, 1):
+            return False
+        bit_depths = getattr(self, "bit_depths", None)
+        if bit_depths and mode.get("bit_depth") not in bit_depths:
+            return False
+        clear_hdr_depths = getattr(self, "clear_hdr_depths", None)
+        if bool(mode.get("hdr")) and clear_hdr_depths is not None:
+            if int(mode.get("bit_depth") or 0) not in clear_hdr_depths:
+                return False
+        hdr_modes = getattr(self, "hdr_modes", None)
+        if hdr_modes and bool(mode.get("hdr")) not in hdr_modes:
+            return False
+        k_steps = getattr(self, "k_steps", None)
+        if k_steps:
+            k_val = round((mode.get("width") or 0) / 1000 * 2) / 2
+            if k_val not in k_steps:
+                return False
+        return True
+
     @staticmethod
     def _mode_binning(mode: Dict) -> tuple:
         bx, by = mode.get("binning_x"), mode.get("binning_y")
@@ -1622,36 +1744,6 @@ class SensorDetect:
                 return None
         return None
 
-    @classmethod
-    def _modes_within_ratio_tolerance(
-        cls, modes: List[Dict], ratio_value: float,
-    ) -> List[Dict]:
-        """Modes within ASPECT_RATIO_TOLERANCE of ratio_value; when none
-        are, the closest mode plus any other within tolerance of *that*
-        mode's own error -- a near-tie offers both rather than an arbitrary
-        pick between them. Returns [] only when no mode has a known aspect
-        at all.
-
-        WP-CM-11 removed this method's `additive_fallback` parameter: it
-        existed only to widen this near-tie fallback for the old shipped
-        default (a single hardcoded "1.78:1"), whose
-        own exemption in _ratio_matches_for_camera called it with
-        `additive_fallback=True`. The default is now derived per camera
-        from its own mode table (_derived_default_ratio_ids) instead of
-        being widened after the fact, so no caller ever needs the wider
-        behaviour any more."""
-        scored = [
-            (abs(cls._mode_aspect(m) - ratio_value), m)
-            for m in modes if cls._mode_aspect(m) is not None
-        ]
-        if not scored:
-            return []
-        within = [m for err, m in scored if err <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS]
-        if within:
-            return within
-        best_err = min(err for err, _ in scored)
-        return [m for err, m in scored if err <= best_err + ASPECT_RATIO_TOLERANCE]
-
     def _aspect_ratio_table(self) -> List[Dict[str, Any]]:
         table = getattr(self, "aspect_ratio_table", None)
         return table if table is not None else load_aspect_ratio_table()
@@ -1717,368 +1809,225 @@ class SensorDetect:
         return FULL_FRAME_RATIO_ID, aspect
 
     def home_ratio_id(self, camera_name: str, mode: Dict) -> str | None:
-        """The toggle a mode belongs to: its nearest canonical ratio, except
-        that a whole-sensor mode on a camera whose full frame is off-table
-        belongs to FULL_FRAME_RATIO_ID instead.
+        """The ONE toggle a mode belongs to (PLAN.md, 2026-09-28, "no
+        closest"):
 
-        One function because three places have to agree or the pane lies: the
-        derived default (which ratios a fresh camera selects), the matcher
-        (which modes an enabled ratio yields) and the settings page's row
-        labels (which toggle a row hides behind). They agreed before this
-        existed only because they all called _nearest_ratio_id; the "full"
-        toggle is the first thing that makes a mode's home depend on the
-        camera, so the shared rule now needs the camera too.
+        1. a whole-sensor mode on a camera whose full frame is off-table
+           belongs to FULL_FRAME_RATIO_ID;
+        2. else its nearest canonical ratio, but ONLY when that is within
+           ASPECT_RATIO_TOLERANCE -- ties broken by table order, same as
+           _nearest_ratio_id/full_frame_ratio;
+        3. else a NATIVE_RATIO_PREFIX id carrying the mode's own real aspect
+           (aspect_ratios.NATIVE_RATIO_PREFIX's own comment), UNLESS that
+           rounded aspect equals the off-table full frame's own rounded
+           aspect, in which case it is folded into FULL_FRAME_RATIO_ID
+           instead -- so a windowed crop that happens to share the sensor's
+           native shape does not mint a second toggle with the same label
+           the full-frame toggle already carries.
 
-        Note what this moves: the imx283's 5472x3648 native readouts used to
-        be filed under 1.37:1, the nearest of the fourteen to their real 1.50,
-        while the pane's own aspect column read "1.50:1". They now sit under
-        "1.50:1 (full)", where the column and the toggle finally say the same
-        thing.
+        Superseded WP-CM-11's version, which returned the nearest canonical
+        ratio unconditionally (no tolerance gate) -- exactly the "closest"
+        behaviour PLAN.md's D2 finding traced to a saved ratio choice
+        surviving a sensor swap onto a camera that never had that shape.
+
+        One function because three places have to agree or the pane lies:
+        the stock default (which ratios a fresh camera selects, via
+        available_aspect_ratios), the matcher (which modes an enabled ratio
+        yields) and the settings page's row labels (which toggle a row hides
+        behind) all call this, never their own copy of the rule.
         """
         aspect = self._mode_aspect(mode)
         if aspect is None:
             return None
-        if self._mode_is_full(mode):
-            full_id, _ = self.full_frame_ratio(camera_name)
-            if full_id == FULL_FRAME_RATIO_ID:
-                return FULL_FRAME_RATIO_ID
-        return self._nearest_ratio_id(aspect)
 
-    def _derived_default_ratio_ids(self, camera_name: str) -> List[str]:
-        """WP-CM-11: every ratio a camera's OWN modes map to, in mode-table
-        order, derived at startup from its raw, pre-filter mode table
-        (sensor_modes_unfiltered, the same table available_aspect_ratios()
-        walks). Never stored: it depends on the driver installed right now.
+        full_id, full_aspect = self.full_frame_ratio(camera_name)
+        full_off_table = full_id == FULL_FRAME_RATIO_ID
 
-        This is the *whole* shape of the camera, and _default_ratio_ids uses it
-        two ways: as the set the preferred pair is looked up in, and as the
-        fallback for a camera that has neither of them.
+        if full_off_table and self._mode_is_full(mode):
+            return FULL_FRAME_RATIO_ID
 
-        Each mode contributes the canonical ratio it is nearest to, whether
-        or not that is within ASPECT_RATIO_TOLERANCE. This set covers every
-        mode by construction: a mode's own nearest ratio is always a member
-        of it, so selecting all of it can never drop a mode from a camera's
-        table -- unlike the old hardcoded single ratio ("1.78:1"), which relied
-        on an exemption to avoid exactly that on a sensor with no 16:9 mode at
-        all (imx477, imx296: see WORK-PACKAGES.md's WP-CM-11).
-        """
-        modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
-        ids: List[str] = []
-        seen = set()
-        for m in modes:
-            rid = self.home_ratio_id(camera_name, m)
-            if rid is not None and rid not in seen:
-                seen.add(rid)
-                ids.append(rid)
-        return ids
+        nearest_id = self._nearest_ratio_id(aspect)
+        if nearest_id is not None:
+            table = self._aspect_ratio_table()
+            nearest_value = next((e["value"] for e in table if e["id"] == nearest_id), None)
+            if (
+                nearest_value is not None
+                and abs(nearest_value - aspect) <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS
+            ):
+                return nearest_id
 
-    def _stand_in_ratio_id(self, derived: List[str], target_id: str) -> str | None:
-        """The id in *derived* that may stand in for *target_id*, or None.
+        if full_off_table and full_aspect is not None and round(aspect, 2) == round(full_aspect, 2):
+            return FULL_FRAME_RATIO_ID
 
-        target_id itself when the camera has it. Otherwise the nearest derived
-        ratio, but ONLY if the pairing is mutual: that ratio's own nearest
-        preference must be target_id too. Mutual-nearest is the test because it
-        needs no threshold, and a threshold here would be a number nobody could
-        defend -- imx477's 1.89:1 stands in for 1.78:1 across a gap of 0.119,
-        which no tolerance in this file would have admitted.
-
-        What mutuality buys: on a camera whose only shapes are 2.39:1 and
-        2.00:1, 2.00:1 is the nearest derived ratio to BOTH preferences, but its
-        own nearest preference is 1.78:1 -- so it stands in for the delivery
-        slot and not for the shape slot, and _default_ratio_ids can see that the
-        camera has no 4:3-ish shape at all rather than quietly filing a 2:1 mode
-        under "4:3".
-
-        FULL_FRAME_RATIO_ID can be a member of *derived* and is skipped: it does
-        not name a shape, it names "whatever this sensor reads when it reads
-        everything", so it has no table value to measure a distance against. The
-        full frame is chosen separately in _default_ratio_ids below.
-        """
-        if target_id in derived:
-            return target_id
-        values = {e["id"]: e["value"] for e in self._aspect_ratio_table()}
-        target = values.get(target_id)
-        if target is None:
-            return None
-        preferences = [v for v in (values.get(PREFERRED_SHAPE_RATIO_ID),
-                                   values.get(PREFERRED_DELIVERY_RATIO_ID))
-                       if v is not None]
-        candidates = [(abs(values[rid] - target), rid) for rid in derived if rid in values]
-        if not candidates:
-            return None
-        _, nearest = min(candidates)
-        # Mutual? The candidate's own nearest preference has to be this one.
-        own = min(preferences, key=lambda v: abs(values[nearest] - v))
-        return nearest if abs(own - target) < 1e-9 else None
+        return f"{NATIVE_RATIO_PREFIX}{aspect:.2f}"
 
     def _default_ratio_ids(self, camera_name: str) -> List[str]:
-        """The selection for a camera nobody has chosen ratios for: this
-        camera's own FULL FRAME, plus the delivery shape
-        aspect_ratios.PREFERRED_DELIVERY_RATIO_ID (1.78:1) or the nearest ratio
-        this camera actually has.
+        """The stock rule for a camera nobody has chosen ratios for (operator,
+        2026-09-28, PLAN.md -- superseding 2026-09-26's "1.78:1 or closest";
+        see aspect_ratios.PREFERRED_DELIVERY_RATIO_ID's comment for the full
+        rationale and worked examples): PREFERRED_SHAPE_RATIO_ID ("1.33:1")
+        if this camera OFFERS it, PREFERRED_DELIVERY_RATIO_ID ("1.78:1") if
+        it offers that, then this camera's own full frame if it is known,
+        offered, and not already selected.
 
-        Operator instruction, 2026-09-26 -- see PREFERRED_DELIVERY_RATIO_ID's
-        comment for the full derivation, including why imx477 needs no special
-        case (its full frame IS 1.33:1) and what each shipped sensor ends up
-        with.
+        "Offers" means literal membership in available_aspect_ratios(camera)
+        -- a mode whose own home_ratio_id() is that id -- never a stand-in
+        found by searching for the nearest shape to a preference. That
+        stand-in/mutual-nearest mechanism (_derived_default_ratio_ids,
+        _stand_in_ratio_id) is gone: this is three plain membership checks in
+        a fixed order.
 
-        Both halves are drawn from _derived_default_ratio_ids, i.e. ratios some
-        mode comes *home* to, which is the same rule _ratio_matches_for_camera
-        and the settings pane's row labels use. So an enabled default always has
-        rows behind it and the pane can never show a toggle that yields nothing.
-
-        The two halves often name the same id -- imx585's full frame is 1.769,
-        which IS 1.78:1 -- and then this returns one toggle, not two. That is
-        the honest answer: there is no second shape to offer.
-
-        Never empty for a camera with any mode at all: a camera whose derived
-        set somehow contains neither falls back to the whole derived set, so it
-        shows its entire table rather than nothing.
+        Never empty for a camera that offers any ratio at all: falls back to
+        every ratio it offers when none of the three checks add anything (a
+        camera with neither preferred ratio and no knowable full frame, e.g.
+        an all-anamorphic sensor at 2.39:1/2.00:1 alone).
         """
-        derived = self._derived_default_ratio_ids(camera_name)
-        if not derived:
+        offered = self.available_aspect_ratios(camera_name)
+        if not offered:
             return []
 
-        # Slot one, the SHAPE slot: this camera's whole frame when the driver
-        # reports enough crop geometry to know what that is, and 4:3-or-closest
-        # when it does not. A 3:2 sensor's own native readout was once hidden by
-        # a default made only of delivery shapes (operator, 2026-09-22), and
-        # leading with the full frame is what stops that recurring -- but
-        # full_frame_ratio() answers (None, None) for every sensor that reports
-        # no crop annotation, which is every stock sensor. Falling back to
-        # PREFERRED_SHAPE_RATIO_ID there is what keeps imx477 on 1.33:1.
+        selected: List[str] = []
+        if PREFERRED_SHAPE_RATIO_ID in offered:
+            selected.append(PREFERRED_SHAPE_RATIO_ID)
+        if PREFERRED_DELIVERY_RATIO_ID in offered and PREFERRED_DELIVERY_RATIO_ID not in selected:
+            selected.append(PREFERRED_DELIVERY_RATIO_ID)
         full_id, _ = self.full_frame_ratio(camera_name)
-        full_known = bool(full_id and full_id in derived)
+        if full_id and full_id in offered and full_id not in selected:
+            selected.append(full_id)
 
-        # A STAND-IN MAY FILL A SLOT BUT MAY NOT, ON ITS OWN, HIDE THE TABLE.
-        # This is the WP-CM-11 guarantee ("no sensor can lose a mode to a
-        # default nobody chose") in the only form it still needs: "or closest"
-        # always finds something, so a rule that narrowed on a stand-in alone
-        # would narrow on every camera and the old fallback would be dead code.
-        # A camera the preferences genuinely do not describe -- no knowable full
-        # frame, and neither 1.33:1 nor 1.78:1 among its own shapes -- keeps its
-        # whole table. An all-anamorphic sensor with 2.39:1 and 2.00:1 would
-        # otherwise open on 2.00:1 alone, with 2.39:1 hidden behind a preference
-        # that never matched it.
-        exact = (PREFERRED_SHAPE_RATIO_ID in derived
-                 or PREFERRED_DELIVERY_RATIO_ID in derived)
-        if not full_known and not exact:
-            return derived
-
-        shape = full_id if full_known else self._stand_in_ratio_id(
-            derived, PREFERRED_SHAPE_RATIO_ID)
-
-        selected: List[str] = [shape] if shape else []
-
-        # Slot two, the DELIVERY slot.
-        delivery = self._stand_in_ratio_id(derived, PREFERRED_DELIVERY_RATIO_ID)
-        if delivery and delivery not in selected:
-            selected.append(delivery)
-
-        return selected
+        return selected or list(offered.keys())
 
     def _enabled_ratio_ids(self, camera_name: str) -> List[str]:
-        """Precedence (WP-CM-11): an entry naming this camera wins; else an
-        explicit "default" entry in aspect_ratios_cfg; else the shipped default
-        for a camera nobody has chosen ratios for (_default_ratio_ids). All
-        three can narrow; only the first two narrow because someone chose
-        them."""
+        """Precedence: an explicit per-camera entry in aspect_ratios_cfg
+        wins; else the stock rule (_default_ratio_ids). NEVER a "default"
+        entry (PLAN.md D2, 2026-09-28): a stray global choice left over from
+        before per-sensor settings files existed is exactly the cross-sensor
+        carrier that let an imx585 selection narrow an imx477 after a swap.
+        See dropped_ratio_ids() for the saved ids this drops and why, and
+        SensorDetect._finalize_modes for where a "default" entry's mere
+        presence is surfaced as a one-time warning notice instead.
+
+        A saved id this camera does not currently offer is dropped rather
+        than applied (a driver swap, or a ratio pruned from the table); if
+        EVERY saved id was dropped this falls back to the stock rule so the
+        camera is never left with zero enabled toggles.
+        """
         cfg = getattr(self, "aspect_ratios_cfg", None) or {}
-        ids = cfg.get(camera_name) or cfg.get("default")
-        if ids:
-            return list(ids)
-        return self._default_ratio_ids(camera_name)
+        saved = cfg.get(camera_name)
+        if not saved:
+            return self._default_ratio_ids(camera_name)
+        offered = self.available_aspect_ratios(camera_name)
+        valid = [rid for rid in saved if rid in offered]
+        return valid if valid else self._default_ratio_ids(camera_name)
+
+    def dropped_ratio_ids(self, camera_name: str) -> List[str]:
+        """Saved ratio ids this camera's saved selection names but does not
+        currently offer -- PLAN.md's settings-editor contract field
+        `dropped`. Ignored by _enabled_ratio_ids, reported here so the
+        operator/GUI can say so instead of silently doing something other
+        than what was saved."""
+        cfg = getattr(self, "aspect_ratios_cfg", None) or {}
+        saved = cfg.get(camera_name)
+        if not saved:
+            return []
+        offered = self.available_aspect_ratios(camera_name)
+        return [rid for rid in saved if rid not in offered]
 
     def _ratio_selection_is_derived(self, camera_name: str) -> bool:
         """True when nobody chose this camera's ratios and the set came from
-        _default_ratio_ids. Mirrors _enabled_ratio_ids' precedence, so the two
-        cannot drift apart -- it reads the same cfg entries in the same order,
-        and says nothing about which ratios that step then returns."""
+        _default_ratio_ids. Mirrors _enabled_ratio_ids' precedence (never
+        "default"), so the two cannot drift apart."""
         cfg = getattr(self, "aspect_ratios_cfg", None) or {}
-        return not (cfg.get(camera_name) or cfg.get("default"))
-
-    def _enabled_ratio_values(self, camera_name: str) -> List[tuple]:
-        values_by_id = {e["id"]: e["value"] for e in self._aspect_ratio_table()}
-        full_id, full_aspect = self.full_frame_ratio(camera_name)
-        out = []
-        for rid in self._enabled_ratio_ids(camera_name):
-            # FULL_FRAME_RATIO_ID is not in the table -- it cannot be, its
-            # value is this camera's own full-frame aspect -- so it is
-            # resolved here instead of being dropped as an unknown id.
-            if rid == FULL_FRAME_RATIO_ID:
-                if full_id == FULL_FRAME_RATIO_ID and full_aspect is not None:
-                    out.append((rid, full_aspect))
-                continue
-            val = values_by_id.get(rid)
-            if val is not None:
-                out.append((rid, val))
-        return out
+        return not cfg.get(camera_name)
 
     def _ratio_matches_for_camera(self, camera_name: str, modes: List[Dict]) -> Dict[int, tuple]:
-        """id(mode) -> (ratio_id, exact, real_aspect) for every mode
-        reachable by one of the camera's enabled ratios, unioned across
-        ratios (item 4: "union across ratios"). A mode reachable by more
-        than one enabled ratio keeps the smallest-error match -- the ratio
-        it actually resembles most.
+        """id(mode) -> (ratio_id, exact, real_aspect) for every mode whose
+        own home_ratio_id() is one of the camera's enabled ratios.
 
-        WP-CM-11: there is no exemption here any more. _enabled_ratio_ids
-        resolves to a real set of ratio ids whoever chose them -- an operator,
-        or the shipped default (_default_ratio_ids) -- and the ordinary
-        matching loop below treats all of them the same way.
-
-        A default nobody chose does narrow the table now: it is 1.33:1 and
-        1.78:1 where the camera has them, so every other ratio family starts
-        hidden. What it can never do is leave a camera with nothing, and that
-        is _default_ratio_ids' own fallback (the whole derived set for a sensor
-        with neither preferred ratio), not an exemption here.
-
-        This replaces an earlier "the matcher returns every mode" exemption
-        that existed because the old shipped default was a single hardcoded
-        ratio, "1.78:1", applied to every sensor alike: a sensor with no mode
-        near it, such as imx477 or imx296, would lose most of its table on a
-        fresh install and the matcher had to make an exception for the default
-        itself (WORK-PACKAGES.md's WP-CM-11; regression coverage for that shape
-        is ShippedDefaultAcrossANativelyDifferentSensorTests and
-        ShippedDefaultPartialMatchRegressionTests, both in
-        test_aspect_ratio_selection.py). The preferred pair is checked against
-        the camera's own modes before it is selected, which is what makes the
-        exemption unnecessary. bit_depths, k_steps, min_mode_width and the HDR
-        switches still apply after this, as they always have.
+        "No closest" (PLAN.md, 2026-09-28): a ratio yields EXACTLY the modes
+        whose home is that ratio -- no tolerance union, no near-tie fallback,
+        no separate "whole sensor" carve-out here, because home_ratio_id()
+        already encodes all of that (the full-frame exception, the tolerance
+        gate, the native-id fallback). exact is unconditionally True:
+        home_ratio_id() never returns an id a mode does not actually belong
+        to. Superseded WP-CM-11's version, which unioned two groups per ratio
+        (a tolerance match, plus every mode whose home was that ratio however
+        far away) specifically to work around the old rule's "nearest
+        canonical ratio, whatever the distance" semantics -- home_ratio_id()
+        no longer has that problem, since it never returns a ratio a mode
+        merely resembles.
         """
-        best: Dict[int, tuple] = {}
-        for rid, rval in self._enabled_ratio_values(camera_name):
-            # A ratio claims two groups of modes, and it needs both.
-            #
-            # The first is the ordinary one: modes within tolerance of it, or the
-            # near-tie fallback when none are.
-            #
-            # The second is modes whose OWN home ratio is this one, however far
-            # away they sit. Without it the "no sensor can lose a mode" property
-            # above is not actually true: _modes_within_ratio_tolerance returns
-            # only the within-tolerance group as soon as that group is non-empty,
-            # so a mode whose nearest ratio is this one but which is further than
-            # tolerance from it gets dropped the moment a sibling mode sits
-            # closer. Two modes at 1.33 and 1.29 both come home to 1.33:1, and
-            # the 1.29 one would vanish under the derived default -- which is
-            # built from home ratios, so it would have enabled 1.33:1 precisely
-            # to keep that mode. Caught by a reviewer on WP-CM-11.
-            #
-            # This holds for a CHOSEN ratio too, not just the derived default,
-            # and the reason is the pane: settings_editor.nearest_ratio labels
-            # every row with its home ratio from the full table, and the pane
-            # filters the table on that label. If the backend used a different
-            # rule, a row labelled "1.33:1" would disappear while 1.33:1 was
-            # switched on -- the selection and the labels have to agree, and the
-            # label is what the operator can actually see.
-            #
-            # FULL_FRAME_RATIO_ID is the exception to both groups. It does not
-            # mean "modes shaped like 1.50" -- it means "modes that read the
-            # whole sensor", which is a different question with a different
-            # answer. Claiming by tolerance would sweep in any windowed crop
-            # that happens to share the native aspect (a half-height 3:2
-            # window is still 3:2), and those are not the whole sensor and
-            # must stay under their own ratio.
-            if rid == FULL_FRAME_RATIO_ID:
-                claimed = [m for m in modes if self._mode_is_full(m)]
-            else:
-                claimed = list(self._modes_within_ratio_tolerance(modes, rval))
-                home = [m for m in modes
-                        if self.home_ratio_id(camera_name, m) == rid]
-                seen_ids = {id(m) for m in claimed}
-                claimed.extend(m for m in home if id(m) not in seen_ids)
-                # A whole-sensor mode belongs to the "full" toggle alone when
-                # that toggle exists, so tolerance must not hand it back to a
-                # neighbouring ratio: the imx283's 1.50 native readouts sit
-                # within nobody's tolerance but would be swept up by the
-                # near-tie fallback in _modes_within_ratio_tolerance, and
-                # would then reappear under 1.37:1 with "full" switched off.
-                if self.full_frame_ratio(camera_name)[0] == FULL_FRAME_RATIO_ID:
-                    claimed = [m for m in claimed if not self._mode_is_full(m)]
-            for m in claimed:
-                aspect = self._mode_aspect(m)
-                err = abs(aspect - rval) if aspect is not None else float("inf")
-                key = id(m)
-                prev = best.get(key)
-                if prev is None or err < prev[3]:
-                    best[key] = (rid, err <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS, aspect, err)
-        return {k: v[:3] for k, v in best.items()}
+        enabled = set(self._enabled_ratio_ids(camera_name))
+        out: Dict[int, tuple] = {}
+        for m in modes:
+            rid = self.home_ratio_id(camera_name, m)
+            if rid is not None and rid in enabled:
+                out[id(m)] = (rid, True, self._mode_aspect(m))
+        return out
 
     def available_aspect_ratios(self, camera_name: str) -> Dict[str, Dict[str, Any]]:
-        """Which ratios this camera can actually produce (ASPECT-RATIOS.md
-        step 2), derived at startup from its raw, pre-filter mode table --
+        """Which ratios this camera can actually produce: exactly the set of
+        home_ratio_id() results across its raw, pre-filter mode table --
         never stored, because it depends on the driver installed right now
         and a cached answer would outlive it.
 
-        A ratio is "exact" when some mode's real aspect is within
-        ASPECT_RATIO_TOLERANCE of it; otherwise it is "approximate" and
-        carries the closest mode's real aspect and the delta; a ratio with
-        no mode behind it at all (only possible for a camera with zero
-        modes, or none with a known aspect) is absent from the result and
-        must not appear as a toggle.
+        "No closest" (PLAN.md, 2026-09-28): every entry is `exact: True` and
+        `delta: 0.0`, because home_ratio_id() only ever returns an id a mode
+        actually belongs to -- a table ratio it is within
+        ASPECT_RATIO_TOLERANCE of, its own native shape (a
+        NATIVE_RATIO_PREFIX id, `name: "Native"`, labelled "%.2f:1" % its
+        aspect), or FULL_FRAME_RATIO_ID for a whole-sensor mode whose full
+        frame is off-table. Superseded WP-CM-7's version, which resolved
+        EVERY one of the table's fourteen ratios to this camera's closest
+        mode regardless of distance (an "approximate" match, carrying a
+        nonzero delta) -- a camera now offers only the ratios some mode of
+        its own is actually home to, and a camera with no aspect-bearing
+        modes at all returns {}.
         """
         modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
+        table_by_id = {e["id"]: e for e in self._aspect_ratio_table()}
+        full_id, full_aspect = self.full_frame_ratio(camera_name)
         result: Dict[str, Dict[str, Any]] = {}
-        for entry in self._aspect_ratio_table():
-            rid, rval = entry["id"], entry["value"]
-            best_mode = None
-            best_err = None
-            for m in modes:
-                a = self._mode_aspect(m)
-                if a is None:
-                    continue
-                err = abs(a - rval)
-                if best_err is None or err < best_err:
-                    best_err = err
-                    best_mode = m
-            if best_mode is None:
+        for m in modes:
+            rid = self.home_ratio_id(camera_name, m)
+            if rid is None or rid in result:
                 continue
+
+            if rid == FULL_FRAME_RATIO_ID:
+                # full_aspect is this camera's own whole-frame aspect --
+                # always available here since home_ratio_id() only returns
+                # FULL_FRAME_RATIO_ID when full_frame_ratio() already found
+                # one. `is_full` and no "(full)" suffix: operator, 2026-09-22,
+                # revising their own earlier request for the suffix -- it
+                # reads as a plain ratio, because that is what it is.
+                result[rid] = {
+                    "id": rid, "value": full_aspect, "name": "Full frame",
+                    "exact": True, "real_aspect": full_aspect, "delta": 0.0,
+                    "is_full": True, "label": "%.2f:1" % full_aspect,
+                }
+                continue
+
+            if rid.startswith(NATIVE_RATIO_PREFIX):
+                aspect = self._mode_aspect(m)
+                result[rid] = {
+                    "id": rid, "value": aspect, "name": "Native",
+                    "exact": True, "real_aspect": aspect, "delta": 0.0,
+                    "is_full": False, "label": "%.2f:1" % aspect,
+                }
+                continue
+
+            entry = table_by_id.get(rid, {})
+            value = entry.get("value", self._mode_aspect(m))
             result[rid] = {
-                "id": rid,
-                "value": rval,
-                "name": entry.get("name"),
-                "exact": best_err <= ASPECT_RATIO_TOLERANCE + _ASPECT_TOLERANCE_EPS,
-                "real_aspect": self._mode_aspect(best_mode),
-                "delta": round(best_err, 3),
-                "is_full": False,
+                "id": rid, "value": value, "name": entry.get("name", rid),
+                "exact": True, "real_aspect": value, "delta": 0.0,
+                # The full frame IS one of the table's fourteen on some
+                # cameras (imx585 at 1.78) -- that toggle both offers this
+                # shape AND covers the whole sensor, so is_full travels here
+                # too rather than only on the off-table branch above.
+                "is_full": full_id == rid,
                 "label": rid,
             }
-
-        # The whole-sensor toggle, in whichever of its two shapes this camera
-        # calls for (see full_frame_ratio()). Either way it is the LAST entry
-        # the operator reads as "(full)", and either way `label` is what the
-        # page prints -- the page must not have to re-derive this, because it
-        # cannot see which modes are full frame.
-        full_id, full_aspect = self.full_frame_ratio(camera_name)
-        if full_id is not None and full_aspect is not None:
-            # No "(full)" suffix on the label (operator, 2026-09-22, revising
-            # their own earlier request for one): on the row it reads as a
-            # ratio like the other fourteen, because that is what it is --
-            # this sensor's native shape. `is_full` still travels, so the
-            # tooltip can say what the toggle covers and so the default can
-            # keep it selected on a camera nobody has configured.
-            full_label = "%.2f:1" % full_aspect
-            if full_id in result:
-                # The full frame IS one of the fourteen (imx585 at 1.78).
-                # Nothing to add and nothing to rename -- that toggle already
-                # yields the whole sensor, and it is already in the default.
-                result[full_id]["is_full"] = True
-            else:
-                # Off-table (imx283 at 1.50). Its own entry, which the pane
-                # sorts last because the id is not in the canonical table.
-                result[full_id] = {
-                    "id": full_id,
-                    "value": full_aspect,
-                    "name": "Full frame",
-                    # Exact in the only sense that matters for this toggle: it
-                    # is not an approximation of a canonical ratio, it is the
-                    # sensor's own shape, stated. Drawing it dashed like an
-                    # approximate match would be the wrong signal.
-                    "exact": True,
-                    "real_aspect": full_aspect,
-                    "delta": 0.0,
-                    "is_full": True,
-                    "label": full_label,
-                }
         return result
 
     def _order_modes(self, selected: List[Dict]) -> List[Dict]:
@@ -2089,7 +2038,8 @@ class SensorDetect:
         self,
         sensors: Dict[str, List[Dict]],
     ) -> Dict[str, Dict[int, Dict]]:
-        """Add custom modes, apply the settings.jsonc filters, order and index.
+        """Resolve per-sensor settings, add custom modes, apply the settings
+        filters, order and index.
 
         F-298: a custom_modes entry whose (width, height, bit_depth, hdr)
         matches an already-detected mode overrides that mode's fps_max in
@@ -2101,6 +2051,72 @@ class SensorDetect:
         appends a brand-new mode exactly as before -- this only changes
         what happens when the dimensions already exist.
         """
+        # ── resolve per-sensor settings (file > legacy > stock) ───────
+        # Camera names are only known now, after the probe -- this is the
+        # first point in the boot sequence _finalize_modes' caller can name
+        # them. Runs before custom_modes are applied below, because a
+        # per-sensor file's own custom_modes has to reach that loop the same
+        # way a legacy settings.jsonc entry always has.
+        #
+        # Gated on hasattr(self, "settings_dir"): only a real SensorDetect,
+        # built through __init__, ever sets that attribute (settings_dir=None
+        # included -- it is always assigned, never left unset). A test double
+        # built with SensorDetect.__new__ and its own hand-picked
+        # aspect_ratios_cfg/enabled_modes/custom_modes never has it, so this
+        # step is skipped for those and their direct attribute values are
+        # used exactly as set -- this is what keeps this method's many
+        # filter-only unit tests unaffected by the per-sensor-file layer.
+        #
+        # Two physical sensors of the same model (a dual-imx585 rig) share
+        # one file here: both keys in *sensors* resolve through the identical
+        # model name cinepi-raw reports, sensor_settings.sensor_settings_path
+        # has no per-port concept, and that is intended -- the operator's
+        # saved choice is a property of "the imx585 I own", not of which
+        # physical port it is plugged into.
+        if hasattr(self, "settings_dir"):
+            image_capture_cfg = self.settings.get("image_capture") if isinstance(self.settings, dict) else None
+            image_capture_cfg = image_capture_cfg if isinstance(image_capture_cfg, dict) else {}
+            legacy_aspect_ratios_cfg = image_capture_cfg.get("aspect_ratios")
+            # PLAN.md D2/2f: a stray global "default" survives on disk until
+            # the operator saves through the new per-sensor mechanism (which
+            # drops it -- settings_editor.put_settings). It is never read as
+            # a value at any precedence level (legacy_sensor_settings/
+            # _enabled_ratio_ids both key on the camera name only) -- this
+            # only decides whether to warn that it is being ignored.
+            self._default_ratio_ignored = bool(
+                isinstance(legacy_aspect_ratios_cfg, dict)
+                and legacy_aspect_ratios_cfg.get("default")
+            )
+            if self._default_ratio_ignored and not getattr(self, "_default_ratio_warned", False):
+                logging.warning(
+                    "image_capture.aspect_ratios has a \"default\" entry, "
+                    "which is ignored: ratio selection is per camera now "
+                    "(a per-camera key, or a per-sensor settings_<camera>"
+                    ".jsonc file). Re-save each camera's ratios from the "
+                    "settings page to drop it.",
+                )
+                self._default_ratio_warned = True
+
+            for cam in sensors:
+                resolved, source = sensor_settings.resolve_sensor_settings(
+                    self.settings, cam, self.settings_dir,
+                )
+                self.sensor_settings_source[cam] = source
+                if "aspect_ratios" in resolved:
+                    self.aspect_ratios_cfg[cam] = resolved["aspect_ratios"]
+                else:
+                    self.aspect_ratios_cfg.pop(cam, None)
+                if "enabled_modes" in resolved:
+                    self.enabled_modes[cam] = resolved["enabled_modes"]
+                else:
+                    self.enabled_modes.pop(cam, None)
+                # custom_modes has no "fall through to legacy" concept beyond
+                # what resolve_sensor_settings already applied -- a missing
+                # key here just means no custom modes for this camera.
+                self.custom_modes[cam] = resolved.get("custom_modes") or []
+        else:
+            self._default_ratio_ignored = False
+
         # ── add or correct user-defined custom modes ─────────────────
         for cam, extras in self.custom_modes.items():
             # Only ever extend or correct a camera the probe actually found.
@@ -2251,81 +2267,63 @@ class SensorDetect:
         # ── filter & index (aspect ratios / k-steps / bit depths / hdr) ──
         pruned: Dict[str, Dict[int, Dict]] = {}
         for cam, modes in sensors.items():
-            selected = []
             mode_entries = (getattr(self, "enabled_modes", {}) or {}).get(cam)
             use_individual_selection = isinstance(mode_entries, list) and len(mode_entries) > 0
-
-            # WP-CM-6: the ratio matcher, beside the other filters. getattr,
-            # same convention as clear_hdr_depths below -- an instance built
-            # with __new__ that never set aspect_ratios_cfg has "no opinion"
-            # and is left exactly as it behaved before this filter existed;
-            # a real SensorDetect always has the attribute (__init__ sets it
-            # from image_capture.aspect_ratios, default {}). Skipped outright
-            # when enabled_modes is authoritative -- an explicit choice beats
-            # a default, same as it already beats k_steps/bit_depths.
-            ratio_matches: Dict[int, tuple] = {}
-            if not use_individual_selection and getattr(self, "aspect_ratios_cfg", None) is not None:
-                ratio_matches = self._ratio_matches_for_camera(cam, modes)
 
             # An explicit enabled_modes choice is resolved once, for the whole
             # camera, because the exact-then-coarse fallback is a property of
             # the SELECTION and not of any single mode: "did anything match at
             # all" cannot be answered inside a per-mode test.
-            enabled_ids: set = set()
             enabled_tier = "exact"
             if use_individual_selection:
-                keep, enabled_tier = self._match_enabled_modes(modes, mode_entries)
-                enabled_ids = {id(m) for m in keep}
+                _keep, enabled_tier = self._match_enabled_modes(modes, mode_entries)
 
+            # PLAN.md's dial rule (2026-09-28, fixing D4): selected AND its
+            # ratio toggle enabled, for an explicit enabled_modes choice
+            # exactly as much as for the stock/ratio-driven path. Before this,
+            # enabled_modes bypassed the ratio filter entirely, so a mode
+            # explicitly enabled under a ratio the operator later hid stayed
+            # selected and reachable -- the pane could show a toggle off while
+            # the dial still held modes behind it.
+            enabled_ratio_ids = set(self._enabled_ratio_ids(cam))
+            dropped_ids = self.dropped_ratio_ids(cam)
+            # getattr: same "no opinion on an instance built with __new__"
+            # convention as mode_selection_notices below -- only a real
+            # SensorDetect's __init__ pre-creates this dict.
+            dropped_by_camera = getattr(self, "sensor_settings_dropped", None)
+            if dropped_by_camera is None:
+                dropped_by_camera = {}
+                self.sensor_settings_dropped = dropped_by_camera
+            dropped_by_camera[cam] = dropped_ids
+
+            selected = []
             for m in modes:
-                # Individual mode selection is authoritative.  Do not
-                # impose a separate resolution floor here: small sensor modes
-                # are valid modes and must reach the resolution picker when the
-                # operator enables them in settings.jsonc.
-                if use_individual_selection:
-                    if id(m) not in enabled_ids:
-                        continue
-                else:
-                    if ratio_matches:
-                        match = ratio_matches.get(id(m))
-                        if match is None:
-                            continue
-                        # Carry the matched ratio, the real aspect, and
-                        # exact-vs-approximate on the mode itself (item 6)
-                        # so the GUI can say a stock sensor's 1.878 stands in
-                        # for a requested 1.78 rather than pretending to be it.
-                        m["aspect_ratio_id"], m["aspect_ratio_exact"], m["aspect_ratio_real"] = match
-                    if self.bit_depths and m["bit_depth"] not in self.bit_depths:
-                        continue
+                # Every mode gets its home ratio, unconditionally -- unlike
+                # the old ratio-matcher branch, which only annotated a mode it
+                # was actively filtering. Consumers of `pruned` (the dial) can
+                # now see which toggle EVERY row belongs to, selected or not.
+                rid = self.home_ratio_id(cam, m)
+                m["aspect_ratio_id"] = rid
+                # "No closest" (PLAN.md 2026-09-28): a mode with a known
+                # aspect always has an exact home -- see home_ratio_id()'s own
+                # docstring for the tolerance-gated/native/full-frame cases it
+                # covers. None only when the mode has no known aspect at all.
+                m["aspect_ratio_exact"] = True if rid is not None else None
+                m["aspect_ratio_real"] = self._mode_aspect(m)
 
-                # A ClearHDR mode also has to pass its own depth switch. The
-                # two are separate questions -- "expose ClearHDR at all" and
-                # "which of its depths" -- and only the second one can tell
-                # 12-bit ClearHDR from 12-bit SDR.
-                # getattr: _finalize_modes is reachable on an instance built
-                # with __new__ (several tests do exactly that, setting only
-                # the filter attributes they care about), and a missing switch
-                # must mean "no opinion", not an exception.
-                clear_hdr_depths = getattr(self, "clear_hdr_depths", None)
-                if not use_individual_selection and bool(m.get("hdr")) and clear_hdr_depths is not None:
-                    if int(m.get("bit_depth") or 0) not in clear_hdr_depths:
-                        continue
-                # settings.jsonc → image_capture.hdr: {sdr, imx585_clear_hdr}
-                # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.
-                if not use_individual_selection and self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
+                if not self.mode_selected(cam, m):
                     continue
-                k_val = round(m["width"] / 1000 * 2) / 2
-                if not use_individual_selection and self.k_steps and k_val not in self.k_steps:
+                if rid not in enabled_ratio_ids:
                     continue
                 selected.append(m)
 
             # WP-CM-6 item 5: the width floor. Hidden, not removed -- the
             # narrow mode stays reachable in sensor_modes_unfiltered for the
-            # settings editor to offer by hand. enabled_modes already took
-            # the use_individual_selection branch above and never reaches
-            # here, so an explicit per-mode choice is never subject to it.
+            # settings editor to offer by hand. An explicit per-mode choice is
+            # never subject to it -- small sensor modes are valid modes and
+            # must reach the resolution picker when the operator enables them.
             # getattr: same "no opinion on an instance that never set this"
-            # convention as aspect_ratios_cfg/clear_hdr_depths above.
+            # convention as aspect_ratios_cfg/clear_hdr_depths elsewhere here.
             if not use_individual_selection:
                 floor = getattr(self, "min_mode_width", None)
                 if floor:
@@ -2336,7 +2334,13 @@ class SensorDetect:
             # table reads as "my setting was ignored", which is exactly how this
             # surfaced: one mode selected in the settings page, seventy-three in
             # the dial. The notice below is what the GUI shows so the widening
-            # is visible instead of mysterious.
+            # is visible instead of mysterious. Priority, highest first: an
+            # invalidated explicit choice, then a saved ratio this camera no
+            # longer offers, then the global "default" leftover, then (if
+            # `selected` is STILL empty after all of the above) the generic
+            # "filters excluded everything" fallback -- which fires
+            # regardless of whether a higher-priority notice already did,
+            # because the empty-selection widening always needs to be visible.
             notice = None
             if use_individual_selection and enabled_tier == "coarse":
                 notice = {
@@ -2367,6 +2371,29 @@ class SensorDetect:
                     "falling back to the full table of %d modes",
                     cam, len(modes),
                 )
+            elif dropped_ids:
+                notice = {
+                    "kind": "ratios_not_offered",
+                    "text": (
+                        "Some of this camera's saved aspect ratios (%s) are "
+                        "not offered by the current driver and are being "
+                        "ignored." % ", ".join(dropped_ids)
+                    ),
+                }
+                logging.warning(
+                    "%s: saved aspect ratios %s are not offered -- ignoring them",
+                    cam, dropped_ids,
+                )
+            elif getattr(self, "_default_ratio_ignored", False):
+                notice = {
+                    "kind": "default_ratio_ignored",
+                    "text": (
+                        "settings.jsonc has a global \"default\" aspect-ratio "
+                        "entry, which is now ignored -- ratio selection is per "
+                        "camera. Re-save this camera's ratios from the "
+                        "settings page to remove it."
+                    ),
+                }
 
             if not selected:
                 if notice is None:

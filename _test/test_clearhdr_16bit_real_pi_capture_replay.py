@@ -42,10 +42,16 @@ HDR_CAPTURE = CAPTURES / "hdr-probe-extracted.txt"
 
 SIXTEEN_BIT_ROWS = {
     # (width, height): (binning_x, fps_max)
+    #
+    # The stock rule of 2026-09-28 (1.33:1 and 1.78:1 where offered plus the
+    # full frame, 1x1 modes only) decides which of the four enumerated 16-bit
+    # sizes open selected. The binned 1920x1100 (2x2) is no longer stock --
+    # it is still parsed (see the PARSED counts above) and one tick away in
+    # the settings page -- and the 1x1 2880x2200 crop, a 1.33:1 shape, now is.
     (3840, 2200): (1, 21),
+    (2880, 2200): (1, 29),
     (1920, 1120): (1, 57),
     (1280, 760): (1, 83),
-    (1920, 1100): (2, 30),
 }
 
 
@@ -88,9 +94,10 @@ class ClearHdr16BitRealPiCaptureReplayTests(unittest.TestCase):
     def test_finalized_table_offers_four_16bit_clearhdr_modes(self):
         """AFTER _finalize_modes, with the shipped settings.jsonc
         (imx585_clear_hdr_16bit: true, imx585_clear_hdr_12bit: false,
-        k_steps [1.5, 2, 3, 4], bit_depths [10, 12, 16]): 10 modes total,
-        four of them 16-bit Clear HDR, at the sizes/binning/fps the operator's
-        Pi actually reported."""
+        k_steps [1.5, 2, 3, 4], bit_depths [10, 12, 16]) and the per-sensor
+        stock rule (1.33:1 + 1.78:1 + full frame, 1x1 only): 10 modes total,
+        four of them 16-bit Clear HDR, at the sizes/fps the operator's Pi
+        actually reported."""
         d = self._detect()
         self.assertEqual(d.camera_model, "imx585")
         final = d.sensor_resolutions["imx585"]

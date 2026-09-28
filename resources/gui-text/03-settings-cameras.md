@@ -6,6 +6,34 @@ they are what the GUI looks each string up by when CineMate starts.
 
 ---
 
+## Aspect-ratio pane: where a sensor's settings live
+<!-- shared by cam0 and cam1 -- the wording never differs by camera, so it is
+     not duplicated per camera below. The file name and any dropped ratio ids
+     are appended after these sentences by the page's own script, not part of
+     this text -- see resources/gui-text/README.md's "what is not in here". -->
+
+### (aspect-ratio pane, stock defaults)
+<!-- key: text.sensors.aspect_ratios.source_stock -->
+
+Stock defaults for this sensor. Saving a change creates its own settings file:
+
+### (aspect-ratio pane, saved to its own file)
+<!-- key: text.sensors.aspect_ratios.source_file -->
+
+Saved for this sensor in its own settings file:
+
+### (aspect-ratio pane, older combined file)
+<!-- key: text.sensors.aspect_ratios.source_legacy -->
+
+From `settings.jsonc`, in the older combined format. Saving moves it into its own settings file:
+
+### (aspect-ratio pane, dropped ratios notice)
+<!-- key: text.sensors.aspect_ratios.dropped -->
+
+Saved ratios this sensor does not offer were ignored:
+
+---
+
 ## Camera 0
 <!-- key: pane.cam0 -->
 

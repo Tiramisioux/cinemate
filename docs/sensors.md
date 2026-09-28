@@ -22,7 +22,8 @@ Higher frame rates need fast storage. If you see a purple/magenta `DROP` indicat
 
 The `cinemate-modes` driver the installer ships gives CineMate five modes: three SDR at 10- and
 12-bit, and two 16-bit ClearHDR. `cinemate-modes` also adds a 14-ratio aspect-ratio crop family,
-offered from the settings editor's Resolution & sensor section. Within that family the 16-bit
+offered from the settings editor's Resolution & sensor section and kept per sensor — see
+[Aspect ratios](settings-json.md#aspect_ratios). Within that family the 16-bit
 ClearHDR crops are unbinned only: the sensor returns a black-level fill instead of an image for a
 cropped *binned* 16-bit ClearHDR readout, confirmed on hardware 2026-09-21 and recorded in
 `cinemate-handbook/lessons/hardware-log.md`. The non-cropped binned HD entry below (mode 3) is

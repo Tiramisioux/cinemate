@@ -101,12 +101,14 @@
     }
   },
   "image_capture": {
-    // WP-CM-6, WP-CM-11, CM-2. Per-camera aspect-ratio selection; see
-    // settings.jsonc's comment for the full explanation. Empty means each
-    // camera defaults to 1.33:1 and 1.78:1 where its own modes have them,
-    // and to every shape it has when it has neither -- "default" is still
-    // available as a deliberate global choice for any camera with no entry
-    // of its own.
+    // WP-CM-6, WP-CM-11, CM-2, per-sensor-settings-2026-09-28. Per-camera
+    // aspect-ratio selection -- the older format, read only for a camera
+    // with no settings_<sensor>.jsonc; see settings.jsonc's comment for the
+    // full explanation. Empty means the stock rule: 1.33:1 and 1.78:1 where
+    // the sensor's own modes reach them, plus its full frame -- only ratios
+    // the sensor actually offers, never a "closest" substitute. A "default"
+    // key is ignored (it used to carry one sensor's choice onto another) and
+    // is dropped by a settings-editor save.
     "aspect_ratios": {},
     // Modes narrower than this are hidden from the dial/GUIs by default
     // (not removed); an enabled_modes entry bypasses it.
@@ -176,9 +178,13 @@
     // Right-shift of the lores plane before the thumbnail is written --
     // see settings.jsonc's comment.
     "thumbnail_size": 1,
-    // Individual recording-mode selection. An empty object means the
-    // legacy k_steps/bit_depths filters remain in force until the new table
-    // is saved for a detected camera.
+    // Individual recording-mode selection and per-mode fps overrides -- the
+    // older format, read only for a camera with no settings_<sensor>.jsonc;
+    // moved into that file on the first settings-editor save for that
+    // camera. Empty means the stock rule: 1x1 modes selected, or every mode
+    // when the driver does not report binning (the HQ camera, imx477) --
+    // still narrowed by k_steps/bit_depths/min_mode_width above and by
+    // aspect_ratios, which combine rather than one bypassing the other.
     "enabled_modes": {},
     "custom_modes": {}
   },

@@ -9,6 +9,7 @@ import subprocess
 import os
 import shutil
 import socket
+from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import glob
 
@@ -699,7 +700,10 @@ def initialize_system(settings, pi_model="unknown"):
     conf_rate = settings.get("settings", {}).get(
         "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
-    sensor_detect = SensorDetect(settings)
+    # settings_dir: the same directory settings.jsonc itself lives in, and
+    # the one the settings editor already writes into -- settings_<camera>
+    # .jsonc files (per-sensor-settings-backend, 2026-09-28) live beside it.
+    sensor_detect = SensorDetect(settings, settings_dir=Path(SETTINGS_FILE).parent)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor, settings=settings, redis_controller=redis_controller)
 

@@ -17,6 +17,7 @@ sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 import flask
 
 from module.app.settings_editor import settings_editor_bp
+from module.sensor_detect import SensorDetect
 
 
 class FakeSensorDetect:
@@ -95,13 +96,25 @@ class SensorModesEndpointTests(unittest.TestCase):
         ])
 
 
-class FakeSensorDetectUnfiltered:
-    """A fixture shaped like the real SensorDetect: sensor_modes_unfiltered
-    plus enabled_modes, which is what selected_for() actually reads (M5)."""
-
-    def __init__(self, sensor_modes_unfiltered, enabled_modes=None):
-        self.sensor_modes_unfiltered = sensor_modes_unfiltered
-        self.enabled_modes = enabled_modes or {}
+def _real_unfiltered_detector(sensor_modes_unfiltered, enabled_modes=None):
+    """A real SensorDetect (per-sensor-settings-backend, 2026-09-28), not a
+    hand-rolled stand-in: the endpoint's "selected" column now delegates to
+    SensorDetect.mode_selected() (PLAN.md D4), which needs the real stock-
+    mode-rule/enabled_modes machinery a minimal FakeSensorDetectUnfiltered
+    no longer provides. Built the same way test_aspect_ratio_selection.py's
+    own _detector() is: SensorDetect.__new__ with only the filter attributes
+    under test set."""
+    d = SensorDetect.__new__(SensorDetect)
+    d.sensor_modes_unfiltered = sensor_modes_unfiltered
+    d.enabled_modes = enabled_modes or {}
+    d.bit_depths = []
+    d.k_steps = []
+    d.hdr_modes = set()
+    d.clear_hdr_depths = None
+    d.aspect_ratios_cfg = {}
+    d.aspect_ratio_table = None
+    d.min_mode_width = None
+    return d
 
 
 class NativeModeDefaultSelectionTests(unittest.TestCase):
@@ -113,7 +126,7 @@ class NativeModeDefaultSelectionTests(unittest.TestCase):
     def _selected(self, mode):
         app = flask.Flask(__name__)
         app.register_blueprint(settings_editor_bp)
-        app.config["SENSOR_DETECT"] = FakeSensorDetectUnfiltered({"cam": [mode]})
+        app.config["SENSOR_DETECT"] = _real_unfiltered_detector({"cam": [mode]})
         app.config["SETTINGS"] = {}
         res = app.test_client().get("/settings-editor/api/sensor-modes")
         body = res.get_json()
@@ -163,7 +176,7 @@ class ActiveWidthHeightFieldTests(unittest.TestCase):
     def _entry(self, mode):
         app = flask.Flask(__name__)
         app.register_blueprint(settings_editor_bp)
-        app.config["SENSOR_DETECT"] = FakeSensorDetectUnfiltered({"cam": [mode]})
+        app.config["SENSOR_DETECT"] = _real_unfiltered_detector({"cam": [mode]})
         app.config["SETTINGS"] = {}
         res = app.test_client().get("/settings-editor/api/sensor-modes")
         body = res.get_json()

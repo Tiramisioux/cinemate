@@ -148,6 +148,19 @@ class BinnedClearHdrIsAResolutionTests(unittest.TestCase):
         d.k_steps = k_steps
         d.hdr_modes = set()
         d.custom_modes = {}
+        # Per-sensor-settings-backend, 2026-09-28: the ratio gate now applies
+        # unconditionally (PLAN.md D4). This fixture's two 16-bit ClearHDR
+        # modes carry the transport's padded height (1100/2200, not the
+        # active 1080/2160), so their real aspect (1.75) lands outside
+        # ASPECT_RATIO_TOLERANCE of every table ratio and homes to
+        # "native:1.75", a DIFFERENT id from the 12-bit SDR mode's "1.78:1" --
+        # leaving this detector with no aspect_ratios_cfg opinion would let
+        # the stock rule (1.78:1 alone, the only ratio a plain default would
+        # pick) silently exclude both ClearHDR rows, which is not what this
+        # class is testing. Both ids this fixture's modes actually offer are
+        # enabled explicitly so the k_steps/clear_hdr_depths interplay below
+        # is exercised on its own.
+        d.aspect_ratios_cfg = {"imx585": ["1.78:1", "native:1.75"]}
         pruned = d._finalize_modes({"imx585": [dict(m) for m in self.MODES]})
         return sorted((m["width"], bool(m.get("hdr")))
                       for m in pruned["imx585"].values())

@@ -107,8 +107,10 @@ def _detector():
     return d
 
 
-def _detect(plain: str, hdr_text: str):
+def _detect(plain: str, hdr_text: str, aspect_ratios_cfg=None):
     d = _detector()
+    if aspect_ratios_cfg is not None:
+        d.aspect_ratios_cfg = aspect_ratios_cfg
     d._list_cameras = lambda hdr=False: hdr_text if hdr else plain
     d.detect_camera_model()
     return d
@@ -194,7 +196,17 @@ class EndToEndTests(unittest.TestCase):
         """Before the plain probe stopped at the marker, the 12-bit ClearHDR
         timings were also read as SDR, and dedup then had to paper over the
         pair. Now the SDR side is exactly the SDR section."""
-        d = _detect(TWO_STATE_LISTING, TWO_STATE_LISTING)
+        # Per-sensor-settings-backend, 2026-09-28: the ratio gate now applies
+        # unconditionally (PLAN.md D4), and this fixture's modes span three
+        # families -- 1.78 (1920x1080/3840x2160), 1.33 (2880x2160) and 2.39
+        # (3840x1608/1648) -- of which the stock rule (1.33:1/1.78:1 only)
+        # would otherwise narrow out the 2.39 family. This test is about
+        # two-state probe dedup, not the ratio axis, so all three ratios this
+        # fixture actually offers are explicitly enabled.
+        d = _detect(
+            TWO_STATE_LISTING, TWO_STATE_LISTING,
+            aspect_ratios_cfg={"imx585": ["1.33:1", "1.78:1", "2.39:1"]},
+        )
         table = d.sensor_modes_unfiltered["imx585"]
         sdr = _shape(m for m in table if not m["hdr"])
         self.assertEqual(sdr, [
@@ -206,7 +218,16 @@ class EndToEndTests(unittest.TestCase):
             (3840, 2160, 12, False, 43),
         ])
         self.assertEqual(len(table), 14)
-        self.assertEqual(len(d.res_modes), 14)
+        # res_modes (the dial) is no longer "table minus nothing": PLAN.md's
+        # stock MODE rule ("1x1 modes on, every mode when the driver does not
+        # report binning") now also gates it, and this fixture's binning
+        # annotations are real (every mode here says "binning NxN"
+        # explicitly) -- so the four 2x2-binned rows (1920x1080 SDR at both
+        # depths, plus their 1920x1100/1920x1080 ClearHDR counterparts) are
+        # correctly excluded from the default selection, leaving the ten 1x1
+        # rows. len(table) above is the assertion this test is actually
+        # about (dedup, not default selection) and stays at the full 14.
+        self.assertEqual(len(d.res_modes), 10)
 
     def test_single_section_hdr_probe_keeps_every_16bit_clearhdr_mode(self):
         """The older cinepi-raw shape: plain probe is SDR only, --hdr sensor

@@ -9,9 +9,15 @@ Tests note), so this covers exactly the five things that note lists:
    (module.aspect_ratios / SensorDetect.aspect_ratio_table, not a second copy
    the endpoint invents);
 2. the offered set excludes a ratio with no mode behind it;
-3. an approximate ratio carries the nearest mode's real aspect;
-4. toggling a ratio (image_capture.aspect_ratios) changes which modes the
-   endpoint marks selected;
+3. a mode outside ASPECT_RATIO_TOLERANCE of every table ratio gets its own
+   reachable "native:<aspect>" toggle, never an "approximate" match against
+   a ratio it merely resembles ("no closest", PLAN.md, 2026-09-28 --
+   superseding this file's earlier "approximate ratio" claim);
+4. each row's `aspect_ratio_id`/the per-camera `enabled` list change as the
+   operator's saved ratio choice (image_capture.aspect_ratios) changes --
+   `selected` itself is deliberately ratio-agnostic now (see
+   LegacyFiltersStillApplyToMoreThanTheStockRuleTests' own docstring), so
+   what toggling narrows is which ids are in `enabled`, not `selected`;
 5. saving round-trips settings.jsonc without losing neighbouring keys -- the
    settings-editor save that silently deleted whole blocks from a camera's
    settings before (test_settings_editor_preserves_unrendered_keys.py), now
@@ -20,8 +26,8 @@ Tests note), so this covers exactly the five things that note lists:
 Built the same way test_aspect_ratio_selection.py builds its SensorDetect
 fixtures: SensorDetect.__new__(SensorDetect) with only the filter attributes
 under test set, so the endpoint runs the real
-_ratio_matches_for_camera()/available_aspect_ratios()/_aspect_ratio_table(),
-not a hand-rolled stand-in that could drift from them.
+home_ratio_id()/available_aspect_ratios()/_aspect_ratio_table(), not a
+hand-rolled stand-in that could drift from them.
 """
 
 import sys
@@ -121,10 +127,19 @@ class OfferedRatiosExcludeUnmatchedTests(unittest.TestCase):
         self.assertTrue(available["1.78:1"]["exact"])
 
 
-class ApproximateRatioRealAspectTests(unittest.TestCase):
-    def test_approximate_ratio_carries_the_nearest_modes_real_aspect(self):
-        # imx477-style tier B camera: one mode at 1.33, nowhere near 2.39.
-        d = _detector(TABLE, {"default": ["1.78:1"]}, {
+class NativeRatioIsReachableTests(unittest.TestCase):
+    """"No closest" (PLAN.md, 2026-09-28), superseding this class's own
+    earlier "approximate ratio" claim: a mode outside ASPECT_RATIO_TOLERANCE
+    of every table ratio is never filed under the nearest one as an
+    "approximate" match. It gets its own native id instead, and that id is
+    what the row and the per-camera `available` set both carry -- there is
+    no more delta/exactness spectrum, only "reachable under this id" or
+    "not offered at all"."""
+
+    def test_a_mode_far_from_every_table_ratio_gets_a_native_id(self):
+        # imx477-style tier B camera: one mode at 1.33, nowhere near this
+        # fixture's sparse table (1.78/2.39/1:1).
+        d = _detector(TABLE, {}, {
             "imx477": [
                 {"width": 2028, "height": 1520, "bit_depth": 12, "fps_max": 40,
                  "hdr": False, "aspect": 1.33},
@@ -132,58 +147,72 @@ class ApproximateRatioRealAspectTests(unittest.TestCase):
         })
         body = _get(d)
         available = body["aspect_ratios"]["imx477"]["available"]
-        scope = available["2.39:1"]
-        self.assertFalse(scope["exact"])
-        self.assertEqual(scope["real_aspect"], 1.33)
-        self.assertGreater(scope["delta"], 0)
+        self.assertNotIn("2.39:1", available, "1.33 is not APPROXIMATELY 2.39 -- it is not offered at all")
+        self.assertNotIn("1.78:1", available)
+        native = available["native:1.33"]
+        self.assertTrue(native["exact"])
+        self.assertEqual(native["real_aspect"], 1.33)
+        self.assertEqual(native["delta"], 0.0)
+        self.assertEqual(native["name"], "Native")
+
+        row = body["sensors"]["imx477"][0]
+        self.assertEqual(row["aspect_ratio_id"], "native:1.33")
+        self.assertTrue(row["aspect_ratio_exact"])
 
 
-class TogglingRatioChangesSelectedTests(unittest.TestCase):
-    def test_toggling_the_enabled_ratio_changes_which_modes_are_selected(self):
-        modes = {
-            "imx585": [
-                {"width": 1920, "height": 1080, "bit_depth": 12, "fps_max": 50,
-                 "hdr": False, "aspect": 1.78},
-                {"width": 1920, "height": 804, "bit_depth": 12, "fps_max": 50,
-                 "hdr": False, "aspect": 2.39},
-            ],
+class TogglingRatioChangesEnabledIdsTests(unittest.TestCase):
+    """Per-sensor-settings-backend, 2026-09-28: the endpoint's "selected" is
+    deliberately ratio-agnostic now (PLAN.md's contract), so what an operator
+    toggling a ratio actually changes is the per-camera `enabled` set and
+    each row's `aspect_ratio_id` labelling -- the pane combines the two
+    (`selected AND aspect_ratio_id in enabled`) to decide a row's checkbox
+    state, which is exactly what SensorDetect._finalize_modes' own dial does
+    (see test_aspect_ratio_selection.py). This class asserts that
+    combination directly, computed the same way the pane would.
+    """
+
+    MODES = {
+        "imx585": [
+            {"width": 1920, "height": 1080, "bit_depth": 12, "fps_max": 50,
+             "hdr": False, "aspect": 1.78},
+            {"width": 1920, "height": 804, "bit_depth": 12, "fps_max": 50,
+             "hdr": False, "aspect": 2.39},
+        ],
+    }
+
+    def _dial(self, cfg):
+        d = _detector(TABLE, cfg, self.MODES)
+        body = _get(d)
+        enabled = set(body["aspect_ratios"]["imx585"]["enabled"])
+        by_size = {(m["width"], m["height"]): m for m in body["sensors"]["imx585"]}
+        return {
+            size: row["selected"] and row["aspect_ratio_id"] in enabled
+            for size, row in by_size.items()
         }
+
+    def test_toggling_the_enabled_ratio_changes_the_dial(self):
         # Narrowing to a single ratio via an EXPLICIT PER-CAMERA key --
         # {"imx585": [...]}, the shape buildAspectRatiosState() actually
         # writes for a camera the operator has interacted with (templates/
-        # settings_editor.html:4021-4028), not the global "default" key.
-        # additive_fallback is keyed off presence of this per-camera entry
-        # (_camera_has_explicit_ratio_selection), so this is what narrowing
-        # looks like for a real operator toggle regardless of which ratio
-        # they narrowed to -- including 2.39 here, and separately below the
-        # single most likely real selection, narrowing to plain 1.78:1
-        # (test_narrowing_a_camera_to_only_the_default_ratio_still_narrows).
-        only_scope = _detector(TABLE, {"default": ["1.78:1"], "imx585": ["2.39:1"]}, modes)
-        by_size_scope = {(m["width"], m["height"]): m for m in _get(only_scope)["sensors"]["imx585"]}
-        self.assertFalse(by_size_scope[(1920, 1080)]["selected"])
-        self.assertTrue(by_size_scope[(1920, 804)]["selected"])
+        # settings_editor.html:4021-4028), never the global "default" key,
+        # which is unconditionally ignored now (PLAN.md D2).
+        only_scope = self._dial({"imx585": ["2.39:1"]})
+        self.assertFalse(only_scope[(1920, 1080)])
+        self.assertTrue(only_scope[(1920, 804)])
 
-        both = _detector(TABLE, {"default": ["1.78:1"], "imx585": ["1.78:1", "2.39:1"]}, modes)
-        by_size_both = {(m["width"], m["height"]): m for m in _get(both)["sensors"]["imx585"]}
-        self.assertTrue(by_size_both[(1920, 1080)]["selected"])
-        self.assertTrue(by_size_both[(1920, 804)]["selected"])
+        both = self._dial({"imx585": ["1.78:1", "2.39:1"]})
+        self.assertTrue(both[(1920, 1080)])
+        self.assertTrue(both[(1920, 804)])
 
-    def test_narrowing_a_camera_to_only_the_default_ratio_still_narrows(self):
-        """Regression test for the WP-CM-7 rework's blocking review finding:
-        an operator who deliberately toggles a multi-ratio camera down to
-        exactly 16:9 saves {"<camera>": ["1.78:1"]} -- bit-for-bit the same
-        list the old hardcoded shipped default ("1.78:1") resolved to for an
-        untouched camera, so a value-equality check could never tell the two
-        apart and this selection silently stopped narrowing anything (every
-        mode with a known aspect survived, mislabeled as 1.78:1). WP-CM-11
-        replaced that hardcoded default with one derived per camera from its
-        own modes, but the same trap applies to it: an explicit per-camera
-        key must still narrow even when its value happens to equal what the
-        derived default would have produced on its own. This saves the
-        explicit per-camera key -- never the global "default" key -- and
-        asserts the non-1.78 mode is excluded, from both the endpoint
-        (settings_editor.selected_for(), via _ratio_matches_for_camera) and
-        _ratio_matches_for_camera() directly."""
+    def test_narrowing_to_178_excludes_the_native_shaped_mode(self):
+        """Regression test for the WP-CM-7 rework's original blocking review
+        finding, restated for "no closest": an operator who deliberately
+        narrows a camera to exactly 16:9 must see that choice actually
+        narrow the dial -- including a mode whose real aspect used to be
+        filed under 1.78:1 as an "approximate" match against a sparse table.
+        Under "no closest" that mode instead gets its own native id and is
+        excluded from a 1.78:1-only dial outright, which is the more literal
+        version of the same guarantee: an explicit choice must narrow."""
         modes = {
             "imx283": [
                 {"width": 5760, "height": 2160, "bit_depth": 12, "fps_max": 24,
@@ -197,31 +226,24 @@ class TogglingRatioChangesSelectedTests(unittest.TestCase):
         cfg = {"imx283": ["1.78:1"]}
 
         d = _detector(TABLE, cfg, modes)
-        by_size = {(m["width"], m["height"]): m for m in _get(d)["sensors"]["imx283"]}
-        self.assertTrue(by_size[(3840, 2160)]["selected"])
-        # 5760x2160 is 2.67, whose home in this fixture's table is 2.39:1, so a
-        # 1.78:1-only selection excludes it.
-        self.assertFalse(by_size[(5760, 2160)]["selected"])
-        # 5472x3648 is 1.50. Against the REAL fourteen-ratio table its home would
-        # be 1.37:1 and it would be excluded here too -- but this fixture uses a
-        # deliberately sparse three-ratio table, where 1.78:1 is the nearest entry
-        # to 1.50 and so the label this row carries. Selection filters on that
-        # label, because it is what the operator sees on the row, so a row labelled
-        # 1.78:1 must not vanish while 1.78:1 is on.
-        self.assertTrue(by_size[(5472, 3648)]["selected"])
+        body = _get(d)
+        enabled = set(body["aspect_ratios"]["imx283"]["enabled"])
+        self.assertEqual(enabled, {"1.78:1"})
+        by_size = {(m["width"], m["height"]): m for m in body["sensors"]["imx283"]}
+        self.assertEqual(by_size[(3840, 2160)]["aspect_ratio_id"], "1.78:1")
+        self.assertEqual(by_size[(5760, 2160)]["aspect_ratio_id"], "native:2.67")
+        self.assertEqual(by_size[(5472, 3648)]["aspect_ratio_id"], "native:1.50")
 
         sd = SensorDetect.__new__(SensorDetect)
         sd.aspect_ratio_table = TABLE
         sd.aspect_ratios_cfg = cfg
+        sd.sensor_modes_unfiltered = modes
         matches = sd._ratio_matches_for_camera("imx283", modes["imx283"])
         matched_sizes = {
             (m["width"], m["height"])
             for m in modes["imx283"] if id(m) in matches
         }
-        # Same reasoning as the row assertions above: against this fixture's sparse
-        # table 1.50 comes home to 1.78:1, so the matcher claims it. 2.67 comes home
-        # to 2.39:1 and stays out.
-        self.assertEqual(matched_sizes, {(3840, 2160), (5472, 3648)})
+        self.assertEqual(matched_sizes, {(3840, 2160)})
 
 
 class SettingsRoundTripTests(unittest.TestCase):
@@ -261,17 +283,24 @@ class SettingsRoundTripTests(unittest.TestCase):
         self.assertEqual(ic["k_steps"], [1.5, 2, 3, 4])
 
 
-class LegacyFiltersStillApplyToARatioMatchTests(unittest.TestCase):
-    """A row the page shows as selected must be a row the camera would offer.
+class LegacyFiltersStillApplyToMoreThanTheStockRuleTests(unittest.TestCase):
+    """A row the page shows as selected reflects mode_selected() alone
+    (per-sensor-settings-backend, 2026-09-28): the endpoint's "selected" is
+    now deliberately RATIO-AGNOSTIC (PLAN.md's contract -- "the mode's own
+    selection, IGNORING the ratio gate"), so the pane can remember a mode's
+    own checkbox state while its ratio group is toggled off, and AND it with
+    `aspect_ratio_id in enabled` client-side rather than losing that state on
+    a round trip. What used to be tested here -- a ratio match combined with
+    the legacy k_steps/bit_depths filters -- is now exactly
+    SensorDetect._stock_mode_selected(), reading k_steps off the detector
+    itself rather than a second copy the endpoint used to keep from
+    current_app.config["SETTINGS"]. See test_aspect_ratio_selection.py's own
+    mode_selected coverage for the k_steps/bit_depths/HDR filter mechanics in
+    isolation; this class keeps the imx519 fixture and the settings-editor
+    round trip.
 
-    The ratio matcher is not the last word: bit_depths and k_steps run after it
-    in _finalize_modes. If the endpoint reported a ratio-matched mode as selected
-    without applying them, the page would disagree with the camera -- and worse,
-    a plain save writes the displayed selection into enabled_modes, which IS
-    authoritative, so the mode would be promoted past those filters for good.
-
-    imx519's native 4656x3496 is the worked example: k_val 4.5, which the shipped
-    k_steps does not list.
+    imx519's native 4656x3496 is the worked example: k_val 4.5, which the
+    shipped k_steps does not list.
     """
 
     MODES = {
@@ -284,14 +313,12 @@ class LegacyFiltersStillApplyToARatioMatchTests(unittest.TestCase):
     }
 
     def _selected(self, k_steps):
-        d = _detector(TABLE, {"imx519": ["1:1"]}, self.MODES)
-        app = _make_app(d)
-        app.config["SETTINGS"] = {"image_capture": {"k_steps": k_steps}}
-        body = app.test_client().get("/settings-editor/api/sensor-modes").get_json()
-        assert body["ok"], body
+        d = _detector(TABLE, {}, self.MODES)
+        d.k_steps = k_steps
+        body = _get(d)
         return {(m["width"], m["height"]): m["selected"] for m in body["sensors"]["imx519"]}
 
-    def test_a_ratio_match_excluded_by_k_steps_is_not_shown_selected(self):
+    def test_a_mode_excluded_by_k_steps_is_not_shown_selected(self):
         # 4.5 absent, 2.5 present: the big mode must not be offered, the small one may.
         selected = self._selected([1.5, 2, 2.5, 3, 4])
         self.assertFalse(selected[(4656, 3496)],
@@ -300,8 +327,8 @@ class LegacyFiltersStillApplyToARatioMatchTests(unittest.TestCase):
         self.assertTrue(selected[(2328, 1748)])
 
     def test_with_the_mode_inside_k_steps_it_is_shown_selected(self):
-        # Same ratio match, same code path: only k_steps changed, so this proves
-        # the exclusion above came from k_steps and not from the ratio matcher.
+        # Same fixture, only k_steps changed, so this proves the exclusion
+        # above came from k_steps and not from anything else mode_selected checks.
         selected = self._selected([2.5, 4.5])
         self.assertTrue(selected[(4656, 3496)])
 

@@ -395,5 +395,129 @@ class TestReleaseImageDryRun(unittest.TestCase):
         self.assertEqual(self.settings.read_text(), OPERATOR_SETTINGS)
         self.assertEqual(self.boot_config.read_text(), OPERATOR_CONFIG)
 
+    # ── Per-sensor settings_<sensor>.jsonc ──────────────────────────────────
+    # These hold an operator's per-sensor aspect-ratio/mode choices (see
+    # development/sensor-settings-2026-09-28/PLAN.md) and are untracked
+    # (.gitignore), so unlike settings.jsonc `git checkout` never puts them
+    # back on its own -- the release script has to stash and remove them
+    # itself, or a release would leak whichever sensor the builder's Pi was
+    # last configured for.
+
+    def test_sensor_settings_are_stashed_and_absent_from_the_image(self):
+        imx477 = self.cinemate / "settings_imx477.jsonc"
+        imx477.write_text('{"version": 1, "sensor": "imx477"}\n')
+        imx477.chmod(0o640)
+        imx585 = self.cinemate / "settings_imx585.jsonc"
+        imx585.write_text('{"version": 1, "sensor": "imx585"}\n')
+
+        # A same-shaped file in the tracked-template directory must never be
+        # touched -- only the root-level settings_*.jsonc is release material.
+        template_dir = self.cinemate / "resources" / "settings"
+        template_dir.mkdir(parents=True)
+        template = template_dir / "settings_default.jsonc"
+        template.write_text("// tracked template, never touched\n")
+
+        # dd is the moment "the image" is taken -- the same moment
+        # test_the_swap_really_produces_the_stock_files checks settings.jsonc
+        # and config.txt at, via the manifest. Snapshot whether the sensor
+        # files are still on disk right then, rather than only trusting the
+        # printed record.
+        snapshot = self.tmp / "at-dd-time.txt"
+        (self.stub_dir / "dd").write_text(
+            "#!/bin/sh\n"
+            f'if [ -e "{imx477}" ] || [ -e "{imx585}" ]; then\n'
+            f'  echo PRESENT > "{snapshot}"\n'
+            "else\n"
+            f'  echo ABSENT > "{snapshot}"\n'
+            "fi\n"
+            'for a in "$@"; do\n'
+            '  case "$a" in of=*) out="${a#of=}" ;; esac\n'
+            "done\n"
+            'echo "stand-in card image" > "$out"\n'
+            'echo "4194304 bytes copied" >&2\n'
+        )
+        (self.stub_dir / "dd").chmod(0o755)
+
+        result = self.run_script()
+        self.assertEqual(
+            result.returncode, 0,
+            f"script failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}",
+        )
+
+        self.assertIn("Stashed 2 per-sensor settings file(s)", result.stdout)
+        self.assertIn("settings_*.jsonc  none shipped (2 stashed)", result.stdout)
+        self.assertEqual(
+            snapshot.read_text().strip(), "ABSENT",
+            "a per-sensor settings file was still on disk when the image was taken",
+        )
+
+        # And both came back, byte for byte, with their own mode.
+        self.assertEqual(imx477.read_text(), '{"version": 1, "sensor": "imx477"}\n')
+        self.assertEqual(oct(imx477.stat().st_mode & 0o777), oct(0o640))
+        self.assertEqual(imx585.read_text(), '{"version": 1, "sensor": "imx585"}\n')
+
+        self.assertEqual(template.read_text(), "// tracked template, never touched\n")
+        self.assertFalse((self.dest / ".cinemate-release-image").exists())
+
+    def test_sensor_settings_mtime_is_restored_not_refreshed(self):
+        # Same reasoning as config.txt's mtime (see ri_mtime() in the script):
+        # a restore that stamps "now" instead of the original time is a subtle
+        # bug even though the content came back correctly.
+        imx477 = self.cinemate / "settings_imx477.jsonc"
+        imx477.write_text('{"sensor": "imx477"}\n')
+        old = 1_700_000_000
+        os.utime(imx477, (old, old))
+
+        result = self.run_script("--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(int(imx477.stat().st_mtime), old)
+
+    def test_interrupted_run_is_recovered_by_restore_only_for_sensor_settings(self):
+        # Simulate a power cut after a sensor-settings file was stashed and
+        # removed, but before the rest of the restore ran.
+        stash = self.dest / ".cinemate-release-image"
+        stash.mkdir()
+        (stash / "settings.jsonc").write_text(OPERATOR_SETTINGS)
+        (stash / "config.txt").write_text(OPERATOR_CONFIG)
+        sensor_stash = stash / "sensor-settings"
+        sensor_stash.mkdir()
+        (sensor_stash / "settings_imx477.jsonc").write_text('{"sensor": "imx477"}\n')
+        owner = grp.getgrgid(os.getgid()).gr_name
+        user = os.environ.get("USER", "runner")
+        (sensor_stash / "settings_imx477.jsonc.meta").write_text(
+            f"{user}:{owner} 640 1700000000\n"
+        )
+        (stash / "state.env").write_text(
+            "RI_CINEMATE_WAS_ACTIVE=0\n"
+            f"RI_SETTINGS_OWNER={user}:{owner}\n"
+            "RI_SETTINGS_MODE=640\n"
+            f"RI_CONFIG_OWNER={user}:{owner}\n"
+            "RI_CONFIG_MODE=600\n"
+        )
+
+        self.settings.write_text(TRACKED_SETTINGS)
+        self.boot_config.write_text("# stock, mid-release\n")
+        # Genuinely gone on disk, as a real interrupted swap would leave it.
+        self.assertFalse((self.cinemate / "settings_imx477.jsonc").exists())
+
+        result = self.run_script("--restore-only")
+        self.assertEqual(
+            result.returncode, 0,
+            f"--restore-only failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}",
+        )
+
+        restored = self.cinemate / "settings_imx477.jsonc"
+        self.assertEqual(restored.read_text(), '{"sensor": "imx477"}\n')
+        self.assertEqual(oct(restored.stat().st_mode & 0o777), oct(0o640))
+        self.assertFalse(stash.exists())
+
+    def test_no_sensor_settings_files_is_a_silent_no_op(self):
+        result = self.run_script("--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("Stashed", result.stdout)
+        self.assertNotIn("per-sensor settings file", result.stdout)
+        self.assertIn("settings_*.jsonc  none shipped (0 stashed)", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

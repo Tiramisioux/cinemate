@@ -295,7 +295,7 @@
     },
     "image_capture": {
       "type": "object",
-      "description": "Recording-mode selection and legacy resolution/bit-depth filters. enabled_modes is the per-camera mode list used by the dynamic recording-mode table; k_steps/bit_depths remain as the backward-compatible fallback when no enabled_modes entry exists for a detected camera.",
+      "description": "Recording-mode selection and legacy resolution/bit-depth filters. enabled_modes/aspect_ratios/custom_modes here are the older per-camera format (per-sensor-settings-2026-09-28): read only for a camera with no settings_<sensor>.jsonc next to settings.jsonc, and moved there on the first settings-editor save for that camera. k_steps/bit_depths are global filters that always apply, regardless of which format holds a camera's per-mode selection.",
       "properties": {
         "k_steps": {
           "type": "array",
@@ -420,7 +420,7 @@
         },
         "enabled_modes": {
           "type": "object",
-          "description": "Per-camera list of the individual driver modes offered by the recording-mode table. When present for a camera, this replaces the legacy k_steps/bit_depths filters for that camera. Each entry identifies a mode by width/height/bit depth/HDR and, when the driver reported it, its sensor crop window.",
+          "description": "Per-camera list of the individual driver modes offered by the recording-mode table -- the older format (per-sensor-settings-2026-09-28), read only for a camera with no settings_<sensor>.jsonc, and moved into that file on the first settings-editor save for that camera. When present here or there, it narrows per-mode selection beyond the stock rule (1x1 modes on, or every mode when the driver does not report binning). Each entry identifies a mode by width/height/bit depth/HDR and, when the driver reported it, its sensor crop window.",
           "additionalProperties": {
             "type": "array",
             "items": {
@@ -442,7 +442,7 @@
         },
         "aspect_ratios": {
           "type": "object",
-          "description": "WP-CM-6 (ASPECT-RATIOS.md), WP-CM-11. Per-camera aspect-ratio selection, keyed exactly as enabled_modes above: a camera with no entry of its own uses \"default\". Ships as {} -- an absent or empty entry means each camera defaults to the ratios its own mode table actually maps to, derived at startup (one ratio per mode, its nearest), so a fresh camera never loses a mode to a default nobody chose. A \"default\" list is still supported as a deliberate global choice and narrows like any other entry once set. Each value names ids from the canonical ratio table (resources/aspect_ratios.json). The mode table under this selection is the modes reachable by one of these ratios (within tolerance, or the closest mode when none are, unioned across ratios), further narrowed by min_mode_width, k_steps, bit_depths and the HDR switches. Ignored for a camera with an enabled_modes entry -- that per-mode choice is authoritative.",
+          "description": "WP-CM-6 (ASPECT-RATIOS.md), WP-CM-11, per-sensor-settings-2026-09-28. Per-camera aspect-ratio selection -- the older format, read only for a camera with no settings_<sensor>.jsonc next to settings.jsonc, and moved into that file on the first settings-editor save for that camera. Ships as {} -- no entry for a camera means the stock rule: 1.33:1 and 1.78:1 where the sensor's own modes reach them, plus its full frame. Only ratios the sensor actually offers are ever selected; there is no \"closest\" substitute for one it does not have. A \"default\" key is ignored -- it used to carry one sensor's choice onto every other sensor with no entry of its own -- and is dropped by a settings-editor save. Each value names ids from the canonical ratio table (resources/aspect_ratios.json). A camera's enabled_modes (here or in its per-sensor file) narrows further, not instead: a mode is offered only when it is both selected by enabled_modes (or the stock per-mode rule) and its ratio is one of the ratios enabled here.",
           "additionalProperties": {
             "type": "array",
             "items": {

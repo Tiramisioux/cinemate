@@ -23,46 +23,72 @@ from typing import Any
 
 DEFAULT_ASPECT_RATIO_TABLE_FILE = "resources/aspect_ratios.json"
 
-# The DELIVERY shape a camera nobody has chosen ratios for starts out selected
-# on, alongside that camera's own full frame. SensorDetect._default_ratio_ids
-# puts the pair together.
+# The two ratios a camera nobody has chosen anything for starts out selected
+# on, when it actually offers them, plus its own full frame. SensorDetect.
+# _default_ratio_ids applies the rule; see its own docstring.
 #
-# Operator instruction, 2026-09-26: "change the stock settings file to expose
-# the 1.33 and 1.78 (or closest) for imx477 as default. for other sensors,
-# default should be full frame and 1.78."
+# Operator instruction, 2026-09-28, superseding 2026-09-26's "1.78 or
+# closest": "with no [per-sensor] file, the stock rule applies: ratios --
+# 1.33:1 if the sensor offers it, 1.78:1 if it offers it, plus its full
+# frame; modes -- 1x1 modes on, every mode when the driver does not report
+# binning." "Offers" now means literally offered -- a member of
+# SensorDetect.available_aspect_ratios(camera), i.e. some mode's own home
+# ratio -- never a stand-in found by searching the camera's shapes for the
+# nearest thing to a preference.
 #
-# That is ONE rule, not two, and it is worth saying why -- it looks like it
-# needs an imx477 special case and it does not. imx477's full frame (4056x3040,
-# 1.334) IS 1.33:1, so "full frame + 1.78-or-closest" already gives imx477
-# exactly the 1.33 the operator asked for. Per-sensor branching here would be a
-# second place for the rule to live and to drift.
+# That is the whole reason this rule replaced 2026-09-26's: "or closest" was
+# built to give imx477 something in the 1.78 slot despite having no true
+# 16:9 mode (its widest, 2028x1080, is 1.878, home ratio 1.89:1) by treating
+# 1.89:1 as a stand-in for 1.78:1 -- but the operator report that produced
+# this file (D2 in PLAN.md, 2026-09-28) traced a swapped-sensor bug to
+# exactly that kind of inference surviving as a saved choice across a sensor
+# swap. The rule is deliberately more literal now: a camera whose delivery
+# shape does not exist gets no delivery-slot toggle, full stop, and
+# 1.33:1/1.78:1 are never present unless a mode's own aspect actually lands
+# on them within ASPECT_RATIO_TOLERANCE.
 #
-# The "or closest" half is the real change from the previous default. Before,
-# 1.78:1 was selected only when some mode came *home* to it, so a sensor with
-# no 16:9 mode at all -- imx477's widest is 2028x1080 = 1.878, which comes home
-# to 1.89:1 -- matched neither preferred ratio and fell back to its entire
-# table. Now the nearest shape the camera actually has stands in for 1.78, so
-# imx477 opens on 1.33:1 + 1.89:1 instead of on everything.
+# Worked through, with each camera's real fixture modes (see
+# _test/test_aspect_ratio_selection.py for the exact numbers):
+#   imx477  (no crop reported -> full frame unknown)     -> 1.33:1 offered, 1.78:1 not (its
+#           nearest is 1.89:1, a DIFFERENT id) -> stock = ["1.33:1"] alone.
+#   imx585  (cinemate-7modes driver: 1920x1080/3840x2160/1920x1100/3840x2200,
+#           all ~16:9, no 4:3 mode)                       -> stock = ["1.78:1"] alone.
+#   imx283  (crop-annotated: full frame 5472x3648 = 1.50, off-table)
+#                                                           -> stock = [FULL_FRAME_RATIO_ID, "1.78:1"]
+#           when it also has a ~16:9 mode; ["1.78:1"] alone for a fixture with
+#           no crop annotation at all (full frame then unknown, same as imx477).
+# Never empty for a camera that offers ANY ratio: _default_ratio_ids falls
+# back to every offered id when neither preference nor the full frame apply.
 #
-# Worked through, with each camera's own modes:
-#   imx477  full 1.334 -> "1.33:1"           nearest to 16/9: 1.89:1  => 1.33 + 1.89
-#   imx283  full 1.50  -> FULL_FRAME_RATIO_ID  has 1.78:1            => full + 1.78
-#   imx585  full 1.769 -> "1.78:1"             has 1.78:1            => 1.78 alone
-#   imx296  full 1.338 -> "1.33:1"           nearest to 16/9: 1.33:1  => 1.33 alone
-# The last two collapse to one toggle because the two halves name the same
-# shape, which is correct: there is nothing else to offer.
+# Operator addendum, 2026-09-28: "imx477 should also open with 2028x1080 --
+# not the 4K mode." resources/sensors.json can name an optional per-sensor
+# `"stock_selection": {"extra_modes": [{"width": ..., "height": ...}]}`
+# block (module.sensor_database), matched against the driver's own mode
+# table by width x height (optionally narrowed by bit_depth/hdr) -- never a
+# hardcoded camera name in Python. SensorDetect._default_ratio_ids() unions
+# in the home ratio id of every entry that matches a real mode; the rest of
+# the rule above (three membership checks, "never empty") is otherwise
+# unchanged. Worked example, imx477: 2028x1080's home is "1.89:1" (its
+# widest 16:9-ish shape, same id 4056x2160 also comes home to) -> stock
+# becomes ["1.33:1", "1.89:1"], but SensorDetect._stock_mode_selected()
+# only stock-selects an extras-only ratio's modes when they are themselves
+# one of the matched extra_modes rows -- so 1.89:1 is ON and 2028x1080 is
+# selected, while its sibling 4056x2160 stays offered but unticked (that
+# camera's toggle covers both; the extras contract does not).
 #
 # An id, not a value: the table is the one place a ratio's number lives (that
 # is this module's whole job), so this is looked up in it, and a ratio missing
 # from the table simply cannot be preferred.
 PREFERRED_DELIVERY_RATIO_ID = "1.78:1"
 
-# The fallback for the first slot, used when the driver reports no crop
-# geometry and SensorDetect.full_frame_ratio() therefore cannot say what this
-# camera's whole frame even is. Every stock sensor is in that position -- crop
-# annotation is a CineMate-driver feature -- so without this the rule above
-# would reduce to "1.78 alone" on exactly the cameras the operator named, and
-# imx477 would lose 1.33 instead of gaining 1.89.
+# Checked first, same "only if actually offered" rule as
+# PREFERRED_DELIVERY_RATIO_ID above -- see that constant's comment for the
+# worked examples. Named "shape" (a 4:3-ish frame) rather than "delivery"
+# because it is the slot a camera's OWN full frame most often also fills
+# (imx477's 4056x3040 full frame is exactly 1.33:1), not because it behaves
+# differently from the delivery slot in the rule itself; both are plain
+# membership tests against available_aspect_ratios(camera), tried in the
+# same order every time: 1.33:1, then 1.78:1, then the full frame.
 PREFERRED_SHAPE_RATIO_ID = "1.33:1"
 
 # The id of the synthetic "whole sensor" toggle, which is NOT in
@@ -81,14 +107,16 @@ PREFERRED_SHAPE_RATIO_ID = "1.33:1"
 #
 #   - the sensor's full frame IS one of the table's ratios (within
 #     ASPECT_RATIO_TOLERANCE) -- imx585's 3840x2160 is 1.78, imx477's 4056x3040
-#     is 1.33 -- and then NO extra toggle appears. The existing one is simply
-#     labelled "1.78:1 (full)", because turning it on already gives you the
-#     whole sensor.
+#     is 1.33 -- and then NO extra toggle appears. The existing one carries
+#     `is_full: true` so the pane/default know it also covers the whole
+#     sensor, but its label is unchanged: "1.78:1", not "1.78:1 (full)" (the
+#     operator dropped the suffix on 2026-09-22, revising their own earlier
+#     request for one -- see available_aspect_ratios()'s own comment).
 #   - the sensor's full frame is a shape the table does not carry -- the
 #     imx283 is a 3:2 sensor at 1.50, and 1.50 is not one of the fourteen --
-#     and then this id appears as its own toggle, sorted last (the settings
-#     pane ranks unknown ids after every table id), labelled with the real
-#     aspect and "(full)": "1.50:1 (full)".
+#     and then this id appears as its own toggle, placed by value among the
+#     table's ratios (not merely appended last), labelled with the real
+#     aspect and no suffix either: "1.50:1".
 #
 # Why it is not simply a fifteenth row in the table: 1.50 is the imx283's
 # native shape and nothing at all on an imx585, and a table entry would offer
@@ -96,6 +124,24 @@ PREFERRED_SHAPE_RATIO_ID = "1.33:1"
 # you, which is the same reason available_aspect_ratios() is derived and never
 # stored.
 FULL_FRAME_RATIO_ID = "full"
+
+# Prefix for a mode whose own real aspect is neither within
+# ASPECT_RATIO_TOLERANCE of any canonical ratio nor this camera's full frame:
+# "no closest" (operator, 2026-09-28 -- PLAN.md, superseding the near-tie/
+# tolerance-union matching this rule replaced) means such a mode still needs
+# its OWN reachable toggle rather than being folded into whichever canonical
+# ratio happens to be nearest. SensorDetect.home_ratio_id() builds the full id
+# as f"{NATIVE_RATIO_PREFIX}{aspect:.2f}", e.g. "native:1.50" -- always two
+# decimal places, matching _mode_aspect()'s own rounding, so the same real
+# shape always produces the same id. Never a member of the loaded table
+# (load_aspect_ratio_table() only ever returns resources/aspect_ratios.json's
+# fourteen rows) and never equal to FULL_FRAME_RATIO_ID, which is reserved for
+# a mode that reads the WHOLE sensor -- home_ratio_id() folds a non-full mode
+# that happens to share the off-table full frame's rounded aspect into
+# FULL_FRAME_RATIO_ID instead of minting a native id here, specifically so the
+# two toggles a camera could otherwise show for the same real shape collapse
+# into one.
+NATIVE_RATIO_PREFIX = "native:"
 
 logger = logging.getLogger(__name__)
 

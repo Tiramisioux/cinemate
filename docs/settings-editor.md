@@ -56,7 +56,7 @@ The left rail groups the same fields `settings.jsonc` holds, unchanged in meanin
 | Look & feel | Welcome screen (HDMI boot splash) · Wi‑Fi hotspot |
 | Cameras | Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, tuning-file override, independent per sensor |
 | Timing | Timing & sync — how strictly frame timing is watched before warning or flagging a take |
-| Exposure & steps | Value steps (click-stops per control) · Resolution & sensor (dynamic resolution and its priority, ClearHDR startup values, DNG thumbnails, the active sensor database) |
+| Exposure & steps | Value steps (click-stops per control) · Resolution & sensor (aspect-ratio and per-mode selection — [kept per sensor](settings-json.md#aspect_ratios) — dynamic resolution and its priority, ClearHDR startup values, DNG thumbnails, the active sensor database) |
 | Recording | Audio (input gain, timecode alignment per bit depth) · HDMI & preview (monitor overlay, dual-feed framing) |
 | Physical controls | Buttons & switches (GPIO in) · Grove HAT potentiometers · Quad rotary encoder · Rec tally & GPIO out · OLED status display |
 | System | Restart CineMate · Reboot Pi · Shut down Pi |

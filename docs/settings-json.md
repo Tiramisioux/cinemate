@@ -287,6 +287,29 @@ imx585 ClearHDR.
 
     A row the attached sensor has no mode for is dimmed — 1.5K, 3K, 5.5K and 10-bit on an IMX585, for instance. Dimmed, not disabled: the switch still flips, still saves and applies the moment a sensor that has those modes is fitted, the same way the Grove HAT's channel assignments survive the HAT being unplugged. With no camera detected at all, nothing is dimmed.
 
+## Aspect ratios
+<a id="aspect_ratios"></a>
+
+Filters which ratios the resolution dial offers, independent of *Resolutions offered* and *Bit depths offered* above, which filter by size and depth instead.
+
+| Behaviour | Detail |
+| --- | --- |
+| Stored per sensor | A ratio or per-mode choice you save is written to `settings_<sensor>.jsonc`, next to `settings.jsonc` on the Pi. Swap the physical sensor and its own file applies — nothing carries over from a different sensor. |
+| The file appears on save, not before | With no `settings_<sensor>.jsonc` yet, the sensor runs on the stock rule below. Change and save a ratio or mode for that sensor and the file is written for the first time. |
+| Stock rule | Ratios: 1.33:1 and 1.78:1, whichever the sensor's own modes actually reach, plus its full frame — plus, on a sensor whose only way to reach a useful 2K mode is a ratio it otherwise wouldn't offer by default, that ratio too (see the IMX477 example). Modes: on when the driver reports 1×1 binning, or when it reports no binning at all — the HQ camera (IMX477) reports none, so every one of its modes is on by default, except as that same example describes. |
+| Only what the sensor offers | The ratio list shows only ratios at least one of the sensor's own modes reaches. There is no "nearest" stand-in for a ratio it does not have. |
+| Reset to stock | Deletes `settings_<sensor>.jsonc` for that sensor. It goes back to the stock rule above on the next start. |
+
+!!! example "IMX477 (HQ camera), stock"
+
+    1.33:1 and 1.89:1 are on by default. 2028×1080 is on; its sibling 4056×2160 (same 1.89:1 ratio, the 4K mode) is offered but off until you tick it yourself.
+
+
+
+!!! note "settings.jsonc still carries the old per-camera lists"
+
+    `image_capture.aspect_ratios`, `enabled_modes` and `custom_modes` in `settings.jsonc` are the older, pre-per-sensor-file format. CineMate reads them only for a sensor with no `settings_<sensor>.jsonc` of its own, and the settings editor moves a camera's entries out of `settings.jsonc` and into its per-sensor file the first time you save for that camera.
+
 ## DNG thumbnails
 <a id="dng-thumbnails"></a>
 

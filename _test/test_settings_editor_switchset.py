@@ -100,8 +100,16 @@ class ModeAvailabilityTests(unittest.TestCase):
             'getattr(sensor_detect, "sensor_modes_unfiltered", None)', self.py)
 
     def test_the_unfiltered_table_is_filled_before_the_filters_run(self):
+        # Per-sensor-settings-backend, 2026-09-28: the bit_depths/k_steps/HDR
+        # checks moved out of an inline block in _finalize_modes and into
+        # mode_selected()/_stock_mode_selected(), the shared predicate
+        # _finalize_modes and the settings-editor endpoint both call now (see
+        # PLAN.md D4). The call site's own position is still the right
+        # anchor for "before the filters run": mode_selected() cannot filter
+        # anything on a mode until sensor_modes_unfiltered already holds the
+        # table it and the pane both read.
         pre = self.detect.index("self.sensor_modes_unfiltered = dict(")
-        post = self.detect.index("if self.bit_depths and m[\"bit_depth\"] not in self.bit_depths:")
+        post = self.detect.index("self.mode_selected(cam, m)")
         self.assertLess(pre, post)
 
     def test_the_endpoint_reports_both_sets_and_whether_it_knows_anything(self):

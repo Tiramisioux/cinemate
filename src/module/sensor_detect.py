@@ -1566,12 +1566,32 @@ class SensorDetect:
         (bit_depths, k_steps, the HDR switches) the non-explicit path in
         _finalize_modes has always applied. min_mode_width is deliberately
         not checked here -- see _stock_mode_selected()'s own docstring.
+
+        Matches *mode* against the saved entries BY VALUE (_mode_identity/
+        _mode_identity_coarse), never by Python object identity: this is
+        called both from _finalize_modes, whose *mode* is one of the
+        camera's live mode dicts, and from the settings-editor endpoint,
+        whose *mode* comes from a DIFFERENT list (sensor_modes_unfiltered's
+        own dict-copies) -- two objects with identical fields but different
+        id()s. The pool used to decide the tier (exact vs coarse vs none) is
+        always sensor_modes_unfiltered, since that decision is a property of
+        the WHOLE saved selection against the CURRENT driver table, not of
+        this one mode; when it is missing (mode_selected called before
+        _finalize_modes has populated it) *mode* stands in as a one-element
+        pool so a direct, standalone call still resolves sensibly.
         """
-        modes = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or []
         entries = (getattr(self, "enabled_modes", None) or {}).get(camera_name)
         if isinstance(entries, list) and entries:
-            keep, _tier = self._match_enabled_modes(modes, entries)
-            return id(mode) in {id(m) for m in keep}
+            pool = (getattr(self, "sensor_modes_unfiltered", None) or {}).get(camera_name) or [mode]
+            _keep, tier = self._match_enabled_modes(pool, entries)
+            if tier == "exact":
+                return self._mode_matches_enabled(mode, entries)
+            if tier == "coarse":
+                coarse_keys = {
+                    self._mode_identity_coarse(e) for e in entries if isinstance(e, dict)
+                }
+                return self._mode_identity_coarse(mode) in coarse_keys
+            return False
         return self._stock_mode_selected(mode)
 
     def _stock_mode_selected(self, mode: Dict) -> bool:

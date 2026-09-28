@@ -13,9 +13,18 @@ still drops every other unrendered key, which is what this covers.
 
 The fix is that a page is a view of the file, not the file:
 _merge_saved_settings() overlays the payload on what is already on disk, so a
-key the payload never mentions survives. The subtrees the page genuinely owns
--- image_capture.custom_modes, the quad rotary's encoders -- are still taken
-as sent, or removing the last override for a camera could never stick.
+key the payload never mentions survives. The one remaining subtree the page
+genuinely owns whole -- the quad rotary's encoders -- is still taken as sent,
+or removing the last encoder override could never stick.
+
+image_capture.custom_modes used to be a second EDITOR_OWNED_SUBTREES entry
+for the same reason, and is not any more (per-sensor-settings-backend,
+2026-09-28): the page stops sending image_capture.custom_modes at all, and
+put_settings() strips it from any body that still carries it BEFORE this
+merge ever runs, so the "page owns this subtree" question this file is about
+no longer applies to it -- a camera's custom modes now live in its own
+settings_<camera>.jsonc, written by sensor_settings.save_sensor_settings(),
+not merged here.
 """
 
 import json
@@ -128,13 +137,23 @@ class MergeSavedSettingsTests(unittest.TestCase):
 
         self.assertEqual(merged["arrays"]["iso"]["steps"], [100, 400])
 
-    def test_custom_modes_is_the_pages_own_so_a_deleted_override_stays_deleted(self):
+    def test_custom_modes_is_no_longer_an_editor_owned_subtree(self):
+        """Per-sensor-settings-backend, 2026-09-28: image_capture.
+        custom_modes is an ordinary merged key now, not an EDITOR_OWNED_
+        SUBTREES entry -- put_settings() strips it from the real request
+        body before this merge ever sees it, so a plain dict-merge (an empty
+        payload leaves the existing value alone) is the correct behaviour
+        for whatever reaches _merge_saved_settings directly, e.g. a stale
+        client payload this endpoint no longer expects."""
         merged = _merge_saved_settings(
             {"image_capture": {"custom_modes": {"imx585": [{"width": 1920}]}}},
             {"image_capture": {"custom_modes": {}}},
         )
 
-        self.assertEqual(merged["image_capture"]["custom_modes"], {})
+        self.assertEqual(
+            merged["image_capture"]["custom_modes"],
+            {"imx585": [{"width": 1920}]},
+        )
 
     def test_a_deleted_quad_encoder_stays_deleted(self):
         merged = _merge_saved_settings(

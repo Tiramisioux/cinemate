@@ -391,6 +391,16 @@ class SensorDatabaseTests(unittest.TestCase):
         """A sensor that ignores --hdr sensor returns identical modes twice; the
         merge must collapse them back to a single non-HDR list."""
         d = self._detector_for_parse()
+        # Per-sensor-settings-backend, 2026-09-28: the ratio gate now applies
+        # unconditionally (PLAN.md D4), so a detector with no aspect_ratios_cfg
+        # opinion at all resolves through the stock rule -- for this fixture's
+        # crop-less imx477 (all five resolutions, home ratios 1.33:1/1.89:1),
+        # that is 1.33:1 alone (see test_aspect_ratio_selection.py's own
+        # imx477 coverage). This test is about HDR-probe deduplication, not
+        # the ratio axis, so both ratios this camera offers are explicitly
+        # enabled to reproduce the old "every resolution reaches this test"
+        # shape.
+        d.aspect_ratios_cfg = {"imx477": ["1.33:1", "1.89:1"]}
         # Same output for both runs (flag ignored by a non-HDR sensor).
         parsed = self._parse(d, self.IMX477_LISTCAMERAS, self.IMX477_LISTCAMERAS)["imx477"]
         self.assertTrue(all(m["hdr"] is False for m in parsed.values()))
@@ -401,6 +411,10 @@ class SensorDatabaseTests(unittest.TestCase):
         the 10- and 12-bit copies of all five resolutions (8-bit dropped), so a
         resolution exists at two bit depths and the operator can reach either."""
         d = self._detector_for_parse()
+        # See test_non_hdr_sensor_not_doubled_by_hdr_probe's comment: this
+        # test is about bit-depth filtering, not the ratio axis, so both
+        # ratios this fixture's imx477 offers are explicitly enabled.
+        d.aspect_ratios_cfg = {"imx477": ["1.33:1", "1.89:1"]}
         parsed = self._parse(d, self.IMX477_LISTCAMERAS)["imx477"]
         depths = sorted({m["bit_depth"] for m in parsed.values()})
         self.assertEqual(depths, [10, 12])            # 8-bit filtered out

@@ -60,6 +60,22 @@ DEFAULT_ASPECT_RATIO_TABLE_FILE = "resources/aspect_ratios.json"
 # Never empty for a camera that offers ANY ratio: _default_ratio_ids falls
 # back to every offered id when neither preference nor the full frame apply.
 #
+# Operator addendum, 2026-09-28: "imx477 should also open with 2028x1080 --
+# not the 4K mode." resources/sensors.json can name an optional per-sensor
+# `"stock_selection": {"extra_modes": [{"width": ..., "height": ...}]}`
+# block (module.sensor_database), matched against the driver's own mode
+# table by width x height (optionally narrowed by bit_depth/hdr) -- never a
+# hardcoded camera name in Python. SensorDetect._default_ratio_ids() unions
+# in the home ratio id of every entry that matches a real mode; the rest of
+# the rule above (three membership checks, "never empty") is otherwise
+# unchanged. Worked example, imx477: 2028x1080's home is "1.89:1" (its
+# widest 16:9-ish shape, same id 4056x2160 also comes home to) -> stock
+# becomes ["1.33:1", "1.89:1"], but SensorDetect._stock_mode_selected()
+# only stock-selects an extras-only ratio's modes when they are themselves
+# one of the matched extra_modes rows -- so 1.89:1 is ON and 2028x1080 is
+# selected, while its sibling 4056x2160 stays offered but unticked (that
+# camera's toggle covers both; the extras contract does not).
+#
 # An id, not a value: the table is the one place a ratio's number lives (that
 # is this module's whole job), so this is looked up in it, and a ratio missing
 # from the table simply cannot be preferred.

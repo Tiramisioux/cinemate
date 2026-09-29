@@ -6,11 +6,13 @@ Release notes for CineMate. For downloads, see the [releases page](https://githu
 
 **Sensors and modes**
 
+- New aspect ratios for imx283 and imx585: 1:1, 16:9, 17:9, 1.85:1, 1.90:1, 2.00:1, 2.20:1, 2.22:1, 2.35:1, 2.39:1, 2.50:1, 2.55:1. 
+
 - Added vmax cropping for imx283 and imx585, changing the actual sensor readout. Reduces write speed needed to disk so some of the modes also works with normal SSD at 25 fps. 
 
 - We also have cropped-in modes, which use a smaller part of the sensor. Useful when using lenses with smaller image circles.
 
-- Aspect ratio selection in Web UI settings-pane, and enabling of individual modes for fast selection on the camera build.
+- Aspect ratio selection in Web UI settings-pane, and enabling of individual modes for fast selection on the camera build. User can activate for example only 1x1 binning modes.
 
 **imx283**
 - Removed black bands on the left and right edges of sensor readout.

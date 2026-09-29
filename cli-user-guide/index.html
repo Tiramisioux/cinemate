@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli-user-guide/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Using CinePi-RAW from the terminal - CineMate Docs</title>
+    <title>CinePi-RAW terminal commands - CineMate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -14,7 +14,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Using CinePi-RAW from the terminal";
+        var mkdocs_page_name = "CinePi-RAW terminal commands";
         var mkdocs_page_input_path = "cli-user-guide.md";
         var mkdocs_page_url = "/cinemate/cli-user-guide/";
       </script>
@@ -99,8 +99,6 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
@@ -114,8 +112,38 @@
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
-              <ul>
+              <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">CineMate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">CinePi-RAW terminal commands</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#checking-available-options">Checking available options</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#camera-modes">Camera modes</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#lowresolution-lores-stream">Low‑resolution (lores) stream</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#preview-window">Preview window</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tuning-file">Tuning file</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#post-processing">Post processing</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cinematespecific-flags">CineMate‑specific flags</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example-commands">Example commands</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#imx477-12-bit-full-width">IMX477 (12-bit, full width)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#imx296-10-bit">IMX296 (10-bit)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#imx283-12-bit-unpacked">IMX283 (12-bit unpacked)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#imx585-12-bit-unpacked">IMX585 (12-bit unpacked)</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -139,7 +167,8 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">Using CinePi-RAW from the terminal</li>
+          <li class="breadcrumb-item">Reference</li>
+      <li class="breadcrumb-item active">CinePi-RAW terminal commands</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cli-user-guide.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -150,7 +179,7 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="using-cinepi-raw-from-the-terminal">Using CinePi-RAW from the terminal<a class="headerlink" href="#using-cinepi-raw-from-the-terminal" title="Permanent link">#</a></h1>
+  <h1 id="cinepi-raw-terminal-commands">CinePi-RAW terminal commands<a class="headerlink" href="#cinepi-raw-terminal-commands" title="Permanent link">#</a></h1>
 <p>You can run <code>cinepi-raw</code> directly — launching the binary yourself from a terminal with your own flags, instead of letting CineMate's process manager (<code>cinepi_multi.py</code>) build the command line and manage the camera lifecycle for you. See <a href="../cinepi-multi/">How CineMate launches CinePi-raw</a> for more information about how CineMate works.</p>
 <p>Running it manually is useful for isolating a problem to <code>cinepi-raw</code> itself (rather than to CineMate's layer on top of it), or for trying a flag combination before wiring it into <code>settings.jsonc</code>. Since <code>cinemate-autostart.service</code> normally holds the camera with its own <code>cinepi-raw</code> child process, stop it first so the two don't fight over the sensor:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>cinemate-autostart
@@ -247,6 +276,10 @@ cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">
 
             </div>
           </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../cli-commands/" class="btn btn-neutral float-left" title="CineMate terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../changelog/" class="btn btn-neutral float-right" title="Changelog">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
 
   <hr/>
 
@@ -272,6 +305,10 @@ cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">
         </span>
     
     
+      <span><a href="../cli-commands/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../changelog/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

@@ -1,6 +1,6 @@
 # Overview
 
-**CineMate** is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw files (10/12-bit, plus 16-bit [ClearHDR](clear-hdr.md) on the IMX585) using off-the-shelf parts.
+**CineMate** is an open-source boilerplate for building your own digital cinema camera on a Raspberry. It records CinemaDNG raw files (10/12-bit, plus 16-bit [ClearHDR](clear-hdr.md) on the IMX585) using off-the-shelf parts.
 
 It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw), built on the [CinePi-RAW recorder by Csaba Nagy](https://github.com/cinepi).
 

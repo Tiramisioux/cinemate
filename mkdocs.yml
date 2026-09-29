@@ -27,6 +27,7 @@ nav:
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Storage pre-roll warm-up: storage-preroll.md
   - Configuring:
+      - Raspberry Pi models: raspberry-pi-models.md
       - config.txt: config-txt.md
       # - The CineMate stack explained: cinemate-stack.md   # hidden from the menu, page still builds
       - settings.jsonc: settings-json.md

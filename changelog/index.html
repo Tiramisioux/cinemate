@@ -119,7 +119,7 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Changelog</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#unreleased">Unreleased</a>
+    <li class="toctree-l2"><a class="reference internal" href="#version-341">Version 3.4.1</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#version-340">Version 3.4.0</a>
         <ul>
@@ -207,33 +207,23 @@
 <div class="markdown-body">
   <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <p>Release notes for CineMate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
-<h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<h2 id="version-341">Version 3.4.1<a class="headerlink" href="#version-341" title="Permanent link">#</a></h2>
+<p><strong>Sensors and modes</strong></p>
 <ul>
 <li>
-<p><strong>New docs page: Raspberry Pi models</strong> — what changes between the Pi 5 / CM5 and the Pi 4 / CM4 families: camera connector and cable, ports and lane counts, packing, ClearHDR and overclock support, and the CM4 carrier-board traps (<code>cam0</code> is 2-lane on the CM4 IO board, camera jumpers on <code>J6</code>). Written after an IMX283 on a CM4 showed a black preview with <code>Camera frontend has timed out</code> on <code>cam0</code> and worked on <code>cam1</code>. See <a href="../raspberry-pi-models/">Raspberry Pi models</a>.</p>
+<p>Added vmax cropping for imx283 and imx585, changing the actual sensor readout. Reduces write speed needed to disk so some of the modes also works with normal SSD at 25 fps. </p>
 </li>
 <li>
-<p><strong>Troubleshooting: two new rows</strong> — a black preview with <code>Camera frontend has timed out</code> (cable, port or carrier jumpers, not software), and the imx283 optical-black band down the left edge, which means the installed <code>cinepi-raw</code> binary is older than its source. See <a href="../troubleshooting/">Troubleshooting</a>.</p>
+<p>We also have cropped-in modes, which use a smaller part of the sensor. Useful when using lenses with smaller image circles.</p>
 </li>
 <li>
-<p><strong>Aspect-ratio and per-mode sensor settings are now kept per sensor</strong> — saving a ratio toggle or a mode selection writes <code>settings_&lt;sensor&gt;.jsonc</code> next to <code>settings.jsonc</code>, instead of <code>image_capture.aspect_ratios</code>/<code>enabled_modes</code>/<code>custom_modes</code> there. Swapping the physical sensor no longer risks one sensor's saved choice leaking onto another through the old <code>"default"</code> carrier — a sensor with no per-sensor file simply runs on the stock rule (1.33:1 and 1.78:1 where it has them, plus its full frame; 1×1 modes on, every mode when the driver reports no binning) and only ever offers the ratios it actually has, never a "closest" stand-in. <code>settings.jsonc</code>'s three keys are read as a fallback for a sensor with no file of its own, and a save moves that sensor's entries out of <code>settings.jsonc</code> and into its own file. See <a href="../settings-json/#aspect_ratios">Aspect ratios</a>. A release image (<code>scripts/make-release-image.sh</code>) now strips any <code>settings_*.jsonc</code> before imaging and restores them afterward, the same way it already does for <code>settings.jsonc</code> and <code>config.txt</code>.</p>
+<p>Aspect ratio selection in Web UI settings-pane, and enabling of individual modes for fast selection on the camera build.</p>
 </li>
-<li>
-<p><strong>Saving from the settings editor no longer deletes the settings it has no field for</strong> — the page built the whole saved document out of its own controls, so every key without one (<code>input_peripherals.pots</code>, <code>system.https.*</code>, <code>system.web_api.*</code>, the <code>arrays.hdr_*</code> tables, <code>image_capture.hdr.iso_max</code>, <code>output_peripherals.oled.width</code>/<code>height</code>, <code>sensors.raw_buffer_count</code>, <code>$schema</code>, and the rest of "<a href="../settings-json/#settings-with-no-field-on-this-page">Settings with no field on this page</a>") was dropped from <code>settings.jsonc</code> and left to CineMate's built-in defaults. A save now merges the page's values over the file on disk, on the server as well as in the browser, so an unrendered key keeps what it said. This is what cost a camera its <code>image_capture.hdr.imx585_clear_hdr_12bit</code> on 2026-09-15 and switched 12-bit ClearHDR back on: a missing key there means "on". The lists the page does build in full — GPIO in/out, quad rotary encoders, per-mode fps ceilings, value steps — still replace what they replace, so deleting an entry still deletes it. Also: an explicit <code>input_peripherals.quad_rotary_controller.enabled: false</code> is no longer flipped back to <code>true</code> by an unrelated save.</p>
-</li>
-<li>
-<p><strong>ClearHDR is two switches now, one per bit depth, and the resolution list decides the rest</strong> — the settings editor offers <strong>Enable IMX585 ClearHDR 16-bit</strong> and <strong>Enable IMX585 ClearHDR 12-bit</strong> (<code>image_capture.hdr.imx585_clear_hdr_16bit</code> / <code>_12bit</code>), and <strong>Resolutions offered</strong> then decides which frame sizes of each you get, exactly as it already did for SDR. The third switch, <code>imx585_clear_hdr_16bit_hd</code>, is gone: it gated <em>every</em> binned ClearHDR mode regardless of bit depth, so turning it on for the 16-bit HD mode silently handed back 12-bit HD as well — which is what its own help text promised it would not do. Defaults are unchanged in effect for a stock camera (16-bit on, 12-bit off, all four K categories on), which is the five-mode imx585 table the <a href="../sensors/#imx585-starlight-eye">sensors page</a> documents. See <a href="../clear-hdr/#which-clearhdr-modes-you-are-offered">ClearHDR</a>.</p>
-</li>
-<li><strong>The embedded DNG thumbnail costs a fraction of what it did</strong> — it is now a compressed colour thumbnail at half the preview size (<code>image_capture.thumbnail</code> defaults to <code>jpeg</code>, the new <code>image_capture.thumbnail_size</code> to <code>1</code>) instead of an uncompressed colour one at the full lores plane on every frame. Per-frame growth over a 3.3.1-era file drops from +22% to about +0.2% at 4K 12-bit, and from +89% to under +1% at HD 12-bit. Measured on hardware: roughly six seconds of recording time per terabyte, and +4.0 ms of encode time per frame (+18%) with no dropped frames — see <a href="../settings-json/#dng-thumbnails">settings.jsonc's "DNG thumbnails" section</a>.</li>
-<li><strong>The <code>thumbnail</code> toggle works again</strong> — <code>set thumbnail 0</code> actually disables the embedded thumbnail now; a bug had hard-coded colour mode regardless of this setting since the 2026-09-05 <code>dng-playback</code> merge.</li>
-<li><strong><code>file_size</code> and the GUI's minutes-remaining now account for the thumbnail</strong> — both were previously low by the thumbnail's full byte count on every frame.</li>
-<li><strong>A fourth embedded-thumbnail type: colour JPEG</strong> — <code>image_capture.thumbnail</code> (and <code>set thumbnail</code>) now takes the words <code>off</code> / <code>mono</code> / <code>colour</code> / <code>jpeg</code> (the legacy <code>0</code>-<code>3</code> still work), where <code>jpeg</code> is a baseline JPEG, quality 85, 4:2:0 — measured 9–16 KB per frame at the shipped 640×360 default and 3–8 KB at 320×180, against 230,400 B / 57,600 B for mono at the same sizes, paid in the most CPU of the four (a YUV→RGB conversion plus the JPEG encode itself). <code>jpeg</code> is now the default. See <a href="../settings-json/#dng-thumbnails">settings.jsonc's "DNG thumbnails" section</a> for the full table.</li>
-<li><strong>The settings editor shows the choice, and its cost</strong> — the Resolution &amp; sensor section gains a visible "DNG thumbnails" card: a mode dropdown whose four labels state the bytes-per-frame and CPU cost of each choice for the attached camera's actual lores size, and a size dropdown labelled with the resulting dimensions. Previously <code>image_capture.thumbnail</code>/<code>thumbnail_size</code> had no field on the page at all.</li>
-<li><strong>The Playback pane serves a JPEG-mode take's thumbnail without re-encoding it</strong> — the two uncompressed modes are still decoded and re-encoded through PIL on every request, as before.</li>
-<li><strong>A custom tuning file that can't load no longer blacks the camera</strong> — a missing, unreadable, or wrong-target file (a Pi 4 / vc4 tuning on a Pi 5, for instance) now falls back to the auto-detected tuning and logs one <code>ERROR</code> line naming the file and the reason, instead of failing camera registration with the picture never coming up. See <a href="../settings-json/#cameras">Custom tuning file</a>.</li>
-<li><strong>The settings editor's tuning-file upload actually uploads now</strong> — <code>Upload .json</code> used to add an entry to the picker and report success without writing anything. It now copies the file into <code>resources/tuning_files/</code>, validated the same way the camera's own launch guard validates a configured path.</li>
-<li><strong>The tuning-file picker no longer erases an override it can't display</strong> — a configured path that isn't one of the shipped files (including every unit's own absolute default) used to have no matching entry, so opening and saving the settings page silently cleared it. It now shows up as its own, clearly labelled entry instead.</li>
 </ul>
+<p><strong>imx283</strong>
+- Removed black bands on the left and right edges of sensor readout.</p>
+<p><strong>Settings editor</strong>
+- Tuning-file upload fixed</p>
 <h2 id="version-340">Version 3.4.0<a class="headerlink" href="#version-340" title="Permanent link">#</a></h2>
 <h3 id="imx585-driver">imx585 driver<a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h3>
 <ul>

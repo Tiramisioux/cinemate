@@ -1,4 +1,4 @@
-# Using CinePi-RAW from the terminal
+# CinePi-RAW terminal commands
 
 You can run `cinepi-raw` directly — launching the binary yourself from a terminal with your own flags, instead of letting CineMate's process manager (`cinepi_multi.py`) build the command line and manage the camera lifecycle for you. See [How CineMate launches CinePi-raw](cinepi-multi.md) for more information about how CineMate works.
 

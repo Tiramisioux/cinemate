@@ -52,7 +52,7 @@ nav:
       # - Overclocking the Pi: overclocking.md   # shipped on by the installer; pending fact-check - hidden from the menu, page still builds
   - Reference:
       - CineMate terminal commands: cli-commands.md
-      # - CinePi RAW terminal commands: cli-user-guide.md   # hidden from the menu, page still builds
+      - CinePi-RAW terminal commands: cli-user-guide.md
       # - Redis API: redis-guide.md   # hidden from the menu, page still builds
       # - Redis Key reference: redis-keys.md   # hidden from the menu, page still builds
       # - How CineMate launches CinePi-raw: cinepi-multi.md   # hidden from the menu, page still builds

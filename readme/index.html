@@ -167,7 +167,7 @@
               
 <div class="markdown-body">
   <h1 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h1>
-<p><strong>CineMate</strong> is an open-source boilerplate for building your own digital cinema camera on a Raspberry. It records CinemaDNG raw files (10/12-bit, plus 16-bit <a href="../clear-hdr/">ClearHDR</a> on the IMX585) using off-the-shelf parts.</p>
+<p><strong>CineMate</strong> is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi. It records CinemaDNG raw files (10/12-bit, plus 16-bit <a href="../clear-hdr/">ClearHDR</a> on the IMX585) using off-the-shelf parts.</p>
 <p>It pairs a lightweight Python interface with a custom fork of <a href="https://github.com/Tiramisioux/cinepi-raw">cinepi-raw</a>, built on the <a href="https://github.com/cinepi">CinePi-RAW recorder by Csaba Nagy</a>.</p>
 <div style="text-align: center;">
   <img src="../images/camera-stack3.png" alt="Camera stack exploded" width="60%" />
@@ -177,23 +177,6 @@
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
 <p>Easiest path is to flash the prebuilt image — see the <a href="../getting-started/">Quick start</a> and the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
 <p>To build the stack yourself on Raspberry Pi OS Lite (Bookworm), or to use the one-click installer, see <a href="../installation-steps/">Manual installation</a>.</p>
-<details class="note">
-<summary>Installing for a non-default sensor</summary>
-<p>The installer sets up IMX477 on <code>cam0</code> by default, but it installs the IMX283 and IMX585
-drivers regardless of which sensor you name. So for most sensors you can install with the
-defaults and then pick your sensor in the browser, on the settings editor's
-<a href="../config-txt/">config.txt tab</a> — no reinstall needed.</p>
-<p>You can still name the sensor up front, which also writes the matching <code>config.txt</code> overlay:</p>
-<div class="highlight"><pre><span></span><code><span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx296<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
-<span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx283<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
-<span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
-<span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585_mono<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam1<span class="w"> </span>./cinemate-install.sh
-</code></pre></div>
-<p>Two cases where naming it up front still matters: <code>imx585_mono</code> also applies the
-<code>rp1-cfe</code> kernel patch that mono 16-bit ClearHDR needs, and <code>imx585</code> also installs the
-IR filter helper. Neither can be done from the browser later — rerun the installer, or run
-<code>scripts/patch-rp1-cfe.sh</code> by hand.</p>
-</details>
 <h2 id="customisation">Customisation<a class="headerlink" href="#customisation" title="Permanent link">#</a></h2>
 <p>GPIO buttons and switches, rotary encoders, potentiometers and the OLED display are optional — see <a href="../hardware-controls/">Additional hardware</a> for an overview. They are configured via <a href="../settings-json/">the settings file</a>. On the Pi, type <code>editsettings</code> in the terminal to open it.</p>
 <h2 id="compatible-sensors">Compatible sensors<a class="headerlink" href="#compatible-sensors" title="Permanent link">#</a></h2>

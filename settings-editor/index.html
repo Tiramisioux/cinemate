@@ -72,6 +72,8 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../raspberry-pi-models/">Raspberry Pi models</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
@@ -195,8 +197,9 @@
 </tr>
 </tbody>
 </table>
-<p>The four file controls and <strong>Save changes</strong> are hidden on Live view, Playback and RAW files, which edit no file. The search box stays.</p>
-<p>Five tabs run across the top of the page:</p>
+<p>The four file controls and <strong>Save changes</strong> are hidden on Playback and RAW files, which edit no file. The search box stays.</p>
+<p>For the live camera feed without leaving the page, see <a href="#the-live-view-launcher">The live-view launcher</a> below — it replaced a dedicated tab.</p>
+<p>Four tabs run across the top of the page:</p>
 <table>
 <thead>
 <tr>
@@ -216,10 +219,6 @@
 <tr>
 <td><strong>settings.jsonc</strong></td>
 <td>Everything in <code>settings.jsonc</code>, grouped into sections (below)</td>
-</tr>
-<tr>
-<td><strong>Live view</strong></td>
-<td>The main Web GUI, embedded</td>
 </tr>
 <tr>
 <td><strong>Playback</strong></td>
@@ -255,7 +254,7 @@
 </tr>
 <tr>
 <td>Exposure &amp; steps</td>
-<td>Value steps (click-stops per control) · Resolution &amp; sensor (resolutions, bit depths, dynamic resolution and its priority, ClearHDR startup values) · Per-mode fps ceilings (per-sensor-mode overrides — see <code>custom_modes</code> in the settings reference)</td>
+<td>Value steps (click-stops per control) · Resolution &amp; sensor (aspect-ratio and per-mode selection — <a href="../settings-json/#aspect_ratios">kept per sensor</a> — dynamic resolution and its priority, ClearHDR startup values, DNG thumbnails, the active sensor database)</td>
 </tr>
 <tr>
 <td>Recording</td>
@@ -267,7 +266,7 @@
 </tr>
 <tr>
 <td>System</td>
-<td>Restart CineMate</td>
+<td>Restart CineMate · Reboot Pi · Shut down Pi</td>
 </tr>
 </tbody>
 </table>
@@ -293,7 +292,8 @@
 <p>Restarts CineMate automatically to apply the new file — the same effect as the CLI's <code>restart cinemate</code>, not a reboot. Recording stops if one is in progress.</p>
 </li>
 </ol>
-<p>You can also apply a save-in-place, or just restart with nothing pending, from <strong>System → Restart CineMate</strong>.</p>
+<p>You can also apply a save-in-place, or just restart with nothing pending, from <strong>System → Restart CineMate</strong>. The same pane's danger zone adds <strong>Reboot Pi</strong> and <strong>Shut down Pi</strong> for when CineMate itself is fine but the Pi needs a full restart or powering off — neither writes <code>config.txt</code>. Shut down Pi asks you to confirm first: once it answers, the Pi is on its way down and only someone at the rig can power it back on, so the page does not poll for it to come back the way a restart or reboot does.</p>
+<p>All three post to the settings editor's own <code>POST /settings-editor/api/power</code> route, not the general web API's <code>POST /api/v1/cmd</code> — that route refuses <code>reboot</code> and <code>shutdown</code> unless <code>system.web_api.allow_destructive</code> is turned on in <code>settings.jsonc</code>, which it is not by default (see <a href="../web-api/">Web API</a>). The settings editor already performs other destructive actions (formatting a drive, deleting a take) without that switch, so these three buttons work on an unmodified camera the same way those do.</p>
 <p>The console under <strong>Restart CineMate</strong> is a live tail of the camera's own <code>system.log</code>, so runtime
 messages appear there as they happen — not only around a restart. It reconnects by itself, which is
 what you want across a restart: the stream drops as the service goes down and resumes when it comes
@@ -313,6 +313,7 @@ a line from <code>system.log</code> or something this page did.</p>
 <p>Double-check the change before saving, especially sensor overlay and link-frequency picks. Consider making config.txt edits through the recovery console instead when you want the safety net.</p>
 </div>
 <p>Everything here needs a full reboot to take effect — restarting CineMate alone never picks up a <code>config.txt</code> change. The page shows the detected sensor modes for whatever is actually attached right now, separately from the overlay picks above them (those apply only after the reboot). CineMate only manages its own fenced block; anything you add to the file outside it survives updates and is untouched by this page.</p>
+<p>Below the <strong>Save &amp; reboot Pi</strong> card sits a second, separate row: <strong>Restart CineMate</strong>, <strong>Reboot Pi</strong> and <strong>Shut down Pi</strong>. These are the same three actions as the System pane's, placed here too so you don't have to leave this tab to reach them — none of the three saves or writes <code>config.txt</code>; that stays <strong>Save &amp; reboot Pi</strong>'s job alone, and Reboot Pi here ignores any unsaved edits on this page the same way the System pane's does.</p>
 <h2 id="i2c-tab">i2c tab<a class="headerlink" href="#i2c-tab" title="Permanent link">#</a></h2>
 <p><img alt="The i2c tab" src="../images/gui-i2c.png" /></p>
 <p>Shows which optional hardware is answering on the camera's I²C bus right now. Everything listed is
@@ -389,14 +390,14 @@ settings that describe it.</p>
 <li><strong>Download</strong> — streams a zip of the take. Only one download runs at a time server-wide; a second attempt is told to wait. On a Chromium browser over a secure context (HTTPS, or localhost) it can write straight into a folder you pick; elsewhere it's a normal browser download.</li>
 <li><strong>Delete</strong> — asks for confirmation, and is refused while that take is actively being written to.</li>
 </ul>
-<p>Checking takes and using <strong>Download selected</strong> / <strong>Delete selected</strong> applies the same actions to the whole selection. Bulk delete refuses the entire request (not a partial delete) if any selected take is currently recording. Downloading more than one take at once needs the folder-picker path above.</p>
+<p>Checking takes and using <strong>Download selected</strong> / <strong>Delete selected</strong> applies the same actions to the whole selection. Bulk delete refuses the entire request (not a partial delete) if any selected take is currently recording. <strong>Download selected</strong> with more than one take produces a single zip with each take in its own top-level folder — on a Chromium browser over a secure context it writes straight into a picked folder like the per-take download does; everywhere else (plain HTTP, the hotspot, mDNS, Safari, every phone) it's one combined zip as a normal browser download. Refusal/wait rules match the per-take download above.</p>
 <h2 id="playback-tab">Playback tab<a class="headerlink" href="#playback-tab" title="Permanent link">#</a></h2>
 <p><img alt="The Playback tab" src="../images/gui-playback.png" /></p>
 <p>Reviews a take's frames, decoded live from the CinemaDNG files, at the settings' conform frame rate. Fully covered in <a href="../playback/">Playback</a> — including the storage-contention lockout that holds playback while a take is recording or its buffer is still flushing.</p>
-<h2 id="live-view-tab">Live view tab<a class="headerlink" href="#live-view-tab" title="Permanent link">#</a></h2>
-<p>Embeds the main <a href="../web-gui/">Web GUI</a> in an iframe — the same live image, ISO/shutter/fps/WB controls and record button, without leaving the settings editor. Open it in a full tab if the controls feel cramped here.</p>
-<p>The <a href="../web-gui/">EXPERIMENT drawer</a> is open by default in this pane, where having every remaining control to hand is the point of it, and closed on the full page, which is the shooting screen.</p>
-<p>For the picture on its own with nothing drawn over it, use port 8000 instead of 5000 (<code>8001</code> for a second sensor).</p>
+<h2 id="the-live-view-launcher">The live-view launcher<a class="headerlink" href="#the-live-view-launcher" title="Permanent link">#</a></h2>
+<p>A circular button fixed to the bottom-right corner of the page (<code>#cinepiLiveLauncher</code>), on every tab rather than a tab of its own. It replaced the settings editor's old embedded Live view tab, which ran the main <a href="../web-gui/">Web GUI</a> in an iframe.</p>
+<p>With one camera detected it is a single button that opens the live Web GUI at <code>http://cinepi.local:5000</code> — the same shooting screen a full tab would show, with the <a href="../web-gui/">EXPERIMENT drawer</a> and the record button. With two cameras it instead shows three small buttons (cam0, cam1, combined); whichever source the Web GUI is currently previewing is highlighted.</p>
+<p>Unlike the old embedded tab, following the launcher navigates away from the settings editor rather than showing the live image inline. For the picture on its own with nothing drawn over it, use port 8000 instead of 5000 (<code>8001</code> for a second sensor).</p>
 </div>
 
             </div>

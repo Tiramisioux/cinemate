@@ -72,6 +72,8 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../raspberry-pi-models/">Raspberry Pi models</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
@@ -130,7 +132,7 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#imx283-and-imx585-sensor-support">IMX283 and IMX585 sensor support</a>
         <ul>
-    <li class="toctree-l4"><a class="reference internal" href="#cinemate-imx283-and-imx585-tuning-overrides">CineMate IMX283 and IMX585 tuning overrides</a>
+    <li class="toctree-l4"><a class="reference internal" href="#cinemate-imx585-tuning-overrides">CineMate IMX585 tuning overrides</a>
     </li>
     <li class="toctree-l4"><a class="reference internal" href="#ir-filter-switch-script">IR filter switch script</a>
     </li>
@@ -545,13 +547,13 @@ EOF
 <h3 id="imx283-and-imx585-sensor-support">IMX283 and IMX585 sensor support<a class="headerlink" href="#imx283-and-imx585-sensor-support" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>dkms<span class="w"> </span>-y
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/imx283-v4l2-driver.git<span class="w"> </span>--branch<span class="w"> </span><span class="m">6</span>.12.y
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/imx283-v4l2-driver.git<span class="w"> </span>--branch<span class="w"> </span>cinemate-modes
 <span class="nb">cd</span><span class="w"> </span>imx283-v4l2-driver/
 ./setup.sh
 sudo<span class="w"> </span>dkms<span class="w"> </span>autoinstall<span class="w"> </span>-k<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>uname<span class="w"> </span>-r<span class="k">)</span><span class="s2">"</span>
 <span class="nb">cd</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/imx585-v4l2-driver.git<span class="w"> </span>--branch<span class="w"> </span>cinemate-7modes
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/imx585-v4l2-driver.git<span class="w"> </span>--branch<span class="w"> </span>cinemate-modes
 <span class="nb">cd</span><span class="w"> </span>imx585-v4l2-driver/
 ./setup.sh
 sudo<span class="w"> </span>dkms<span class="w"> </span>autoinstall<span class="w"> </span>-k<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>uname<span class="w"> </span>-r<span class="k">)</span><span class="s2">"</span>
@@ -559,24 +561,29 @@ sudo<span class="w"> </span>dkms<span class="w"> </span>autoinstall<span class="
 </code></pre></div>
 <div class="admonition note">
 <p>The IMX283 and IMX585 DKMS drivers are Tiramisioux forks of Will Whang's
-(<a href="https://github.com/Tiramisioux/imx283-v4l2-driver">imx283</a> <code>6.12.y</code>, adding UHD 4K 10-bit and
-2.7K 16:9 12-bit; <a href="https://github.com/Tiramisioux/imx585-v4l2-driver">imx585</a> <code>cinemate-7modes</code>,
-three SDR and four ClearHDR modes). Both pins are verified on CineMate hardware. For
-<code>imx585_mono</code> the installer also applies <code>scripts/patch-rp1-cfe.sh</code>, without which mono 16-bit
-capture records garbage — see <a href="../clear-hdr/#mono-sensor-imx585_mono">ClearHDR</a>.</p>
+(<a href="https://github.com/Tiramisioux/imx283-v4l2-driver">imx283</a> <code>cinemate-modes</code>, merging <code>6.12.y</code>
+and adding UHD 4K 10-bit and 2.7K 16:9 12-bit; <a href="https://github.com/Tiramisioux/imx585-v4l2-driver">imx585</a>
+<code>cinemate-modes</code>, three SDR and four ClearHDR modes). Both forks' <code>cinemate-modes</code> branch also adds
+a 14-ratio aspect-ratio crop family; on the imx585 the 16-bit ClearHDR modes in that family are
+unbinned only, because a cropped binned 16-bit ClearHDR readout returns the sensor's black-level
+pedestal instead of an image (confirmed on hardware 2026-09-21, see
+<code>cinemate-handbook/lessons/hardware-log.md</code>) -- the original, non-cropped 1920x1100 binned HD entry
+is unaffected. The imx585 pin is verified on CineMate hardware, including the 2026-09-21
+WP-585-8 takes; the imx283 pin is desk-checked only and its hardware gate has not run yet.
+For <code>imx585_mono</code> the installer also applies <code>scripts/patch-rp1-cfe.sh</code>, without which mono
+16-bit capture records garbage — see <a href="../clear-hdr/#mono-sensor-imx585_mono">ClearHDR</a>.</p>
 </div>
-<h4 id="cinemate-imx283-and-imx585-tuning-overrides">CineMate IMX283 and IMX585 tuning overrides<a class="headerlink" href="#cinemate-imx283-and-imx585-tuning-overrides" title="Permanent link">#</a></h4>
-<p>These commands overlay CineMate's local IMX283, IMX585 and IMX585 mono tuning files into the <code>libcamera</code> source tree and the installed IPA directories so the runtime stays aligned with CineMate's defaults. All three override files are <code>pisp</code>-target (Pi 5 / PiSP ISP), so they are installed only into the <code>pisp</code> dirs — copying them into the <code>vc4</code> (Pi 4) dirs would apply the wrong hardware config and overwrite the stock <code>bcm2835</code>-target <code>imx283.json</code> that Pi 4 needs.</p>
+<h4 id="cinemate-imx585-tuning-overrides">CineMate IMX585 tuning overrides<a class="headerlink" href="#cinemate-imx585-tuning-overrides" title="Permanent link">#</a></h4>
+<p>These commands overlay CineMate's local IMX585 and IMX585 mono tuning files into the <code>libcamera</code> source tree and the installed IPA directories so the runtime stays aligned with CineMate's defaults. Both override files are <code>pisp</code>-target (Pi 5 / PiSP ISP), so they are installed only into the <code>pisp</code> dirs — copying them into the <code>vc4</code> (Pi 4) dirs would apply the wrong hardware config.</p>
+<p>IMX283 is deliberately <strong>not</strong> overridden: libcamera already ships a calibrated <code>imx283.json</code> (14 algorithms, measured CCMs, a 16-point <code>ct_curve</code>) at <code>$LIBCAMERA_DIR/src/ipa/rpi/pisp/data/imx283.json</code>, and CineMate must not clobber it. An earlier CineMate release did install a 5-algorithm stub there (<code>bayes: 0</code>, no <code>ct_curve</code>) that produced a 2.70x blue AWB gain and a magenta image in both the preview and the DNG — see <code>development/imx283-active-size/ROUND2.md</code>, Defect A. If you installed that release, <code>git checkout</code> restores the tracked source-tree copy, and you still need to reinstall it over the shadowing copy at <code>/usr/local/share/libcamera/ipa/rpi/pisp/imx283.json</code> by hand (that path is not git-tracked and nothing overlays it automatically any more).</p>
 <div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span>dir<span class="w"> </span><span class="k">in</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data<span class="p">;</span><span class="w"> </span><span class="k">do</span>
 <span class="w">  </span>install<span class="w"> </span>-d<span class="w"> </span>-m<span class="w"> </span><span class="m">755</span><span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">"</span>
-<span class="w">  </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>/home/pi/cinemate/resources/tuning_files/imx283.json<span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">/imx283.json"</span>
 <span class="w">  </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>/home/pi/cinemate/resources/tuning_files/imx585.json<span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">/imx585.json"</span>
 <span class="w">  </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>/home/pi/cinemate/resources/tuning_files/imx585_mono.json<span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">/imx585_mono.json"</span>
 <span class="k">done</span>
 
 <span class="k">for</span><span class="w"> </span>dir<span class="w"> </span><span class="k">in</span><span class="w"> </span>/usr/local/share/libcamera/ipa/rpi/pisp<span class="p">;</span><span class="w"> </span><span class="k">do</span>
 <span class="w">  </span>sudo<span class="w"> </span>install<span class="w"> </span>-d<span class="w"> </span>-m<span class="w"> </span><span class="m">755</span><span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">"</span>
-<span class="w">  </span>sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>/home/pi/cinemate/resources/tuning_files/imx283.json<span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">/imx283.json"</span>
 <span class="w">  </span>sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>/home/pi/cinemate/resources/tuning_files/imx585.json<span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">/imx585.json"</span>
 <span class="w">  </span>sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">644</span><span class="w"> </span>/home/pi/cinemate/resources/tuning_files/imx585_mono.json<span class="w"> </span><span class="s2">"</span><span class="nv">$dir</span><span class="s2">/imx585_mono.json"</span>
 <span class="k">done</span>

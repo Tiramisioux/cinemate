@@ -72,6 +72,8 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../raspberry-pi-models/">Raspberry Pi models</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
@@ -180,6 +182,16 @@
 <td><strong>Bare terminal after boot, no CineMate error</strong></td>
 <td>CineMate never started. The systemd unit failed <em>before</em> <code>main.py</code> ran — almost always because <code>/etc/systemd/system/cinemate-autostart.service</code> is an old copy with the strict camera-ready gate, and a <code>git pull</code> does not update it</td>
 <td>The unit and the <code>/usr/local/bin/</code> helpers are <strong>copied</strong> by <code>sudo make install</code>, not symlinked. Run <code>cd /home/pi/cinemate &amp;&amp; sudo make install &amp;&amp; sudo systemctl daemon-reload</code>, then reboot. Confirm with <code>grep ExecStartPre /etc/systemd/system/cinemate-autostart.service</code> — it must read <code>ExecStartPre=-/usr/local/bin/camera-ready.sh</code>, with the leading <code>-</code>. Distinguish this from a Python startup crash: a crash prints a red <code>CineMate crashed during startup</code> block on <code>tty1</code> first; this failure prints nothing at all. See <a href="../installation-steps/">Installation</a>.</td>
+</tr>
+<tr>
+<td><strong>Black preview, and the log says <code>Camera frontend has timed out</code></strong></td>
+<td>The sensor answers on I2C but sends no frames: the ribbon, the camera port, or the carrier's camera jumpers. The mode list still looks normal, so this is easy to mistake for a software fault</td>
+<td>Power off and reseat the ribbon at both ends. On a CM4, put a 4-lane sensor on <code>cam1</code> and use the overlay without <code>,cam0</code>. Check the camera jumpers on the carrier (<code>J6</code> on the official IO board). See <a href="../raspberry-pi-models/">Raspberry Pi models</a>.</td>
+</tr>
+<tr>
+<td><strong>Black band down the left edge of the preview (imx283)</strong></td>
+<td>The sensor's optical-black columns. CineMate crops them from the preview and marks them in the DNG, but only if the installed <code>cinepi-raw</code> binary is new enough. A <code>git pull</code> updates the source, not the binary</td>
+<td>Check the binary: <code>strings $(which cinepi-raw) \| grep -c "Preview OB compensation"</code>. <code>0</code> means it predates the fix. Update with <code>cinemate-update.sh</code>, which rebuilds what changed, or rebuild by hand: <code>cd ~/cinepi-raw &amp;&amp; meson compile -C build &amp;&amp; sudo meson install -C build</code>. DNGs recorded on the old binary still carry the band.</td>
 </tr>
 <tr>
 <td><strong>Recording won't start / no storage</strong></td>

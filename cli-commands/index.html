@@ -72,6 +72,8 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../raspberry-pi-models/">Raspberry Pi models</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
@@ -498,6 +500,12 @@
 <td>0/1 or none</td>
 <td><code>set_shutter_a_sync_mode</code></td>
 <td>Enable exposure-sync mode, keeping exposure time constant across fps changes. Pots and encoders then step in <code>arrays.shutter_a.sync_increment</code> (0.1° default), independent of <code>free_increment</code>.</td>
+</tr>
+<tr>
+<td><code>set sync warnings [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set_sync_warnings_enabled</code></td>
+<td>Show or hide the SYNC box/flash on both GUIs. Display-only: <code>frames_in_sync</code> keeps being judged, logged, and used by the end-of-take analysis exactly the same either way — this never affects recording integrity, only whether the operator sees the warning. Omit the value to toggle. Default on.</td>
 </tr>
 <tr>
 <td><code>set iso lock [0/1]</code></td>

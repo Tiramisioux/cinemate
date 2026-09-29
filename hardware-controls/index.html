@@ -72,6 +72,8 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../raspberry-pi-models/">Raspberry Pi models</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
@@ -441,12 +443,49 @@ GPIO 7 is physical pin 26, and GPIO 21 is physical pin 40. Full interactive refe
 ships it <code>true</code>; set it to <code>false</code> to keep a row's wiring on file while switching it off. A row
 with no <code>enabled</code> key at all is on.</p>
 </div>
+<p>Two switches sit alongside the gesture lines, both off by default:</p>
+<table>
+<thead>
+<tr>
+<th>Switch</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Reverse</strong></td>
+<td>Swaps which physical turn gpiozero reports as clockwise for this encoder, so <strong>Rotate CW</strong>'s command fires on what used to be the counter-clockwise turn, and vice versa. Which command is bound to which line does not change -- only which turn triggers it.</td>
+</tr>
+<tr>
+<td><strong>Wrap around</strong></td>
+<td>Passed on to whichever command <strong>Rotate CW</strong>/<strong>Rotate CCW</strong> calls, if that command accepts it. At either end of a setting's range, one more click wraps to the other end instead of stopping. A command that is not one of the <code>inc_</code>/<code>dec_</code> setting steppers below ignores Wrap for this row and says so in the log ("takes no wrap argument") rather than doing nothing silently.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Wrap only changes this encoder</p>
+<p><code>iso</code>, <code>shutter_a</code>, <code>shutter_a_nom</code>, <code>fps</code> and the four HDR settings clamp at the ends by default
+everywhere; turning Wrap on here makes them wrap around <em>for this encoder only</em> -- <code>set iso</code> from
+the CLI, the web API and a pot still clamp. <code>wb</code>, <code>zoom</code> and <code>resolution</code> are the other way round:
+they have always wrapped unconditionally, so turning Wrap <strong>off</strong> here now clamps them instead, a
+change from earlier CineMate versions for this encoder specifically -- every other surface (CLI,
+web API, pots) keeps wrapping those three regardless of this switch.</p>
+</div>
+<p><code>hardware_controls.rotary_encoders[]</code> carries these as <code>"reverse": true/false</code> and <code>"wrap": true/false</code>;
+absent is <code>false</code> for both.</p>
 <h3 id="the-adafruit-quad-rotary-encoder-i2c-board">The Adafruit Quad Rotary Encoder i²c board<a class="headerlink" href="#the-adafruit-quad-rotary-encoder-i2c-board" title="Permanent link">#</a></h3>
 <p>Sits below the GPIO in list with its own <strong>+ Add encoder</strong>. Its rows address the board's four encoders, not GPIO pins, so the left column offers <strong>None</strong> and <strong>Encoder 0</strong> through <strong>Encoder 3</strong>.</p>
 <p><img alt="One dial of the quad rotary board" src="../images/gui-quad-rotary-row.png" /></p>
 <p><strong>+ Add encoder</strong> claims the lowest free encoder index. Set the <strong>Turn</strong> line, what rotating the dial cycles, then add button gestures with <strong>+ Add</strong> as on a GPIO button.</p>
 <p><strong>Turn</strong> offers <strong>Nothing</strong>, <strong>ISO</strong>, <strong>Shutter angle</strong>, <strong>Frame rate</strong>, <strong>White balance</strong>, <strong>Resolution</strong>, <strong>Preview zoom</strong>, <strong>Nominal shutter angle</strong>, <strong>HDR threshold low</strong>, <strong>HDR threshold high</strong>, <strong>HDR blend</strong>, <strong>HDR gain adder</strong>.</p>
 <p>The push button below <strong>Turn</strong> takes the full button grammar.</p>
+<p>Two switches ride the <strong>Turn</strong> line beside the setting dropdown, off by default and set per channel --
+encoder 0 can wrap while encoder 1 does not. Same two switches and the same semantics as the GPIO
+rotary encoder's above: <strong>Reverse</strong> flips which way this dial's turn counts as positive; <strong>Wrap
+around</strong> is passed to the channel's <code>inc_</code>/<code>dec_</code> pair, so it wraps <code>iso</code>/<code>shutter_a</code>/etc that normally
+clamp, and -- when off -- clamps <code>wb</code>/<code>zoom</code>/<code>resolution</code> that normally wrap. <code>input_peripherals.
+quad_rotary_controller.encoders["0".."3"]</code> carries these as <code>"reverse": true/false</code> and
+<code>"wrap": true/false</code>; absent is <code>false</code> for both.</p>
 <p>With all four configured, <strong>+ Add encoder</strong> reports "All four encoders are already configured". The stock file configures all four encoders and ships the board on: <code>input_peripherals.quad_rotary_controller.enabled</code> is <code>true</code>, and CineMate only sets the board up when it is. Set it to <code>false</code> if you are not running the board.</p>
 <h3 id="gpio-out-tally-and-slate-tone">GPIO out: tally and slate tone<a class="headerlink" href="#gpio-out-tally-and-slate-tone" title="Permanent link">#</a></h3>
 <div class="admonition warning">

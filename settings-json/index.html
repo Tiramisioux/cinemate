@@ -72,6 +72,8 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../raspberry-pi-models/">Raspberry Pi models</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">settings.jsonc</a>
@@ -89,6 +91,8 @@
     <li class="toctree-l2"><a class="reference internal" href="#grove-hat-potentiometers">Grove HAT potentiometers</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#resolution-sensor">Resolution &amp; sensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#aspect-ratios">Aspect ratios</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#dng-thumbnails">DNG thumbnails</a>
         <ul>
@@ -360,6 +364,10 @@ a rig that depends on them.</p>
 </thead>
 <tbody>
 <tr>
+<td>Sync warnings</td>
+<td>Shows the SYNC box and screen flash on both GUIs when a take drifts out of sync. Default on. Off is display-only: <code>frames_in_sync</code> is still judged, logged, and used by the end-of-take analysis exactly the same either way, so nothing about recording integrity changes. <code>settings.sync_warnings_enabled</code>, CLI <code>set sync warnings [0/1]</code>.</td>
+</tr>
+<tr>
 <td>Auto storage pre-roll</td>
 <td>Records and discards a short test clip at startup and on each storage mount, priming the card. Never becomes the "latest recording". Default on. Off skips only the automatic runs; CLI <code>storage preroll</code> still works (<a href="../storage-preroll/">Storage pre-roll</a>).</td>
 </tr>
@@ -395,8 +403,8 @@ a rig that depends on them.</p>
 and the Playback pane's speed, so a take shot above it plays slow motion unless <strong>Use conform
 frame rate</strong> is off there. DNG timecode uses the actual capture rate.</p>
 </div>
-<p>These map to <code>system.storage.auto_preroll</code>, <code>settings.conform_frame_rate</code>, <code>settings.light_hz</code> and
-<code>settings.sync_tolerances</code>.</p>
+<p>These map to <code>system.storage.auto_preroll</code>, <code>settings.conform_frame_rate</code>, <code>settings.light_hz</code>,
+<code>settings.sync_warnings_enabled</code> and <code>settings.sync_tolerances</code>.</p>
 <h2 id="value-steps">Value steps<a class="headerlink" href="#value-steps" title="Permanent link">#</a></h2>
 <p><a id="arrays"></a></p>
 <p><img alt="Value steps section of the CineMate settings editor" src="../images/gui-steps.png" /></p>
@@ -706,6 +714,47 @@ off.</p>
 <p class="admonition-title">Greyed rows</p>
 <p>A row the attached sensor has no mode for is dimmed — 1.5K, 3K, 5.5K and 10-bit on an IMX585, for instance. Dimmed, not disabled: the switch still flips, still saves and applies the moment a sensor that has those modes is fitted, the same way the Grove HAT's channel assignments survive the HAT being unplugged. With no camera detected at all, nothing is dimmed.</p>
 </div>
+<h2 id="aspect-ratios">Aspect ratios<a class="headerlink" href="#aspect-ratios" title="Permanent link">#</a></h2>
+<p><a id="aspect_ratios"></a></p>
+<p>Filters which ratios the resolution dial offers, independent of <em>Resolutions offered</em> and <em>Bit depths offered</em> above, which filter by size and depth instead.</p>
+<table>
+<thead>
+<tr>
+<th>Behaviour</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stored per sensor</td>
+<td>A ratio or per-mode choice you save is written to <code>settings_&lt;sensor&gt;.jsonc</code>, next to <code>settings.jsonc</code> on the Pi. Swap the physical sensor and its own file applies — nothing carries over from a different sensor.</td>
+</tr>
+<tr>
+<td>The file appears on save, not before</td>
+<td>With no <code>settings_&lt;sensor&gt;.jsonc</code> yet, the sensor runs on the stock rule below. Change and save a ratio or mode for that sensor and the file is written for the first time.</td>
+</tr>
+<tr>
+<td>Stock rule</td>
+<td>Ratios: 1.33:1 and 1.78:1, whichever the sensor's own modes actually reach, plus its full frame — plus, on a sensor whose only way to reach a useful 2K mode is a ratio it otherwise wouldn't offer by default, that ratio too (see the IMX477 example). Modes: on when the driver reports 1×1 binning, or when it reports no binning at all — the HQ camera (IMX477) reports none, so every one of its modes is on by default, except as that same example describes.</td>
+</tr>
+<tr>
+<td>Only what the sensor offers</td>
+<td>The ratio list shows only ratios at least one of the sensor's own modes reaches. There is no "nearest" stand-in for a ratio it does not have.</td>
+</tr>
+<tr>
+<td>Reset to stock</td>
+<td>Deletes <code>settings_&lt;sensor&gt;.jsonc</code> for that sensor. It goes back to the stock rule above on the next start.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition example">
+<p class="admonition-title">IMX477 (HQ camera), stock</p>
+<p>1.33:1 and 1.89:1 are on by default. 2028×1080 is on; its sibling 4056×2160 (same 1.89:1 ratio, the 4K mode) is offered but off until you tick it yourself.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">settings.jsonc still carries the old per-camera lists</p>
+<p><code>image_capture.aspect_ratios</code>, <code>enabled_modes</code> and <code>custom_modes</code> in <code>settings.jsonc</code> are the older, pre-per-sensor-file format. CineMate reads them only for a sensor with no <code>settings_&lt;sensor&gt;.jsonc</code> of its own, and the settings editor moves a camera's entries out of <code>settings.jsonc</code> and into its per-sensor file the first time you save for that camera.</p>
+</div>
 <h2 id="dng-thumbnails">DNG thumbnails<a class="headerlink" href="#dng-thumbnails" title="Permanent link">#</a></h2>
 <p><a id="dng-thumbnails"></a></p>
 <p>Every DNG can carry a second image (IFD1) alongside the raw frame, so the settings editor's <a href="../playback/#the-embedded-thumbnail">Playback pane</a> can show a take without decoding the much heavier raw frame. Every frame in a take pays for whichever choice is made — the bytes and the CPU cost below apply to every single frame recorded, not once per take.</p>
@@ -937,8 +986,11 @@ single, double and triple click, and a hold, each running a different command.</
 <p>The stock image ships six controls (two record buttons, a multi-gesture button, two switches and a
 rotary encoder) and the four dials of the quad rotary board. The GPIO encoder and the quad board each
 carry an <code>enabled</code> flag, both <code>true</code> as shipped; set either to <code>false</code> to keep the mapping on file
-while switching the device off. Creating a control, choosing its command and argument, and moving it
-to another pin are covered in <a href="../hardware-controls/">Additional hardware</a>.</p>
+while switching the device off. Every GPIO rotary encoder and every quad-board channel also carries its
+own <code>reverse</code> and <code>wrap</code> booleans (both <code>false</code> as shipped): Reverse swaps which turn direction
+increases the value, Wrap makes one more click at either end of the range land on the other end
+instead of stopping. Creating a control, choosing its command and argument, and moving it to another
+pin are covered in <a href="../hardware-controls/">Additional hardware</a>.</p>
 <p>These map to <code>hardware_controls</code> and <code>input_peripherals</code>.</p>
 <h2 id="gpio-out">GPIO out<a class="headerlink" href="#gpio-out" title="Permanent link">#</a></h2>
 <p><a id="hardware_outputs"></a></p>
@@ -1049,7 +1101,7 @@ its name in capitals plus the raw value, so a typo shows as <code>TYPO: N/A</cod
 </tr>
 <tr>
 <td>Restart CineMate</td>
-<td>Real restart. Sends <code>restart cinemate</code> to the page API, the same dispatcher entry as the CLI and the default GPIO 13 double-click. systemd restarts <code>cinemate-autostart</code>, ~10 s per the page. Recording stops, page unresponsive until the service returns. On failure: "Restart failed" toast, nothing restarted.</td>
+<td>Real restart: posts to the settings editor's own <code>POST /settings-editor/api/power</code> (<code>restart_cinemate</code>), which schedules <code>CinePiController.restart_cinemate()</code> — the same method the CLI's <code>restart cinemate</code> and the default GPIO 13 double-click call, just not through their shared dispatcher. systemd restarts <code>cinemate-autostart</code>, ~10 s per the page. Recording stops, page unresponsive until the service returns. On failure: "Restart failed" toast, nothing restarted.</td>
 </tr>
 <tr>
 <td>Log console</td>
@@ -1057,17 +1109,21 @@ its name in capitals plus the raw value, so a typo shows as <code>TYPO: N/A</cod
 </tr>
 <tr>
 <td>Reboot Pi</td>
-<td>Real reboot, and only a reboot: it sends the <code>reboot</code> command through the same dispatcher as the CLI and the GPIO 13 triple-click, and does <strong>not</strong> write <code>config.txt</code> — unsaved edits on Boot config are left where they are. Recording stops first. The console reports the Pi answering again; allow about 25 seconds. On failure: "Reboot failed" toast, nothing rebooted.</td>
+<td>Real reboot, and only a reboot: same <code>/settings-editor/api/power</code> route (<code>reboot</code>), which does <strong>not</strong> write <code>config.txt</code> — unsaved edits on Boot config are left where they are. Recording stops first. The console reports the Pi answering again; allow about 25 seconds. On failure: "Reboot failed" toast, nothing rebooted.</td>
+</tr>
+<tr>
+<td>Shut down Pi</td>
+<td>Powers the Pi off — the same route (<code>shutdown</code>). Asks you to confirm first. Once it answers, the Pi is on its way down; the console counts roughly 20 seconds and stops on "power can be removed" without polling for the Pi to come back, because it is not coming back on its own — only someone at the rig, by cutting and restoring power, can do that. Recording stops first. On failure: "Shutdown failed" toast, nothing powered off.</td>
 </tr>
 </tbody>
 </table>
 <div class="admonition warning">
 <p class="admonition-title">An older install may refuse to reboot itself</p>
-<p>CineMate runs as <code>pi</code>, so rebooting needs a sudoers grant — and until this release its
-drop-in never had one. On a Pi whose distro <code>NOPASSWD</code> rule is still in place nothing
-changes; where it had been removed, every reboot path failed silently. Re-run
-<code>cinemate-install.sh</code> to add the grant. Both buttons now say so instead of animating a
-reboot that will not happen.</p>
+<p>CineMate runs as <code>pi</code>, so rebooting or shutting down needs a sudoers grant — and until
+this release its drop-in never had one. On a Pi whose distro <code>NOPASSWD</code> rule is still in
+place nothing changes; where it had been removed, every reboot path failed silently. Re-run
+<code>cinemate-install.sh</code> to add the grant. Every reboot/shutdown button now says so instead of
+animating an action that will not happen.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">config.txt reboots itself</p>

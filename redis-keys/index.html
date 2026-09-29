@@ -72,6 +72,8 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../raspberry-pi-models/">Raspberry Pi models</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
@@ -542,6 +544,12 @@ transition instead of a stale value.</p>
 <td>CineMate (RedisListener)</td>
 <td><code>1</code> if live/final expected vs recorded frame counts are within configured sync tolerance; defaults are +/- 2 frames live and +/- 1 frame after buffered writes flush</td>
 <td>No</td>
+</tr>
+<tr>
+<td>sync_warnings_enabled</td>
+<td>CineMate</td>
+<td>Display-only: <code>1</code> lets the SYNC box/flash show on the HDMI and web GUIs. <code>frames_in_sync</code> above is judged, logged and analysed the same either way — this never suppresses that, only the on-screen indicator. <code>set sync warnings [0/1]</code></td>
+<td>Yes</td>
 </tr>
 <tr>
 <td>recording_time</td>

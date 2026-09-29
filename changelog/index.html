@@ -72,6 +72,8 @@
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../raspberry-pi-models/">Raspberry Pi models</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">settings.jsonc</a>
@@ -207,6 +209,15 @@
 <p>Release notes for CineMate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
 <ul>
+<li>
+<p><strong>New docs page: Raspberry Pi models</strong> — what changes between the Pi 5 / CM5 and the Pi 4 / CM4 families: camera connector and cable, ports and lane counts, packing, ClearHDR and overclock support, and the CM4 carrier-board traps (<code>cam0</code> is 2-lane on the CM4 IO board, camera jumpers on <code>J6</code>). Written after an IMX283 on a CM4 showed a black preview with <code>Camera frontend has timed out</code> on <code>cam0</code> and worked on <code>cam1</code>. See <a href="../raspberry-pi-models/">Raspberry Pi models</a>.</p>
+</li>
+<li>
+<p><strong>Troubleshooting: two new rows</strong> — a black preview with <code>Camera frontend has timed out</code> (cable, port or carrier jumpers, not software), and the imx283 optical-black band down the left edge, which means the installed <code>cinepi-raw</code> binary is older than its source. See <a href="../troubleshooting/">Troubleshooting</a>.</p>
+</li>
+<li>
+<p><strong>Aspect-ratio and per-mode sensor settings are now kept per sensor</strong> — saving a ratio toggle or a mode selection writes <code>settings_&lt;sensor&gt;.jsonc</code> next to <code>settings.jsonc</code>, instead of <code>image_capture.aspect_ratios</code>/<code>enabled_modes</code>/<code>custom_modes</code> there. Swapping the physical sensor no longer risks one sensor's saved choice leaking onto another through the old <code>"default"</code> carrier — a sensor with no per-sensor file simply runs on the stock rule (1.33:1 and 1.78:1 where it has them, plus its full frame; 1×1 modes on, every mode when the driver reports no binning) and only ever offers the ratios it actually has, never a "closest" stand-in. <code>settings.jsonc</code>'s three keys are read as a fallback for a sensor with no file of its own, and a save moves that sensor's entries out of <code>settings.jsonc</code> and into its own file. See <a href="../settings-json/#aspect_ratios">Aspect ratios</a>. A release image (<code>scripts/make-release-image.sh</code>) now strips any <code>settings_*.jsonc</code> before imaging and restores them afterward, the same way it already does for <code>settings.jsonc</code> and <code>config.txt</code>.</p>
+</li>
 <li>
 <p><strong>Saving from the settings editor no longer deletes the settings it has no field for</strong> — the page built the whole saved document out of its own controls, so every key without one (<code>input_peripherals.pots</code>, <code>system.https.*</code>, <code>system.web_api.*</code>, the <code>arrays.hdr_*</code> tables, <code>image_capture.hdr.iso_max</code>, <code>output_peripherals.oled.width</code>/<code>height</code>, <code>sensors.raw_buffer_count</code>, <code>$schema</code>, and the rest of "<a href="../settings-json/#settings-with-no-field-on-this-page">Settings with no field on this page</a>") was dropped from <code>settings.jsonc</code> and left to CineMate's built-in defaults. A save now merges the page's values over the file on disk, on the server as well as in the browser, so an unrendered key keeps what it said. This is what cost a camera its <code>image_capture.hdr.imx585_clear_hdr_12bit</code> on 2026-09-15 and switched 12-bit ClearHDR back on: a missing key there means "on". The lists the page does build in full — GPIO in/out, quad rotary encoders, per-mode fps ceilings, value steps — still replace what they replace, so deleting an entry still deletes it. Also: an explicit <code>input_peripherals.quad_rotary_controller.enabled: false</code> is no longer flipped back to <code>true</code> by an unrelated save.</p>
 </li>

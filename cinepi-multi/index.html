@@ -169,7 +169,6 @@
 <li>per-camera HDMI output mapping from the <code>output</code> section</li>
 <li>the low-resolution preview size used by CinePi-raw</li>
 </ul>
-<p>The preview size is based on <code>hdmi_display.width</code> and <code>hdmi_display.height</code>, but if a framebuffer is already active, CineMate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped <code>1920x1080</code> preview into a smaller active mode.</p>
 <p>On Raspberry Pi 4 / Pi 400 / CM4, CineMate switches IMX296 and IMX477 launches to packed raw mode (<code>P</code>), for example <code>1456:1088:10:P</code> for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (<code>U</code>). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.</p>
 <p>In multi-camera mode, the sensors are synced. The first process is launched with <code>--sync server</code> and the rest use <code>--sync client</code>. Only the primary process gets the on-screen preview rectangle; secondary cameras run with <code>--nopreview</code>.</p>
 </div>

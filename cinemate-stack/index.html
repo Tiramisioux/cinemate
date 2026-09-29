@@ -151,7 +151,6 @@
               
 <div class="markdown-body">
   <h1 id="the-cinemate-stack-explained">The CineMate stack explained<a class="headerlink" href="#the-cinemate-stack-explained" title="Permanent link">#</a></h1>
-<p>The camera is five pieces stacked bottom to top: a kernel driver on the sensor chip, libcamera handing finished frames up, <code>cinepi-raw</code> running the capture loop and writing the CinemaDNGs, Redis holding the live state, and CineMate owning everything you touch. CineMate and cinepi-raw are separate processes, and Redis serves as an "API"-layer between them.</p>
 <p><img alt="The CineMate camera stack, exploded" src="../images/camera-stack3.png" /></p>
 <h2 id="the-layers">The layers<a class="headerlink" href="#the-layers" title="Permanent link">#</a></h2>
 <table>
@@ -184,7 +183,7 @@
 </tr>
 <tr>
 <td>Redis</td>
-<td>An off-the-shelf in-memory key-value store with publish/subscribe channels</td>
+<td>In-memory key-value store with publish/subscribe channels</td>
 <td>Holding live state (<code>iso</code>, <code>fps</code>, <code>is_recording</code>, …), carrying control changes down on the <code>cp_controls</code> channel and per-frame stats up on <code>cp_stats</code></td>
 <td><a href="../redis-guide/">Redis API</a>, <a href="../redis-keys/">Redis key reference</a></td>
 </tr>
@@ -193,42 +192,6 @@
 <td>A Python program, <code>src/main.py</code></td>
 <td>All operator surfaces, storage handling, settings, and launching cinepi-raw</td>
 <td><a href="../simple-gui/">Simple GUI</a>, <a href="../web-gui/">Web GUI</a>, <a href="../cli-commands/">Terminal commands</a></td>
-</tr>
-</tbody>
-</table>
-<h2 id="following-a-setting-down-to-the-sensor">Following a setting down to the sensor<a class="headerlink" href="#following-a-setting-down-to-the-sensor" title="Permanent link">#</a></h2>
-<p>Picking <strong>800</strong> from the ISO selector in the web GUI takes six hops.</p>
-<table>
-<thead>
-<tr>
-<th>Hop</th>
-<th>What happens</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1. Browser</td>
-<td>Sends the CLI command line <code>set iso 800</code> as the plain-text body of <code>POST /api/v1/cmd</code>. Every web GUI control is a command string.</td>
-</tr>
-<tr>
-<td>2. Dispatcher</td>
-<td><code>CommandExecutor.handle_received_data()</code> longest-prefix matches <code>set iso</code> to <code>CinePiController.set_iso</code>, then takes a lock with a two-second timeout. On timeout the command is dropped and the API answers <code>503 err busy</code>. The CLI, the serial port and the settings editor all enter here.</td>
-</tr>
-<tr>
-<td>3. Controller</td>
-<td><code>set_iso()</code> returns early if the ISO lock is on. Otherwise it clamps 800 into the <code>iso_steps</code> range from <code>settings.jsonc</code> and writes to Redis.</td>
-</tr>
-<tr>
-<td>4. Redis</td>
-<td>The key <code>iso</code> is written and its <em>name</em> published on the <code>cp_controls</code> channel. A value that has not changed is not published, so a repeated command never reaches cinepi-raw.</td>
-</tr>
-<tr>
-<td>5. cinepi-raw</td>
-<td>Subscribed to <code>cp_controls</code>, it looks the published name up in a handler map, divides by 100 and sets <code>libcamera::controls::AnalogueGain</code>.</td>
-</tr>
-<tr>
-<td>6. libcamera</td>
-<td>Applies the gain to the following frames through the sensor driver.</td>
 </tr>
 </tbody>
 </table>
@@ -268,29 +231,7 @@
 </tr>
 </tbody>
 </table>
-<p><code>cinepi-raw</code> is not in that list. It has no unit of its own: CineMate launches it as a child
-process, one per detected sensor, and supervises it. Stop CineMate and the recorders stop with it.
-That is why a resolution or ClearHDR change can relaunch the recorder without anything at the
-systemd level noticing.</p>
-<p>The three services either side of CineMate are deliberately independent of it, because each one
-answers a question you need answered most when CineMate is the thing that broke:</p>
-<ul>
-<li><strong>The hotspot stays up.</strong> <code>wifi-hotspot.service</code> reconciles the access point on its own timer and
-  reads the credentials straight from <code>settings.jsonc</code>. NetworkManager also persists the profile
-  with autoconnect, so the network is back at boot before any Python has run. A CineMate that
-  crashes on startup is still reachable.</li>
-<li><strong>The recovery console stays up.</strong> <code>cinemate-recovery.service</code> runs as root on port <code>8080</code>, uses
-  the standard library only, and has no dependency on <code>cinemate-autostart.service</code>. It exists to
-  diagnose and repair a camera whose main program will not start, which is exactly when the
-  settings editor on port 5000 is unavailable.</li>
-<li><strong>Storage mounts itself.</strong> <code>storage-automount.service</code> reacts to udev events, so a drive
-  appearing or disappearing is handled whether or not CineMate is running.</li>
-</ul>
-<p>Restarting CineMate is therefore cheap and safe. It does not drop the hotspot, does not unmount the
-card, and does not take the recovery console with it. <code>restart cinemate</code> on the CLI, <strong>System →
-Restart CineMate</strong> in the settings editor, and a settings save all do the same thing. A reboot is
-only needed for <code>config.txt</code> changes, which the firmware reads at power-on.</p>
-<p>Full detail on each unit, including how to check and restart them: <a href="../system-services/">System
+<p>Fore more information on each unit, check <a href="../system-services/">System
 services</a>.</p>
 </div>
 

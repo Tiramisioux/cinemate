@@ -119,6 +119,8 @@
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#checking-available-options">Checking available options</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#listing-connected-cameras">Listing connected cameras</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#camera-modes">Camera modes</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#lowresolution-lores-stream">Low‑resolution (lores) stream</a>
@@ -190,8 +192,14 @@
 <div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>-h
 </code></pre></div>
 <p>This prints a long list of options supported by the application. It includes the standard parameters from <code>rpicam-apps</code> (such as resolution and exposure settings) plus additional flags specific to the CineMate.</p>
+<h2 id="listing-connected-cameras">Listing connected cameras<a class="headerlink" href="#listing-connected-cameras" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>cinepi-raw --list-cameras
+</code></pre></div>
+<p>For HDR modes:</p>
+<div class="highlight"><pre><span></span><code>cinepi-raw --list-cameras --hdr sensor
+</code></pre></div>
 <h2 id="camera-modes">Camera modes<a class="headerlink" href="#camera-modes" title="Permanent link">#</a></h2>
-<p>CinePi-Raw uses <strong>Libcamera</strong> to talk to your Raspberry Pi camera module. Each sensor supports one or more <em>modes</em>, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:</p>
+<p>CinePi-Raw uses Libcamera to talk to your Raspberry Pi camera module. Each sensor supports one or more <em>modes</em>, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:</p>
 <div class="highlight"><pre><span></span><code>--mode 2028:1080:12:U
 </code></pre></div>
 <ul>

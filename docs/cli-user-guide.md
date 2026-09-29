@@ -20,9 +20,21 @@ cinepi-raw -h
 
 This prints a long list of options supported by the application. It includes the standard parameters from `rpicam-apps` (such as resolution and exposure settings) plus additional flags specific to the CineMate.
 
+## Listing connected cameras
+
+```
+cinepi-raw --list-cameras
+```
+
+For HDR modes:
+
+```
+cinepi-raw --list-cameras --hdr sensor
+```
+
 ## Camera modes
 
-CinePi-Raw uses **Libcamera** to talk to your Raspberry Pi camera module. Each sensor supports one or more *modes*, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:
+CinePi-Raw uses Libcamera to talk to your Raspberry Pi camera module. Each sensor supports one or more *modes*, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:
 
 ```
 --mode 2028:1080:12:U

@@ -2,6 +2,14 @@
 
 The installer and CineMate image file comes with PiShrink preinstalled. This can be used for making compressed image file to backup your system.
 
+In the Raspberry Pi terminal, type
+
+```
+make-release-image
+```
+
+or run the script below:
+
 ```shell hl_lines="2 3"
 sudo bash -Eeuo pipefail -c '
   # Timestamp like 2025-07-19_19-38-33

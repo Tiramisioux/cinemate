@@ -14,10 +14,7 @@ The tab edits only the block CineMate owns, fenced by two marker lines:
 # <<< cinemate-install <<<
 ```
 
-A save rewrites the camera section (between `# ---- Camera section ----` and
-`# ---- End camera section ----`) and the `dtparam=i2c_arm=on` / `dtparam=i2s=on` / `dtparam=spi=on` / `dtparam=audio=on` / `dtoverlay=rp1-overclock` lines. Every other line, in the fence or outside it, is untouched. The camera section is replaced wholesale: the installer's five commented example blocks, one per sensor, collapse on the first save to `camera_auto_detect=` plus your overlay lines.
-
-Hand edits outside the fence survive this page and `cinemate-update.sh`, which never touches `config.txt`. They do not survive a re-run of `cinemate-install.sh`: `configure_boot_config()` rewrites the whole file as the managed block alone, copying the old one to the installer's backup directory.
+You can add your own settings outside the section, at the end of the file. 
 
 ![The config.txt tab of the CineMate settings editor](images/gui-config-txt.png)
 

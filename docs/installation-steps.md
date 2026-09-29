@@ -30,31 +30,9 @@ chmod +x cinemate-install.sh
 
 The installer defaults to an `imx477` on camera port `cam0`. The IMX283 and IMX585 drivers are installed either way, so you can change to your own sensor afterwards — in the browser, on the settings editor's [config.txt tab](config-txt.md), which writes the overlay and reboots for you.
 
-!!! note "Or change it by hand"
-
-    The same thing over SSH: run `editboot` (or `sudo nano /boot/firmware/config.txt`), uncomment the block for your sensor, comment out the others, and reboot. See [Boot config](config-txt.md#hand-edits).
-
-    Two cases still want the sensor named at install time: `SENSOR_MODEL=imx585_mono` also applies the `rp1-cfe` kernel patch that mono 16-bit ClearHDR needs, and `SENSOR_MODEL=imx585` also installs the IR filter helper. Neither happens when you switch sensor later.
-
 After installing, reboot the system and CineMate should start automatically.
 
-## Dependency files
-
-Python dependencies are split across four files:
-
-| File | Installed by | Contents |
-|---|---|---|
-| `requirements.txt` | the installer, always; CI's `test` job | Portable runtime deps — `flask`, `flask_socketio`, `numpy`, `pillow`, `psutil`, `pyserial`, `pyudev`, `redis`, `termcolor` |
-| `requirements-hardware.txt` | the installer, always | GPIO/I²C-only deps — `gpiozero`, `lgpio` (**not optional**, despite `INSTALL_ALT_GPIO_BACKEND`), the Adafruit/Grove libraries, `evdev`, `smbus2` |
-| `requirements-dev.txt` | not installed on the Pi | Local dev tooling |
-| `docs/requirements-docs.txt` | CI's docs build only | `mkdocs` and its plugins, kept out of the runtime set entirely |
-
-`versions.env` pairs a `cinemate` revision with the `cinepi-raw` revision the installer should
-clone alongside it (`CINEMATE_REPO_REF` / `CINEPI_RAW_REPO_REF`). Both are empty by default,
-which clones each repo's current default branch — set them to pin an install to a known-good
-pair of commits.
-
-## Manual install
+## Manual install starts here
 
 Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing.
 
@@ -63,13 +41,11 @@ sudo apt update -y
 sudo apt upgrade -y
 ```
 
-### Kernel baseline (Raspberry Pi 5 / CM5)
+### Kernel baseline
 
 CineMate pins the Pi 5 kernel to a validated baseline: **6.12.93+rpt**. Install it before building `libcamera`, `cinepi-raw`, or the IMX585 driver, and make the boot files stick in `/boot/firmware`.
 
 The baseline matters in both directions. Older kernels — including the previous 6.12.25 pin — ship an `rp1-cfe` driver that corrupts 16-bit CSI-2 capture, which breaks imx585 ClearHDR (10/12-bit recording is unaffected). The fixes landed mid-2025 (`cfe: Avoid unpack operation for 16-bit formats` plus a 16-bit hardware mismatch workaround), so any kernel from 6.12.93+rpt onward works; the pin keeps the fleet on one tested version.
-
-Skip this section on Pi 4.
 
 ```bash
 mkdir -p ~/kernel-baseline-6.12.93
@@ -102,13 +78,13 @@ After the reboot, verify the baseline before continuing:
 uname -r
 ```
 
-Expected output on Pi 5:
+Expected output:
 
 ```text
 6.12.93+rpt-rpi-2712
 ```
 
-The `-rpi-2712` flavour matters: if `uname -r` reports `-rpi-v8`, the Pi booted the generic 4K-page kernel instead of the copied `kernel_2712.img` — repeat the `update-initramfs`/`cp` steps above. Out-of-tree sensor modules (imx585, imx283) must be rebuilt whenever the kernel version changes.
+Then
 
 ```bash
 sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
@@ -130,14 +106,7 @@ sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev open
 sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -name "libtiff.so" | head -n 1) /usr/lib/aarch64-linux-gnu/libtiff.so.5 && export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH && sudo ldconfig
 ```
 
-!!! tip "Pi 5 overclock (optional)"
-    On a Raspberry Pi 5 you can raise the RP1 image-pipeline clock to unlock
-    higher imx585 ClearHDR frame rates. Do this **before** the libcamera build
-    below so the change is compiled in. See [Overclocking the Pi](overclocking.md)
-    — it changes one line in `controller.cpp` (`minPixelProcessingTime`) and adds
-    an RP1 device-tree overlay. The prebuilt CineMate image already ships this
-    libcamera build; only the RP1 overlay stays commented out in `config.txt`
-    until you opt in.
+
 
 ```shell
 git clone https://github.com/Tiramisioux/libcamera.git && \
@@ -256,13 +225,6 @@ chmod +x /home/pi/compile-raw.sh
 
 You can rerun `/home/pi/compile-raw.sh` later whenever you need to rebuild `cinepi-raw`. If you really do want a clean Meson reconfigure, run `FORCE_WIPE=1 /home/pi/compile-raw.sh`.
 
-The `cinepi-raw` build now also installs the matching `rpicam-*` utilities into `/usr/local/bin`. Verify that the local binary wins over the distro one:
-
-```bash
-command -v rpicam-hello
-/usr/local/bin/rpicam-hello --version
-```
-
 ### Seed Redis with white balance default keys
 
 ```
@@ -340,25 +302,7 @@ sudo dkms autoinstall -k "$(uname -r)"
 cd
 ```
 
-!!! note ""
-    The IMX283 and IMX585 DKMS drivers are Tiramisioux forks of Will Whang's
-    ([imx283](https://github.com/Tiramisioux/imx283-v4l2-driver) `cinemate-modes`, merging `6.12.y`
-    and adding UHD 4K 10-bit and 2.7K 16:9 12-bit; [imx585](https://github.com/Tiramisioux/imx585-v4l2-driver)
-    `cinemate-modes`, three SDR and four ClearHDR modes). Both forks' `cinemate-modes` branch also adds
-    a 14-ratio aspect-ratio crop family; on the imx585 the 16-bit ClearHDR modes in that family are
-    unbinned only, because a cropped binned 16-bit ClearHDR readout returns the sensor's black-level
-    pedestal instead of an image (confirmed on hardware 2026-09-21, see
-    `cinemate-handbook/lessons/hardware-log.md`) -- the original, non-cropped 1920x1100 binned HD entry
-    is unaffected. The imx585 pin is verified on CineMate hardware, including the 2026-09-21
-    WP-585-8 takes; the imx283 pin is desk-checked only and its hardware gate has not run yet.
-    For `imx585_mono` the installer also applies `scripts/patch-rp1-cfe.sh`, without which mono
-    16-bit capture records garbage — see [ClearHDR](clear-hdr.md#mono-sensor-imx585_mono).
-
 #### CineMate IMX585 tuning overrides
-
-These commands overlay CineMate's local IMX585 and IMX585 mono tuning files into the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with CineMate's defaults. Both override files are `pisp`-target (Pi 5 / PiSP ISP), so they are installed only into the `pisp` dirs — copying them into the `vc4` (Pi 4) dirs would apply the wrong hardware config.
-
-IMX283 is deliberately **not** overridden: libcamera already ships a calibrated `imx283.json` (14 algorithms, measured CCMs, a 16-point `ct_curve`) at `$LIBCAMERA_DIR/src/ipa/rpi/pisp/data/imx283.json`, and CineMate must not clobber it. An earlier CineMate release did install a 5-algorithm stub there (`bayes: 0`, no `ct_curve`) that produced a 2.70x blue AWB gain and a magenta image in both the preview and the DNG — see `development/imx283-active-size/ROUND2.md`, Defect A. If you installed that release, `git checkout` restores the tracked source-tree copy, and you still need to reinstall it over the shadowing copy at `/usr/local/share/libcamera/ipa/rpi/pisp/imx283.json` by hand (that path is not git-tracked and nothing overlays it automatically any more).
 
 ```bash
 for dir in /home/pi/libcamera/src/ipa/rpi/pisp/data; do
@@ -373,18 +317,6 @@ for dir in /usr/local/share/libcamera/ipa/rpi/pisp; do
   sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx585_mono.json "$dir/imx585_mono.json"
 done
 ```
-
-Every mode a sensor supports is listed in `resources/sensors.json`, so all of them stay available to the system. CineMate's stock `settings.jsonc` then exposes only the practical ones in the UI — for the IMX283 that is the ≥25 fps 2.7K and 4K crops (`k_steps: [3, 4]`). Add `5.5` to also show the IMX283 5K modes, or set `k_steps` to your sensor's sizes (for example `[1.5, 2, 4]` for IMX477). To check or edit the list, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/settings.jsonc` directly:
-
-```json
-"image_capture": {
-  "k_steps": [3, 4],
-  "bit_depths": [10, 12],
-  "custom_modes": {}
-}
-```
-
-Restart CineMate after changing `settings.jsonc`.
 
 #### IR filter switch script
 
@@ -412,10 +344,6 @@ sudo raspi-config nonint do_i2c 0
 sudo hostnamectl set-hostname cinepi
 ```
 
-`hostnamectl` does not touch `/etc/hosts`'s `127.0.1.1` line, so fix that separately, and
-install `avahi-daemon` so `<hostname>.local` actually resolves over mDNS — nothing does this
-by default; whether it works out of the box on a given image is down to chance (F-289):
-
 ```bash
 sudo sed -i -E 's/^127\.0\.1\.1[[:space:]].*/127.0.1.1\tcinepi/' /etc/hosts
 grep -q '^127\.0\.1\.1' /etc/hosts || echo -e '127.0.1.1\tcinepi' | sudo tee -a /etc/hosts
@@ -423,19 +351,13 @@ sudo apt install -y avahi-daemon libnss-mdns
 sudo systemctl enable --now avahi-daemon
 ```
 
-!!! note ""
-
-    You will find the pi as `cinepi.local` on the local network, or at the hotspot CineMate creates. If it still doesn't resolve from a particular device, that device's own network/mDNS resolver is the next thing to check — some guest Wi-Fi networks and VPNs block mDNS multicast entirely.
-
 ### Add camera modules to config.txt
 
 ```shell
 sudo nano /boot/firmware/config.txt
 ```
 
-Replace the file contents with the single managed-format CineMate block documented on **[Modifying config.txt](config-txt.md)** — that page is the canonical copy of the block. Uncomment the section for the sensor you are using (comment out the others) and set the physical camera port (`cam0` by default) to the connector your sensor is on. A clean install uses the IMX477 section on `cam0`.
-
-The one-click installer writes this same managed block automatically and backs up the previous file under `/home/pi/.cinemate-install-backups/`.
+Replace the file contents with the single managed-format CineMate block documented on **[Modifying config.txt](config-txt.md)** 
 
 Exit with Ctrl+X, press "y", then Enter to save.
 
@@ -658,11 +580,6 @@ rm -f "$STAGED"
 EOF
 sudo chmod 755 /usr/local/bin/cinemate-apply-config-txt
 ```
-
-The apply helper only ever copies a fixed, already-pi-written staging file over `config.txt`,
-preserving its existing owner/mode — the settings editor's "apply config.txt" button uses it so
-a page running as `pi` can write into root-owned `/boot/firmware` (F-288) without a broad sudo
-grant.
 
 #### Allow CineMate to run with sudo
 
@@ -944,77 +861,7 @@ cd /home/pi/cinemate/services/cinemate-recovery
 sudo make enable
 ```
 
-#### Further notes
-
-`sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits up to 8 seconds for `cinepi-raw` to report a camera before systemd launches CineMate — but that wait is now advisory, not a startup gate: if no camera ever shows up, CineMate still starts, showing a full-width **CAMERA NOT FOUND** message in the preview area of both the HDMI and web GUI (see [Troubleshooting](troubleshooting.md)) rather than failing to boot. The startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal CineMate stop while leaving `tty1` available for Plymouth during full system shutdown.
-
-!!! warning "Updating an existing install — `git pull` is not enough"
-
-    `cinemate-autostart.service` and the helper scripts under `/usr/local/bin/` are **copied** into place by `sudo make install`, not symlinked. A `git pull` on the Pi updates the repo but leaves the installed copies exactly as they were, however long ago you installed.
-
-    That matters here: the camera-ready gate was made advisory in the unit file, and `camera-ready.sh` was shortened from 30 s to 8 s. Without the copy step, a Pi keeps the **strict** gate — with no camera attached, systemd fails the unit before CineMate ever runs, and you get a bare terminal on `tty1` with no CineMate error to explain it.
-
-    On a Pi that was set up before this change:
-
-    ```shell
-    cd /home/pi/cinemate/
-    sudo make install               # re-copies the service file and the helper scripts
-    sudo systemctl daemon-reload
-    sudo systemctl restart cinemate-autostart   # or reboot
-    ```
-
-    CineMate checks this for you at startup and logs a warning naming this exact command if any installed copy is out of date with the repo. Re-running the full installer does the same thing, since it calls `sudo make install` itself.
-
-For routine updates, run `cinemate-update.sh` from the repo root (`/home/pi/cinemate/cinemate-update.sh`) instead of a bare `git pull`. It fetches and fast-forwards both `cinepi-raw` and `cinemate`, then rebuilds/reinstalls whichever repo actually changed — including the `make install` step above — so the installed copies stay current automatically. If `versions.env` has a `CINEMATE_REPO_REF` and/or `CINEPI_RAW_REPO_REF` recorded (see [Dependency files](#dependency-files) above), it checks out and follows that pinned ref for the corresponding repo instead of whatever branch happens to be checked out; left empty (the default), it behaves exactly as before.
-
-You now have a 12 bit RAW image capturing system on your Raspberry Pi!
-
-#### Wi-Fi hotspot handoff
-
-Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.
-
-To connect again, check your available wifi networks. There should now be a network available named CinePi. Connect to it using password `11111111`
-
-Now you should be able to ssh to the Pi with this command:
-
-```shell
-ssh pi@cinepi.local
-```
-
-You should also be able to find the Pi by opening a terminal and typing:
-
-```shell
-arp -a
-```
-
-You will see something like
-```shell    
-❯ arp -a
-
-? (10.42.0.1) at e4:5f:1:a9:72:a7 on en0 ifscope [ethernet]
-```
-
-During development/building your rig you might prefer the Pi to use your normal Wi‑Fi instead of its own hotspot so you remain online while tinkering. Disable the hotspot by setting `system.wifi_hotspot.enabled` to `false` in `settings.jsonc` _and_ by stopping the service with: 
-
-```
-sudo systemctl stop wifi-hotspot
-```
-
-To stop the hotspot from starting on boot, type 
-
-```
-sudo systemctl disable wifi-hotspot
-```
-
-See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
-
-#### Connect to the Pi (if not already connected):
-
-```shell
-ssh pi@10.42.0.1
-```
-
-Log in with the password you chose in Raspberry Pi Imager. (The prebuilt image uses `pi` / `1` — see [Connecting via SSH](ssh.md).)
+Phew! You should now have a 12 bit RAW image capturing system on your Raspberry Pi!
 
 ## Running CineMate manually
 
@@ -1121,3 +968,52 @@ hdmi_ignore_cec_init=1
 ```
 
 This skips the HDMI CEC handshake during boot, removing a short delay on HDMI-connected displays.
+
+## Further notes
+
+### Wi-Fi hotspot handoff
+
+Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.
+
+To connect again, check your available wifi networks. There should now be a network available named CinePi. Connect to it using password `11111111`
+
+Now you should be able to ssh to the Pi with this command:
+
+```shell
+ssh pi@cinepi.local
+```
+
+You should also be able to find the Pi by opening a terminal and typing:
+
+```shell
+arp -a
+```
+
+You will see something like
+```shell    
+❯ arp -a
+
+? (10.42.0.1) at e4:5f:1:a9:72:a7 on en0 ifscope [ethernet]
+```
+
+During development/building your rig you might prefer the Pi to use your normal Wi‑Fi instead of its own hotspot so you remain online while tinkering. Disable the hotspot by setting `system.wifi_hotspot.enabled` to `false` in `settings.jsonc` _and_ by stopping the service with: 
+
+```
+sudo systemctl stop wifi-hotspot
+```
+
+To stop the hotspot from starting on boot, type 
+
+```
+sudo systemctl disable wifi-hotspot
+```
+
+See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
+
+#### Connect to the Pi (if not already connected):
+
+```shell
+ssh pi@10.42.0.1
+```
+
+Log in with the password you chose in Raspberry Pi Imager. (The prebuilt image uses `pi` / `1` — see [Connecting via SSH](ssh.md).)

@@ -1,6 +1,6 @@
 # Commands reference
 
-Type `cinemate` in the Raspberry Pi CLI to start CineMate manually. This stops any autostarted instance, shows the camera startup sequence and opens the CineMate pseudo-CLI, where you type the commands below.
+Type `cinemate` in the Raspberry Pi terminal to start CineMate manually. This stops any autostarted instance, shows the camera startup sequence and opens the CineMate pseudo-CLI, where you type the commands below.
 
 The same strings reach the camera three other ways:
 

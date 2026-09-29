@@ -2,7 +2,7 @@
 
 The built-in hotspot lets you use any device (phone/tablet/computer) for preview/controlling the camera.
 
-Once joined, the camera is at `cinepi.local` or, equivalently, `10.42.0.1`. 
+Camera is found at `cinepi.local` or `10.42.0.1`. 
 
 During development you may want the Pi to join your normal Wi-Fi so it has internet access. Set `system.wifi_hotspot.enabled` to `false` and configure Wi-Fi through `raspi-config` or the desktop tools.
 

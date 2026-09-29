@@ -553,32 +553,6 @@ sudo chmod +x /usr/local/bin/pishrink.sh
 sudo reboot
 ```
 
-### Trying out CinePi from the terminal
-
-You should now have a working install of cinepi-raw. To see if your camera is recognized by the system:
-
-```shell
-cinepi-raw --list-cameras
-```
-
-Try it out with a simple cli command:
-
-```shell
-cinepi-raw --mode 2028:1080:12:U --width 2028 --height 1080 --lores-width 1280 --lores-height 720
-```
-
-Use the packing suffix that matches your Pi generation and sensor. For IMX296, the sensor mode is 10-bit:
-
-```shell
-# IMX296 on Raspberry Pi 5 / CM5
-cinepi-raw --mode 1456:1088:10:U --width 1456 --height 1088 --lores-width 1280 --lores-height 720
-
-# IMX296 on Raspberry Pi 4 / Pi 400 / CM4
-cinepi-raw --mode 1456:1088:10:P --width 1456 --height 1088 --lores-width 1280 --lores-height 720
-```
-
-For more details on running CinePi-raw from the command line, see [this section](cli-user-guide.md). 
-
 ### CineMate
 
 #### System wide packages

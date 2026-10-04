@@ -120,6 +120,20 @@ class ParameterKey(Enum):
     SYNC_WARNINGS_ENABLED = "sync_warnings_enabled"  # display-only: gates the SYNC box/flash on both GUIs; frames_in_sync is still judged, logged and analysed regardless (settings.sync_warnings_enabled, CinePiController.set_sync_warnings_enabled)
     USER_CHANGING_FPS   = "user_changing_fps"
     FSCK_STATUS         = "FSCK_STATUS"  # ssd_monitor's own fsck result; cinepi-raw never reads this one
+    # Pinefeat CEF168 Canon EF lens adapter (module/lens/). Iris is write-only
+    # on the lens, so IRIS is the commanded value, never a readback.
+    IRIS                = "iris"
+    LENS_CONTROL        = "lens_control"         # operator toggle, 0/1; only settable while the adapter is found
+    LENS_DETECTED       = "lens_detected"        # adapter board answered a CRC-checked read, 0/1
+    LENS_PROVENANCE     = "lens_provenance"      # "" / i2c-raw / v4l2-subdev
+    LENS_PORT           = "lens_port"            # cam0 / cam1 / ""
+    LENS_ID             = "lens_id"              # Canon lens id byte from the board, or ""
+    LENS_KEY            = "lens_key"             # selected resources/lenses.json entry, or ""
+    LENS_NAME           = "lens_name"
+    LENS_STATE          = "lens_state"           # absent / no_lens / unknown_lens / uncalibrated / ready / selftest / calibrating / error
+    LENS_MESSAGE        = "lens_message"
+    LENS_APERTURE_RANGE = "lens_aperture_range"  # "1.8-22" or ""
+    FOCUS_POSITION      = "focus_position"       # focus motor position readback, or ""
 
 
 _KNOWN_PARAMETER_VALUES = {member.value for member in ParameterKey}

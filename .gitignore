@@ -215,6 +215,10 @@ settings.json
 # (settings_default.jsonc, settings_komodo.jsonc) and must stay tracked.
 /settings_*.jsonc
 
+# Lens database written at runtime by module/lens/ (Pinefeat CEF168 adapter);
+# a missing file is an empty database. See docs/pinefeat.md.
+/resources/lenses.json
+
 # Local Codex staging scratch
 .codex-skill-staging/
 staging/

@@ -10,7 +10,7 @@ from typing import List
 import os
 import shutil
 
-from module import rp1_regime
+from module import lens_tuning, rp1_regime
 from module.config_loader import (
     load_settings,
     DEFAULT_SETTINGS_PATH,
@@ -450,6 +450,94 @@ class CinePiProcess(Thread):
             )
         return tune
 
+    def _autofocus_tuning(self, base_tune: Optional[str], model_key: str) -> Optional[str]:
+        """The derived autofocus tuning for this launch, or None for none.
+
+        PLAN.md D9/D17, module/lens_tuning.py. Wanted for this camera when
+        lens_control.autofocus is on (default off; read with .get because the
+        settings block belongs to the integration branch), Redis says the
+        adapter is found, switched on, reached over the kernel driver, and on
+        this camera's port, and the selected lens has a focus calibration.
+        When wanted and it builds, the caller launches with the derived file
+        and --autofocus-mode manual. When wanted and it fails, the base tuning
+        is kept and one ERROR line says why -- the same rule as a bad
+        tuning_file_override, since a broken tuning would black the camera
+        instead of merely losing autofocus.
+
+        Also owns Redis AF_AVAILABLE: the lens key this launch has an AF
+        tuning for, "" otherwise. The key is one value for the whole rig, so
+        only the camera the lens is mounted on writes it. In a dual-sensor rig
+        the other camera leaves it alone -- it would otherwise overwrite the
+        lens camera's answer with "" depending on which thread got there
+        last. A Pi 4 has one camera process, which always owns the key; "" for
+        the lens port means there is no lens to speak for, so anyone may clear.
+        """
+        redis = self.redis_controller
+        port = self.cam.port
+        is_pi4 = self._is_pi4()
+        lens_port = str(redis.get_value(ParameterKey.LENS_PORT.value) or "").strip()
+        owns_key = is_pi4 or lens_port in ("", port)
+
+        lens_cfg = _settings().get("lens_control")
+        if not isinstance(lens_cfg, dict):
+            lens_cfg = {}
+        autofocus = lens_cfg.get("autofocus") in (True, 1)
+
+        lens_key, reason = lens_tuning.autofocus_gate(
+            autofocus=autofocus,
+            lens_control=redis.get_value(ParameterKey.LENS_CONTROL.value),
+            lens_detected=redis.get_value(ParameterKey.LENS_DETECTED.value),
+            provenance=redis.get_value(ParameterKey.LENS_PROVENANCE.value),
+            lens_port=lens_port,
+            lens_key=redis.get_value(ParameterKey.LENS_KEY.value),
+            camera_port=port,
+            single_camera=is_pi4,
+        )
+
+        fallback = (
+            f"the base tuning {base_tune}" if base_tune is not None
+            else "no --tuning-file (libcamera's own tuning)"
+        )
+        derived: Optional[str] = None
+        if lens_key is None:
+            if autofocus:
+                logging.info("[%s] Autofocus enabled but not applied: %s", port, reason)
+        else:
+            entry, reason = lens_tuning.load_lens_entry(lens_cfg.get("database_file"), lens_key)
+            if entry is None:
+                logging.error(
+                    "[%s] Autofocus tuning NOT applied (%s); launching with %s",
+                    port, reason, fallback,
+                )
+            elif not isinstance(entry.get("focus"), dict):
+                # An uncalibrated lens is a normal state, not a fault: AF has
+                # nothing to be tuned with until the operator calibrates.
+                logging.info(
+                    "[%s] Autofocus enabled but lens '%s' is not calibrated; "
+                    "launching without an AF tuning", port, lens_key,
+                )
+            else:
+                path, reason = lens_tuning.build_lens_tuning(
+                    base_tune, entry, lens_tuning.DEFAULT_CACHE_DIR,
+                    expected_target=tuning_target(is_pi4),
+                )
+                if path is None:
+                    logging.error(
+                        "[%s] Autofocus tuning NOT applied (%s); launching with %s",
+                        port, reason, fallback,
+                    )
+                else:
+                    derived = str(path)
+                    logging.info(
+                        "[%s] Autofocus tuning for lens '%s': %s (base %s); "
+                        "AF mode manual until the operator asks for AF",
+                        port, lens_key, derived, base_tune,
+                    )
+
+        if owns_key:
+            redis.set_value(ParameterKey.AF_AVAILABLE.value, lens_key if derived else "")
+        return derived
+
     def _build_args(self):
         # base resolution
         sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
@@ -526,6 +614,11 @@ class CinePiProcess(Thread):
 
         # file paths
         tune = self._resolve_base_tuning(model_key)
+        # Autofocus builds on whichever base was just resolved (stock or
+        # override, pisp or vc4) and replaces it only when it succeeds.
+        af_tune = self._autofocus_tuning(tune, model_key)
+        if af_tune is not None:
+            tune = af_tune
         post = f'/home/pi/post-processing{self.cam.index}.json'
         # ── Dual-sensor HDMI preview ──────────────────────────────────────
         # With two sensors, DRM master is exclusive, so the two cinepi-raw
@@ -633,6 +726,11 @@ class CinePiProcess(Thread):
         # libcamera is left to find its own, exactly as before PLAN.md D19.
         if tune is not None:
             args += ["--tuning-file", tune]
+        if af_tune is not None:
+            # Always with a derived tuning (PLAN.md F11): `rpi.af` makes
+            # libcamera advertise AfMode, and without this flag cinepi-raw
+            # picks the maximum one -- continuous AF -- on its own.
+            args += ["--autofocus-mode", "manual"]
 
         # ── PiSP pixel-rate ceiling. libcamera's bound is a compile-time
         # constant, so a build made for the rp1-overclock overlay advertises

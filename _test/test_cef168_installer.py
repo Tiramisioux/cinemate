@@ -1,4 +1,4 @@
-"""Pinefeat CEF168 autofocus install step: opt-in, pinned, idempotent, warn-not-abort.
+"""Pinefeat CEF168 kernel driver install step: opt-in, pinned, idempotent, warn-not-abort.
 
 What this guards, and what it cannot:
 
@@ -38,9 +38,16 @@ HELPER = ROOT / "scripts" / "cef168-module-installed.sh"
 OVERLAY_DIR = ROOT / "resources" / "overlays" / "cef168"
 OVERLAY = OVERLAY_DIR / "cef168-overlay.dts"
 
+WRAPPER = ROOT / "scripts" / "install-cef168.sh"
+
 PINNED = "e3abfb2"
 KERNEL = "6.12.96+rpt-rpi-v8"
 FAKE_HEAD = PINNED + "0" * (40 - len(PINNED))
+
+
+def _bash_major():
+    out = subprocess.run(["bash", "-c", "echo ${BASH_VERSINFO[0]}"], capture_output=True, text=True).stdout.strip()
+    return int(out or 0)
 
 
 class StaticContractTests(unittest.TestCase):
@@ -48,7 +55,7 @@ class StaticContractTests(unittest.TestCase):
         self.installer = INSTALLER.read_text(encoding="utf-8")
 
     def test_off_by_default(self):
-        self.assertIn('INSTALL_CEF168_AF="${INSTALL_CEF168_AF:-0}"', self.installer)
+        self.assertIn('INSTALL_CEF168_DRIVER="${INSTALL_CEF168_DRIVER:-0}"', self.installer)
 
     def test_upstream_is_pinned_to_the_reviewed_commit(self):
         self.assertIn('CEF168_REPO_REF="${CEF168_REPO_REF:-' + PINNED + '}"', self.installer)
@@ -56,14 +63,14 @@ class StaticContractTests(unittest.TestCase):
 
     def test_usage_header_and_summary_mention_it(self):
         header = "\n".join(self.installer.splitlines()[:20])
-        self.assertIn("INSTALL_CEF168_AF=1", header)
-        self.assertIn("cef168_af=$INSTALL_CEF168_AF", self.installer)
+        self.assertIn("INSTALL_CEF168_DRIVER=1", header)
+        self.assertIn("cef168_driver=$INSTALL_CEF168_DRIVER", self.installer)
 
     def test_step_is_wired_into_main(self):
         self.assertRegex(self.installer, r"(?m)^    install_cef168_support$")
 
     def test_installer_never_edits_config_txt_for_cef168(self):
-        # D3: CineMate enables the overlay itself, only when the module exists.
+        # The overlay is installed disabled; nothing in the step may enable it.
         body = self.installer.split("install_cef168_support() {", 1)[1].split("\ninstall_sensor_tuning_overrides()", 1)[0]
         self.assertNotIn("config.txt\"", body.replace("/boot/firmware/config.txt and reboot", ""))
         self.assertNotIn("ensure_line_in_root_file", body)
@@ -78,8 +85,9 @@ class StaticContractTests(unittest.TestCase):
         kbuild = (OVERLAY_DIR / "Kbuild").read_text(encoding="utf-8")
         self.assertRegex(kbuild, r"(?m)^obj-m := cef168\.o$")
 
-    def test_helper_is_executable(self):
-        self.assertTrue(HELPER.stat().st_mode & stat.S_IXUSR)
+    def test_helper_and_wrapper_are_executable(self):
+        for path in (HELPER, WRAPPER):
+            self.assertTrue(path.stat().st_mode & stat.S_IXUSR, path)
 
 
 class OverlaySourceTests(unittest.TestCase):
@@ -132,6 +140,43 @@ class OverlaySourceTests(unittest.TestCase):
         # Unresolved base-tree labels must be exported as fixups, not baked in.
         for symbol in ("i2c_csi_dsi", "i2c_csi_dsi0", "i2c0if", "i2c0mux"):
             self.assertIn(symbol, text)
+
+
+class DocsAgreeWithCodeTests(unittest.TestCase):
+    """docs/pinefeat/install.md restates three facts that live in code. A comment
+    cannot fail when they drift; these can."""
+
+    PAGES = ("index", "install", "panes", "lenses", "compatibility")
+
+    def setUp(self):
+        self.install_md = (ROOT / "docs" / "pinefeat" / "install.md").read_text(encoding="utf-8")
+        self.installer = INSTALLER.read_text(encoding="utf-8")
+
+    def test_manual_steps_use_the_installers_pin(self):
+        pin = re.search(r'CEF168_REPO_REF="\$\{CEF168_REPO_REF:-([0-9a-f]+)\}"', self.installer)
+        self.assertIsNotNone(pin)
+        self.assertIn(f"git -C ~/cef168 checkout {pin.group(1)}", self.install_md)
+
+    def test_manual_steps_use_the_dkms_conf_version(self):
+        conf = (OVERLAY_DIR / "dkms.conf").read_text(encoding="utf-8")
+        version = re.search(r'(?m)^PACKAGE_VERSION="([^"]+)"$', conf).group(1)
+        for needle in (f"/usr/src/cef168-{version}", f"dkms add -m cef168 -v {version}",
+                       f"dkms build -m cef168 -v {version}", f"dkms install -m cef168 -v {version}"):
+            self.assertIn(needle, self.install_md)
+
+    def test_every_overlay_sensor_word_is_in_the_docs_table_and_back(self):
+        overlay = OVERLAY.read_text(encoding="utf-8")
+        flags = set(re.findall(r'(?m)^\t\t(imx\d+) = <0>, "\+\d+";$', overlay))
+        self.assertGreaterEqual(len(flags), 4)
+        documented = set(re.findall(r"dtoverlay=cef168,(?:cam\d,)?(imx\d+)", self.install_md))
+        self.assertEqual(documented, flags)
+
+    def test_pages_exist_and_are_in_the_nav(self):
+        nav = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+        for page in self.PAGES:
+            with self.subTest(page=page):
+                self.assertTrue((ROOT / "docs" / "pinefeat" / f"{page}.md").is_file())
+                self.assertRegex(nav, rf"(?m)^\s+- [^#\n]+: pinefeat/{page}\.md$")
 
 
 class HelperTests(unittest.TestCase):
@@ -314,7 +359,7 @@ class InstallStepTests(unittest.TestCase):
     def count(self, prefix):
         return sum(1 for line in self.calls() if line.startswith(prefix))
 
-    def run_step(self, **env_extra):
+    def sandbox_env(self, **env_extra):
         env = dict(os.environ)
         env.update(
             PATH=f"{self.bin}:{env['PATH']}",
@@ -329,6 +374,10 @@ class InstallStepTests(unittest.TestCase):
             TMPDIR=str(self.tmp),
         )
         env.update(env_extra)
+        return env
+
+    def run_step(self, **env_extra):
+        env = self.sandbox_env(**env_extra)
         script = textwrap.dedent(
             f"""
             source "{INSTALLER}"
@@ -348,6 +397,16 @@ class InstallStepTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("STEP-RETURNED", result.stdout)
 
+    @unittest.skipIf(_bash_major() < 4, "the installer targets bash 5; macOS ships 3.2")
+    def test_wrapper_script_runs_only_this_step(self):
+        result = subprocess.run([str(WRAPPER)], capture_output=True, text=True, env=self.sandbox_env(), timeout=120)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.count("dkms install -m cef168 -v 1.0"), 1, self.calls())
+        self.assertEqual([p.name for p in self.overlays.iterdir()], ["cef168.dtbo"])
+        # Nothing else of the installer ran: no apt upgrade, no libcamera, no config.txt.
+        self.assertEqual([c for c in self.calls() if c.startswith("apt") and "upgrade" in c], [])
+        self.assertNotIn("Writing /boot/firmware/config.txt", result.stdout)
+
     def test_off_by_default_touches_nothing(self):
         result = self.run_step()
         self.assert_returned(result)
@@ -356,7 +415,7 @@ class InstallStepTests(unittest.TestCase):
         self.assertEqual(list(self.overlays.iterdir()), [])
 
     def test_fresh_install_builds_stages_and_installs_the_overlay_disabled(self):
-        result = self.run_step(INSTALL_CEF168_AF="1")
+        result = self.run_step(INSTALL_CEF168_DRIVER="1")
         self.assert_returned(result)
         for verb in ("add", "build", "install"):
             self.assertEqual(self.count(f"dkms {verb} -m cef168 -v 1.0"), 1, self.calls())
@@ -372,15 +431,15 @@ class InstallStepTests(unittest.TestCase):
         self.assertIn("dtoverlay=cef168,cam0,imx477", result.stdout)
 
     def test_pinned_ref_is_what_gets_cloned(self):
-        self.run_step(INSTALL_CEF168_AF="1")
+        self.run_step(INSTALL_CEF168_DRIVER="1")
         clone = [c for c in self.calls() if c.startswith("git clone")]
         self.assertEqual(len(clone), 1)
         self.assertIn("pinefeat/cef168.git", clone[0])
 
     def test_second_run_is_a_noop_for_dkms_and_overlay(self):
-        self.assert_returned(self.run_step(INSTALL_CEF168_AF="1"))
+        self.assert_returned(self.run_step(INSTALL_CEF168_DRIVER="1"))
         before = self.calls()
-        result = self.run_step(INSTALL_CEF168_AF="1")
+        result = self.run_step(INSTALL_CEF168_DRIVER="1")
         self.assert_returned(result)
         self.assertIn("already installed by DKMS", result.stdout)
         self.assertIn("already current", result.stdout)
@@ -388,10 +447,10 @@ class InstallStepTests(unittest.TestCase):
         self.assertEqual([c for c in new if c.startswith(("dkms add", "dkms build", "dkms install", "dkms remove"))], [], new)
 
     def test_a_moved_pin_rebuilds(self):
-        self.assert_returned(self.run_step(INSTALL_CEF168_AF="1"))
+        self.assert_returned(self.run_step(INSTALL_CEF168_DRIVER="1"))
         before = len(self.calls())
         other = "e3abfb2" + "1" * 33
-        result = self.run_step(INSTALL_CEF168_AF="1", FAKE_HEAD=other)
+        result = self.run_step(INSTALL_CEF168_DRIVER="1", FAKE_HEAD=other)
         self.assert_returned(result)
         new = self.calls()[before:]
         self.assertEqual(sum(1 for c in new if c.startswith("dkms build")), 1, new)
@@ -399,34 +458,34 @@ class InstallStepTests(unittest.TestCase):
         self.assertEqual(stamp.read_text().strip(), other)
 
     def test_build_failure_warns_and_does_not_abort(self):
-        result = self.run_step(INSTALL_CEF168_AF="1", FAKE_DKMS_FAIL="build")
+        result = self.run_step(INSTALL_CEF168_DRIVER="1", FAKE_DKMS_FAIL="build")
         self.assert_returned(result)
         self.assertIn("WARN: DKMS build of cef168 failed", result.stderr)
         self.assertEqual(list(self.overlays.iterdir()), [], "overlay must not be installed without the module")
 
     def test_unpinned_checkout_is_never_built(self):
-        result = self.run_step(INSTALL_CEF168_AF="1", FAKE_HEAD="d" * 40)
+        result = self.run_step(INSTALL_CEF168_DRIVER="1", FAKE_HEAD="d" * 40)
         self.assert_returned(result)
         self.assertIn("not the pinned", result.stderr)
         self.assertEqual(self.count("dkms build"), 0)
 
     def test_missing_headers_warn_and_skip(self):
         shutil.rmtree(self.modules / KERNEL / "build")
-        result = self.run_step(INSTALL_CEF168_AF="1")
+        result = self.run_step(INSTALL_CEF168_DRIVER="1")
         self.assert_returned(result)
         self.assertIn(f"apt install -y linux-headers-{KERNEL}", self.calls())
         self.assertIn("No kernel headers", result.stderr)
         self.assertEqual(self.count("dkms build"), 0)
 
     def test_apt_failure_warns_and_does_not_abort(self):
-        result = self.run_step(INSTALL_CEF168_AF="1", FAKE_APT_FAIL="1")
+        result = self.run_step(INSTALL_CEF168_DRIVER="1", FAKE_APT_FAIL="1")
         self.assert_returned(result)
         self.assertIn("Could not install dkms", result.stderr)
 
     def test_pinefeats_own_patch_in_a_sensor_overlay_is_called_out(self):
         (self.overlays / "imx477.dtbo").write_bytes(b"\x00compatible\x00pinefeat,cef168\x00")
         (self.overlays / "imx296.dtbo").write_bytes(b"\x00compatible\x00sony,imx296\x00")
-        result = self.run_step(INSTALL_CEF168_AF="1")
+        result = self.run_step(INSTALL_CEF168_DRIVER="1")
         self.assert_returned(result)
         self.assertIn("imx477.dtbo", result.stderr)
         self.assertNotIn("imx296.dtbo", result.stderr)

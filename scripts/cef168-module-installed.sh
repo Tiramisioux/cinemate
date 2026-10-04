@@ -8,8 +8,8 @@
 # Why it exists: the CEF168 overlay must only be enabled when this module is
 # installed. Overlay without module means the sensor driver waits forever for
 # a lens driver that never loads, and the camera never registers. The
-# installer and CineMate's own overlay enabling both ask this question, so the
-# answer lives here once.
+# installer and anything else that enables the overlay ask this question, so
+# the answer lives here once.
 #
 # The check, exactly (a Python caller should do the same, no subprocess):
 #   1. Read /lib/modules/<release>/modules.dep, the index depmod writes.

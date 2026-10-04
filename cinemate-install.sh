@@ -9,10 +9,10 @@ trap 'printf "[cinemate-install] ERROR: line %s while running: %s\n" "$LINENO" "
 #   SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
 #   SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 #   SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
-# Optional: Pinefeat CEF168 Canon EF adapter autofocus support (off by default;
-# basic iris/focus control needs nothing installed). Builds the cef168 kernel
-# module with DKMS and installs the cef168 overlay disabled. See docs/pinefeat.md.
-#   INSTALL_CEF168_AF=1 SENSOR_MODEL=imx477 CAM_PORT=cam0 ./cinemate-install.sh
+# Optional: Pinefeat CEF168 Canon EF adapter kernel driver (off by default;
+# iris, focus and calibration need nothing installed). Builds the cef168 kernel
+# module with DKMS and installs the cef168 overlay disabled. See docs/pinefeat/install.md.
+#   INSTALL_CEF168_DRIVER=1 SENSOR_MODEL=imx477 CAM_PORT=cam0 ./cinemate-install.sh
 
 PI_USER="${PI_USER:-pi}"
 PI_GROUP="${PI_GROUP:-$PI_USER}"
@@ -44,9 +44,10 @@ INSTALL_PLYMOUTH="${INSTALL_PLYMOUTH:-1}"
 INSTALL_IMX283_DRIVER="${INSTALL_IMX283_DRIVER:-1}"
 INSTALL_IMX585_DRIVER="${INSTALL_IMX585_DRIVER:-1}"
 INSTALL_IR_FILTER_HELPER="${INSTALL_IR_FILTER_HELPER:-auto}"
-# Pinefeat CEF168 Canon EF lens adapter: kernel driver (DKMS) + overlay, needed
-# only for libcamera autofocus. Off by default; see install_cef168_support.
-INSTALL_CEF168_AF="${INSTALL_CEF168_AF:-0}"
+# Pinefeat CEF168 Canon EF lens adapter: optional kernel driver (DKMS) + overlay.
+# Not needed for iris, focus or calibration. Off by default; see
+# install_cef168_support.
+INSTALL_CEF168_DRIVER="${INSTALL_CEF168_DRIVER:-0}"
 ENABLE_CONSOLE_AUTOLOGIN="${ENABLE_CONSOLE_AUTOLOGIN:-1}"
 
 ENABLE_SUPPORT_SERVICES="${ENABLE_SUPPORT_SERVICES:-1}"
@@ -393,9 +394,9 @@ print_configuration_summary() {
     detail "Runtime HDMI ports: cam0->$HDMI_PORT_CAM0 cam1->$HDMI_PORT_CAM1"
     detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
     detail "Hotspot: $HOTSPOT_NAME (enabled=$HOTSPOT_ENABLED)"
-    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx283_driver=$INSTALL_IMX283_DRIVER imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER cef168_af=$INSTALL_CEF168_AF"
-    if is_true "$INSTALL_CEF168_AF"; then
-        detail "Pinefeat CEF168 autofocus: $CEF168_REPO_URL @ $CEF168_REPO_REF (DKMS driver + cef168 overlay, overlay stays disabled)"
+    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx283_driver=$INSTALL_IMX283_DRIVER imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER cef168_driver=$INSTALL_CEF168_DRIVER"
+    if is_true "$INSTALL_CEF168_DRIVER"; then
+        detail "Pinefeat CEF168 kernel driver: $CEF168_REPO_URL @ $CEF168_REPO_REF (DKMS driver + cef168 overlay, overlay stays disabled)"
     fi
     detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE recovery=$ENABLE_RECOVERY_CONSOLE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
 }
@@ -1572,15 +1573,16 @@ install_imx283_support() {
     fi
 }
 
-# --- Pinefeat CEF168 Canon EF lens adapter (autofocus level only) -----------
+# --- Pinefeat CEF168 Canon EF lens adapter (optional kernel driver) ---------
 # Basic use (iris, focus, calibration, lens database) talks to the adapter board
-# over I2C directly and needs none of this. Libcamera autofocus needs the board
-# as a V4L2 lens subdevice, which means the cef168 kernel module plus an overlay
-# that declares the board. This step installs both and leaves the overlay
-# DISABLED: loading the overlay while cef168.ko is missing makes the sensor's
-# async notifier wait forever for a lens driver and the camera never registers.
-# CineMate adds the overlay line to its managed config.txt block itself, only
-# when autofocus is requested and the module check below passes.
+# over I2C directly and needs none of this. The driver makes the board a V4L2
+# lens subdevice (v4l2-ctl access, and the prerequisite for libcamera autofocus,
+# which is paused). That takes the cef168 kernel module plus an overlay that
+# declares the board. This step installs both and leaves the overlay DISABLED:
+# loading the overlay while cef168.ko is missing makes the sensor's async
+# notifier wait forever for a lens driver and the camera never registers. Enable
+# it by hand (docs/pinefeat/install.md) after scripts/cef168-module-installed.sh
+# passes; CineMate itself does not edit config.txt for it.
 
 # The one definition of "is cef168.ko installed for this kernel" lives in
 # scripts/cef168-module-installed.sh so CineMate and the installer cannot
@@ -1660,8 +1662,10 @@ install_cef168_overlay() {
 }
 
 # Pinefeat's own configure.sh writes the lens node into the stock sensor .dtbo
-# (backups <sensor>.dtbo.~N~). With that still in place the cef168 overlay
-# would declare a second lens at 0x0d on the same bus.
+# (backups <sensor>.dtbo.~N~). With that still in place the two declarations
+# merge into one node (both are cef168@d on the same bus), but the sensor
+# overlay then declares the lens unconditionally, so CineMate can no longer keep
+# the lens out of the device tree when cef168.ko is missing for a kernel.
 warn_if_cef168_sensor_overlay_patched() {
     local overlays_dir="$CEF168_OVERLAYS_DIR"
     local patched
@@ -1669,15 +1673,16 @@ warn_if_cef168_sensor_overlay_patched() {
     if [[ -n "$patched" ]]; then
         warn "Pinefeat's configure.sh patch is still in:"
         while IFS= read -r f; do
-            warn "  $f (restore its .dtbo.~N~ backup, see docs/pinefeat.md)"
+            warn "  $f (restore its .dtbo.~N~ backup, see docs/pinefeat/install.md)"
         done <<<"$patched"
-        warn "Enabling the cef168 overlay on top of it would declare the lens twice."
+        warn "That overlay declares the lens whether or not cef168.ko exists for the running kernel;"
+        warn "a kernel without the module then stops the camera registering, and CineMate cannot prevent it."
     fi
 }
 
 install_cef168_support() {
-    if ! is_true "$INSTALL_CEF168_AF"; then
-        detail "Skipping Pinefeat CEF168 autofocus support (INSTALL_CEF168_AF=1 to install; basic lens control needs nothing)"
+    if ! is_true "$INSTALL_CEF168_DRIVER"; then
+        detail "Skipping Pinefeat CEF168 kernel driver (INSTALL_CEF168_DRIVER=1 to install; iris, focus and calibration need nothing)"
         return 0
     fi
 
@@ -1687,41 +1692,41 @@ install_cef168_support() {
     local res_dir="$CINEMATE_SOURCE_DIR/resources/overlays/cef168"
     local kernel dkms_ver commit stage stamp
 
-    log "Installing Pinefeat CEF168 autofocus support"
+    log "Installing Pinefeat CEF168 kernel driver"
     kernel="$(cef168_target_kernel)"
     # `|| true` on every substitution/pipeline below: this runs under the
     # installer's `set -e`, and a bare failure here would abort the whole install.
     dkms_ver="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "$res_dir/dkms.conf" 2>/dev/null || true)"
     if [[ -z "$dkms_ver" ]]; then
-        warn "Could not read PACKAGE_VERSION from $res_dir/dkms.conf -- CEF168 autofocus support skipped"
+        warn "Could not read PACKAGE_VERSION from $res_dir/dkms.conf -- CEF168 driver install skipped"
         return 0
     fi
     stage="$CEF168_SRC_ROOT/cef168-$dkms_ver"
     stamp="$stage/.cinemate-upstream-commit"
 
     if ! sudo apt install -y dkms device-tree-compiler; then
-        warn "Could not install dkms/device-tree-compiler -- CEF168 autofocus support skipped"
+        warn "Could not install dkms/device-tree-compiler -- CEF168 driver install skipped"
         return 0
     fi
     if ! ensure_cef168_kernel_headers "$kernel"; then
-        warn "No kernel headers for $kernel -- CEF168 autofocus support skipped"
+        warn "No kernel headers for $kernel -- CEF168 driver install skipped"
         return 0
     fi
     if ! ensure_repo "$CEF168_DIR" "$CEF168_REPO_URL" "$CEF168_REPO_REF"; then
-        warn "CEF168 driver checkout failed -- autofocus will be unavailable until this is resolved."
-        warn "Basic iris/focus control is unaffected. See docs/pinefeat.md."
+        warn "CEF168 driver checkout failed -- the kernel driver will be unavailable until this is resolved."
+        warn "Iris, focus and calibration are unaffected. See docs/pinefeat/install.md."
         return 0
     fi
     # tail: run_as_pi prints a "Running as ..." line to stdout when not run as $PI_USER.
     commit="$(run_as_pi git -C "$CEF168_DIR" rev-parse HEAD 2>/dev/null | tail -n 1 || true)"
     if [[ -z "$commit" ]]; then
-        warn "Could not read the checked-out commit of $CEF168_DIR -- CEF168 autofocus support skipped"
+        warn "Could not read the checked-out commit of $CEF168_DIR -- CEF168 driver install skipped"
         return 0
     fi
     if is_commitish_ref "$CEF168_REPO_REF" && [[ "$commit" != "$CEF168_REPO_REF"* ]]; then
         # ensure_repo carries on with whatever is checked out when a fetch or
         # checkout fails (offline re-run); never build an unpinned commit.
-        warn "$CEF168_DIR is at '${commit:-unknown}', not the pinned $CEF168_REPO_REF -- CEF168 autofocus support skipped"
+        warn "$CEF168_DIR is at '${commit:-unknown}', not the pinned $CEF168_REPO_REF -- CEF168 driver install skipped"
         return 0
     fi
 
@@ -1736,14 +1741,14 @@ install_cef168_support() {
             || ! sudo install -d -m 755 "$stage" \
             || ! sudo install -m 644 "$CEF168_DIR/cef168.c" "$res_dir/Kbuild" "$res_dir/dkms.conf" "$stage/" \
             || ! printf '%s\n' "$commit" | sudo tee "$stamp" >/dev/null; then
-            warn "Could not stage the cef168 sources in $stage -- CEF168 autofocus support skipped"
+            warn "Could not stage the cef168 sources in $stage -- CEF168 driver install skipped"
             return 0
         fi
         if ! sudo dkms add -m cef168 -v "$dkms_ver" \
             || ! sudo dkms build -m cef168 -v "$dkms_ver" -k "$kernel" \
             || ! sudo dkms install -m cef168 -v "$dkms_ver" -k "$kernel"; then
-            warn "DKMS build of cef168 failed for $kernel -- CEF168 autofocus will be unavailable until this is resolved."
-            warn "See /var/lib/dkms/cef168/$dkms_ver/build/make.log. Basic iris/focus control is unaffected."
+            warn "DKMS build of cef168 failed for $kernel -- the CEF168 kernel driver will be unavailable until this is resolved."
+            warn "See /var/lib/dkms/cef168/$dkms_ver/build/make.log. Iris, focus and calibration are unaffected."
             return 0
         fi
     fi
@@ -1757,12 +1762,12 @@ install_cef168_support() {
     fi
 
     if ! install_cef168_overlay; then
-        warn "cef168 overlay not installed -- CEF168 autofocus will be unavailable until this is resolved."
+        warn "cef168 overlay not installed -- the CEF168 kernel driver will be unavailable until this is resolved."
         return 0
     fi
     warn_if_cef168_sensor_overlay_patched
 
-    detail "The overlay is installed but NOT enabled; CineMate enables it when autofocus is requested."
+    detail "The overlay is installed but NOT enabled, and CineMate does not enable it."
     detail "By hand: add 'dtoverlay=cef168,$CAM_PORT,${SENSOR_MODEL%_mono}' after the sensor's dtoverlay line in /boot/firmware/config.txt and reboot."
     detail "Do not enable it without the module: the camera would not register. Check: scripts/cef168-module-installed.sh"
 }
@@ -2050,8 +2055,8 @@ print_post_install_notes() {
     if ((KERNEL_ALIGNMENT_REQUIRED_REBOOT)); then
         detail "Pi 5 kernel baseline was aligned to $KERNEL_BASELINE_ABI_2712; reboot once before camera testing if you did not run the installer with RUN_REBOOT=1"
     fi
-    if is_true "$INSTALL_CEF168_AF"; then
-        detail "CEF168 autofocus: driver built with DKMS, cef168 overlay installed but not enabled; see docs/pinefeat.md"
+    if is_true "$INSTALL_CEF168_DRIVER"; then
+        detail "CEF168 driver: built with DKMS, cef168 overlay installed but not enabled; see docs/pinefeat/install.md"
     fi
     detail "Use 'cinemate' to launch the runtime wrapper manually"
 }
@@ -2331,7 +2336,7 @@ main() {
     section "Installing sensor-specific support"
     install_imx283_support
     install_imx585_support
-    section "Installing Pinefeat CEF168 autofocus support (optional)"
+    section "Installing Pinefeat CEF168 kernel driver (optional)"
     install_cef168_support
     install_sensor_tuning_overrides
     install_ir_filter_helper

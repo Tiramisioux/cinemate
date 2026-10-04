@@ -24,8 +24,8 @@
 //
 // Do NOT load this overlay unless cef168.ko is installed for the running
 // kernel. The sensor driver's async notifier then waits for a lens driver that
-// never arrives and the camera never registers. CineMate checks this before it
-// enables the overlay (scripts/cef168-module-installed.sh).
+// never arrives and the camera never registers. Check first with
+// scripts/cef168-module-installed.sh.
 //
 // Name:   cef168
 // Info:   Pinefeat CEF168 Canon EF lens adapter (focus and aperture over I2C).

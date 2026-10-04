@@ -134,6 +134,15 @@ class ParameterKey(Enum):
     LENS_MESSAGE        = "lens_message"
     LENS_APERTURE_RANGE = "lens_aperture_range"  # "1.8-22" or ""
     FOCUS_POSITION      = "focus_position"       # focus motor position readback, or ""
+    # libcamera autofocus over the lens (needs the cef168 driver + overlay and a
+    # calibrated lens; see development/pinefeat-cef168/PLAN.md D15). The first
+    # three cross into cinepi-raw (CONTROL_KEY_AF_*); the next two come back.
+    AF_MODE             = "af_mode"              # manual / auto / continuous (cinemate -> cinepi-raw)
+    AF_TRIGGER          = "af_trigger"           # start / cancel, edge-triggered on publish (cinemate -> cinepi-raw)
+    LENS_POSITION       = "lens_position"        # requested focus in dioptres (cinemate -> cinepi-raw)
+    AF_STATE            = "af_state"             # idle / scanning / focused / failed (cinepi-raw -> cinemate)
+    LENS_POSITION_ACTUAL = "lens_position_actual"  # dioptres from frame metadata (cinepi-raw -> cinemate)
+    AF_AVAILABLE        = "af_available"         # lens_key the camera was launched with an AF tuning for, or "" (cinepi_multi)
 
 
 _KNOWN_PARAMETER_VALUES = {member.value for member in ParameterKey}

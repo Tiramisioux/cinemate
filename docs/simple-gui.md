@@ -27,3 +27,5 @@ Simple GUI is available on the attached HDMI output.
 **Latching tiles.** The `DROP` tile latches after a drop-frame event and stays visible until a new take starts. A crossed magenta `SYNC` tile latches as soon as the live expected-vs-recorded frame slot count is outside the configured live tolerance (default +/- 2 frames), then stays visible through the end of the take and until the next take starts. Dropped-frame holes do not trigger the `SYNC` tile by themselves; they are shown by `DROP`.
 
 For redraw timing and performance tuning, see [Simple GUI refresh tuning](simple-gui-refresh-tuning.md).
+
+With a [Pinefeat lens adapter](pinefeat/index.md) fitted, the top row gains an `IRIS` group and the SYS column an `EF` box: [what they show](pinefeat/panes.md#hdmi-gui).

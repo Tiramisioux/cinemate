@@ -9,6 +9,10 @@ trap 'printf "[cinemate-install] ERROR: line %s while running: %s\n" "$LINENO" "
 #   SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
 #   SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 #   SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
+# Optional: Pinefeat CEF168 Canon EF adapter kernel driver (off by default;
+# iris, focus and calibration need nothing installed). Builds the cef168 kernel
+# module with DKMS and installs the cef168 overlay disabled. See docs/pinefeat/install.md.
+#   INSTALL_CEF168_DRIVER=1 SENSOR_MODEL=imx477 CAM_PORT=cam0 ./cinemate-install.sh
 
 PI_USER="${PI_USER:-pi}"
 PI_GROUP="${PI_GROUP:-$PI_USER}"
@@ -40,6 +44,10 @@ INSTALL_PLYMOUTH="${INSTALL_PLYMOUTH:-1}"
 INSTALL_IMX283_DRIVER="${INSTALL_IMX283_DRIVER:-1}"
 INSTALL_IMX585_DRIVER="${INSTALL_IMX585_DRIVER:-1}"
 INSTALL_IR_FILTER_HELPER="${INSTALL_IR_FILTER_HELPER:-auto}"
+# Pinefeat CEF168 Canon EF lens adapter: optional kernel driver (DKMS) + overlay.
+# Not needed for iris, focus or calibration. Off by default; see
+# install_cef168_support.
+INSTALL_CEF168_DRIVER="${INSTALL_CEF168_DRIVER:-0}"
 ENABLE_CONSOLE_AUTOLOGIN="${ENABLE_CONSOLE_AUTOLOGIN:-1}"
 
 ENABLE_SUPPORT_SERVICES="${ENABLE_SUPPORT_SERVICES:-1}"
@@ -62,6 +70,7 @@ REDIS_PLUS_PLUS_DIR="${REDIS_PLUS_PLUS_DIR:-$PI_HOME/redis-plus-plus}"
 LGPIO_DIR="${LGPIO_DIR:-$PI_HOME/lg}"
 IMX283_DRIVER_DIR="${IMX283_DRIVER_DIR:-$PI_HOME/imx283-v4l2-driver}"
 IMX585_DRIVER_DIR="${IMX585_DRIVER_DIR:-$PI_HOME/imx585-v4l2-driver}"
+CEF168_DIR="${CEF168_DIR:-$PI_HOME/cef168}"
 # No dedicated virtualenv: cinemate-recovery.service already runs on system
 # python3 deliberately ("the venv is broken" is a supported failure mode for
 # that service, per its own comments and test_unit_runs_system_python_not_the_venv
@@ -134,6 +143,19 @@ IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-cinemate-modes}"
 # supported default.
 IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx585-v4l2-driver.git}"
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-cinemate-modes}"
+# Pinefeat's CEF168 lens driver, pinned to a commit (no fork). Only cef168.c is
+# built; the DKMS packaging (dkms.conf, Kbuild) and the overlay live in this
+# repo under resources/overlays/cef168/, so upstream's configure.sh -- which
+# overwrites the stock sensor .dtbo files -- is never run.
+CEF168_REPO_URL="${CEF168_REPO_URL:-https://github.com/pinefeat/cef168.git}"
+CEF168_REPO_REF="${CEF168_REPO_REF:-e3abfb2}"
+# Filesystem roots, overridable only so _test/test_cef168_installer.py can run the
+# step against a scratch tree (the same reason configure_boot_config takes
+# CONFIG_TXT_PATH). An install never sets them.
+CEF168_MODULES_ROOT="${CEF168_MODULES_ROOT:-/lib/modules}"
+CEF168_SRC_ROOT="${CEF168_SRC_ROOT:-/usr/src}"
+CEF168_OVERLAYS_DIR="${CEF168_OVERLAYS_DIR:-/boot/firmware/overlays}"
+export CEF168_MODULES_ROOT   # read by scripts/cef168-module-installed.sh
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
 # Pi 5 kernel baseline. 6.12.93+rpt is the oldest baseline validated for
@@ -372,7 +394,10 @@ print_configuration_summary() {
     detail "Runtime HDMI ports: cam0->$HDMI_PORT_CAM0 cam1->$HDMI_PORT_CAM1"
     detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
     detail "Hotspot: $HOTSPOT_NAME (enabled=$HOTSPOT_ENABLED)"
-    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx283_driver=$INSTALL_IMX283_DRIVER imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
+    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx283_driver=$INSTALL_IMX283_DRIVER imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER cef168_driver=$INSTALL_CEF168_DRIVER"
+    if is_true "$INSTALL_CEF168_DRIVER"; then
+        detail "Pinefeat CEF168 kernel driver: $CEF168_REPO_URL @ $CEF168_REPO_REF (DKMS driver + cef168 overlay, overlay stays disabled)"
+    fi
     detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE recovery=$ENABLE_RECOVERY_CONSOLE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
 }
 
@@ -1548,6 +1573,205 @@ install_imx283_support() {
     fi
 }
 
+# --- Pinefeat CEF168 Canon EF lens adapter (optional kernel driver) ---------
+# Basic use (iris, focus, calibration, lens database) talks to the adapter board
+# over I2C directly and needs none of this. The driver makes the board a V4L2
+# lens subdevice (v4l2-ctl access, and the prerequisite for libcamera autofocus,
+# which is paused). That takes the cef168 kernel module plus an overlay that
+# declares the board. This step installs both and leaves the overlay DISABLED:
+# loading the overlay while cef168.ko is missing makes the sensor's async
+# notifier wait forever for a lens driver and the camera never registers. Enable
+# it by hand (docs/pinefeat/install.md) after scripts/cef168-module-installed.sh
+# passes; CineMate itself does not edit config.txt for it.
+
+# The one definition of "is cef168.ko installed for this kernel" lives in
+# scripts/cef168-module-installed.sh so CineMate and the installer cannot
+# disagree. Arguments pass through: [-v] [kernel-release].
+cef168_module_installed() {
+    "$CINEMATE_SOURCE_DIR/scripts/cef168-module-installed.sh" "$@"
+}
+
+# The kernel the module must exist for. On Pi 5 that is the pinned baseline
+# (the running kernel only catches up at the next reboot); elsewhere it is
+# whatever is running.
+cef168_target_kernel() {
+    if is_rpi2712_platform; then
+        printf '%s' "$KERNEL_BASELINE_ABI_2712"
+    else
+        uname -r
+    fi
+}
+
+# DKMS cannot build without headers for the target kernel. Pi 5 headers are
+# installed and held by align_pi5_kernel_baseline; on the Pi 4 family they are
+# not installed by anything else, so fetch them here.
+ensure_cef168_kernel_headers() {
+    local kernel="$1"
+    local flavour=""
+
+    if [[ ! -d "$CEF168_MODULES_ROOT/$kernel/build" ]]; then
+        detail "Installing kernel headers for $kernel"
+        if ! sudo apt install -y "linux-headers-$kernel"; then
+            warn "Could not install linux-headers-$kernel"
+            return 1
+        fi
+    fi
+
+    # The meta package keeps headers arriving with later kernel updates, which
+    # is what lets DKMS rebuild the module for them. Pi 5 already pins its own.
+    if ! is_rpi2712_platform && [[ "$kernel" == *-rpi-* ]]; then
+        flavour="${kernel##*-rpi-}"
+        if ! dpkg -s "linux-headers-rpi-$flavour" >/dev/null 2>&1; then
+            detail "Installing linux-headers-rpi-$flavour so DKMS can follow kernel updates"
+            sudo apt install -y "linux-headers-rpi-$flavour" || \
+                warn "Could not install linux-headers-rpi-$flavour; the module will not rebuild itself after a kernel update"
+        fi
+    fi
+    [[ -d "$CEF168_MODULES_ROOT/$kernel/build" ]]
+}
+
+# Compile and install the overlay. Never enables it. Check-then-skip: the
+# compiled blob is compared byte for byte with what is already installed.
+install_cef168_overlay() {
+    local src="$CINEMATE_SOURCE_DIR/resources/overlays/cef168/cef168-overlay.dts"
+    local overlays_dir="$CEF168_OVERLAYS_DIR"
+    local dtbo
+
+    if [[ ! -f "$src" ]]; then
+        warn "Missing $src"
+        return 1
+    fi
+    if [[ ! -d "$overlays_dir" ]]; then
+        warn "$overlays_dir not found; cannot install the cef168 overlay"
+        return 1
+    fi
+    dtbo="$(mktemp --suffix=.dtbo)"
+    # unit_address_vs_reg: the <sensor>@1a merge nodes carry no reg on purpose.
+    if ! dtc -@ -I dts -O dtb -W no-unit_address_vs_reg -o "$dtbo" "$src"; then
+        warn "dtc failed on $src"
+        rm -f "$dtbo"
+        return 1
+    fi
+    if sudo test -f "$overlays_dir/cef168.dtbo" && sudo cmp -s "$dtbo" "$overlays_dir/cef168.dtbo"; then
+        detail "cef168.dtbo already current in $overlays_dir"
+    else
+        detail "Installing cef168.dtbo into $overlays_dir (not enabled in config.txt)"
+        sudo install -m 644 "$dtbo" "$overlays_dir/cef168.dtbo"
+    fi
+    rm -f "$dtbo"
+}
+
+# Pinefeat's own configure.sh writes the lens node into the stock sensor .dtbo
+# (backups <sensor>.dtbo.~N~). With that still in place the two declarations
+# merge into one node (both are cef168@d on the same bus), but the sensor
+# overlay then declares the lens unconditionally, so CineMate can no longer keep
+# the lens out of the device tree when cef168.ko is missing for a kernel.
+warn_if_cef168_sensor_overlay_patched() {
+    local overlays_dir="$CEF168_OVERLAYS_DIR"
+    local patched
+    patched="$(sudo grep -alF -- 'pinefeat,cef168' "$overlays_dir"/*.dtbo 2>/dev/null | grep -v '/cef168\.dtbo$' || true)"
+    if [[ -n "$patched" ]]; then
+        warn "Pinefeat's configure.sh patch is still in:"
+        while IFS= read -r f; do
+            warn "  $f (restore its .dtbo.~N~ backup, see docs/pinefeat/install.md)"
+        done <<<"$patched"
+        warn "That overlay declares the lens whether or not cef168.ko exists for the running kernel;"
+        warn "a kernel without the module then stops the camera registering, and CineMate cannot prevent it."
+    fi
+}
+
+install_cef168_support() {
+    if ! is_true "$INSTALL_CEF168_DRIVER"; then
+        detail "Skipping Pinefeat CEF168 kernel driver (INSTALL_CEF168_DRIVER=1 to install; iris, focus and calibration need nothing)"
+        return 0
+    fi
+
+    # Opt-in, and Pinefeat's driver is third-party code: warn-don't-die on every
+    # step, same as the sensor drivers above. A failure here must not abort an
+    # install for someone whose camera does not need it.
+    local res_dir="$CINEMATE_SOURCE_DIR/resources/overlays/cef168"
+    local kernel dkms_ver commit stage stamp
+
+    log "Installing Pinefeat CEF168 kernel driver"
+    kernel="$(cef168_target_kernel)"
+    # `|| true` on every substitution/pipeline below: this runs under the
+    # installer's `set -e`, and a bare failure here would abort the whole install.
+    dkms_ver="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "$res_dir/dkms.conf" 2>/dev/null || true)"
+    if [[ -z "$dkms_ver" ]]; then
+        warn "Could not read PACKAGE_VERSION from $res_dir/dkms.conf -- CEF168 driver install skipped"
+        return 0
+    fi
+    stage="$CEF168_SRC_ROOT/cef168-$dkms_ver"
+    stamp="$stage/.cinemate-upstream-commit"
+
+    if ! sudo apt install -y dkms device-tree-compiler; then
+        warn "Could not install dkms/device-tree-compiler -- CEF168 driver install skipped"
+        return 0
+    fi
+    if ! ensure_cef168_kernel_headers "$kernel"; then
+        warn "No kernel headers for $kernel -- CEF168 driver install skipped"
+        return 0
+    fi
+    if ! ensure_repo "$CEF168_DIR" "$CEF168_REPO_URL" "$CEF168_REPO_REF"; then
+        warn "CEF168 driver checkout failed -- the kernel driver will be unavailable until this is resolved."
+        warn "Iris, focus and calibration are unaffected. See docs/pinefeat/install.md."
+        return 0
+    fi
+    # tail: run_as_pi prints a "Running as ..." line to stdout when not run as $PI_USER.
+    commit="$(run_as_pi git -C "$CEF168_DIR" rev-parse HEAD 2>/dev/null | tail -n 1 || true)"
+    if [[ -z "$commit" ]]; then
+        warn "Could not read the checked-out commit of $CEF168_DIR -- CEF168 driver install skipped"
+        return 0
+    fi
+    if is_commitish_ref "$CEF168_REPO_REF" && [[ "$commit" != "$CEF168_REPO_REF"* ]]; then
+        # ensure_repo carries on with whatever is checked out when a fetch or
+        # checkout fails (offline re-run); never build an unpinned commit.
+        warn "$CEF168_DIR is at '${commit:-unknown}', not the pinned $CEF168_REPO_REF -- CEF168 driver install skipped"
+        return 0
+    fi
+
+    if sudo dkms status -m cef168 -v "$dkms_ver" -k "$kernel" 2>/dev/null | grep -q ': installed' \
+        && [[ "$(cat "$stamp" 2>/dev/null)" == "$commit" ]] \
+        && cef168_module_installed "$kernel"; then
+        detail "cef168 $dkms_ver (upstream ${commit:0:7}) already installed by DKMS for $kernel"
+    else
+        detail "Staging cef168 $dkms_ver (upstream ${commit:0:7}) in $stage"
+        sudo dkms remove -m cef168 -v "$dkms_ver" --all >/dev/null 2>&1 || true
+        if ! sudo rm -rf "$stage" \
+            || ! sudo install -d -m 755 "$stage" \
+            || ! sudo install -m 644 "$CEF168_DIR/cef168.c" "$res_dir/Kbuild" "$res_dir/dkms.conf" "$stage/" \
+            || ! printf '%s\n' "$commit" | sudo tee "$stamp" >/dev/null; then
+            warn "Could not stage the cef168 sources in $stage -- CEF168 driver install skipped"
+            return 0
+        fi
+        if ! sudo dkms add -m cef168 -v "$dkms_ver" \
+            || ! sudo dkms build -m cef168 -v "$dkms_ver" -k "$kernel" \
+            || ! sudo dkms install -m cef168 -v "$dkms_ver" -k "$kernel"; then
+            warn "DKMS build of cef168 failed for $kernel -- the CEF168 kernel driver will be unavailable until this is resolved."
+            warn "See /var/lib/dkms/cef168/$dkms_ver/build/make.log. Iris, focus and calibration are unaffected."
+            return 0
+        fi
+    fi
+
+    local module_path
+    if module_path="$(cef168_module_installed -v "$kernel")"; then
+        detail "cef168 module for $kernel: $CEF168_MODULES_ROOT/$kernel/$module_path"
+    else
+        warn "DKMS reported success but no cef168 module is indexed for $kernel -- check 'sudo dkms status' and 'sudo depmod -a $kernel'"
+        return 0
+    fi
+
+    if ! install_cef168_overlay; then
+        warn "cef168 overlay not installed -- the CEF168 kernel driver will be unavailable until this is resolved."
+        return 0
+    fi
+    warn_if_cef168_sensor_overlay_patched
+
+    detail "The overlay is installed but NOT enabled, and CineMate does not enable it."
+    detail "By hand: add 'dtoverlay=cef168,$CAM_PORT,${SENSOR_MODEL%_mono}' after the sensor's dtoverlay line in /boot/firmware/config.txt and reboot."
+    detail "Do not enable it without the module: the camera would not register. Check: scripts/cef168-module-installed.sh"
+}
+
 install_sensor_tuning_overrides() {
     log "Installing Cinemate sensor tuning overrides"
     local local_tuning_dir="$CINEMATE_SOURCE_DIR/resources/tuning_files"
@@ -1831,6 +2055,9 @@ print_post_install_notes() {
     if ((KERNEL_ALIGNMENT_REQUIRED_REBOOT)); then
         detail "Pi 5 kernel baseline was aligned to $KERNEL_BASELINE_ABI_2712; reboot once before camera testing if you did not run the installer with RUN_REBOOT=1"
     fi
+    if is_true "$INSTALL_CEF168_DRIVER"; then
+        detail "CEF168 driver: built with DKMS, cef168 overlay installed but not enabled; see docs/pinefeat/install.md"
+    fi
     detail "Use 'cinemate' to launch the runtime wrapper manually"
 }
 
@@ -2109,6 +2336,8 @@ main() {
     section "Installing sensor-specific support"
     install_imx283_support
     install_imx585_support
+    section "Installing Pinefeat CEF168 kernel driver (optional)"
+    install_cef168_support
     install_sensor_tuning_overrides
     install_ir_filter_helper
     section "Installing optional GPIO backend"

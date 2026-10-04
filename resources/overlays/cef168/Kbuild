@@ -1,0 +1,8 @@
+# Kbuild file for the Pinefeat CEF168 lens driver (cef168.c, upstream
+# https://github.com/pinefeat/cef168, pinned by cinemate-install.sh).
+#
+# Upstream ships Makefile.template instead, which its configure.sh copies to
+# Makefile together with sensor overlay patching. DKMS only needs the one
+# line below, and a file called Kbuild takes precedence over a Makefile in
+# the same directory, so nothing from upstream is modified.
+obj-m := cef168.o

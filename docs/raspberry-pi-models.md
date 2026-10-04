@@ -23,3 +23,5 @@ The CM4 behaves like a Pi 4 but depends on the carrier board.
 
 - **For imx283 and 585, use cam port 1.** On the official CM4 IO board, `cam0` is wired for **2 lanes** and `cam1` for **4 lanes**. Put a 4-lane sensor on `cam1`.
 - **Jumpers.** Fit the camera jumpers on the carrier (`J6` on the official IO board). Without them the sensor may not get its control lines. Third-party carriers differ, so read your carrier's documentation.
+
+The [Pinefeat CEF168 lens adapter](pinefeat/index.md#platforms) works on all of the boards above. The overlay line differs per board.

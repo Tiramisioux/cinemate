@@ -1,0 +1,137 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Pinefeat CEF168 Canon EF lens adapter, as a standalone overlay.
+//
+// Why this exists: Pinefeat's configure.sh adds the lens node by *patching the
+// sensor's own overlay* and overwriting /boot/firmware/overlays/<sensor>.dtbo
+// (backup <sensor>.dtbo.~N~), and a firmware upgrade silently reverts it.
+// This overlay leaves every stock and CineMate sensor .dtbo untouched.
+//
+// What it does, in two parts:
+//   1. Adds the lens board (compatible "pinefeat,cef168", I2C address 0x0d) on
+//      the camera's own I2C bus, the same bus the sensor sits on.
+//   2. Merges `lens-focus = <&lens>` into the sensor node. The sensor node is
+//      created by the sensor's overlay and its label is private to that
+//      overlay, so it cannot be named from here. Instead a fragment targets the
+//      bus and carries a child node with the sensor node's exact name
+//      (<sensor>@1a). The firmware merges same-named nodes property by
+//      property, so the property lands on the real sensor node, whichever
+//      overlay is listed first in config.txt.
+//
+// Usage (config.txt), the port token and the sensor token must match the
+// sensor's own dtoverlay line:
+//     dtoverlay=imx477,cam0
+//     dtoverlay=cef168,cam0,imx477
+//
+// Do NOT load this overlay unless cef168.ko is installed for the running
+// kernel. The sensor driver's async notifier then waits for a lens driver that
+// never arrives and the camera never registers. Check first with
+// scripts/cef168-module-installed.sh.
+//
+// Name:   cef168
+// Info:   Pinefeat CEF168 Canon EF lens adapter (focus and aperture over I2C).
+// Load:   dtoverlay=cef168,<param>[,<param>]...
+// Params: cam0                    Use the CAM0 connector's I2C bus (default
+//                                 is CAM1 / the default camera bus).
+//         imx477                  The sensor is an IMX477 (HQ camera)
+//         imx296                  The sensor is an IMX296 (GS camera)
+//         imx283                  The sensor is an IMX283 (OneInchEye)
+//         imx585                  The sensor is an IMX585 (StarlightEye,
+//                                 colour or mono)
+//
+// The vcc-supply property of Pinefeat's own node is left out on purpose: the
+// driver never requests a regulator, and &vdd_3v3_reg is not defined by every
+// base device tree.
+//
+// Do not put a label on the <sensor>@1a nodes below. A label gives the node a
+// phandle, and the merge would overwrite the sensor node's own phandle.
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	// The same two enables every Raspberry Pi camera overlay carries. On the
+	// Pi 4 family they switch on the CAM0/CAM1 I2C mux; on the Pi 5 family the
+	// two nodes are empty placeholders and this is a no-op.
+	fragment@0 {
+		target = <&i2c0if>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target = <&i2c0mux>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	lens_frag: fragment@2 {
+		target = <&i2c_csi_dsi>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			lens: cef168@d {
+				compatible = "pinefeat,cef168";
+				reg = <0x0d>;
+				status = "okay";
+			};
+		};
+	};
+
+	// Dormant until the matching sensor parameter switches one on (see
+	// __overrides__). Exactly one of these should be active.
+	imx477_frag: fragment@10 {
+		target = <&i2c_csi_dsi>;
+		__dormant__ {
+			imx477@1a {
+				lens-focus = <&lens>;
+			};
+		};
+	};
+
+	imx296_frag: fragment@11 {
+		target = <&i2c_csi_dsi>;
+		__dormant__ {
+			imx296@1a {
+				lens-focus = <&lens>;
+			};
+		};
+	};
+
+	imx283_frag: fragment@12 {
+		target = <&i2c_csi_dsi>;
+		__dormant__ {
+			imx283@1a {
+				lens-focus = <&lens>;
+			};
+		};
+	};
+
+	imx585_frag: fragment@13 {
+		target = <&i2c_csi_dsi>;
+		__dormant__ {
+			imx585@1a {
+				lens-focus = <&lens>;
+			};
+		};
+	};
+
+	__overrides__ {
+		// Same retargeting the stock sensor overlays use for their own cam0
+		// parameter: i2c_csi_dsi (CAM1 / default) becomes i2c_csi_dsi0 (CAM0).
+		cam0 = <&lens_frag>, "target:0=", <&i2c_csi_dsi0>,
+		       <&imx477_frag>, "target:0=", <&i2c_csi_dsi0>,
+		       <&imx296_frag>, "target:0=", <&i2c_csi_dsi0>,
+		       <&imx283_frag>, "target:0=", <&i2c_csi_dsi0>,
+		       <&imx585_frag>, "target:0=", <&i2c_csi_dsi0>;
+
+		imx477 = <0>, "+10";
+		imx296 = <0>, "+11";
+		imx283 = <0>, "+12";
+		imx585 = <0>, "+13";
+	};
+};

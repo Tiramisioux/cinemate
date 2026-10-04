@@ -19,6 +19,8 @@
 
 Physical controls are mapped in [the settings file](settings-json.md). Type `editsettings` on the Pi to open it or use the Web UI. Changes apply at the next CineMate start. Controls call the same commands as the CLI and web GUI, listed under [commands reference](cli-commands.md).
 
+The [Pinefeat CEF168 lens adapter](pinefeat/index.md) adds iris and focus: buttons, dials and a potentiometer can be assigned to them ([how](pinefeat/panes.md#buttons-dials-and-pots)).
+
 !!! info "CineMate uses BCM pin numbering"
     The numbers CineMate wants are the **GPIO n** labels, not the physical pin positions.
     GPIO 7 is physical pin 26, and GPIO 21 is physical pin 40. Full interactive reference:

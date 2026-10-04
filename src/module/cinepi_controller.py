@@ -9,7 +9,8 @@ from threading import Timer
 import psutil
 
 from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request
-from module.sensor_detect import compute_frame_size_mb, thumbnail_plane_bytes
+from module.sensor_detect import compute_frame_size_mb, is_pi4_family, thumbnail_plane_bytes
+from module.tuning_files import stock_tuning_path
 from module.ir_filter import IRFilter
 from module.config_loader import (
     load_settings as _load_settings,
@@ -3641,9 +3642,9 @@ class CinePiController:
         # value not found", and writes neither cg_rb nor wb_user, so the
         # operator's WB control silently does nothing. Letting a missing file
         # reach that handler discarded the perfectly good default curve
-        # already assigned here. Sensors without a file at this hardcoded pisp
-        # path are ordinary, not exotic: any sensor on a Pi 4, or an
-        # imx477/imx296 whose libcamera checkout lives elsewhere.
+        # already assigned here. Sensors without a file at the platform's
+        # stock path are ordinary, not exotic: a sensor libcamera ships no
+        # tuning for, or a checkout that lives elsewhere.
         ct_curve = default_ct_curve
 
         if not sensor_key:
@@ -3652,10 +3653,11 @@ class CinePiController:
                 "white balance (no tuning file to read)."
             )
         else:
-            tuning_file_path = (
-                f"/home/pi/libcamera/src/ipa/rpi/pisp/data/"
-                f"{sensor_key}.json"
-            )
+            # The platform's own stock file (PLAN.md D19): the vc4 profile on
+            # the Pi 4 family, pisp on the Pi 5 family. This used to be pisp
+            # unconditionally, so a Pi 4 read the Pi 5 curve for its white
+            # balance whenever the source tree happened to hold one.
+            tuning_file_path = str(stock_tuning_path(sensor_key, is_pi4_family()))
             logging.info(f"Loading tuning file from: {tuning_file_path}")
             try:
                 with open(tuning_file_path, 'r') as file:

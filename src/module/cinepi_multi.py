@@ -20,7 +20,12 @@ from module.redis_controller import ParameterKey, decode_log_encode_request, Eve
 from module.framebuffer import Framebuffer
 from module.sensor_database import repo_root
 from module.sensor_detect import is_pi4_family, compute_preview_geometry
-from module.tuning_files import resolve_tuning_override
+from module.tuning_files import (
+    resolve_stock_tuning,
+    resolve_tuning_override,
+    stock_tuning_path,
+    tuning_target,
+)
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
     recorder_profile_args,
@@ -380,6 +385,71 @@ class CinePiProcess(Thread):
                      self.cam.port, role, path)
         return path
 
+    def _resolve_base_tuning(self, model_key: str) -> Optional[str]:
+        """The tuning file cinepi-raw is launched with, or None for none.
+
+        PLAN.md D19: the Pi 4 family (Pi 4, 400, CM4) gets its own vc4 tuning
+        profile, the Pi 5 family keeps the pisp one. Both are checked against
+        the "target" libcamera will compare them with, and a
+        tuning_file_override must carry that same target -- a pisp file on a
+        Pi 4 degrades exactly like a vc4 file on a Pi 5.
+
+        Pi 5 family: always returns a path, the stock pisp file unless the
+        override is valid. The stock path is passed unchecked, as it always
+        was; only an override can be wrong and only an override is checked.
+
+        Pi 4 family: the stock vc4 file is passed only when it exists and
+        validates; if it does not, this returns None and the launch carries no
+        --tuning-file (libcamera finds its own), which is what every Pi 4
+        launch did before D19. The override, when valid, wins over both.
+        """
+        is_pi4 = self._is_pi4()
+        port = self.cam.port
+        target = tuning_target(is_pi4)
+
+        stock = stock_tuning_path(model_key, is_pi4)
+        tune: Optional[str] = str(stock)
+        stock_problem = None
+        if is_pi4:
+            checked, stock_reason = resolve_stock_tuning(model_key, is_pi4)
+            if checked is None:
+                tune = None
+                stock_problem = stock_reason
+
+        # A bad override must degrade to the stock tuning, never reach
+        # --tuning-file unchecked: libcamera treats the env override as
+        # authoritative and fails camera *registration* when it cannot load
+        # it, while discover_cameras() has already succeeded without the
+        # flag -- so an unchecked bad path blacks the camera instead of just
+        # failing to apply (FINDINGS.md S1 steps 4-9; module/tuning_files.py's
+        # docstring has the full chain, including S2's wrong-target variant).
+        resolved_tune, tune_reason = resolve_tuning_override(
+            self.tuning_file_override, repo_root(), target,
+        )
+        if tune_reason == "ok":
+            tune = str(resolved_tune)
+            logging.info("[%s] Custom tuning file: %s", port, tune)
+        elif tune_reason != "disabled":
+            fallback = (
+                f"the auto-detected tuning {tune}" if tune is not None
+                else "no --tuning-file (libcamera's own tuning)"
+            )
+            logging.error(
+                "[%s] Custom tuning file override NOT applied (%s); launching with %s",
+                port, tune_reason, fallback,
+            )
+
+        if stock_problem is not None and tune is None:
+            # One line on the plain Pi 4 case. A file that is simply absent is
+            # ordinary (an apt-installed libcamera has no source tree); one
+            # that is there but wrong deserves more than INFO.
+            log = logging.info if stock_problem.startswith("file not found") else logging.warning
+            log(
+                "[%s] No usable %s tuning (%s); launching without --tuning-file",
+                port, target, stock_problem,
+            )
+        return tune
+
     def _build_args(self):
         # base resolution
         sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
@@ -455,23 +525,7 @@ class CinePiProcess(Thread):
         )
 
         # file paths
-        tune = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{model_key}.json'
-        # A bad override must degrade to this auto-detected tuning, never
-        # reach --tuning-file unchecked: libcamera treats the env override as
-        # authoritative and fails camera *registration* when it cannot load
-        # it, while discover_cameras() has already succeeded without the
-        # flag -- so an unchecked bad path blacks the camera instead of just
-        # failing to apply (FINDINGS.md S1 steps 4-9; module/tuning_files.py's
-        # docstring has the full chain, including S2's bcm2835 variant).
-        resolved_tune, tune_reason = resolve_tuning_override(self.tuning_file_override, repo_root())
-        if tune_reason == "ok":
-            tune = str(resolved_tune)
-            logging.info("[%s] Custom tuning file: %s", self.cam.port, tune)
-        elif tune_reason != "disabled":
-            logging.error(
-                "[%s] Custom tuning file override NOT applied (%s); launching with the auto-detected tuning %s",
-                self.cam.port, tune_reason, tune,
-            )
+        tune = self._resolve_base_tuning(model_key)
         post = f'/home/pi/post-processing{self.cam.index}.json'
         # ── Dual-sensor HDMI preview ──────────────────────────────────────
         # With two sensors, DRM master is exclusive, so the two cinepi-raw
@@ -574,14 +628,11 @@ class CinePiProcess(Thread):
             self.cam.port, n_cpus - 1,
         )
 
-        # * Skip --tuning-file on Pi 4.  All other models keep it. *
-        if not self._is_pi4():
+        # Pi 5 family: always pass the resolved tuning. Pi 4 family: only when
+        # _resolve_base_tuning found a vc4 file it could vouch for; otherwise
+        # libcamera is left to find its own, exactly as before PLAN.md D19.
+        if tune is not None:
             args += ["--tuning-file", tune]
-        elif self.tuning_file_override.get('enabled'):
-            logging.info(
-                "[%s] Custom tuning file override ignored on Pi 4 (VC4 uses its built-in tuning)",
-                self.cam.port,
-            )
 
         # ── PiSP pixel-rate ceiling. libcamera's bound is a compile-time
         # constant, so a build made for the rp1-overclock overlay advertises

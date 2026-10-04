@@ -561,6 +561,7 @@ class SubdevInfo:
     model: str      # "cef168", "imx477", ...
     bus: int
     address: int
+    port: str = ""  # "cam0"/"cam1" when the platform table knows the bus, else ""
 
 
 def list_subdevs(sysfs_root: str = SYSFS_V4L, dev_root: str = DEV_ROOT) -> list[SubdevInfo]:
@@ -593,11 +594,20 @@ def list_subdevs(sysfs_root: str = SYSFS_V4L, dev_root: str = DEV_ROOT) -> list[
     return [info for _, info in sorted(found, key=lambda item: item[0])]
 
 
-def find_subdevs(sysfs_root: str = SYSFS_V4L, dev_root: str = DEV_ROOT) -> list[SubdevInfo]:
+def find_subdevs(sysfs_root: str = SYSFS_V4L, dev_root: str = DEV_ROOT, *,
+                 platform: Optional[str] = None) -> list[SubdevInfo]:
     """The cef168 lens subdevs: PLAN F6/F4 -- present when the driver is bound,
-    whether or not a board is actually fitted."""
-    return [s for s in list_subdevs(sysfs_root, dev_root)
-            if s.model == LENS_DRIVER_NAME and s.address == I2C_ADDRESS]
+    whether or not a board is actually fitted. The bus comes from the subdev's
+    own name (``cef168 N-000d``); with ``platform`` given, ``port`` is filled
+    from that platform's table (``open_adapter`` does better when it has the
+    camera list, and pairs the bus with the sensor's)."""
+    table = PLATFORM_CAM_BUSES.get(platform or "", {})
+    by_bus = {bus: port for port, bus in table.items()}
+    return [
+        SubdevInfo(s.path, s.name, s.model, s.bus, s.address, by_bus.get(s.bus, ""))
+        for s in list_subdevs(sysfs_root, dev_root)
+        if s.model == LENS_DRIVER_NAME and s.address == I2C_ADDRESS
+    ]
 
 
 def detect_platform() -> str:

@@ -17,7 +17,6 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lens_fakes  # noqa: E402
 from lens_fakes import FakeBackend, FakeSMBus, fake_smbus_module, frame  # noqa: E402
 
 from module.lens import cef168  # noqa: E402
@@ -378,6 +377,12 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertEqual((found[0].path, found[0].bus, found[0].address),
                          ("/dev/v4l-subdev1", 0, 0x0D))
+
+    def test_the_port_is_filled_from_the_platform_table_when_asked(self):
+        sysfs, dev = make_sysfs(self.tmp, CM4_SUBDEVS)
+        self.assertEqual(cef168.find_subdevs(sysfs, dev)[0].port, "")
+        self.assertEqual(cef168.find_subdevs(sysfs, dev, platform="pi4")[0].port, "cam0")
+        self.assertEqual(cef168.find_subdevs(sysfs, dev, platform="pi5")[0].port, "")
 
     def test_pi5_lens_subdev_gives_its_own_bus(self):
         sysfs, dev = make_sysfs(self.tmp, {0: "imx585 6-001a", 1: "cef168 6-000d"})

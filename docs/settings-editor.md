@@ -33,16 +33,17 @@ The top bar carries a search box (filters every field/take on the current tab by
 | **Upload** | Parses a `.json`/`.jsonc`/`.txt` file you pick and loads it into the form — again, not written until Save |
 | **Save changes** | Writes the file for the active tab and applies it (see below) — disabled until something is actually dirty |
 
-The four file controls and **Save changes** are hidden on Playback and RAW files, which edit no file. The search box stays.
+The four file controls and **Save changes** are hidden on i2c, Lens, Playback and RAW files, which edit no file. The search box stays.
 
 For the live camera feed without leaving the page, see [The live-view launcher](#the-live-view-launcher) below — it replaced a dedicated tab.
 
-Four tabs run across the top of the page:
+Six tabs run across the top of the page:
 
 | Tab | Edits |
 |---|---|
 | **config.txt** | The managed block CineMate owns inside `/boot/firmware/config.txt` — sensor overlays, hardware buses, RP1 overclock |
 | **i2c** | What is attached to the camera's I²C bus, and the two clocks |
+| **Lens** | The [Pinefeat CEF168 adapter](pinefeat/panes.md#settings-editor-lens-pinefeat): the lens in use, the saved lens list, aperture range, capabilities and calibration. Live state, nothing to save |
 | **settings.jsonc** | Everything in `settings.jsonc`, grouped into sections (below) |
 | **Playback** | Reviews a recorded take frame-by-frame off the card |
 | **RAW files** | Browse, download, delete and format the mounted RAW storage |
@@ -54,7 +55,7 @@ The left rail groups the same fields `settings.jsonc` holds, unchanged in meanin
 | Group | Sections |
 |---|---|
 | Look & feel | Welcome screen (HDMI boot splash) · Wi‑Fi hotspot |
-| Cameras | Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, tuning-file override, independent per sensor |
+| Cameras | Camera 0 · Camera 1 — geometry, HDMI routing, USB device name, tuning-file override (each file in the picker shows the platform it was made for, and files for the other Pi platform are marked), independent per sensor |
 | Timing | Timing & sync — how strictly frame timing is watched before warning or flagging a take |
 | Exposure & steps | Value steps (click-stops per control) · Resolution & sensor (aspect-ratio and per-mode selection — [kept per sensor](settings-json.md#aspect_ratios) — dynamic resolution and its priority, ClearHDR startup values, DNG thumbnails, the active sensor database) |
 | Recording | Audio (input gain, timecode alignment per bit depth) · HDMI & preview (monitor overlay, dual-feed framing) |
@@ -126,6 +127,7 @@ bus, so opening this tab cannot disturb an encoder someone is turning or blank a
 | Adafruit quad rotary encoder | `0x49` | Four dials and push buttons on one board |
 | I²C OLED display | `0x3c` or `0x3d` | SSD1306 or SSD1309 — the two share a command set and an address, and neither has an ID register, so the pane names both rather than guessing. Shows the configured pixel size |
 | Real-time clock | `0x68` | Pi 4 only — see [Additional hardware](hardware-controls.md#real-time-clock) |
+| Pinefeat CEF168 lens adapter | `0x0d` | On the camera's own I²C bus, never bus 1. Reports how it was reached (`raw I²C` or the `cef168` kernel driver): [details](pinefeat/panes.md#the-i2c-pane) |
 | CFE Hat | `0x34` | The card is PCIe, but `0x34` — the hat's latch controller — is what says a hat is fitted, so that is what the pane goes on |
 
 Each row shows the address that answered. A device that is not found says which address was tried,

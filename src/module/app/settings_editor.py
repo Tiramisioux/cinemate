@@ -49,6 +49,13 @@ from module.config_loader import (
 )
 from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
+from module.lens.database import (
+    LensDatabase,
+    LensDatabaseError,
+    capabilities_of,
+    format_aperture_range,
+    is_calibrated,
+)
 from module.redis_controller import ParameterKey, smpte_frame_base
 from module import sensor_settings
 from module.sensor_detect import (
@@ -1766,6 +1773,179 @@ def sync_rtc():
     result = hardware_probe.sync_rtc_to_system()
     status = 200 if result["ok"] else 500
     return jsonify(result), status
+
+
+# ── Lens / Pinefeat pane ─────────────────────────────────────────────────
+# Reads and commands for the CEF168 adapter. Like the rest of this editor the
+# routes work with no camera and no Redis: LENS_CONTROLLER is None whenever the
+# camera app is not running (or this blueprint is served on its own), and then
+# the saved lenses are read straight from the database file and every command
+# answers "camera not running" instead of failing.
+
+_LENS_NOT_RUNNING = ("The camera is not running, so there is no lens controller to talk "
+                     "to. Saved lenses can still be read and deleted.")
+
+
+def _lens_database():
+    """The database the camera app writes, or -- when none was handed over --
+    one opened on the path settings.jsonc names. LensDatabase is stdlib-only
+    and re-reads its file only when it changed, so building one per request is
+    cheap and needs neither a camera nor Redis."""
+    database = current_app.config.get("LENS_DATABASE")
+    if database is not None:
+        return database
+    settings = current_app.config.get("SETTINGS") or {}
+    return LensDatabase((settings.get("lens_control") or {}).get("database_file"))
+
+
+def _lens_entry_summary(key: str, entry: dict) -> dict:
+    """One saved lens as the pane lists it: enough to fill the dropdown and to
+    show what the entry knows without opening it."""
+    focus = entry.get("focus") if isinstance(entry.get("focus"), dict) else None
+    return {
+        "key": key,
+        "name": str(entry.get("name") or key),
+        "lens_id": entry.get("lens_id"),
+        "last_used": entry.get("last_used"),
+        "aperture": format_aperture_range(entry),
+        "last_iris": entry.get("last_iris"),
+        "capabilities": capabilities_of(entry),
+        "calibrated": is_calibrated(entry),
+        "focus": ({
+            "calibrated_at": focus.get("calibrated_at"),
+            "position_min": focus.get("position_min"),
+            "position_max": focus.get("position_max"),
+            "mfd_m": focus.get("mfd_m"),
+            "distance_encoder": focus.get("distance_encoder"),
+            "points": len(focus.get("map") or []) // 2,
+        } if focus else None),
+    }
+
+
+@settings_editor_bp.route("/api/lens", methods=["GET"])
+def get_lens():
+    """Everything the Lens / Pinefeat pane draws, in one read: the controller's
+    status (None when the camera is not running), the saved lenses, and where
+    the database lives. Polled about once a second while the pane is open, so
+    it does no bus traffic -- the status is the controller's own snapshot."""
+    controller = _lens_controller()
+    status = None
+    if controller is not None:
+        try:
+            status = controller.status()
+        except Exception:
+            logger.exception("lens status failed")
+            return jsonify({"ok": False, "message": "The lens controller could not report its status"}), 500
+    database = _lens_database()
+    entries = database.entries()
+    return jsonify({
+        "ok": True,
+        "controller": controller is not None,
+        "message": "" if controller is not None else _LENS_NOT_RUNNING,
+        "status": status,
+        "entries": sorted((_lens_entry_summary(k, e) for k, e in entries.items()),
+                          key=lambda e: e["name"].lower()),
+        "database": {"path": str(database.path), "error": database.load_error},
+    })
+
+
+def _lens_command(call):
+    """Run one controller command and answer ``{ok, message}``.
+
+    A refusal (lens control off, recording, no lens...) is a normal answer, not
+    a server fault: it is 200 with ok false and the controller's own sentence,
+    which the pane shows as-is. 503 only when there is nobody to ask.
+    """
+    controller = _lens_controller()
+    if controller is None:
+        return jsonify({"ok": False, "message": _LENS_NOT_RUNNING}), 503
+    try:
+        ok, message = call(controller)
+    except Exception:
+        logger.exception("lens command failed")
+        return jsonify({"ok": False, "message": "The lens command failed; see the log"}), 500
+    return jsonify({"ok": bool(ok), "message": message})
+
+
+def _json_body() -> dict:
+    body = request.get_json(silent=True)
+    return body if isinstance(body, dict) else {}
+
+
+@settings_editor_bp.route("/api/lens/control", methods=["POST"])
+def set_lens_control():
+    """The one lens on/off toggle (D1). Switching on is refused by the
+    controller unless the adapter is found; the pane disables the toggle then
+    too, but this is the check that counts."""
+    enabled = _json_body().get("enabled")
+    if not isinstance(enabled, bool):
+        return jsonify({"ok": False, "message": "enabled must be true or false"}), 400
+    return _lens_command(lambda c: c.set_enabled(enabled))
+
+
+@settings_editor_bp.route("/api/lens/select", methods=["POST"])
+def select_lens():
+    key = _json_body().get("key")
+    if not isinstance(key, str) or not key:
+        return jsonify({"ok": False, "message": "Choose a saved lens"}), 400
+    return _lens_command(lambda c: c.select_lens(key))
+
+
+@settings_editor_bp.route("/api/lens/save", methods=["POST"])
+def save_lens():
+    """Save the working lens: as a new entry (no key) or over an existing one
+    (the pane asks for confirmation first). Nothing reaches the database any
+    other way (D6c)."""
+    body = _json_body()
+    name = body.get("name")
+    key = body.get("key")
+    if not isinstance(name, str) or not name.strip():
+        return jsonify({"ok": False, "message": "A lens needs a name"}), 400
+    if key is not None and not isinstance(key, str):
+        return jsonify({"ok": False, "message": "key must be a saved lens key"}), 400
+    return _lens_command(lambda c: c.save_lens(name, key or None))
+
+
+@settings_editor_bp.route("/api/lens/aperture", methods=["POST"])
+def set_lens_aperture():
+    """Enter (or, with both null, clear) the lens's widest and narrowest
+    f-number. The adapter cannot read them, so the operator types them; they
+    change the working lens until it is saved."""
+    body = _json_body()
+    return _lens_command(lambda c: c.set_aperture_range(body.get("min"), body.get("max")))
+
+
+@settings_editor_bp.route("/api/lens/calibrate", methods=["POST"])
+def calibrate_lens():
+    """Start a calibration sweep. Refused while recording and while lens
+    control is not effective; the refusal text is the controller's."""
+    mfd = _json_body().get("mfd_m")
+    if mfd in (None, ""):
+        mfd = None
+    else:
+        try:
+            mfd = float(mfd)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "message": "The minimum focus distance must be a number of metres"}), 400
+        if not 0.01 <= mfd <= 100.0:
+            return jsonify({"ok": False, "message": "The minimum focus distance must be between 0.01 and 100 metres"}), 400
+    return _lens_command(lambda c: c.request_calibration(mfd))
+
+
+@settings_editor_bp.route("/api/lens/entries/<key>", methods=["DELETE"])
+def delete_lens_entry(key):
+    """Remove a saved lens. Works with no camera running. If the running
+    controller has this entry selected it notices on its next poll and keeps
+    the lens as an unsaved entry, so a calibration is not lost with it."""
+    database = _lens_database()
+    try:
+        removed = database.delete(key)
+    except LensDatabaseError as exc:
+        logger.warning("lens delete failed: %s", exc)
+        return jsonify({"ok": False, "message": f"Could not update the lens database: {exc}"}), 500
+    if not removed:
+        return jsonify({"ok": False, "message": f"No saved lens '{key}'"}), 404
+    return jsonify({"ok": True, "message": f"Deleted '{key}'"})
 
 
 # ── live log ─────────────────────────────────────────────────────────────

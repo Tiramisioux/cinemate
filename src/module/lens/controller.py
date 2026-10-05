@@ -331,6 +331,7 @@ class LensController(threading.Thread):
                     "last": ({
                         "ok": last.ok, "reason": last.reason, "stats": dict(last.stats),
                         "duration_s": last.duration_s, "focus": copy.deepcopy(last.focus),
+                        "no_position_feedback": bool(last.no_position_feedback),
                     } if last else None),
                 },
                 "selftest": {"running": self._detector.running, "armed": self._detector.armed},

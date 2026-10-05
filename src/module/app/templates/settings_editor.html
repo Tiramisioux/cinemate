@@ -392,6 +392,17 @@
      fields stay editable rather than being disabled. */
   .hw-absent{ opacity:.45; }
   .hw-note{ font-size:12px; color: var(--muted); margin:6px 0 0; }
+  /* ---------- Lens pane styles ---------- */
+  .lens-wrap{ flex-wrap: wrap; justify-content: flex-end; }
+  .lens-ap{ display:inline-flex; align-items:center; gap:5px; font-size:13px; color: var(--muted); white-space:nowrap; }
+  .chip-dirty{ color: var(--dirty); border-color: var(--dirty); background: var(--dirty-soft); text-transform:none; letter-spacing:0; }
+  .chip-warn{ color: var(--restart); border-color: var(--restart); background: var(--restart-soft); }
+  .toggle[disabled]{ opacity:.4; cursor: not-allowed; }
+  .lens-bar{ height:8px; border-radius:999px; background: var(--line); overflow:hidden; margin-top:8px; max-width:46ch; }
+  .lens-bar-fill{ height:100%; width:0%; background: var(--accent); transition: width .25s linear; }
+  @media (prefers-reduced-motion: reduce){ .lens-bar-fill{ transition:none; } }
+  .lens-fail{ color: var(--danger); }
+
   /* A tuning file made for the other Pi platform: still listed, still pickable
      (a saved value must render), but dimmed. The option text also says so. */
   option.tune-mismatch{ color: var(--muted); }
@@ -1458,6 +1469,10 @@
       <div class="rail-title eyebrow">{{ t('rail.i2c-hardware.title') }}</div>
       <p class="rail-blurb">{{ t('rail.i2c-hardware.blurb') }}</p>
     </div>
+    <div class="rail-group" data-page="lens">
+      <div class="rail-title eyebrow">{{ t('rail.lens-pinefeat.title') }}</div>
+      <p class="rail-blurb">{{ t('rail.lens-pinefeat.blurb') }}</p>
+    </div>
     <div class="rail-group" data-page="raw">
       <div class="rail-title eyebrow">{{ t('rail.raw-files.title') }}</div>
       <p class="rail-blurb">{{ t('rail.raw-files.blurb') }}</p>
@@ -1472,6 +1487,7 @@
     <div class="page-tabs" role="tablist" aria-label="CineMate app pages">
       <button type="button" data-page-tab="config" role="tab">{{ t('tab.config.label') }}<span class="tab-hint">{{ t('tab.config.hint') }}</span></button>
       <button type="button" data-page-tab="i2c" role="tab">{{ t('tab.i2c.label') }}<span class="tab-hint">{{ t('tab.i2c.hint') }}</span></button>
+      <button type="button" data-page-tab="lens" role="tab">{{ t('tab.lens.label') }}<span class="tab-hint">{{ t('tab.lens.hint') }}</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">{{ t('tab.settings.label') }}<span class="tab-hint">{{ t('tab.settings.hint') }}</span></button>
       <button type="button" data-page-tab="playback" role="tab">{{ t('tab.playback.label') }}<span class="tab-hint">{{ t('tab.playback.hint') }}</span></button>
       <button type="button" data-page-tab="raw" role="tab">{{ t('tab.raw.label') }}<span class="tab-hint">{{ t('tab.raw.hint') }}</span></button>
@@ -1479,6 +1495,7 @@
     <p class="lede" data-page-lede="config" hidden></p>
     <p class="lede" data-page-lede="settings" hidden></p>
     <p class="lede" data-page-lede="i2c" hidden></p>
+    <p class="lede" data-page-lede="lens" hidden></p>
     <p class="lede" data-page-lede="playback" hidden></p>
     <p class="lede" data-page-lede="raw" hidden></p>
 
@@ -2847,6 +2864,132 @@
     </section>
 
 
+
+    <!-- LENS / PINEFEAT: live state read from the LensController (app.config
+         LENS_CONTROLLER) over /api/lens -- not a settings.jsonc page, so like
+         the i2c pane it has no Save. -->
+    <section class="group" id="lens" data-page="lens">
+      <header class="group-head">
+        <h2>{{ t('pane.lens.0.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.lens.0.sub') }}</p>
+        <p class="hw-note" id="lensRunNote" hidden></p>
+      </header>
+      <div class="cards">
+        <div class="card" data-search="pinefeat cef168 adapter lens canon ef found provenance bus">
+          <div class="card-main">
+            <div class="card-label">{{ t('card.lens.status.label') }}</div>
+            <p class="card-help">{{ t('card.lens.status.help') }}</p>
+            <p class="card-help" id="lensStatusText">—</p>
+          </div>
+          <div class="card-control"><span class="chip" id="lensStatusChip">…</span></div>
+        </div>
+        <div class="card" data-search="lens control toggle enable iris focus">
+          <div class="card-main">
+            <label class="card-label" for="lensControlToggle">{{ t('card.lens.control.label') }}</label>
+            <p class="card-help">{{ t('card.lens.control.help') }}</p>
+            <p class="card-help" id="lensControlWhy" hidden></p>
+          </div>
+          <div class="card-control">
+            <button class="toggle" id="lensControlToggle" type="button" role="switch" aria-checked="false" disabled></button>
+          </div>
+        </div>
+      </div>
+
+      <header class="group-head" style="margin-top:26px">
+        <h2>{{ t('pane.lens.1.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.lens.1.sub') }}</p>
+      </header>
+      <div class="cards">
+        <div class="card" data-search="mounted lens id state">
+          <div class="card-main">
+            <div class="card-label">{{ t('card.lens.mounted.label') }}</div>
+            <p class="card-help">{{ t('card.lens.mounted.help') }}</p>
+            <p class="card-help" id="lensMountedText">—</p>
+          </div>
+          <div class="card-control"><span class="chip" id="lensStateChip">—</span></div>
+        </div>
+        <div class="card" data-search="saved lens entry select dropdown unknown unsaved">
+          <div class="card-main">
+            <label class="card-label" for="lensSelect">{{ t('card.lens.select.label') }}</label>
+            <p class="card-help">{{ t('card.lens.select.help') }}</p>
+          </div>
+          <div class="card-control">
+            <span class="chip chip-dirty" id="lensDirtyChip" hidden>Unsaved changes</span>
+            <select class="field-input" id="lensSelect" disabled></select>
+          </div>
+        </div>
+        <div class="card" data-search="lens name save new over">
+          <div class="card-main">
+            <label class="card-label" for="lensName">{{ t('card.lens.save.label') }}</label>
+            <p class="card-help">{{ t('card.lens.save.help') }}</p>
+          </div>
+          <div class="card-control lens-wrap">
+            <input class="field-input wide" type="text" id="lensName" maxlength="80" placeholder="Lens name" autocomplete="off" disabled>
+            <button class="btn btn-primary" type="button" id="lensSaveNew" disabled>Save as new</button>
+            <button class="btn btn-ghost" type="button" id="lensSaveOver" disabled>Save over</button>
+          </div>
+        </div>
+        <div class="card" data-search="aperture range widest narrowest f-number iris">
+          <div class="card-main">
+            <div class="card-label">{{ t('card.lens.aperture.label') }}</div>
+            <p class="card-help">{{ t('card.lens.aperture.help') }}</p>
+          </div>
+          <div class="card-control lens-wrap">
+            <span class="lens-ap">f/<input class="field-input num-input" type="number" id="lensApMin" min="0.5" max="128" step="0.1" aria-label="Widest f-number" disabled></span>
+            <span class="lens-ap">to f/<input class="field-input num-input" type="number" id="lensApMax" min="0.5" max="128" step="0.1" aria-label="Narrowest f-number" disabled></span>
+            <button class="btn btn-ghost" type="button" id="lensApApply" disabled>Apply</button>
+            <button class="btn btn-ghost" type="button" id="lensApClear" disabled>Clear</button>
+          </div>
+        </div>
+        <div class="card" data-search="capabilities iris focus autofocus iris only">
+          <div class="card-main">
+            <div class="card-label">{{ t('card.lens.capabilities.label') }}</div>
+            <p class="card-help">{{ t('card.lens.capabilities.help') }}</p>
+            <p class="card-help" id="lensCapNote" hidden></p>
+          </div>
+          <div class="card-control lens-wrap">
+            <span class="chip" id="lensCapIris">Iris —</span>
+            <span class="chip" id="lensCapFocus">Focus —</span>
+            <span class="chip" id="lensCapAf">Autofocus reserved</span>
+          </div>
+        </div>
+      </div>
+
+      <header class="group-head" style="margin-top:26px">
+        <h2>{{ t('pane.lens.2.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.lens.2.sub') }}</p>
+      </header>
+      <div class="cards">
+        <div class="card" data-search="calibrate calibration sweep focus range minimum focus distance">
+          <div class="card-main">
+            <div class="card-label">{{ t('card.lens.calibrate.label') }}</div>
+            <p class="card-help">{{ t('card.lens.calibrate.help') }}</p>
+            <div class="lens-progress" id="lensProgress" hidden>
+              <div class="lens-bar"><div class="lens-bar-fill" id="lensBarFill"></div></div>
+              <p class="card-help" id="lensProgressText"></p>
+            </div>
+            <p class="card-help" id="lensCalMsg" hidden></p>
+          </div>
+          <div class="card-control lens-wrap">
+            <span class="lens-ap">MFD <input class="field-input num-input" type="number" id="lensMfd" min="0.01" max="100" step="0.01" placeholder="m" aria-label="Minimum focus distance in metres" disabled></span>
+            <button class="btn btn-primary" type="button" id="lensCalBtn" disabled>Calibrate</button>
+          </div>
+        </div>
+        <div class="card" data-search="last calibration result map points distance encoder">
+          <div class="card-main">
+            <div class="card-label">{{ t('card.lens.last.label') }}</div>
+            <p class="card-help">{{ t('card.lens.last.help') }}</p>
+            <p class="card-help" id="lensLastText">—</p>
+          </div>
+        </div>
+      </div>
+
+      <header class="group-head" style="margin-top:26px">
+        <h2>{{ t('pane.lens.3.heading') }}</h2>
+        <p class="group-sub">{{ t('pane.lens.3.sub') }}</p>
+      </header>
+      <div class="cards" id="lensSavedList"></div>
+    </section>
 
   </main>
 </div>
@@ -7123,7 +7266,7 @@
     var saveBtn = document.getElementById('saveBtn');
     var openJsonBtn = document.getElementById('openJson');
     var openJsonLabel = document.getElementById('openJsonLabel');
-    var noFilePage = activePage === 'raw' || activePage === 'playback' || activePage === 'i2c';
+    var noFilePage = activePage === 'raw' || activePage === 'playback' || activePage === 'i2c' || activePage === 'lens';
     saveBtn.hidden = noFilePage;
     openJsonBtn.hidden = noFilePage;
     document.getElementById('revertBtn').hidden = noFilePage;
@@ -7413,6 +7556,322 @@
     });
   }
 
+
+  /* ---------- Lens / Pinefeat pane ---------- */
+  /* Everything here comes from GET /settings-editor/api/lens (the running
+     LensController's own snapshot plus the saved-lens file) and goes back
+     through the POST routes beside it -- not /api/v1/cmd, whose lens commands
+     take a name as one word and carry no refusal text. Nothing is cached in the
+     page: it is polled while the pane is open, and every render is a pure
+     function of the last answer, so a lens swapped from a button or the CLI
+     shows up here without a reload.
+     Two traps this pane has to respect, both about a poll overwriting the
+     operator: it must not rebuild the dropdown under an open picker, and it
+     must not rewrite a name or an f-number they are partway through typing --
+     the inputs follow the server only until they have been touched. */
+  var lensData = null;
+  var lensLoading = false;
+  var lensTimer = null;
+  var lensTouched = { name: false, aperture: false };
+  var lensShownKey = null;       /* which saved entry the inputs were last filled for */
+  var LENS_POLL_MS = 1000;
+
+  function lensEl(id){ return document.getElementById(id); }
+  function lensFmt(n){ return (typeof n === 'number' && isFinite(n)) ? String(Math.round(n * 100) / 100) : '—'; }
+  function lensCapText(label, value){
+    return label + ' ' + (value === true ? 'yes' : value === false ? 'no' : 'untested');
+  }
+
+  function lensRefresh(){
+    if (lensTimer){ clearTimeout(lensTimer); lensTimer = null; }
+    /* One request in flight; poll only while the pane is on screen. */
+    if (activePage === 'lens' && !document.hidden) lensTimer = setTimeout(lensRefresh, LENS_POLL_MS);
+    if (lensLoading) return;
+    lensLoading = true;
+    fetch('/settings-editor/api/lens', { cache: 'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok){ lensEl('lensStatusText').textContent = (res && res.message) || 'Could not read the lens adapter.'; return; }
+        lensData = res;
+        lensRender();
+      })
+      .catch(function(err){ lensEl('lensStatusText').textContent = 'Could not reach the server: ' + err; })
+      .finally(function(){ lensLoading = false; });
+  }
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden && activePage === 'lens') lensRefresh(); });
+
+  function lensPost(url, body){
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+      .then(function(r){ return r.json().then(function(j){ return { ok: r.ok && !!j.ok, message: j.message || '' }; }); })
+      .catch(function(err){ return { ok: false, message: 'Could not reach the server: ' + err }; });
+  }
+  function lensAct(url, body, after){
+    return lensPost(url, body).then(function(res){
+      showToast(res.message || (res.ok ? 'Done' : 'Not done'));
+      if (after) after(res);
+      lensRefresh();
+      return res;
+    });
+  }
+
+  function lensRender(){
+    var d = lensData;
+    var st = d.status;                       /* null: the camera is not running */
+    var running = !!st;
+    var found = running && !!st.found;
+    var working = (st && st.working) || {};
+    var lensPresent = running && st.lens_id !== null && st.lens_id !== undefined;
+    var calibrating = running && st.calibration && st.calibration.running;
+
+    var note = lensEl('lensRunNote');
+    note.hidden = running;
+    note.textContent = running ? '' : d.message;
+
+    /* adapter */
+    var chip = lensEl('lensStatusChip');
+    chip.className = 'chip' + (found ? ' chip-live' : '');
+    chip.textContent = !running ? 'camera not running' : found ? 'found' : 'not found';
+    var text;
+    if (!running) text = 'Cannot say: only the running camera can reach the adapter.';
+    else if (!found) text = 'Not found. ' + (st.absent_reason || '');
+    else {
+      var words = { 'v4l2-subdev': 'the cef168 driver is bound', 'i2c-raw': 'raw read on the camera bus, no driver' };
+      text = 'Found' + (st.port ? ' on ' + st.port : '') + (st.bus_description ? ' (' + st.bus_description + ')' : '')
+           + '. Provenance: ' + st.provenance + ' — ' + (words[st.provenance] || 'unknown') + '.';
+    }
+    lensEl('lensStatusText').textContent = text;
+
+    /* toggle: only meaningful, and only operable, while the adapter is found (D1) */
+    var tog = lensEl('lensControlToggle');
+    tog.disabled = !found;
+    tog.setAttribute('aria-checked', String(found && !!st.enabled));
+    var why = lensEl('lensControlWhy');
+    why.hidden = found;
+    why.textContent = found ? '' : (running ? 'Switched off until the adapter is found.' : 'Switched off while the camera is not running.');
+
+    /* mounted lens */
+    var stateChip = lensEl('lensStateChip');
+    var stateName = running ? st.state : '—';
+    stateChip.className = 'chip' + (stateName === 'ready' ? ' chip-live' : (stateName === 'error' || stateName === 'unknown_lens') ? ' chip-warn' : '');
+    stateChip.textContent = String(stateName).replace('_', ' ');
+    lensEl('lensMountedText').textContent = !running ? '—'
+      : (lensPresent ? 'Lens id ' + st.lens_id + '. ' : (found ? 'No lens mounted. ' : '')) + (found ? (st.message || '') : '');
+
+    /* saved-lens dropdown: rebuilt only when its content changed, never under an open picker */
+    var sel = lensEl('lensSelect');
+    var entries = d.entries || [];
+    var signature = entries.map(function(e){ return e.key + '\u0000' + e.name + '\u0000' + e.lens_id; }).join('\u0001');
+    if (sel.dataset.signature !== signature && document.activeElement !== sel){
+      sel.textContent = '';
+      var unknown = document.createElement('option');
+      unknown.value = ''; unknown.textContent = 'Unknown lens (not saved)';
+      sel.appendChild(unknown);
+      entries.forEach(function(e){
+        var opt = document.createElement('option');
+        opt.value = e.key;
+        opt.textContent = e.name + (e.lens_id !== null && e.lens_id !== undefined ? ' (id ' + e.lens_id + ')' : '');
+        sel.appendChild(opt);
+      });
+      sel.dataset.signature = signature;
+    }
+    var key = running ? (st.lens_key || '') : '';
+    if (document.activeElement !== sel) sel.value = key;
+    sel.disabled = !lensPresent;
+    lensEl('lensDirtyChip').hidden = !(running && working.dirty);
+
+    /* name: follows the selected entry until the operator types */
+    var nameEl = lensEl('lensName');
+    if (lensShownKey !== key){ lensTouched.name = false; lensTouched.aperture = false; lensShownKey = key; }
+    if (!lensTouched.name && document.activeElement !== nameEl) nameEl.value = key ? (working.name || '') : '';
+    nameEl.disabled = !lensPresent;
+    var hasName = nameEl.value.trim() !== '';
+    lensEl('lensSaveNew').disabled = !lensPresent || !hasName;
+    var over = lensEl('lensSaveOver');
+    over.disabled = !lensPresent || !key || !hasName;
+    over.title = key ? 'Replace the saved lens "' + (working.name || key) + '"' : 'Choose a saved lens first';
+
+    /* aperture range */
+    var ap = working.aperture || null;
+    var apMin = lensEl('lensApMin'), apMax = lensEl('lensApMax');
+    if (!lensTouched.aperture && document.activeElement !== apMin && document.activeElement !== apMax){
+      apMin.value = ap ? ap.min : '';
+      apMax.value = ap ? ap.max : '';
+    }
+    [apMin, apMax, lensEl('lensApApply'), lensEl('lensApClear')].forEach(function(el){ el.disabled = !lensPresent; });
+
+    /* capabilities (D20) */
+    var caps = (st && st.capabilities) || {};
+    function capChip(id, label, value){
+      var el = lensEl(id);
+      el.textContent = lensCapText(label, lensPresent ? value : null);
+      el.className = 'chip' + (lensPresent && value === true ? ' chip-live' : (lensPresent && value === false ? ' chip-warn' : ''));
+    }
+    capChip('lensCapIris', 'Iris', caps.iris);
+    capChip('lensCapFocus', 'Focus', caps.focus);
+    lensEl('lensCapAf').textContent = 'Autofocus reserved';
+    var capNote = lensEl('lensCapNote');
+    var irisOnly = lensPresent && caps.focus === false;
+    capNote.hidden = !irisOnly;
+    capNote.textContent = irisOnly ? 'Iris only: this lens never reported a focus position when it was calibrated, so focus controls are off for it.' : '';
+
+    /* calibrator */
+    var cal = (st && st.calibration) || {};
+    lensEl('lensCalBtn').disabled = !running || !!calibrating;
+    lensEl('lensMfd').disabled = !running || !!calibrating;
+    var prog = lensEl('lensProgress');
+    prog.hidden = !calibrating;
+    if (calibrating){
+      var p = cal.progress || {};
+      var span = (p.position_max || 0) - (p.position_min || 0);
+      var frac = (span > 0 && typeof p.position === 'number') ? Math.max(0, Math.min(1, (p.position - p.position_min) / span)) : 0;
+      lensEl('lensBarFill').style.width = Math.round(frac * 100) + '%';
+      lensEl('lensProgressText').textContent = 'Sweeping: position ' + (p.position === null || p.position === undefined ? '—' : p.position)
+        + (span > 0 ? ' of ' + p.position_min + '–' + p.position_max : '') + ', ' + lensFmt(p.elapsed_s) + ' s, '
+        + (p.samples || 0) + ' samples.';
+    }
+    lensRenderLast(cal.last, working);
+
+    lensRenderSaved(entries, key, running);
+  }
+
+  function lensRenderLast(last, working){
+    var el = lensEl('lensLastText');
+    el.classList.remove('lens-fail');
+    if (!last){ el.textContent = 'No calibration has run since CineMate started.'; return; }
+    if (!last.ok){
+      el.classList.add('lens-fail');
+      el.textContent = 'Failed: ' + last.reason
+        + (last.no_position_feedback ? ' The lens is now marked iris only; save it to keep that.' : '');
+      return;
+    }
+    var f = last.focus || {};
+    var points = (f.map || []).length / 2;
+    var kind = f.distance_encoder ? 'distance encoder: yes' : 'distance encoder: no (2-point fallback map)';
+    el.textContent = 'Map: ' + points + ' points. Minimum focus distance: ' + (f.mfd_m ? lensFmt(f.mfd_m) + ' m' : 'not reported')
+      + '. ' + kind[0].toUpperCase() + kind.slice(1) + '. Focus range ' + f.position_min + '–' + f.position_max
+      + ', took ' + lensFmt(last.duration_s) + ' s.' + (working && working.dirty ? ' Not saved yet.' : '');
+  }
+
+  function lensRenderSaved(entries, selectedKey, running){
+    var host = lensEl('lensSavedList');
+    var signature = JSON.stringify([entries, selectedKey]);
+    if (host.dataset.signature === signature) return;
+    host.dataset.signature = signature;
+    host.textContent = '';
+    if (!entries.length){
+      var empty = document.createElement('div');
+      empty.className = 'card';
+      var em = document.createElement('div');
+      em.className = 'card-main';
+      var ep = document.createElement('p');
+      ep.className = 'card-help';
+      ep.textContent = 'No lens has been saved yet. Mount a lens, give it a name above and choose Save as new.';
+      em.appendChild(ep); empty.appendChild(em); host.appendChild(empty);
+      return;
+    }
+    entries.forEach(function(e){
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.setAttribute('data-search', (e.name + ' ' + e.key + ' lens ' + e.lens_id).toLowerCase());
+      var main = document.createElement('div');
+      main.className = 'card-main';
+      var label = document.createElement('div');
+      label.className = 'card-label';
+      label.textContent = e.name;
+      var help = document.createElement('p');
+      help.className = 'card-help';
+      var parts = ['id ' + (e.lens_id === null || e.lens_id === undefined ? '—' : e.lens_id)];
+      parts.push(e.aperture ? 'f/' + e.aperture.replace('-', ' to f/') : 'aperture range not set');
+      parts.push(e.capabilities && e.capabilities.focus === false ? 'iris only'
+        : (e.calibrated ? 'calibrated' + (e.focus && e.focus.mfd_m ? ', MFD ' + lensFmt(e.focus.mfd_m) + ' m' : '') : 'not calibrated'));
+      if (e.last_used) parts.push('used ' + e.last_used.replace('T', ' ').replace('Z', ' UTC'));
+      help.textContent = parts.join(' · ');
+      main.appendChild(label); main.appendChild(help);
+      var control = document.createElement('div');
+      control.className = 'card-control';
+      if (e.key === selectedKey){
+        var inUse = document.createElement('span');
+        inUse.className = 'chip chip-live';
+        inUse.textContent = 'in use';
+        control.appendChild(inUse);
+      }
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn btn-danger-outline';
+      del.textContent = 'Delete';
+      del.setAttribute('aria-label', 'Delete ' + e.name);
+      del.addEventListener('click', function(){
+        showConfirm('Delete the saved lens "' + e.name + '"? Its calibration and aperture range are lost. The lens itself is untouched.',
+          function(){
+            fetch('/settings-editor/api/lens/entries/' + encodeURIComponent(e.key), { method: 'DELETE' })
+              .then(function(r){ return r.json(); })
+              .then(function(res){ showToast(res.message || (res.ok ? 'Deleted' : 'Not deleted')); })
+              .catch(function(err){ showToast('Could not reach the server: ' + err); })
+              .finally(function(){ lensRefresh(); });
+          }, null, { title: 'Delete this lens?', okLabel: 'Delete', danger: true });
+      });
+      control.appendChild(del);
+      card.appendChild(main); card.appendChild(control);
+      host.appendChild(card);
+    });
+  }
+
+  lensEl('lensControlToggle').addEventListener('click', function(){
+    var tog = lensEl('lensControlToggle');
+    if (tog.disabled) return;
+    var want = tog.getAttribute('aria-checked') !== 'true';
+    tog.disabled = true;                      /* until the answer says what actually happened */
+    lensAct('/settings-editor/api/lens/control', { enabled: want });
+  });
+  lensEl('lensSelect').addEventListener('change', function(e){
+    if (!e.target.value){ lensRefresh(); return; }       /* "Unknown lens" is a state, not a choice */
+    lensTouched.name = false; lensTouched.aperture = false;
+    lensAct('/settings-editor/api/lens/select', { key: e.target.value });
+  });
+  lensEl('lensName').addEventListener('input', function(){ lensTouched.name = true; if (lensData) lensRender(); });
+  ['lensApMin', 'lensApMax'].forEach(function(id){
+    lensEl(id).addEventListener('input', function(){ lensTouched.aperture = true; });
+  });
+  lensEl('lensSaveNew').addEventListener('click', function(){
+    lensAct('/settings-editor/api/lens/save', { name: lensEl('lensName').value.trim() },
+      function(res){ if (res.ok) lensTouched.name = false; });
+  });
+  lensEl('lensSaveOver').addEventListener('click', function(){
+    var key = lensData && lensData.status && lensData.status.lens_key;
+    if (!key) return;
+    var name = lensEl('lensName').value.trim();
+    var target = (lensData.entries || []).filter(function(e){ return e.key === key; })[0];
+    showConfirm('Replace the saved lens "' + (target ? target.name : key) + '" with the current calibration and settings'
+      + (target && target.name !== name ? ', and rename it "' + name + '"' : '') + '?',
+      function(){
+        lensAct('/settings-editor/api/lens/save', { name: name, key: key },
+          function(res){ if (res.ok) lensTouched.name = false; });
+      }, null, { title: 'Save over this lens?', okLabel: 'Save over' });
+  });
+  function lensApertureValue(id){
+    var raw = lensEl(id).value.trim();
+    return raw === '' ? null : Number(raw);
+  }
+  lensEl('lensApApply').addEventListener('click', function(){
+    var lo = lensApertureValue('lensApMin'), hi = lensApertureValue('lensApMax');
+    if (lo === null && hi === null){ showToast('Enter both f-numbers, or choose Clear'); return; }
+    lensAct('/settings-editor/api/lens/aperture', { min: lo, max: hi }, function(res){ if (res.ok) lensTouched.aperture = false; });
+  });
+  lensEl('lensApClear').addEventListener('click', function(){
+    lensAct('/settings-editor/api/lens/aperture', { min: null, max: null }, function(res){ if (res.ok) lensTouched.aperture = false; });
+  });
+  lensEl('lensCalBtn').addEventListener('click', function(){
+    var msg = lensEl('lensCalMsg');
+    var mfd = lensEl('lensMfd').value.trim();
+    lensEl('lensCalBtn').disabled = true;
+    lensAct('/settings-editor/api/lens/calibrate', mfd === '' ? {} : { mfd_m: mfd }, function(res){
+      /* A refusal (recording, lens control off, no lens) is the controller's own
+         sentence; keep it on the card, not only in a toast that fades. */
+      msg.hidden = res.ok;
+      msg.textContent = res.ok ? '' : 'Not started: ' + res.message;
+    });
+  });
+
   /* Which page a reload lands on. The rail's links already put a section id
      in the hash (#cam0, #steps, ...) and every section declares its page via
      data-page, so a URL that carries a hash answers this on its own. The hash
@@ -7424,7 +7883,7 @@
      never contradict a hash -- it is consulted when there is nothing else to
      go on. Storage can throw outright (Safari private mode, site data blocked),
      so every access is guarded and simply falls back to the default. */
-  var PAGE_LANDING = { config: 'bootconfig', i2c: 'i2cbus', settings: 'welcome', raw: 'clips', playback: 'playback' };
+  var PAGE_LANDING = { config: 'bootconfig', i2c: 'i2cbus', lens: 'lens', settings: 'welcome', raw: 'clips', playback: 'playback' };
   var DEFAULT_PAGE = 'settings';
   var LAST_PAGE_KEY = 'cinemate.settingsEditor.lastPage';
   function rememberPage(page){
@@ -7466,6 +7925,9 @@
     if (page === 'i2c'){ i2cRefresh(); i2cStartTicking(); }
     else { i2cStopTicking(); }
     activePage = page;
+    /* The lens pane polls only while it is the page on screen. */
+    if (page === 'lens'){ lensRefresh(); }
+    else if (lensTimer){ clearTimeout(lensTimer); lensTimer = null; }
     rememberPage(page);
     pageTabButtons.forEach(function(b){
       var isActive = b.getAttribute('data-page-tab') === page;

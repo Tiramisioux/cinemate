@@ -99,3 +99,35 @@ transition instead of a stale value.
 | gui_layout | CineMate | Path to the active GUI layout preset | No |
 | pi_model | CineMate startup | Platform family, not the full board name: `pi5` (Pi 5 / 500 / CM5), `pi4` (Pi 4 / 400 / CM4), `other`, or `unknown` | No |
 | sensor | CineMate startup | Active camera model key | No |
+
+### Lens (Pinefeat CEF168 adapter)
+
+Written by CineMate's lens thread (`module/lens`), which reads the adapter board over I²C. Inert without the adapter: the keys then read `lens_detected` `0`, `lens_state` `absent`, the rest empty. See [Pinefeat adapter](pinefeat/index.md).
+
+| Key | Written by | Description | Safe to change manually? |
+|-----|------------|-------------|--------------------------|
+| lens_control | CineMate | Operator switch for everything below, `0` or `1`, persisted across restarts. Effective only while `lens_detected` is `1`: `set lens control 1` is refused when the adapter is not found. Seeded `0` | No (use `set lens control`) |
+| lens_detected | CineMate (lens thread) | `1` once the adapter answered a CRC-checked read | No |
+| lens_provenance | CineMate (lens thread) | How the adapter is reached: `i2c-raw` (CineMate reads the board directly) or `v4l2-subdev` (the optional `cef168` kernel driver); empty when not found | No |
+| lens_port | CineMate (lens thread) | Camera port the adapter sits on, `cam0` or `cam1`; empty when not found or not known | No |
+| lens_id | CineMate (lens thread) | Canon lens id byte the adapter reads, `0`–`255`; empty with no lens mounted. Not unique to a lens model | No |
+| lens_key | CineMate (lens thread) | The selected entry's key in the lens database (`lenses.json`); empty for a lens not yet saved | No (use `set lens`) |
+| lens_name | CineMate (lens thread) | Name of the selected entry; empty when none | No |
+| lens_state | CineMate (lens thread) | One word: `absent`, `no_lens`, `unknown_lens`, `uncalibrated`, `ready`, `selftest`, `calibrating`, `error` | No |
+| lens_message | CineMate (lens thread) | The last human-readable status or refusal line, what the panes show | No |
+| lens_aperture_range | CineMate (lens thread) | Widest and narrowest f-number of the selected lens as the operator entered it, e.g. `1.8-22`; empty until entered | No (use `set lens aperture`) |
+| iris | CineMate (lens thread) | The f-number CineMate last commanded, e.g. `2.8`. The lens cannot be read back, so this is never a measurement. Persisted; re-applied to the lens when it is detected. Seeded empty. Written only by the lens thread: `set iris` goes through the lens, not straight to this key | No (use `set iris`) |
+| focus_position | CineMate (lens thread) | Focus motor position the adapter reports, an integer; empty with no lens. Trails a command by up to a poll (`lens_control.poll_hz`) | No |
+
+#### Autofocus keys (paused)
+
+Autofocus is paused: CineMate has no commands for these and `lens_control.autofocus` ships `false`. The keys exist in `ParameterKey` and cinepi-raw's `CONTROL_KEY_AF_*` handlers, and are listed so a stray value found with `redis-cli` is not a mystery. Nothing here is seeded: `af_mode` in particular is never written globally, because `manual` would switch off stock Camera Module 3 autofocus.
+
+| Key | Written by | Description | Safe to change manually? |
+|-----|------------|-------------|--------------------------|
+| af_mode | (paused) CineMate -> CinePi-raw | `manual`, `auto` or `continuous`. No CineMate command sets it | No |
+| af_trigger | (paused) CineMate -> CinePi-raw | `start` or `cancel`, edge-triggered on publish | No |
+| lens_position | (paused) CineMate -> CinePi-raw | Requested focus in dioptres, for libcamera's `LensPosition` | No |
+| af_state | (paused) CinePi-raw -> CineMate | `idle`, `scanning`, `focused` or `failed` | No |
+| lens_position_actual | (paused) CinePi-raw -> CineMate | Focus in dioptres from frame metadata | No |
+| af_available | (paused) CineMate (cinepi_multi) | `lens_key` the camera was launched with an autofocus tuning for, else empty | No |

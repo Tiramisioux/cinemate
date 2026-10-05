@@ -543,6 +543,9 @@ PORTS = ("cam0", "cam1")
 # matching sensor subdev answers the question. The Pi 5 row is a copy of
 # ir_filter.CAM_PORT_TO_BUS (pinned by a test). The pi4 row has no cam1 on
 # purpose: that bus has not been measured, and "unknown, say so" beats a guess.
+# There is deliberately no "cm5" row: the buses of a Compute Module 5 depend on
+# the carrier board (CM5IO: cam0 i2c-6 / cam1 i2c-0; a Pi 5: 6 / 4), see
+# detect_platform().
 PLATFORM_CAM_BUSES: dict[str, dict[str, int]] = {
     "pi5": {"cam0": 6, "cam1": 4},
     "pi4": {"cam0": 0},
@@ -611,15 +614,28 @@ def find_subdevs(sysfs_root: str = SYSFS_V4L, dev_root: str = DEV_ROOT, *,
 
 
 def detect_platform() -> str:
-    """'pi5' / 'pi4' / 'other' / 'unknown' -- sensor_detect.pi_family(), imported
-    lazily so this module stays importable on its own."""
+    """'pi5' / 'cm5' / 'pi4' / 'other' / 'unknown' -- sensor_detect.pi_family(),
+    imported lazily so this module stays importable on its own.
+
+    ``pi_family()`` calls a Compute Module 5 "pi5" (right for tuning files and
+    the RP1 receiver), but the camera I2C buses are wired per *carrier*, not per
+    SoC: a CM5IO board has cam0 = i2c-6 and cam1 = i2c-0, a Pi 5 has cam0 = i2c-6
+    and cam1 = i2c-4. Letting a CM5 inherit the Pi 5 row would probe the wrong
+    bus for cam1 without a word. So a CM5 is reported as its own platform,
+    "cm5", which has *no* row in ``PLATFORM_CAM_BUSES``: its bus comes from the
+    ``cef168`` subdev name or from the sensor's subdev, and when neither exists
+    the reason says the bus is unknown instead of guessing one.
+    """
     try:
-        from module.sensor_detect import pi_family
+        from module.sensor_detect import pi_family, read_pi_model
     except Exception:  # an import-time failure elsewhere must not stop detection
         logger.debug("pi_family unavailable", exc_info=True)
         return "unknown"
     try:
-        return pi_family()
+        family = pi_family()
+        if family == "pi5" and "Compute Module 5" in read_pi_model():
+            return "cm5"
+        return family
     except Exception:
         logger.debug("pi_family failed", exc_info=True)
         return "unknown"

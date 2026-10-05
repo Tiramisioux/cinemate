@@ -109,6 +109,10 @@ TUNING_FILE_NAME_RX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.json$")
 # one blank option reading "(none - toggle)" for all of them, which was untrue
 # for eleven methods -- including format_drive, where `filesystem or "exfat"`
 # means a blank argument silently formats the card.
+# The group the lens actions live in. Named once: get_actions() greys it by
+# this name, and the JS copy in the template spells it the same way.
+LENS_ACTION_GROUP = "Lens (Pinefeat)"
+
 ACTION_METHODS = [
     {"group": "Record", "value": "rec", "label": "Start / stop recording"},
     {"group": "ISO", "value": "set_iso", "label": "Set ISO", "no_arg": "required",
@@ -174,6 +178,24 @@ ACTION_METHODS = [
     # set_filter's else-branch returns "Invalid value provided." -- it acts on
     # 0 or 1 only and has no toggle branch, whatever its old label implied.
     {"group": "Sensor", "value": "set_filter", "label": "Set IR-cut filter", "no_arg": "required", "arg": {"type": "toggle01"}},
+    # Lens (Pinefeat CEF168 adapter). Always listed, whether or not an adapter is
+    # fitted: a saved button layout must keep pointing at something. With lens
+    # control off the methods do nothing and log why (CinePiController, "Lens"
+    # block); get_actions() marks the group greyed with the reason.
+    # save_lens and set_lens_aperture_range are not offered here: they need a
+    # typed name or two numbers, which a button cannot carry. They are CLI
+    # commands (`save lens`, `set lens aperture`) and the Lens / Pinefeat pane.
+    {"group": LENS_ACTION_GROUP, "value": "set_iris", "label": "Set iris (f-number)", "no_arg": "required",
+     "arg": {"type": "select", "options": [1, 1.1, 1.2, 1.4, 1.6, 1.8, 2, 2.2, 2.5, 2.8, 3.2, 3.5, 4, 4.5, 5, 5.6, 6.3, 7.1, 8, 9, 10, 11, 13, 14, 16, 18, 20, 22, 25, 29, 32]}},
+    {"group": LENS_ACTION_GROUP, "value": "inc_iris", "label": "Iris: stop down one third (higher f-number)"},
+    {"group": LENS_ACTION_GROUP, "value": "dec_iris", "label": "Iris: open up one third (lower f-number)"},
+    {"group": LENS_ACTION_GROUP, "value": "set_focus", "label": "Set focus position", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 65535, "placeholder": "motor position"}},
+    {"group": LENS_ACTION_GROUP, "value": "inc_focus", "label": "Focus towards infinity (one detent)"},
+    {"group": LENS_ACTION_GROUP, "value": "dec_focus", "label": "Focus nearer (one detent)"},
+    {"group": LENS_ACTION_GROUP, "value": "set_lens_control", "label": "Toggle lens control", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": LENS_ACTION_GROUP, "value": "calibrate_lens", "label": "Calibrate the lens"},
+    {"group": LENS_ACTION_GROUP, "value": "set_lens", "label": "Next lens entry for the mounted lens", "no_arg": "cycle"},
     {"group": "Locks", "value": "set_all_lock", "label": "Toggle all-parameter lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
     {"group": "System", "value": "restart_cinemate", "label": "Restart CineMate"},
     {"group": "System", "value": "restart_camera", "label": "Restart camera process"},
@@ -990,11 +1012,30 @@ def get_actions():
     cinepi_controller = current_app.config.get("CINEPI_CONTROLLER")
     available = _public_method_names(cinepi_controller) if cinepi_controller is not None else None
 
+    # D11: the lens actions are always listed (a saved layout must keep
+    # pointing at them) but are greyed, with the reason, while lens control is
+    # not effective. `greyed` is advisory: the entry stays selectable.
+    lens_controller = current_app.config.get("LENS_CONTROLLER")
+    lens_grey_reason = ""
+    if lens_controller is None:
+        lens_grey_reason = "Lens control is not available"
+    else:
+        try:
+            lens_status = lens_controller.status()
+            if not lens_status.get("effective"):
+                lens_grey_reason = lens_status.get("message") or "Lens control is off"
+        except Exception:
+            logger.debug("actions: lens status unavailable", exc_info=True)
+            lens_grey_reason = "Lens status unavailable"
+
     actions = []
     for entry in ACTION_METHODS:
         item = dict(entry)
         if available is not None:
             item["available"] = entry["value"] in available
+        if entry.get("group") == LENS_ACTION_GROUP and lens_grey_reason:
+            item["greyed"] = True
+            item["grey_reason"] = lens_grey_reason
         actions.append(item)
 
     return jsonify({"ok": True, "actions": actions})

@@ -345,6 +345,10 @@ def load_lens_entry(database_value, key: str) -> tuple[Optional[dict], str]:
     sensors.database_file. A missing file is simply an empty database -- the
     file is created on the first write -- so it is a reason, not an error.
     Strict JSON, per PLAN.md section 3; unknown fields are left alone.
+
+    No longer called at launch: cinepi_multi reads entries through
+    ``module.lens.database.LensDatabase`` (the integration step this module's
+    docstring promised). Kept, with its tests, as the dependency-free reader.
     """
     path = resolve_database_path(database_value or DEFAULT_LENS_DATABASE_FILE)
     try:

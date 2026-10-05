@@ -2209,7 +2209,8 @@ seed_redis_defaults() {
         wb 5600 wb_user 5600 width 0 memory_alert 0 \
         shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
         exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
-        zoom 0 write_speed_to_drive 0 recording_time 0 >/dev/null
+        zoom 0 write_speed_to_drive 0 recording_time 0 \
+        lens_control 0 iris "" >/dev/null
     run_as_pi redis-cli SETNX sensor_mode 0 >/dev/null
     run_as_pi redis-cli SET cg_rb 3.5,1.5 >/dev/null
     run_as_pi redis-cli PUBLISH cp_controls cg_rb >/dev/null || true

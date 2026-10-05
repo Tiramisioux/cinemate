@@ -154,6 +154,7 @@ class LensController(threading.Thread):
                  sleep: Optional[Callable[[float], None]] = None,
                  request_camera_restart: Optional[Callable[[str], None]] = None,
                  autofocus_enabled: Any = False,
+                 calibrate_on_selftest: Any = True,
                  focus_step_fraction: float = FOCUS_STEP_FRACTION,
                  calibration_timeout_s: float = CALIBRATION_TIMEOUT_S,
                  detector: Optional[SelfTestDetector] = None):
@@ -173,6 +174,12 @@ class LensController(threading.Thread):
         self._request_restart = request_camera_restart
         self._autofocus_enabled_source = (autofocus_enabled if callable(autofocus_enabled)
                                           else (lambda value=bool(autofocus_enabled): value))
+        # ``lens_control.calibrate_on_selftest``: whether the AF/MF x3 gesture
+        # starts a calibration when the board's self-test ends (a callable is
+        # asked each time, like autofocus_enabled).
+        self._calibrate_on_selftest_source = (
+            calibrate_on_selftest if callable(calibrate_on_selftest)
+            else (lambda value=calibrate_on_selftest: value))
         self._focus_step_fraction = focus_step_fraction
         self._calibration_timeout_s = calibration_timeout_s
         self._detector = detector or SelfTestDetector()
@@ -708,6 +715,10 @@ class LensController(threading.Thread):
                 self._say("Self-test seen; focus is marked unavailable for this lens, so no "
                           "calibration was started. Use Calibrate to try again.")
                 logger.info("Lens self-test finished; focus is unavailable for this lens")
+            elif not self._calibrate_on_selftest():
+                self._say("Self-test seen; calibration on self-test is switched off "
+                          "(lens_control.calibrate_on_selftest). Use Calibrate.")
+                logger.info("Lens self-test finished; calibrate_on_selftest is off")
             elif self._recording():
                 self._say("Self-test seen while recording; not calibrating")
                 logger.info("Lens self-test finished while recording; not calibrating")
@@ -852,6 +863,18 @@ class LensController(threading.Thread):
                     "position when it was calibrated")
         return None
 
+    def _iris_refusal(self) -> Optional[str]:
+        """``_refusal`` plus the D20 gate for iris: a lens whose entry says its
+        iris does not engage gets no iris commands, with the reason."""
+        reason = self._refusal()
+        if reason:
+            return reason
+        with self._lock:
+            working = self._working
+        if capability(working, "iris") is False:
+            return "The iris is not available for this lens: its entry says iris commands do nothing"
+        return None
+
     def _command_failed(self, what: str, exc: Exception) -> tuple[bool, str]:
         message = f"{what} failed: {exc}"
         logger.warning("Lens: %s", message)
@@ -879,7 +902,7 @@ class LensController(threading.Thread):
 
     def set_iris(self, fnumber: float) -> tuple[bool, str]:
         """Command an absolute f-number, clamped to the entry's aperture range."""
-        reason = self._refusal()
+        reason = self._iris_refusal()
         if reason:
             return False, reason
         try:
@@ -1147,6 +1170,14 @@ class LensController(threading.Thread):
         actual = self._parse_float(self._redis_get(ParameterKey.LENS_POSITION_ACTUAL))
         if actual is not None:
             self._redis_set(ParameterKey.LENS_POSITION, f"{actual:.4f}")
+
+    def _calibrate_on_selftest(self) -> bool:
+        try:
+            value = self._calibrate_on_selftest_source()
+        except Exception:
+            logger.debug("calibrate_on_selftest setting unavailable", exc_info=True)
+            return True
+        return value if isinstance(value, bool) else _truthy(value)
 
     def _autofocus_enabled(self) -> bool:
         """The ``lens_control.autofocus`` setting. It may be a callable owned by

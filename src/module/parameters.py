@@ -92,20 +92,26 @@ class Parameter:
     unit: str
     redis_key: str
     setter: str
-    cycle: str  # "steps" (increment/decrement through a table) or
+    cycle: str  # "steps" (increment/decrement through a table),
                 # "direction" (set_X(direction="next"/"prev") owns its own
-                # cycling logic)
+                # cycling logic) or "method" (the controller's own
+                # inc_X()/dec_X() do the stepping, because the value is
+                # not a plain list index -- the lens iris and focus)
     steps: Callable[[object], list]
     policy_key: str
     free_attr: Optional[str] = None
     lock_attr: Optional[str] = None
     menu: bool = True
+    # False when the Redis key is a *readback* that trails the command (the
+    # focus motor's position), so comparing it with the value just requested
+    # would report "did not stick" for every command that worked.
+    confirm: bool = True
 
 
 def _param(name, label, unit, steps, *, cycle="steps", redis_key=None,
            setter=None, policy_key=None, free_attr=None, lock_attr=None,
-           menu=True):
-    if cycle not in ("steps", "direction"):
+           menu=True, confirm=True):
+    if cycle not in ("steps", "direction", "method"):
         raise ValueError(f"unknown cycle kind: {cycle!r}")
     return Parameter(
         name=name,
@@ -119,6 +125,7 @@ def _param(name, label, unit, steps, *, cycle="steps", redis_key=None,
         free_attr=free_attr,
         lock_attr=lock_attr,
         menu=menu,
+        confirm=confirm,
     )
 
 
@@ -205,11 +212,38 @@ _HDR_THRESHOLD_HIGH = _param(
     free_attr="hdr_threshold_high_free",
 )
 
+# Pinefeat CEF168 lens adapter. Both are stepped by the controller's own
+# inc_iris/dec_iris and inc_focus/dec_focus (cycle="method"), not by indexing a
+# step list: the iris table is the *selected lens entry's*, and the lens cannot
+# be read back, so "the current step" is whatever was last commanded (Redis
+# `iris`, which is "" until then); focus is a motor position moved in
+# percent-of-range detents. Registered so the quad rotary's `setting_name`, a
+# pot, increment_setting() and get_setting() all find them by name.
+_IRIS = _param(
+    "iris", "Iris", "f/",
+    cycle="method",
+    # Live: the table of whichever lens entry is selected right now (the full
+    # third-stop table when no lens is selected or no range was entered).
+    steps=lambda c: c.iris_steps(),
+)
+
+_FOCUS = _param(
+    "focus", "Focus", "",
+    cycle="method",
+    # The board's motor position, not a dioptre: Redis `focus_position`.
+    redis_key="focus_position",
+    confirm=False,
+    # A motor range has no step table; the 1 % detent is the lens controller's.
+    # Report the calibrated range's end points so a consumer has bounds.
+    steps=lambda c: c.focus_range(),
+)
+
 REGISTRY: dict[str, Parameter] = {
     p.name: p
     for p in (
         _ISO, _SHUTTER_A, _SHUTTER_A_NOM, _FPS, _WB, _ZOOM,
         _HDR_BLEND, _HDR_GAIN_ADDER, _HDR_THRESHOLD_LOW, _HDR_THRESHOLD_HIGH,
+        _IRIS, _FOCUS,
     )
 }
 

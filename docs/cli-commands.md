@@ -75,6 +75,26 @@ Startup values come from `image_capture.hdr` in `settings.jsonc`. All four knobs
 | `set log [<10\|12\|on\|off>]` | int, string or none | `set_log_encode` | Toggle [CineMate Log](cinemate-log.md) using each camera's default target for its live bit depth (16-bit → 12, 12-bit → 10). `set log 10` / `set log 12` force a target where the live bit depth supports it; `set log on` / `set log off` force a state (`yes`/`no`, `true`/`false` work too). A number other than 10 or 12 is rejected, so `set log 1` is not a synonym for `on`. Restarts the camera when idle; while recording the request is stored and applied on the next launch. |
 | `set thumbnail <word\|n>` | string | `set_thumbnail` | Embedded DNG thumbnail mode: `off` (`0`), `mono` (`1`), `colour`/`color` (`2`, default), `jpeg` (`3`) — words are case-insensitive, and the legacy ints still work. Applied live on the next frame, no camera restart. Affects new takes only. Thumbnail size is `image_capture.thumbnail_size` in [`settings.jsonc`](settings-json.md#dng-thumbnails) instead — not exposed as a command here, since its handler restarts the camera. |
 
+## Lens (Pinefeat CEF168 adapter)
+
+Iris, focus, calibration and the lens database, through the [Pinefeat adapter](pinefeat/index.md). Every command is always there; with lens control off, no adapter or no lens it does nothing and logs why.
+
+| Command | Argument | Method | What it does |
+|---|---|---|---|
+| `set iris <f-number>` | float | `set_iris` | Set the aperture, clamped to the lens's entered aperture range. The lens cannot be read back, so `iris` in [Redis](redis-keys.md#lens-pinefeat-cef168-adapter) is the value last commanded. |
+| `inc iris` / `dec iris` | – | `inc_iris` / `dec_iris` | One third of a stop towards a higher f-number (stop down, darker) or a lower one (open up, brighter), along the lens's own iris table. A dial with **wrap** on goes round from one end to the other. |
+| `set focus <position>` | float | `set_focus` | Move the focus motor to an absolute position, clamped to the range the adapter reports. |
+| `inc focus` / `dec focus` | – | `inc_focus` / `dec_focus` | One detent, 1 % of the motor range, towards infinity or towards the minimum focus distance. Never wraps. |
+| `set lens control [0/1]` | 0/1 or none | `set_lens_control` | The one lens on/off switch, remembered across restarts. Omit the value to toggle. Switching **on** is refused while the adapter is not found. |
+| `calibrate lens [<metres>]` | float or none | `calibrate_lens` | Sweep the focus range and build the lens's focus map. The optional value is the lens's minimum focus distance in metres, for a lens that reports none. Refused while recording. The result is in the working lens until you save. |
+| `set lens [<key>]` | text or none | `set_lens` | Select a lens from the database by key. Omit the key to step through the entries saved for the mounted lens. |
+| `save lens [<name>]` | text or none | `save_lens` | Save the working lens as a **new** entry called `<name>`; the name may contain spaces. With no name, save **over** the selected entry under its own name. Save-over with a different name is in the settings editor. |
+| `set lens aperture <widest> <narrowest>` | two numbers, or `clear` | `set_lens_aperture_range` | Enter the mounted lens's aperture range, for example `set lens aperture 1.8 22` (`1.8-22` also works). Unsaved until `save lens`. |
+
+!!! note ""
+
+    On a button, `set_iris` and `set_focus` need a value; `inc_*`, `dec_*` and `calibrate_lens` do not. `save_lens` and `set_lens_aperture_range` need typed text, so they are commands and settings-editor actions, not button actions. A Grove potentiometer can drive the iris with `setting: "iris"` ([Additional hardware](hardware-controls.md)), and a quad rotary dial with `setting_name: "iris"` or `"focus"`.
+
 ## Resolution and preview
 
 | Command | Argument | Method | What it does |

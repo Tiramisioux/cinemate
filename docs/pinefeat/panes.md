@@ -111,9 +111,16 @@ The commands are listed with their arguments in the [commands reference](../cli-
 |---|---|
 | Iris | `set iris`, `inc iris`, `dec iris` |
 | Focus | `set focus`, `inc focus`, `dec focus` |
-| Lens | `set lens`, `save lens`, `calibrate lens`, `set lens control` |
+| Lens | `set lens`, `save lens`, `calibrate lens`, `set lens control`, `set lens aperture` |
 
 With lens control off, a command does nothing and prints why.
+
+| Command | Direction and details |
+|---|---|
+| `inc iris` / `dec iris` | `inc` goes towards a higher f-number (stop down, darker). One third of a stop, along the mounted lens's own table. |
+| `inc focus` / `dec focus` | `inc` goes towards infinity. One detent is 1 % of the motor range. Focus never wraps. |
+| `save lens <name>` | Saves the working lens as a new entry. With no name, saves over the selected entry. |
+| `set lens aperture 1.8 22` | Enters the aperture range. Unsaved until `save lens`. |
 
 ## Buttons, dials and pots
 
@@ -124,7 +131,7 @@ Everything is assigned the usual way: [Additional hardware](../hardware-controls
 | GPIO button or switch | Pick the command on a gesture line | `inc_iris`, `dec_iris`, `inc_focus`, `dec_focus`, `calibrate_lens`, `set_lens` |
 | Rotary encoder | **Rotate CW** and **Rotate CCW** lines | `inc_iris` and `dec_iris`, or `inc_focus` and `dec_focus` |
 | Quad rotary board | The dial's **Turn** line: `setting_name` | `"iris"` or `"focus"` |
-| Grove potentiometer | A pot channel | `iris_pot` |
+| Grove potentiometer | A pot channel in `input_peripherals.pots` | `{ "channel": 2, "setting": "iris" }` ([settings](../settings-json.md#lens_control)) |
 
 **[placeholder - WP4: how the lens commands are grouped in the Command dropdown]**
 

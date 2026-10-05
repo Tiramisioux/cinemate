@@ -649,7 +649,8 @@ pi_model 0 rec 0 sensor 0 shutter_a 0 space_left 0 storage_type 0 \
 wb 5600 wb_user 5600 width 0 memory_alert 0 \
 shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
 exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
-zoom 0 write_speed_to_drive 0 recording_time 0
+zoom 0 write_speed_to_drive 0 recording_time 0 \
+lens_control 0 iris ""
 redis-cli SETNX sensor_mode 0
 ```
 

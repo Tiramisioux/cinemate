@@ -33,6 +33,7 @@ from module.dynamic_resolution import (
     normalize_priority,
 )
 from module import parameters
+from module.lens.database import IRIS_STEPS, iris_steps_for
 
 SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
@@ -92,7 +93,12 @@ class CinePiController:
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.sensor_detect = sensor_detect
-        
+        # The Pinefeat CEF168 lens thread, handed over by main.py with
+        # attach_lens_controller() (it is started *before* this object exists,
+        # so cinepi-raw can read the lens keys at launch). None when nothing
+        # was attached -- every lens method then says so instead of failing.
+        self.lens_controller = None
+
         self.iso_steps = iso_steps
         self.iso_steps_dynamic = list(iso_steps)
 
@@ -1913,6 +1919,9 @@ class CinePiController:
     def attach_redis_listener(self, redis_listener) -> None:
         self.redis_listener = redis_listener
 
+    def attach_lens_controller(self, lens_controller) -> None:
+        self.lens_controller = lens_controller
+
     def add_resolution_change_callback(self, callback) -> None:
         if not callable(callback):
             logging.warning("Ignoring non-callable resolution change callback.")
@@ -3486,9 +3495,16 @@ class CinePiController:
         return max(0, min(idx + delta, length - 1))
 
     def increment_setting(self, setting_name, steps, fps=None, wrap=False):
+        param = parameters.get(setting_name, source="increment_setting")
+        if param is not None and param.cycle == "method":
+            # The lens parameters (iris, focus) step themselves: their "current
+            # value" may be "" in Redis (the lens cannot be read back) and their
+            # table is the selected lens's, so the generic index walk below
+            # would restart from step 0 whenever the value is unknown.
+            return getattr(self, f"inc_{setting_name}")(wrap=wrap)
+
         current_value = float(self.get_setting(setting_name))
 
-        param = parameters.get(setting_name, source="increment_setting")
         dynamic_steps = param.steps(self) if param is not None else steps
 
         if current_value in dynamic_steps:
@@ -3515,9 +3531,12 @@ class CinePiController:
 
 
     def decrement_setting(self, setting_name, steps, fps=None, wrap=False):
+        param = parameters.get(setting_name, source="decrement_setting")
+        if param is not None and param.cycle == "method":
+            return getattr(self, f"dec_{setting_name}")(wrap=wrap)
+
         current_value = float(self.get_setting(setting_name))
 
-        param = parameters.get(setting_name, source="decrement_setting")
         dynamic_steps = param.steps(self) if param is not None else steps
 
         if current_value in dynamic_steps:
@@ -3797,6 +3816,199 @@ class CinePiController:
 
     def dec_zoom(self, wrap=True):
         self.set_zoom(direction='prev', wrap=wrap)
+
+    # ─── Lens (Pinefeat CEF168 adapter) ───────────────────────────────────────
+    #
+    # Thin delegations to module.lens.controller.LensController, which owns the
+    # adapter, the lens database and every refusal reason. These methods exist
+    # so the lens is reachable by name from every surface that dispatches by
+    # name -- the CLI table, GPIO buttons and encoders, the quad rotary
+    # (`setting_name: "iris"`), the Grove pot -- and they always exist, even
+    # with no adapter fitted: a control that vanished would leave a saved
+    # button layout pointing at nothing. With lens control not effective
+    # (switched off, adapter absent, no lens, or the lens cannot do it) each
+    # one does nothing and logs why, at INFO: the same shape as set_iso()
+    # being ignored under ClearHDR.
+    #
+    # They return True when the lens was commanded, False when it was not. The
+    # operator-facing sentence goes to the log (and, for the settings editor,
+    # to lens_message); it is never an exception, because a button press or a
+    # pot swing must not be able to raise out of its dispatcher.
+    #
+    # No dispatch lock is taken here, deliberately: LensController serialises
+    # its own bus access (an I2C transaction must not interleave with another)
+    # and these are not read-modify-write on CinePiController state. The Grove
+    # pot is the one caller that is not serialised by CommandExecutor, and it
+    # takes CommandExecutor's lock itself (analog_controls._dispatch), exactly
+    # like every other pot.
+
+    def _lens_report(self, outcome) -> bool:
+        ok, message = outcome
+        if ok:
+            logging.info("Lens: %s", message)
+        else:
+            logging.info("Lens: not done: %s", message)
+        return bool(ok)
+
+    def _lens(self):
+        lens = getattr(self, "lens_controller", None)
+        if lens is None:
+            logging.info("Lens: not done: lens control is not available on this build")
+        return lens
+
+    def iris_steps(self):
+        """The f-numbers the iris can be stepped through right now: the selected
+        lens entry's own third-stop table (its aperture range clamps it), or the
+        full table when no lens is selected or no range was entered. Live, so a
+        lens swap changes what a pot or encoder offers without a restart."""
+        lens = getattr(self, "lens_controller", None)
+        if lens is None:
+            return list(IRIS_STEPS)
+        # working_entry(), not status(): a pot calls this ten times a second.
+        return iris_steps_for(lens.working_entry())
+
+    def focus_range(self):
+        """``[position_min, position_max]`` of the focus motor as the board
+        reports it, or ``[0, 65535]`` before it has said (the registry's `steps`
+        for focus: a motor range has no step table, only bounds)."""
+        lens = getattr(self, "lens_controller", None)
+        reported = lens.status().get("focus_range") if lens is not None else None
+        return list(reported) if reported else [0, 0xFFFF]
+
+    def set_iris(self, value):
+        """Command an absolute f-number (clamped to the lens entry's aperture
+        range). The lens cannot be read back, so Redis `iris` is the commanded
+        value."""
+        lens = self._lens()
+        return False if lens is None else self._lens_report(lens.set_iris(value))
+
+    def _step_iris(self, count, wrap):
+        lens = self._lens()
+        if lens is None:
+            return False
+        if wrap:
+            # At either end of this lens's table one more click goes to the
+            # other end instead of stopping, like inc_wb. Only worth asking
+            # for the table when the caller opted in.
+            status = lens.status()
+            steps, current = status.get("iris_steps") or [], status.get("iris")
+            if steps and current is not None:
+                if count > 0 and current >= steps[-1] - 1e-6:
+                    return self._lens_report(lens.set_iris(steps[0]))
+                if count < 0 and current <= steps[0] + 1e-6:
+                    return self._lens_report(lens.set_iris(steps[-1]))
+        return self._lens_report(lens.step_iris(count))
+
+    def inc_iris(self, wrap=False):
+        """One third-stop towards a higher f-number (stop down: darker)."""
+        return self._step_iris(1, wrap)
+
+    def dec_iris(self, wrap=False):
+        """One third-stop towards a lower f-number (open up: brighter)."""
+        return self._step_iris(-1, wrap)
+
+    def set_focus(self, value):
+        """Move the focus motor to an absolute position (clamped to the range
+        the board reports)."""
+        lens = self._lens()
+        return False if lens is None else self._lens_report(lens.set_focus(value))
+
+    def inc_focus(self, wrap=False):
+        """One detent (1 % of the motor range) towards infinity. `wrap` is
+        accepted so a dial can be configured with it, and deliberately not
+        honoured: wrapping would throw focus from infinity to the minimum focus
+        distance in one click, mid-pull."""
+        lens = self._lens()
+        return False if lens is None else self._lens_report(lens.step_focus(1))
+
+    def dec_focus(self, wrap=False):
+        """One detent (1 % of the motor range) towards the minimum focus
+        distance. `wrap` is accepted and ignored, see inc_focus."""
+        lens = self._lens()
+        return False if lens is None else self._lens_report(lens.step_focus(-1))
+
+    def set_lens_control(self, value=None):
+        """The one lens on/off toggle (0/1, persisted); no value toggles. It
+        can only be switched on while the adapter is found -- switching on
+        without one is refused with the reason, so the toggle never claims a
+        control that is not there."""
+        lens = self._lens()
+        if lens is None:
+            return False
+        if value is None:
+            target = not lens.enabled()
+        else:
+            text = str(value).strip().lower()
+            if text in TRUE_VALUES:
+                target = True
+            elif text in FALSE_VALUES:
+                target = False
+            else:
+                logging.info("Lens: not done: lens control takes 0 or 1, not %r", value)
+                return False
+        return self._lens_report(lens.set_enabled(target))
+
+    def calibrate_lens(self, mfd_m=None):
+        """Start a focus calibration sweep. `mfd_m` is the lens's minimum focus
+        distance in metres, only for a lens that reports none. Refused while
+        recording."""
+        lens = self._lens()
+        return False if lens is None else self._lens_report(lens.request_calibration(mfd_m))
+
+    def set_lens(self, key=None):
+        """Select a lens database entry. No key cycles through the entries
+        saved for the mounted lens."""
+        lens = self._lens()
+        if lens is None:
+            return False
+        return self._lens_report(lens.select_lens(None if key in (None, "") else str(key)))
+
+    def save_lens(self, name=None, key=None):
+        """Save the working lens: as a new entry called `name`, or over entry
+        `key`. With no name, save over the selected entry under its own name
+        (the "I just recalibrated this lens" case)."""
+        lens = self._lens()
+        if lens is None:
+            return False
+        if name in (None, ""):
+            working = lens.working_entry()
+            if not working.get("key"):
+                logging.info("Lens: not done: this lens has no saved entry to save over; "
+                             "give it a name")
+                return False
+            name, key = working.get("name") or working["key"], working["key"]
+        return self._lens_report(lens.save_lens(str(name), None if key in (None, "") else str(key)))
+
+    @staticmethod
+    def _parse_aperture_range(text):
+        """``"1.8-22"`` / ``"1.8 22"`` / ``"f/1.8 f/22"`` -> ``(1.8, 22.0)``;
+        ``"clear"`` -> ``(None, None)``; anything else -> ``None``."""
+        cleaned = str(text).strip().lower()
+        if cleaned in ("clear", "none", "off", ""):
+            return (None, None)
+        numbers = re.findall(r"\d+(?:\.\d+)?", cleaned)
+        if len(numbers) != 2:
+            return None
+        return float(numbers[0]), float(numbers[1])
+
+    def set_lens_aperture_range(self, minimum=None, maximum=None):
+        """Enter the mounted lens's widest and narrowest f-number (the adapter
+        cannot read them). Either two numbers, or one text such as "1.8-22"
+        (the CLI passes the rest of the line as one string); "clear" or no
+        arguments removes the range. Changes the working lens: it is not in
+        the database until `save_lens`."""
+        lens = self._lens()
+        if lens is None:
+            return False
+        if maximum is None and minimum is not None:
+            parsed = self._parse_aperture_range(minimum)
+            if parsed is None:
+                logging.info("Lens: not done: give the aperture range as two f-numbers, "
+                             "e.g. 1.8 22, or 'clear'")
+                return False
+            minimum, maximum = parsed
+        return self._lens_report(lens.set_aperture_range(minimum, maximum))
+
 
         
     def restart_camera(self, preview_enabled=None):

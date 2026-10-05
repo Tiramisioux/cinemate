@@ -516,6 +516,21 @@ Saving restarts CineMate; the OLED is set up at startup, so changes come up on t
 These map to `output_peripherals.oled`, listed under
 [`output_peripherals`](settings-json.md#output_peripherals).
 
+## Lens control (Pinefeat)
+
+<a id="lens_control"></a>
+
+Settings for the [Pinefeat CEF168 lens adapter](pinefeat/index.md). They do nothing without the adapter. These keys have no field in the settings editor yet: edit them by hand, see [Editing the file directly](#editing-the-file-directly). The on/off switch is not a setting. It is `set lens control`, and it is remembered across restarts.
+
+| Key | Default | What it does |
+|---|---|---|
+| `lens_control.database_file` | `lenses.json` in `resources` | The [lens database](pinefeat/lenses.md#the-lens-database) CineMate writes: one entry per lens. A relative path resolves from the repo root. A missing file is an empty database, created on the first save. |
+| `lens_control.poll_hz` | `4` | How often the adapter is read while lens control is on, in Hz, `0.5`–`20`. `4` is fast enough to see the lens's own self-test gesture. While lens control is off, or while the adapter is not found, CineMate reads it far less often. |
+| `lens_control.calibrate_on_selftest` | `true` | Flip the lens's AF/MF switch three times within 15 seconds and the adapter runs its self-test. `true`: CineMate calibrates the lens when it ends. `false`: it only notes that it saw it, and you use `calibrate lens`. |
+| `lens_control.autofocus` | `false` | **Autofocus is paused.** Leave this `false`. |
+
+A Grove potentiometer can drive the iris: add `{ "channel": 2, "setting": "iris" }` to `input_peripherals.pots` ([Grove HAT potentiometers](#grove-hat-potentiometers)). Its steps follow the selected lens's aperture range. `"None"` leaves it unassigned. A quad rotary dial takes `"setting_name": "iris"` or `"focus"`.
+
 ## Restart and log output
 
 ![Restart and log output section of the CineMate settings editor](images/gui-system.png)
@@ -578,7 +593,7 @@ file rather than replacing it, so these keep whatever you set — see
 | `system.storage.recognized_ssds` | Recognised SSD identifiers. Empty by default. |
 | `sensors.raw_buffer_count` | Frames `cinepi-raw` buffers in RAM against write bursts. Leave at `0`; the active storage profile sets the depth. |
 | `sensors.cam1.camera_name` · `override_camera_name` · `geometry.horizontal_flip` · `geometry.vertical_flip` | Camera 1 has fewer page fields than Camera 0; set these by hand for a second sensor. |
-| `input_peripherals.pots` | Grove HAT analogue pots: one `{channel, setting}` entry each. The **Grove HAT potentiometers** pane on the settings editor is a mock-up — it neither reads nor writes this key, so its channel menus are not what the camera is using. |
+| `input_peripherals.pots` | Grove HAT analogue pots: one `{channel, setting}` entry each; `setting` is `iso`, `shutter_a`, `fps`, `wb`, one of the four ClearHDR knobs, or `iris` (lens). The **Grove HAT potentiometers** pane on the settings editor is a mock-up — it neither reads nor writes this key, so its channel menus are not what the camera is using. |
 | `arrays.hdr_threshold_low` · `hdr_threshold_high` · `hdr_blend` · `hdr_gain_adder` | Click-stop tables (`steps`, `free`, `free_increment`) a pot or encoder steps through. Startup values: [Resolution & sensor](#resolution-sensor). |
 | `arrays.shutter_a.sync_increment` | Granularity in shutter-angle sync mode only. Default `0.1`°, independent of the shutter angle's own free increment. |
 | `image_capture.hdr.self_heal` | Auto-recovery for the flat-pedestal ClearHDR startup defect. Off by default, [details](clear-hdr.md#flat-black-pedestal-frames). |

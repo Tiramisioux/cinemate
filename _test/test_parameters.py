@@ -12,6 +12,7 @@ from module.parameters import REGISTRY, get, menu_parameters
 EXPECTED_NAMES = {
     "iso", "shutter_a", "shutter_a_nom", "fps", "wb", "zoom",
     "hdr_blend", "hdr_gain_adder", "hdr_threshold_low", "hdr_threshold_high",
+    "iris", "focus",
 }
 
 
@@ -31,6 +32,14 @@ class StubController:
         self.hdr_threshold_high_steps = [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095]
         self.hdr_blend_steps = [0, 1, 2, 3, 4, 5, 6, 7, 8]
         self.hdr_gain_adder_steps = [0, 1, 2, 3, 4, 5]
+
+    # The two lens parameters read the selected lens entry through the
+    # controller, not an attribute (see CinePiController.iris_steps).
+    def iris_steps(self):
+        return [1.8, 2.0, 2.8, 4.0]
+
+    def focus_range(self):
+        return [0, 1069]
 
     # Mirrors CinePiController.calculate_dynamic_shutter_angles enough for
     # the steps callable to have something real to call.
@@ -56,11 +65,13 @@ class RegistryCompletenessTests(unittest.TestCase):
     def test_every_entry_has_a_setter_and_valid_cycle_kind(self):
         for param in REGISTRY.values():
             self.assertTrue(param.setter)
-            self.assertIn(param.cycle, ("steps", "direction"))
+            self.assertIn(param.cycle, ("steps", "direction", "method"))
 
     def test_default_redis_key_and_setter_follow_the_naming_convention(self):
-        # wb and shutter_a_nom are the documented exceptions.
-        exceptions = {"wb": "wb_user", "shutter_a_nom": "shutter_angle_nom"}
+        # wb, shutter_a_nom and focus are the documented exceptions (focus's
+        # Redis key is the motor-position readback, `focus_position`).
+        exceptions = {"wb": "wb_user", "shutter_a_nom": "shutter_angle_nom",
+                      "focus": "focus_position"}
         for name, param in REGISTRY.items():
             expected_redis_key = exceptions.get(name, name)
             self.assertEqual(param.redis_key, expected_redis_key)
@@ -162,6 +173,45 @@ class StepsCallableTests(unittest.TestCase):
         self.assertEqual(
             REGISTRY["hdr_gain_adder"].steps(self.controller), self.controller.hdr_gain_adder_steps
         )
+
+
+class LensParameterTests(unittest.TestCase):
+    """iris and focus: registered so a dial's `setting_name`, get_setting() and
+    increment_setting() find them by name; stepped by the controller's own
+    inc_/dec_ methods (cycle="method")."""
+
+    def setUp(self):
+        self.controller = StubController()
+
+    def test_both_step_through_the_controllers_own_methods(self):
+        self.assertEqual(REGISTRY["iris"].cycle, "method")
+        self.assertEqual(REGISTRY["focus"].cycle, "method")
+
+    def test_iris_steps_are_the_selected_lens_table_not_a_stored_list(self):
+        self.assertEqual(REGISTRY["iris"].steps(self.controller), [1.8, 2.0, 2.8, 4.0])
+
+    def test_focus_steps_are_the_motor_range_bounds(self):
+        self.assertEqual(REGISTRY["focus"].steps(self.controller), [0, 1069])
+
+    def test_setters_follow_the_naming_convention(self):
+        self.assertEqual(REGISTRY["iris"].setter, "set_iris")
+        self.assertEqual(REGISTRY["focus"].setter, "set_focus")
+
+    def test_focus_readback_is_not_confirmed_against_the_command(self):
+        # focus_position trails the command by a poll; comparing it with the
+        # value just sent would report "did not stick" for every move.
+        self.assertTrue(REGISTRY["iris"].confirm)
+        self.assertFalse(REGISTRY["focus"].confirm)
+
+    def test_neither_declares_a_lock_or_free_stepping(self):
+        for name in ("iris", "focus"):
+            self.assertIsNone(REGISTRY[name].lock_attr)
+            self.assertIsNone(REGISTRY[name].free_attr)
+
+    def test_get_does_not_warn_for_either(self):
+        with self.assertNoLogs("module.parameters", level="WARNING"):
+            get("iris", source="quad_rotary_controller")
+            get("focus", source="quad_rotary_controller")
 
 
 class LockAndFreeAttrTests(unittest.TestCase):

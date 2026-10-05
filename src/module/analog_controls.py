@@ -28,6 +28,7 @@ class AnalogControls(threading.Thread):
 
     def __init__(self, cinepi_controller, redis_controller, iso_pot=None, shutter_a_pot=None, fps_pot=None, wb_pot=None, iso_steps=None, shutter_a_steps=None, fps_steps=None, wb_steps=None,
                  hdr_threshold_low_pot=None, hdr_threshold_high_pot=None, hdr_blend_pot=None, hdr_gain_adder_pot=None,
+                 iris_pot=None,
                  dispatch_lock=None):
         threading.Thread.__init__(self)
 
@@ -56,6 +57,10 @@ class AnalogControls(threading.Thread):
         self.hdr_threshold_high_pot = self.convert_to_int_or_none(hdr_threshold_high_pot)
         self.hdr_blend_pot = self.convert_to_int_or_none(hdr_blend_pot)
         self.hdr_gain_adder_pot = self.convert_to_int_or_none(hdr_gain_adder_pot)
+        # Pinefeat CEF168 lens iris. Steps come live from the selected lens
+        # entry (CinePiController.iris_steps()); with lens control off the
+        # dispatch below is a logged no-op, so a wired pot is harmless.
+        self.iris_pot = self.convert_to_int_or_none(iris_pot)
 
         self.iso_steps = iso_steps or []
         self.shutter_a_steps = shutter_a_steps or []
@@ -76,6 +81,7 @@ class AnalogControls(threading.Thread):
         self.hdr_threshold_high_buffer = deque(maxlen=self.buffer_size)
         self.hdr_blend_buffer = deque(maxlen=self.buffer_size)
         self.hdr_gain_adder_buffer = deque(maxlen=self.buffer_size)
+        self.iris_buffer = deque(maxlen=self.buffer_size)
 
         # Last set values for debouncing
         self.last_iso = None
@@ -86,6 +92,7 @@ class AnalogControls(threading.Thread):
         self.last_hdr_threshold_high = None
         self.last_hdr_blend = None
         self.last_hdr_gain_adder = None
+        self.last_iris = None
         
         GROVE_BASE_HAT_ADDRESS = 0x08
         I2C_BUS = 1
@@ -188,6 +195,9 @@ class AnalogControls(threading.Thread):
 
         if kind in ('hdr_threshold_low', 'hdr_threshold_high', 'hdr_blend', 'hdr_gain_adder'):
             return getattr(c, f'{kind}_steps')      # already rebuilt by update_steps()
+
+        if kind == 'iris':
+            return c.iris_steps()                   # the selected lens's own table, live
 
         return []      # fallback – should never happen
 
@@ -364,6 +374,20 @@ class AnalogControls(threading.Thread):
                     self._dispatch('hdr_gain_adder', new_adder)
                     self.last_hdr_gain_adder = new_adder
                     self._record_dispatch('hdr_gain_adder', smoothed_hdr_gain_adder)
+
+            # ── Pinefeat CEF168 lens iris ────────────────────────────────
+            if self.iris_pot is not None:
+                raw = self.adc.read(self.iris_pot)
+                self.iris_buffer.append(raw)
+                smoothed_iris = self.moving_average(self.iris_buffer)
+                new_iris = self.map_adc_to_steps(smoothed_iris,
+                                                 steps=self._get_steps('iris'))
+                if (new_iris is not None and new_iris != self.last_iris
+                        and self._has_moved('iris', smoothed_iris)):
+                    logging.info(f"Iris changed → ADC raw={raw}, mapped=f/{new_iris}")
+                    self._dispatch('iris', new_iris)
+                    self.last_iris = new_iris
+                    self._record_dispatch('iris', smoothed_iris)
 
         except Exception as e:
             logging.error(f"Error occurred while updating parameters: {e}\n{traceback.format_exc()}")

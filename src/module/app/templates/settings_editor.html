@@ -392,6 +392,9 @@
      fields stay editable rather than being disabled. */
   .hw-absent{ opacity:.45; }
   .hw-note{ font-size:12px; color: var(--muted); margin:6px 0 0; }
+  /* A tuning file made for the other Pi platform: still listed, still pickable
+     (a saved value must render), but dimmed. The option text also says so. */
+  option.tune-mismatch{ color: var(--muted); }
   .card-main{ min-width: 0; }
   .card-label{
     display:block; font-weight: 600; font-size: 14px; margin-bottom: 2px;
@@ -1672,7 +1675,7 @@
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <button class="toggle" id="f-c0-tune" data-path="sensors.cam0.tuning_file_override.enabled" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
             <div class="upload-control" id="f-c0-tunefile-row" style="justify-content:flex-end; opacity:.45; pointer-events:none">
-              <select class="field-input" id="f-c0-tunefile" data-path="sensors.cam0.tuning_file_override.path" data-type="string" data-original="" data-accept-unlisted="1" style="min-width:190px">{% for f in tuning_files %}<option value="{{ f.path }}">{{ f.name }}</option>{% endfor %}</select>
+              <select class="field-input" id="f-c0-tunefile" data-path="sensors.cam0.tuning_file_override.path" data-type="string" data-original="" data-accept-unlisted="1" style="min-width:190px">{% for f in tuning_files %}<option value="{{ f.path }}"{% if not f.matches_platform %} class="tune-mismatch"{% endif %}>{{ f.label }}</option>{% endfor %}</select>
               <label class="btn btn-ghost" for="f-c0-tunefile-input" style="cursor:pointer">Upload .json</label>
               <input type="file" accept="application/json" id="f-c0-tunefile-input" class="visually-hidden">
             </div>
@@ -1756,7 +1759,7 @@
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <button class="toggle" id="f-c1-tune" data-path="sensors.cam1.tuning_file_override.enabled" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
             <div class="upload-control" id="f-c1-tunefile-row" style="justify-content:flex-end; opacity:.45; pointer-events:none">
-              <select class="field-input" id="f-c1-tunefile" data-path="sensors.cam1.tuning_file_override.path" data-type="string" data-original="" data-accept-unlisted="1" style="min-width:190px">{% for f in tuning_files %}<option value="{{ f.path }}">{{ f.name }}</option>{% endfor %}</select>
+              <select class="field-input" id="f-c1-tunefile" data-path="sensors.cam1.tuning_file_override.path" data-type="string" data-original="" data-accept-unlisted="1" style="min-width:190px">{% for f in tuning_files %}<option value="{{ f.path }}"{% if not f.matches_platform %} class="tune-mismatch"{% endif %}>{{ f.label }}</option>{% endfor %}</select>
               <label class="btn btn-ghost" for="f-c1-tunefile-input" style="cursor:pointer">Upload .json</label>
               <input type="file" accept="application/json" id="f-c1-tunefile-input" class="visually-hidden">
             </div>
@@ -4709,7 +4712,7 @@
           if (data && data.ok){
             var opt = document.createElement('option');
             opt.value = data.path;
-            opt.textContent = data.name;
+            opt.textContent = data.label || data.name;
             select.appendChild(opt);
             select.value = opt.value;
             select.dispatchEvent(new Event('change', { bubbles: true }));

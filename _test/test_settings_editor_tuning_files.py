@@ -172,6 +172,74 @@ class TuningFileRouteTests(_SeededTuningDirCase):
         self.assertEqual((self.tuning_dir / "custom_a.json").read_bytes(), VALID_PISP_JSON)
 
 
+class TuningFilePlatformTests(_SeededTuningDirCase):
+    """PLAN D19: the picker shows each file's target, marks the ones this Pi
+    cannot load, and the upload route validates against the running platform."""
+
+    def setUp(self):
+        super().setUp()
+        (self.tuning_dir / "vc4_a.json").write_bytes(BCM2835_JSON)
+        (self.tuning_dir / "broken.json").write_bytes(b"not json")
+
+    def _as(self, pi4):
+        patcher = mock.patch.object(settings_editor, "is_pi4_family", return_value=pi4)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _files(self):
+        body = _client().get("/settings-editor/api/tuning-files").get_json()
+        return body, {f["name"]: f for f in body["files"]}
+
+    def test_a_pi5_marks_the_vc4_file_and_the_unreadable_one(self):
+        self._as(False)
+        body, files = self._files()
+        self.assertEqual(body["platform_target"], "pisp")
+        self.assertEqual(files["custom_a.json"]["target"], "pisp")
+        self.assertTrue(files["custom_a.json"]["matches_platform"])
+        self.assertEqual(files["custom_a.json"]["label"], "custom_a.json (pisp)")
+        self.assertFalse(files["vc4_a.json"]["matches_platform"])
+        self.assertIn("bcm2835", files["vc4_a.json"]["label"])
+        self.assertIn("not for this Pi 5", files["vc4_a.json"]["label"])
+        self.assertIsNone(files["broken.json"]["target"])
+        self.assertFalse(files["broken.json"]["matches_platform"])
+
+    def test_a_pi4_flips_which_files_match(self):
+        self._as(True)
+        body, files = self._files()
+        self.assertEqual(body["platform_target"], "bcm2835")
+        self.assertTrue(files["vc4_a.json"]["matches_platform"])
+        self.assertFalse(files["custom_a.json"]["matches_platform"])
+        self.assertIn("not for this Pi 4", files["custom_a.json"]["label"])
+
+    def test_the_page_marks_a_mismatched_option(self):
+        self._as(True)
+        html = _client().get("/settings-editor/").get_data(as_text=True)
+        self.assertIn('<option value="resources/tuning_files/custom_a.json" class="tune-mismatch">', html)
+        self.assertIn('<option value="resources/tuning_files/vc4_a.json">', html)
+
+    def test_a_pi4_accepts_a_vc4_upload_and_refuses_a_pisp_one(self):
+        self._as(True)
+        ok = _client().post("/settings-editor/api/tuning-files",
+                            data={"file": (BytesIO(BCM2835_JSON), "vc4_new.json")},
+                            content_type="multipart/form-data")
+        self.assertEqual(ok.status_code, 200)
+        self.assertEqual(ok.get_json()["target"], "bcm2835")
+        self.assertIn("bcm2835", ok.get_json()["label"])
+        bad = _client().post("/settings-editor/api/tuning-files",
+                             data={"file": (BytesIO(VALID_PISP_JSON), "pisp_new.json")},
+                             content_type="multipart/form-data")
+        self.assertEqual(bad.status_code, 400)
+        self.assertIn("pisp", bad.get_json()["message"])
+        self.assertFalse((self.tuning_dir / "pisp_new.json").exists())
+
+    def test_a_pi5_still_refuses_a_vc4_upload(self):
+        self._as(False)
+        bad = _client().post("/settings-editor/api/tuning-files",
+                             data={"file": (BytesIO(BCM2835_JSON), "vc4_new.json")},
+                             content_type="multipart/form-data")
+        self.assertEqual(bad.status_code, 400)
+
+
 class TuningFileTemplateStructureTests(unittest.TestCase):
     """Structural guards in the style of test_settings_editor_page_restore.py
     -- pin that the code is present; the unlisted-value behaviour itself
@@ -191,6 +259,9 @@ class TuningFileTemplateStructureTests(unittest.TestCase):
 
     def test_upload_handler_posts_to_the_real_route(self):
         self.assertIn("fetch('/settings-editor/api/tuning-files'", self.html)
+
+    def test_uploaded_option_uses_the_servers_label(self):
+        self.assertIn("opt.textContent = data.label || data.name;", self.html)
 
     def test_client_side_fabrication_is_gone(self):
         self.assertNotIn("opt.value = 'resources/tuning_files/' + file.name;", self.html)

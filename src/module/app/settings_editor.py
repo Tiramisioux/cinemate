@@ -53,10 +53,11 @@ from module.redis_controller import ParameterKey, smpte_frame_base
 from module import sensor_settings
 from module.sensor_detect import (
     active_picture_size,
+    is_pi4_family,
     thumbnail_choice_labels,
     SensorDetect,
 )
-from module.tuning_files import tuning_json_problem
+from module.tuning_files import tuning_json_problem, tuning_target
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -348,35 +349,77 @@ def _current_thumbnail_editor_context(settings: dict) -> dict:
     }
 
 
+def _platform_tuning_target() -> str:
+    """The "target" a tuning file must carry on THIS machine: "bcm2835" on a
+    Pi 4 / CM4, "pisp" on a Pi 5 / CM5 (PLAN D19). The same platform decision
+    cinepi_multi's launch guard makes, so the picker, the upload route and the
+    launch can never disagree about which files are usable."""
+    return tuning_target(is_pi4_family())
+
+
+def _tuning_file_target(path: Path) -> str | None:
+    """The "target" a tuning file declares, or None when it cannot be read as
+    a JSON object that has one."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    target = data.get("target") if isinstance(data, dict) else None
+    return target if isinstance(target, str) else None
+
+
 def _list_tuning_files() -> list[dict]:
     """Directory listing behind both tuning-file pickers and
     GET /api/tuning-files (FINDINGS.md S3.3: the picker used to be two
     hardcoded <option> lists, so a file copied into resources/tuning_files/
     over SSH -- the documented procedure -- never appeared in it).
 
+    Every entry also says which platform it was tuned for and whether that is
+    this one (PLAN D19): a Pi 4 takes vc4 ("bcm2835") files, a Pi 5 takes
+    PiSP files, and libcamera refuses the other kind outright. `label` is the
+    picker's option text, so the template and the upload handler word it once.
+
     A missing directory means a broken checkout, not "no files" -- warn
     rather than let an empty picker pass as normal.
     """
     try:
-        names = sorted(p.name for p in TUNING_FILES_DIR.glob("*.json") if p.is_file())
+        files = sorted(p for p in TUNING_FILES_DIR.glob("*.json") if p.is_file())
     except OSError as exc:
         logger.warning("Tuning files directory unavailable (%s): %s", TUNING_FILES_DIR, exc)
         return []
-    return [{"name": name, "path": f"{TUNING_FILES_REL}/{name}"} for name in names]
+    platform = _platform_tuning_target()
+    return [_tuning_file_entry(p.name, _tuning_file_target(p), platform) for p in files]
+
+
+def _tuning_file_entry(name: str, target: str | None, platform: str) -> dict:
+    matches = target == platform
+    if target is None:
+        label = f"{name} (no target: not usable)"
+    elif matches:
+        label = f"{name} ({target})"
+    else:
+        label = f"{name} ({target}: not for this {'Pi 4' if platform == 'bcm2835' else 'Pi 5'})"
+    return {
+        "name": name,
+        "path": f"{TUNING_FILES_REL}/{name}",
+        "target": target,
+        "matches_platform": matches,
+        "label": label,
+    }
 
 
 def _validate_tuning_json(raw: bytes) -> str | None:
     """An uploaded tuning file must satisfy the same JSON-shape rule the
-    launch guard enforces (module.tuning_files.tuning_json_problem), so the
-    editor and the launch-time fallback can never disagree about what counts
-    as usable (PLAN.md S1.2). Returns an error message, or None if *raw* is
-    fine.
+    launch guard enforces (module.tuning_files.tuning_json_problem), against
+    the platform this machine is (PLAN D19), so the editor and the
+    launch-time fallback can never disagree about what counts as usable
+    (PLAN.md S1.2). Returns an error message, or None if *raw* is fine.
     """
     try:
         data = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, ValueError) as exc:
         return f"Not valid JSON: {exc}"
-    return tuning_json_problem(data)
+    return tuning_json_problem(data, _platform_tuning_target())
 
 
 @settings_editor_bp.route("/")
@@ -400,7 +443,12 @@ def index():
 
 @settings_editor_bp.route("/api/tuning-files", methods=["GET"])
 def list_tuning_files():
-    return jsonify({"ok": True, "dir": TUNING_FILES_REL, "files": _list_tuning_files()})
+    return jsonify({
+        "ok": True,
+        "dir": TUNING_FILES_REL,
+        "platform_target": _platform_tuning_target(),
+        "files": _list_tuning_files(),
+    })
 
 
 @settings_editor_bp.route("/api/tuning-files", methods=["POST"])
@@ -454,7 +502,10 @@ def upload_tuning_file():
     path = f"{TUNING_FILES_REL}/{name}"
     message = f"Uploaded {name} to {TUNING_FILES_REL}/"
     logger.info("tuning file uploaded via settings editor: %s (%d bytes)", path, len(raw))
-    return jsonify({"ok": True, "name": name, "path": path, "message": message})
+    # Validated against this platform above, so the target is the platform's.
+    entry = _tuning_file_entry(name, _platform_tuning_target(), _platform_tuning_target())
+    return jsonify({"ok": True, "name": name, "path": path, "message": message,
+                    "label": entry["label"], "target": entry["target"]})
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])

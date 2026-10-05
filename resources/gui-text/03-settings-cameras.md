@@ -82,7 +82,7 @@ Only used while the override above is on.
 ### Custom tuning file
 <!-- key: card.sensors.cam0.tuning_file_override.enabled -->
 
-Overrides the auto‑detected colour tuning with a file from `resources/tuning_files/` — pick one already there, or upload a `.json` to copy it in. Only Pi 5 (`pisp`) tunings load; anything missing, unreadable, or the wrong target is reported in the log and falls back to the auto‑detected tuning, so a bad pick degrades the picture instead of blacking the camera.
+Overrides the auto‑detected colour tuning with a file from `resources/tuning_files/` — pick one already there, or upload a `.json` to copy it in. Each file in the list shows the platform it was made for. A Pi 5 takes `pisp` tunings and a Pi 4 takes `bcm2835` ones; a file for the other platform is marked *not for this Pi*, and anything missing, unreadable, or the wrong target is reported in the log and falls back to the auto‑detected tuning, so a bad pick degrades the picture instead of blacking the camera.
 
 ### CineMate Log
 <!-- key: card.sensors.cam0.log_encode -->
@@ -119,7 +119,7 @@ Locks this sensor's frame timing to the Pi's clock to prevent slow frame‑rate 
 ### Custom tuning file
 <!-- key: card.sensors.cam1.tuning_file_override.enabled -->
 
-Same idea as cam0 — pick a file from `resources/tuning_files/` or upload one to copy it in. Only Pi 5 (`pisp`) tunings load; anything else falls back to the auto‑detected tuning with the reason logged, not a black screen.
+Same idea as cam0 — pick a file from `resources/tuning_files/` or upload one to copy it in. Only files made for this Pi's platform (`pisp` on a Pi 5, `bcm2835` on a Pi 4) load; anything else falls back to the auto‑detected tuning with the reason logged, not a black screen.
 
 ### CineMate Log
 <!-- key: card.sensors.cam1.log_encode -->

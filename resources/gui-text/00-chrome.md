@@ -1,6 +1,6 @@
 # Page chrome
 
-The six tabs across the top of the settings editor, and the sidebar groups down the left.
+The tabs across the top of the settings editor, and the sidebar groups down the left.
 The heading line is the label; the paragraph under it is the smaller text beneath it.
 
 ## Tabs
@@ -14,6 +14,11 @@ boot & sensors
 <!-- key: tab.i2c -->
 
 i2c hardware
+
+### Lens
+<!-- key: tab.lens -->
+
+Pinefeat adapter
 
 ### settings.jsonc
 <!-- key: tab.settings -->
@@ -121,6 +126,11 @@ _(no blurb — this group is just a heading over links)_
 <!-- key: rail.i2c-hardware -->
 
 What is attached to the camera's I²C bus.
+
+### Lens / Pinefeat
+<!-- key: rail.lens-pinefeat -->
+
+Canon EF lens adapter — found or not, the lens in use, and calibration.
 
 ### RAW files
 <!-- key: rail.raw-files -->

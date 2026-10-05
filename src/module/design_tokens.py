@@ -19,6 +19,7 @@ no equivalent on the other side and stay defined locally where they're used
 DESIGN_TOKENS = {
     "label": (136, 136, 136),  # status-box / field-label grey
     "box": (136, 136, 136),  # status-box border -- same grey as label
+    "dim": (88, 88, 88),  # a control that exists but is switched off / has nothing to act on
     "value": (249, 249, 249),  # default label-value text colour
     "guide": (249, 249, 249),  # preview-guide outline, un-zoomed state
     "zoom_hi": (255, 221, 0),  # preview-guide outline once zoomed in

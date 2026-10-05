@@ -450,6 +450,143 @@ class RtcTests(unittest.TestCase):
         self.assertTrue(any("-r" in c for c in calls), "the clock was never read back")
 
 
+class FakeLensBackend:
+    """A lens backend that can only be read: any write is a test failure."""
+
+    def __init__(self, bus, provenance="i2c-raw", port="cam0", bus_source="platform-table"):
+        self.bus, self.provenance, self.port, self.bus_source = bus, provenance, port, bus_source
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+    def _no_write(self, *a, **k):
+        raise AssertionError("the hardware pane must never command the lens")
+
+    set_iris = set_focus = calibrate = _no_write
+
+
+class LensAdapterRowTests(unittest.TestCase):
+    """The Pinefeat CEF168 row: found via the controller's own snapshot (no bus
+    traffic) or, with no controller, one read through cef168.open_adapter --
+    never on bus 1, never a write, provenance reported beside the answer."""
+
+    def _open_adapter(self, result):
+        from module.lens import cef168
+        calls = []
+
+        def fake(*a, **k):
+            calls.append((a, k))
+            return result
+
+        original = cef168.open_adapter
+        cef168.open_adapter = fake
+        self.addCleanup(setattr, cef168, "open_adapter", original)
+        return calls
+
+    def test_the_controller_status_answers_with_no_probe_at_all(self):
+        calls = self._open_adapter((None, "must not be asked"))
+        status = {"found": True, "provenance": "v4l2-subdev", "bus": 0, "port": "cam0",
+                  "bus_description": "i2c-0, from the cef168 subdev name"}
+        row = hardware_probe.detect_lens_adapter(status)
+        self.assertEqual(calls, [])
+        self.assertTrue(row["present"])
+        self.assertEqual(row["source"], "controller")
+        self.assertEqual(row["provenance"], "v4l2-subdev")
+        self.assertEqual(row["bus"], "i2c-0")
+        self.assertEqual(row["address"], 0x0D)
+
+    def test_an_absent_controller_status_carries_the_reason(self):
+        row = hardware_probe.detect_lens_adapter({"found": False, "absent_reason": "nothing on i2c-6"})
+        self.assertFalse(row["present"])
+        self.assertIsNone(row["address"])
+        self.assertEqual(row["reason"], "nothing on i2c-6")
+
+    def test_without_a_controller_a_raw_read_on_a_camera_bus_is_reported_as_i2c_raw(self):
+        backend = FakeLensBackend(6)
+        self._open_adapter((backend, ""))
+        row = hardware_probe.detect_lens_adapter(None)
+        self.assertTrue(row["present"])
+        self.assertEqual((row["source"], row["provenance"], row["bus"]), ("probed", "i2c-raw", "i2c-6"))
+        self.assertTrue(backend.closed, "the probe handle must be closed")
+
+    def test_a_subdev_is_reported_as_v4l2_subdev(self):
+        self._open_adapter((FakeLensBackend(0, "v4l2-subdev", bus_source="cef168-subdev"), ""))
+        self.assertEqual(hardware_probe.detect_lens_adapter(None)["provenance"], "v4l2-subdev")
+
+    def test_nothing_answering_is_absence_with_the_reason(self):
+        self._open_adapter((None, "cam0: no adapter answered"))
+        row = hardware_probe.detect_lens_adapter(None)
+        self.assertFalse(row["present"])
+        self.assertIn("no adapter answered", row["reason"])
+
+    def test_bus_1_is_refused_even_if_something_answers_there(self):
+        # 0x0d on the user bus would be some other device; the camera buses
+        # are the only place this row looks (see "scope the bus").
+        backend = FakeLensBackend(hardware_probe.I2C_BUS)
+        self._open_adapter((backend, ""))
+        row = hardware_probe.detect_lens_adapter(None)
+        self.assertFalse(row["present"])
+        self.assertIn("not a camera bus", row["reason"])
+        self.assertTrue(backend.closed)
+
+    def test_a_probe_that_raises_is_absence_not_a_500(self):
+        from module.lens import cef168
+        original = cef168.open_adapter
+
+        def boom(*a, **k):
+            raise RuntimeError("bus on fire")
+
+        cef168.open_adapter = boom
+        self.addCleanup(setattr, cef168, "open_adapter", original)
+        row = hardware_probe.detect_lens_adapter(None)
+        self.assertFalse(row["present"])
+        self.assertIn("bus on fire", row["reason"])
+
+    def test_detect_devices_lists_it_after_the_oled_and_never_via_bus_1(self):
+        original = hardware_probe._smbus
+        hardware_probe._smbus = lambda: None
+        try:
+            self._open_adapter((None, "no"))
+            devices = hardware_probe.detect_devices()
+        finally:
+            hardware_probe._smbus = original
+        keys = [d["key"] for d in devices]
+        self.assertEqual(keys[-3:], ["oled", "lens_adapter", "cfe_hat"])
+        lens = devices[keys.index("lens_adapter")]
+        self.assertNotEqual(lens.get("bus"), f"i2c-{hardware_probe.I2C_BUS}")
+
+    def test_the_route_prefers_the_running_controller_over_a_probe(self):
+        calls = self._open_adapter((None, "must not be asked"))
+
+        class Lens:
+            def status(self):
+                return {"found": True, "provenance": "i2c-raw", "bus": 4, "port": "cam1",
+                        "bus_description": "i2c-4, from the camera's sensor subdev"}
+
+        app = _make_app()
+        app.config["LENS_CONTROLLER"] = Lens()
+        original = hardware_probe._smbus
+        hardware_probe._smbus = lambda: None
+        try:
+            body = app.test_client().get("/settings-editor/api/hardware").get_json()
+        finally:
+            hardware_probe._smbus = original
+        row = next(d for d in body["devices"] if d["key"] == "lens_adapter")
+        self.assertTrue(row["present"])
+        self.assertEqual((row["source"], row["port"]), ("controller", "cam1"))
+        self.assertEqual(calls, [])
+
+    def test_the_pane_words_the_provenance_and_the_source(self):
+        html = TEMPLATE.read_text(encoding="utf-8")
+        fn = re.search(r"function i2cLensDetail\(d\)\{(.*?)\n  \}", html, re.S).group(1)
+        self.assertIn("v4l2-subdev", html)
+        self.assertIn("i2c-raw", html)
+        self.assertIn("Provenance", fn)
+        self.assertIn("no bus probe issued", fn)
+        self.assertIn("function i2cDeviceDetail(d){\n    if (d.key === 'lens_adapter') return i2cLensDetail(d);", html)
+
+
 class HardwareRouteTests(unittest.TestCase):
     def test_the_endpoint_reports_every_device_and_both_clocks(self):
         original = hardware_probe._smbus
@@ -464,7 +601,7 @@ class HardwareRouteTests(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertTrue(body["ok"])
         keys = {d["key"] for d in body["devices"]}
-        self.assertEqual(keys, {"grove", "quad_rotary", "rtc", "oled", "cfe_hat"})
+        self.assertEqual(keys, {"grove", "quad_rotary", "rtc", "oled", "cfe_hat", "lens_adapter"})
         # both carry an epoch so the page can tick between polls rather than
         # forking hwclock once a second
         self.assertIn("epoch", body["clocks"]["system"])

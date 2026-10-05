@@ -28,4 +28,4 @@ Simple GUI is available on the attached HDMI output.
 
 For redraw timing and performance tuning, see [Simple GUI refresh tuning](simple-gui-refresh-tuning.md).
 
-With a [Pinefeat lens adapter](pinefeat/index.md) fitted, the top row gains an `IRIS` group and the SYS column an `EF` box: [what they show](pinefeat/panes.md#hdmi-gui).
+With a [Pinefeat lens adapter](pinefeat/index.md) fitted, the top row gains an `IRIS` group between `EXP` and `EI`, and the SYS column an `EF` box (plus `CAL` while calibrating): [what they show](pinefeat/panes.md#hdmi-gui).

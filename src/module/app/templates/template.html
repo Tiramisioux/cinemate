@@ -29,6 +29,7 @@
         :root {
             --label: rgb(136, 136, 136);
             --box: rgb(136, 136, 136);
+            --dim: rgb(88, 88, 88);
             --value: rgb(249, 249, 249);
             --guide: rgb(249, 249, 249);
             --box-text: #000;
@@ -157,6 +158,11 @@
             line-height: 1.05;
         }
         .group.tinted .value { color: var(--sync-tint); }
+        /* A control that exists but has nothing to act on (the IRIS group
+           while lens control is off, no lens is mounted, or the lens's iris
+           does not respond). The same dim token simple_gui draws with, and
+           the same in both skins: black-on-colour would read as a live value. */
+        .group.dim .label, .group.dim .value { color: var(--dim); }
         .group.switching .value { color: var(--res-switching); }
 
         /* draw_rounded_box(): a locked parameter is drawn inverted. */
@@ -361,11 +367,22 @@
             white-space: nowrap;
         }
         .box.zoom-active { background: var(--zoom-hi); }
+        .box.dim { background: var(--dim); }
         .box.log { background: var(--log-badge); }
         .box.drop { background: var(--drop); color: var(--drop-text); }
         .box.sync { background: var(--sync); position: relative; }
+        .box.crossed { position: relative; }
         /* _draw_status_box(crossed=True) strikes the SYNC box through */
         .box.sync::after {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            background: linear-gradient(to bottom right,
+                transparent calc(50% - 1.5px), #000 calc(50% - 1.5px),
+                #000 calc(50% + 1.5px), transparent calc(50% + 1.5px));
+        }
+        /* the EF box, crossed with no lens mounted -- the same strike as SYNC */
+        .box.crossed::after {
             content: '';
             position: absolute;
             inset: 4px;
@@ -646,6 +663,22 @@
             white-space: nowrap;
         }
         button:active, #button-row .btn-link:active { background: var(--label); color: #000; }
+        /* The lens picker (Pinefeat adapter only) sits in the button row and
+           reads as one of its buttons. */
+        #button-row select#s-lens {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: calc(var(--value-size) * 0.62);
+            color: var(--value);
+            background: transparent;
+            border: 2px solid var(--label);
+            border-radius: 4px;
+            padding: 0.3em 0.7em;
+            cursor: pointer;
+            max-width: 16em;
+            text-overflow: ellipsis;
+        }
+        #button-row select#s-lens option { color: #000; background: #fff; }
         button.on { background: var(--log-badge); border-color: var(--log-badge); color: #000; }
         button[disabled] { opacity: 0.45; cursor: default; }
 
@@ -966,6 +999,12 @@
         <div class="group" id="g-exp">
             <span class="label" id="l-exp"></span><span class="value" id="v-exp"></span>
         </div>
+        <!-- Pinefeat lens adapter: hidden until an adapter answers, dim while
+             there is nothing to command (V.iris_state, from populate_values). -->
+        <div class="group selectable hidden" id="g-iris">
+            <span class="label" id="l-iris"></span><span class="value" id="v-iris"></span>
+            <select id="s-iris" aria-label="Iris"></select>
+        </div>
         <div class="group selectable" id="g-iso">
             <span class="label" id="l-iso"></span><span class="value" id="v-iso"></span>
             <select id="s-iso" aria-label="ISO"></select>
@@ -1037,6 +1076,7 @@
             <a id="btn-settings" class="btn-link" href="/settings-editor/" title="Settings, storage and playback" aria-label="Open the settings editor">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.13.35.4.63.74.79H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </a>
+            <select id="s-lens" class="hidden" aria-label="Lens" title="Lens (from the saved lens list)"></select>
             <button id="btn-experiment" title="Show every remaining CLI control as a live widget">EXPERIMENT</button>
             <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
             <button id="btn-unmount" title="unmount">UNMOUNT</button>
@@ -1097,7 +1137,7 @@
     //    `initial_values` and as deltas as `gui_data_change`.
     let V = {};
     let steps = {
-        iso: [], shutter_a: [], fps: [], wb: [], resolutions: [],
+        iso: [], shutter_a: [], fps: [], wb: [], resolutions: [], iris: [],
         // EXPERIMENT drawer only. Unlike the lists above, these are not
         // recomputed from the live frame rate — they come straight from
         // settings.jsonc and arrive once, with the snapshot.
@@ -1278,6 +1318,15 @@
         if (V.usb_connected) { sys.push(box('SER', '')); }
         if (V.mic_connected) { sys.push(box('MIC', '')); }
         if (V.keyboard_connected) { sys.push(box('KEY', '')); }
+        // Pinefeat adapter, same decision as draw_left_sections(): present
+        // whenever the adapter is found; dim while lens control is off;
+        // crossed with no lens mounted or an adapter error. An unknown or
+        // uncalibrated lens is deliberately not marked.
+        if (V.lens_ef_state) {
+            sys.push(box('EF', (V.lens_ef_state === 'off' ? 'dim' : '') +
+                (V.lens_ef_state === 'no_lens' || V.lens_ef_state === 'error' ? ' crossed' : '')));
+            if (V.lens_calibrating) { sys.push(box('CAL', 'log small')); }
+        }
         const storage = String(V.storage_type || '').toUpperCase();
         if (storage && storage !== 'NONE') {
             boxes(storage).forEach((b) => sys.push(b));
@@ -1542,6 +1591,7 @@
         text('l-fps', V.fps_label);
         text('l-shutter', V.shutter_label);
         text('l-exp', V.exposure_label);
+        text('l-iris', V.iris_label);
         text('l-iso', V.iso_label);
         text('l-wb', V.wb_label);
         text('l-res', V.res_label);
@@ -1549,6 +1599,7 @@
         text('v-fps', V.fps);
         text('v-shutter', V.shutter_speed);
         text('v-exp', V.exposure_time);
+        text('v-iris', V.iris);
         text('v-iso', V.iso);
         text('v-wb', V.color_temp);
         text('v-res', V.res);
@@ -1564,6 +1615,9 @@
         // ClearHDR the gain ceiling lands the 800 step on 799. Same tint and
         // same meaning as shutter-sync above.
         $('g-iso').classList.toggle('tinted', Boolean(V.iso_capped));
+        // IRIS: hidden / dim / normal, decided once in populate_values().
+        show($('g-iris'), V.iris_state === 'grey' || V.iris_state === 'normal');
+        $('g-iris').classList.toggle('dim', V.iris_state === 'grey');
         $('g-res').classList.toggle('switching', truthy(V.resolution_switching));
         // Green while dynamic resolution is holding a mode the operator did
         // not choose -- the same signal the HDMI overlay gives, so RES never
@@ -1621,7 +1675,44 @@
         $('btn-log').textContent = V.log_badge_cam0 || 'LOG';
     }
 
+    // The iris picker offers the selected lens's own third-stop table. The
+    // live value can sit off it (a range end such as 22.6 is always on the
+    // table; a value commanded from the CLI need not be), so it is carried as
+    // an extra entry rather than letting the <select> fall back to its first
+    // option and read as a different aperture.
+    function irisOptions() {
+        const list = (steps.iris || []).slice();
+        const live = parseFloat(String(V.iris || '').replace(/[^0-9.]/g, ''));
+        if (isFinite(live) && live > 0 && !list.some((v) => Number(v) === live)) {
+            const at = list.findIndex((v) => Number(v) > live);
+            list.splice(at < 0 ? list.length : at, 0, live);
+        }
+        return { options: list.map((v) => ({ value: v, text: 'F' + v })), live };
+    }
+
+    function renderLensSelect() {
+        const sel = $('s-lens');
+        const found = V.iris_state === 'grey' || V.iris_state === 'normal';
+        show(sel, found);
+        if (!found) { return; }
+        const lenses = V.lens_options || [];
+        const options = [{ value: '', text: lenses.length ? 'Lens: choose...' : 'No saved lenses', disabled: true }]
+            .concat(lenses.map((l) => ({ value: l.key, text: l.name })));
+        // fillSelect's cache keys on option values only, and a lens saved
+        // over under a new name keeps its key -- so tell it the names moved.
+        const signature = lenses.map((l) => l.key + '\u0000' + l.name).join('\u0001');
+        if (sel.dataset.lensSignature !== signature) {
+            sel.dataset.filled = '';
+            sel.dataset.lensSignature = signature;
+        }
+        fillSelect(sel, options, V.lens_key || '');
+        sel.title = V.lens_message || 'Lens';
+    }
+
     function renderSelectors() {
+        const iris = irisOptions();
+        fillSelect($('s-iris'), iris.options, iris.live > 0 ? iris.live : undefined);
+        renderLensSelect();
         fillSelect($('s-iso'), steps.iso.map((v) => ({ value: v, text: v })), V.iso);
         // find() returns undefined when the live angle isn't in the current
         // step table (e.g. a rejected pick on a locked shutter). Under free
@@ -2378,7 +2469,7 @@
     // one is rebuilt and only recover on reconnect.
     const STEP_LISTS = {
         iso_steps: 'iso', shutter_a_steps: 'shutter_a',
-        fps_steps: 'fps', wb_steps: 'wb',
+        fps_steps: 'fps', wb_steps: 'wb', iris_steps: 'iris',
     };
 
     function absorbSteps(data) {
@@ -2682,6 +2773,20 @@
             cmd(prefix + e.target.value);
         });
     }
+    // IRIS needs its own guard: a grey group is not locked, it has nothing to
+    // command, and the useful answer is the reason (lens control off, no lens
+    // mounted, ...) rather than a command the controller would only log.
+    $('s-iris').addEventListener('change', (e) => {
+        if (V.iris_state !== 'normal') {
+            toast(V.iris_grey_reason || 'Lens control is off');
+            renderSelectors();
+            return;
+        }
+        cmd('set iris ' + e.target.value);
+    });
+    $('s-lens').addEventListener('change', (e) => {
+        if (e.target.value) { cmd('set lens ' + e.target.value); }
+    });
     bindTopSelect('s-iso',     'set iso ');
     bindTopSelect('s-shutter', 'set shutter a ');
     bindTopSelect('s-fps',     'set fps ');

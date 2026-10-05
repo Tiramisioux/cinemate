@@ -26,7 +26,14 @@ the quad rotary encoder's seesaw does not reliably ACK that bare receive-byte
 of them, `EREMOTEIO`), so it alone is probed with a real register read
 instead. See ``_seesaw_present`` for why that one write is safe.
 
-Everything is scoped to bus 1 deliberately. 0x34 is the CFE Hat there, but it
+The Pinefeat CEF168 lens adapter is the one device NOT on bus 1: it sits on a
+camera's own I²C bus, whose number depends on the board (Pi 5 cam0 6 / cam1 4,
+CM4 0). Its row is therefore never probed through ``I2C_BUS`` -- it is answered
+by the running LensController when there is one (no bus traffic at all), and
+otherwise by ``module.lens.cef168.open_adapter``'s single CRC-checked read on
+the camera bus that function works out. See ``detect_lens_adapter``.
+
+Everything else is scoped to bus 1 deliberately. 0x34 is the CFE Hat there, but it
 is also the StarlightEye IR-cut filter on the camera buses (4 and 6 on a Pi
 5), so an unscoped sweep would report one as the other.
 """
@@ -327,13 +334,115 @@ def detect_oled(oled_settings: dict | None = None) -> dict:
     return entry
 
 
-def detect_devices(oled_settings: dict | None = None, quad_rotary_driver: dict | None = None) -> list[dict]:
+LENS_ADAPTER_ADDRESS = 0x0D
+
+# What each backend's provenance means, for the pane's detail line.
+_LENS_PROVENANCE_NOTES = {
+    "v4l2-subdev": "the cef168 kernel driver is bound and the board answered through it",
+    "i2c-raw": "a raw read on the camera's I²C bus; no kernel driver is involved",
+}
+
+
+def _lens_entry(present: bool, **fields) -> dict:
+    entry = {
+        "key": "lens_adapter",
+        "name": "Pinefeat CEF168 lens adapter",
+        "hint": "Canon EF lens control: iris, focus",
+        "present": present,
+        "address": LENS_ADAPTER_ADDRESS if present else None,
+        "expected": [f"0x{LENS_ADAPTER_ADDRESS:02x}"],
+        # Not the pane's I2C_BUS: this board is on a camera bus. Filled in when
+        # it is known.
+        "bus": None,
+        "provenance": "",
+        "source": "",
+        "port": "",
+        "bus_description": "",
+        "reason": "",
+        "probe_error": None,
+    }
+    entry.update(fields)
+    return entry
+
+
+def detect_lens_adapter(lens_status: dict | None = None, cameras: list | None = None) -> dict:
+    """The Pinefeat CEF168 adapter's row.
+
+    Two ways to know, in order of preference:
+
+    * ``lens_status`` is the running LensController's ``status()``. It already
+      polls the board, so asking it costs no bus traffic at all and cannot
+      disturb a take -- the same reason the quad rotary row prefers its
+      driver's state. Reported with ``source: "controller"``.
+    * Without one, a single read-only attempt through ``cef168.open_adapter``:
+      the cef168 subdev when the kernel driver is bound (``v4l2-subdev``),
+      else one CRC-checked raw read of the 15-byte frame at 0x0d on the camera
+      bus (``i2c-raw``). It writes nothing. ``source: "probed"``.
+
+    The provenance is reported beside the answer, never blended into it: a
+    subdev only proves the *driver* is loaded (its probe does no I/O), which is
+    why a subdev alone is not accepted -- ``open_adapter`` returns a backend
+    only after a read came back with a valid CRC.
+
+    Never bus 1. That is the Pi's user bus; the adapter's address there would
+    be something else entirely (0x34 is a different device on each bus, see
+    the module docstring). A backend that resolved to it is refused.
+    """
+    if lens_status is not None:
+        if not lens_status.get("found"):
+            return _lens_entry(False, source="controller",
+                               reason=str(lens_status.get("absent_reason") or "not found"))
+        bus = lens_status.get("bus")
+        return _lens_entry(
+            True, source="controller",
+            bus=f"i2c-{bus}" if bus is not None else None,
+            provenance=str(lens_status.get("provenance") or ""),
+            port=str(lens_status.get("port") or ""),
+            bus_description=str(lens_status.get("bus_description") or ""),
+        )
+
+    try:
+        from module.lens import cef168
+    except Exception:
+        logger.debug("lens module unavailable", exc_info=True)
+        return _lens_entry(False, source="probed", reason="the lens module could not be loaded")
+    try:
+        backend, reason = cef168.open_adapter(cameras=cameras)
+    except Exception as exc:
+        logger.debug("lens adapter probe failed", exc_info=True)
+        return _lens_entry(False, source="probed", reason=f"the probe failed: {exc}")
+    if backend is None:
+        return _lens_entry(False, source="probed", reason=reason)
+    try:
+        if backend.bus == I2C_BUS:
+            return _lens_entry(
+                False, source="probed", bus=f"i2c-{backend.bus}",
+                reason=f"refused: i2c-{I2C_BUS} is the Pi's user bus, not a camera bus")
+        return _lens_entry(
+            True, source="probed",
+            bus=f"i2c-{backend.bus}" if backend.bus is not None else None,
+            provenance=str(backend.provenance or ""),
+            port=str(backend.port or ""),
+            bus_description=cef168.describe_bus(backend.bus, backend.bus_source),
+        )
+    finally:
+        try:
+            backend.close()
+        except Exception:
+            logger.debug("closing the lens probe failed", exc_info=True)
+
+
+def detect_devices(oled_settings: dict | None = None, quad_rotary_driver: dict | None = None,
+                   lens_status: dict | None = None, cameras: list | None = None) -> list[dict]:
     """Presence of every peripheral the pane lists, probed now.
 
     *quad_rotary_driver* is the running ``QuadRotaryController``'s own state
     snapshot (``{enabled, connected, ever_connected, last_error,
     last_change_epoch}``), or None when the controller was never started --
     see ``_detect_quad_rotary`` for how it changes what gets probed.
+
+    *lens_status* is the running ``LensController.status()`` (or None), see
+    ``detect_lens_adapter``.
     """
     found = []
     for spec in DEVICES:
@@ -356,6 +465,7 @@ def detect_devices(oled_settings: dict | None = None, quad_rotary_driver: dict |
         found.append(entry)
 
     found.append(detect_oled(oled_settings))
+    found.append(detect_lens_adapter(lens_status, cameras))
 
     cfe = detect_cfe_hat()
     found.append({

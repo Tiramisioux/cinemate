@@ -66,6 +66,19 @@ def _to_float(value, default=None):
         return default
 
 
+def _truthy(value) -> bool:
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _format_iris(value) -> str:
+    """Redis ``iris`` ("2.8", "22", "") as the top row shows it: ``F2.8``,
+    ``F22``, or ``F--`` while nothing has been commanded yet."""
+    fnumber = _to_float(value)
+    if fnumber is None or fnumber <= 0:
+        return "F--"
+    return f"F{fnumber:g}"
+
+
 def _log_badge_text(target) -> str:
     """"" for 0/None/unparsable, else "LOG10"/"LOG12" -- the CAM-section
     badge text for a log_encode_camN redis value (what that camera was
@@ -465,6 +478,12 @@ class SimpleGUI(threading.Thread):
             "exposure_label": {"pos": ( 678,   4), "size": 30, "font": "regular"},
             "exposure_time":  {"pos": ( 740,   3), "size": 41, "font": "bold"},
 
+            # Pinefeat lens adapter (IRIS): drawn only while the adapter is
+            # found, and x is always overridden by _top_row_layout(), so this
+            # x is a placeholder -- the entry exists for the font and the y.
+            "iris_label":     {"pos": ( 810,   4), "size": 30, "font": "regular"},
+            "iris":           {"pos": ( 880,   3), "size": 41, "font": "bold"},
+
             # column 3
             "iso_label":      {"pos": (944,   4), "size": 30, "font": "regular"},
             "iso":            {"pos": (983,   3), "size": 41, "font": "bold"},
@@ -510,6 +529,10 @@ class SimpleGUI(threading.Thread):
             
             "exposure_label": {"normal": (136, 136, 136), "inverse": "black"},
             "exposure_time":  {"normal": (249, 249, 249), "inverse": "black"},
+            # populate_values() swaps both to the "dim" token while the lens
+            # control is grey (see _lens_gui_values).
+            "iris_label":     {"normal": (136, 136, 136), "inverse": "black"},
+            "iris":           {"normal": (249, 249, 249), "inverse": "black"},
             "zoom_factor":      {"normal": "black", "inverse": "black"},
             "anamorphic_factor": {"normal": "black", "inverse": "black"},
             "sensor": {"normal": (136,136,136), "inverse": "black"},
@@ -689,8 +712,113 @@ class SimpleGUI(threading.Thread):
             "cpu_load": cpu_load,
             "cpu_temp": cpu_temp,
             "latest_recording_info": latest_recording_info,
+            "lens_options": self._read_lens_options(),
         })
         self._last_slow_refresh_ts = time.monotonic()
+
+    def _lens_controller(self):
+        return getattr(self.cinepi_controller, "lens_controller", None)
+
+    def _read_lens_options(self):
+        """The saved lenses as a dropdown wants them -- [{key, name, lens_id}],
+        sorted by name. Read with the other slow values, once a second: a lens
+        saved in the settings editor shows up in the browser's dropdown within
+        that second. An unreadable database is an empty dropdown, not a fault."""
+        lens = self._lens_controller()
+        if lens is None:
+            return []
+        try:
+            entries = lens.entries()
+        except Exception:
+            logging.debug("lens database unavailable; no lens options this pass", exc_info=True)
+            return []
+        options = [
+            {"key": key, "name": str(entry.get("name") or key), "lens_id": entry.get("lens_id")}
+            for key, entry in entries.items()
+        ]
+        return sorted(options, key=lambda o: o["name"].lower())
+
+    def _lens_gui_values(self):
+        """Everything the IRIS group, the SYS ``EF``/``CAL`` boxes and the web
+        GUI's lens dropdown need, from the lens keys the LensController
+        publishes (module/lens/controller.py, PLAN D10). Read from Redis rather
+        than asked of the controller, so this is a cache lookup per frame.
+
+        ``iris_state`` is the one decision both surfaces draw from:
+
+        * ``hidden``  no adapter answered -- the group does not exist
+        * ``grey``    adapter found but there is nothing to command: lens control
+                      is off, no lens is mounted, the adapter is erroring, or the
+                      selected lens's entry says its iris does nothing (D20)
+        * ``normal``  lens control is effective
+
+        ``iris_grey_reason`` says why a grey group is grey, for a tap on it.
+        """
+        get = self.redis_controller.get_value
+        found = _truthy(get(ParameterKey.LENS_DETECTED.value))
+        enabled = _truthy(get(ParameterKey.LENS_CONTROL.value))
+        state = str(get(ParameterKey.LENS_STATE.value) or "")
+
+        iris_capability = None
+        lens = self._lens_controller()
+        if found and lens is not None:
+            try:
+                iris_capability = (lens.working_entry().get("capabilities") or {}).get("iris")
+            except Exception:
+                logging.debug("lens working entry unavailable this frame", exc_info=True)
+
+        reason = ""
+        if not found:
+            iris_state = "hidden"
+        else:
+            if not enabled:
+                reason = "Lens control is off"
+            elif state == "no_lens":
+                reason = "No lens is mounted"
+            elif state in ("error", "absent"):
+                reason = str(get(ParameterKey.LENS_MESSAGE.value) or "Lens adapter error")
+            elif iris_capability is False:
+                reason = "This lens's iris does not respond (its saved entry says so)"
+            iris_state = "grey" if reason else "normal"
+
+        if not found:
+            ef_state = ""
+        elif not enabled:
+            ef_state = "off"
+        elif state in ("no_lens", "error", "absent"):
+            ef_state = "no_lens" if state == "no_lens" else "error"
+        else:
+            ef_state = "on"
+
+        lens_id = get(ParameterKey.LENS_ID.value)
+        return {
+            "iris_label": "IRIS",
+            "iris": _format_iris(get(ParameterKey.IRIS.value)),
+            "iris_state": iris_state,
+            "iris_grey_reason": reason,
+            "iris_steps": list(self._iris_steps()) if found else [],
+            "lens_ef_state": ef_state,
+            "lens_calibrating": found and state == "calibrating",
+            "lens_state": state if found else "",
+            "lens_key": str(get(ParameterKey.LENS_KEY.value) or "") if found else "",
+            "lens_name": str(get(ParameterKey.LENS_NAME.value) or "") if found else "",
+            "lens_message": str(get(ParameterKey.LENS_MESSAGE.value) or "") if found else "",
+            "lens_options": list(self._slow_values.get("lens_options") or []) if found else [],
+            "lens_id": _to_int(lens_id) if found else None,
+        }
+
+    def _iris_steps(self):
+        """The f-numbers the iris picker offers: the selected lens entry's own
+        table (CinePiController.iris_steps), and nothing before the controller
+        has the method (a controller built without the lens block)."""
+        steps = getattr(self.cinepi_controller, "iris_steps", None)
+        if not callable(steps):
+            return []
+        try:
+            return steps()
+        except Exception:
+            logging.debug("iris steps unavailable this frame", exc_info=True)
+            return []
 
     def _maybe_refresh_slow_values(self):
         if (
@@ -903,6 +1031,13 @@ class SimpleGUI(threading.Thread):
         # already-unmissable full-width message was noise). The web GUI
         # rides the same empty `sensor` value.
         values["camera_missing"] = not bool(cam_list)
+        # Pinefeat lens adapter: the IRIS group and the EF/CAL boxes. Dimmed
+        # (never hidden) while found-but-not-effective; see _lens_gui_values.
+        values.update(self._lens_gui_values())
+        grey = values["iris_state"] == "grey"
+        for key, plain in (("iris_label", DESIGN_TOKENS["label"]), ("iris", DESIGN_TOKENS["value"])):
+            self.colors[key]["normal"] = DESIGN_TOKENS["dim"] if grey else plain
+            self.colors[key]["inverse"] = DESIGN_TOKENS["dim"] if grey else "black"
         # CineMate Log per-cam badge text. Read from log_encode_camN -- what
         # that camera was actually LAUNCHED with, published by
         # CinePiProcess._build_args() -- never from settings or the live
@@ -1550,6 +1685,7 @@ class SimpleGUI(threading.Thread):
             values.get("usb_connected"),
             values.get("mic_connected"),
             values.get("keyboard_connected"),
+            values.get("lens_ef_state"),
             values.get("storage_type") not in [None, "", "none"]
         ])
 
@@ -1571,6 +1707,31 @@ class SimpleGUI(threading.Thread):
                 ty = y      + (BOX_H - th) // 2
                 draw.text((tx, ty), lbl, font=box_font, fill=TEXT_COLOR)
                 y += BOX_H + BOX_GAP
+
+            # Pinefeat lens adapter. The box is there whenever the adapter is
+            # found, so "is it seen at all" has an answer on the monitor:
+            #   grey box          lens control on
+            #   dim box           lens control off (the toggle, not the hardware)
+            #   grey box, crossed adapter found but no lens mounted, or the
+            #                     adapter is erroring
+            # An unknown or uncalibrated lens is deliberately NOT marked: the
+            # box cannot say which of the two it is, the IRIS group still works
+            # for both, and a mark that means "something is a bit off" trains
+            # the eye to ignore it. The settings editor carries those states.
+            ef_state = values.get("lens_ef_state")
+            if ef_state:
+                self._draw_status_box(
+                    draw, [box_x, y, box_x + BOX_W, y + BOX_H],
+                    "EF",
+                    DESIGN_TOKENS["dim"] if ef_state == "off" else BOX_COLOR,
+                    box_font, TEXT_COLOR,
+                    crossed=ef_state in ("no_lens", "error"))
+                y += BOX_H + BOX_GAP
+                if values.get("lens_calibrating"):
+                    self._draw_status_box(
+                        draw, [box_x, y, box_x + BOX_W, y + BOX_H],
+                        "CAL", LOG_BADGE_COLOR, box_font, TEXT_COLOR)
+                    y += BOX_H + BOX_GAP
 
             storage = str(values.get("storage_type", "")).upper()
             if storage and storage != "NONE":
@@ -1810,15 +1971,35 @@ class SimpleGUI(threading.Thread):
             draw.line([(base_x, y), (base_x + BAR_W, y)], fill=(136,136,136))
 
 
-    # Top info-row groups, in display order: (label_key, value_key).
+    # Top info-row groups, in display order: (label_key, value_key). The IRIS
+    # group is conditional (see _top_row_group_visible): it is in this table so
+    # its place in the row is data, but it takes no room and draws nothing
+    # unless a Pinefeat adapter is fitted.
     TOP_ROW_GROUPS = (
         ("fps_label", "fps"),
         ("shutter_label", "shutter_speed"),
         ("exposure_label", "exposure_time"),
+        ("iris_label", "iris"),
         ("iso_label", "iso"),
         ("wb_label", "color_temp"),
         ("res_label", "res"),
     )
+
+    @staticmethod
+    def _top_row_group_visible(label_key, values):
+        """False for a top-row group that should take no room this frame.
+
+        Only the IRIS group is conditional today: it follows ``iris_state``
+        ("hidden" when no adapter answered, "grey" or "normal" otherwise). A
+        frame built without that field (a test, a GUI that predates the lens)
+        counts as hidden, so the row is exactly the six groups it always was.
+        """
+        if label_key == "iris_label":
+            return values.get("iris_state") in ("grey", "normal")
+        return True
+
+    def _active_top_row_groups(self, values):
+        return [g for g in self.TOP_ROW_GROUPS if self._top_row_group_visible(g[0], values)]
 
     def _sensor_has_hdr_modes(self):
         """True when the active sensor exposes any ClearHDR mode.
@@ -1883,11 +2064,13 @@ class SimpleGUI(threading.Thread):
         }
 
     def _top_row_layout(self, draw, values, shrink_x, shrink_y, badge):
-        """Justify the six top-row groups with equal gaps between
-        TOP_ROW_LEFT_X and RES_RIGHT_ANCHOR. Returns (x_by_key, badge_x)."""
+        """Justify the visible top-row groups (six, or seven with the IRIS
+        group) with equal gaps between TOP_ROW_LEFT_X and RES_RIGHT_ANCHOR.
+        Returns (x_by_key, badge_x); a hidden group has no entry in x_by_key,
+        which is how draw_gui() knows to skip it."""
         intra = TOP_ROW_INTRA_GAP * shrink_x
         groups = []
-        for label_key, value_key in self.TOP_ROW_GROUPS:
+        for label_key, value_key in self._active_top_row_groups(values):
             label_w = self._measure_layout_text(draw, label_key, values, shrink_x, shrink_y)
             value_w = self._measure_layout_text(draw, value_key, values, shrink_x, shrink_y)
             group_w = label_w + intra + value_w
@@ -2114,9 +2297,12 @@ class SimpleGUI(threading.Thread):
         hdr_badge = self._hdr_badge(draw, shrink_x, shrink_y)
         top_row_x, hdr_badge_x = self._top_row_layout(draw, values, shrink_x, shrink_y, hdr_badge)
 
+        top_row_keys = {key for group in self.TOP_ROW_GROUPS for key in group}
         for element, info in current_layout.items():
             if values.get(element) is None:
                 continue
+            if element in top_row_keys and element not in top_row_x:
+                continue    # a conditional group that is hidden this frame
             position = [info["pos"][0] * shrink_x, info["pos"][1] * shrink_y]
             font_size = info.get("size", 12) * min(min(shrink_x, shrink_y), 1) 
             # 12 is the default font size, min with 1 makes sure the font stays same in bigger displays

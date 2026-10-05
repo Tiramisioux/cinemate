@@ -49,14 +49,22 @@ from module.config_loader import (
 )
 from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
+from module.lens.database import (
+    LensDatabase,
+    LensDatabaseError,
+    capabilities_of,
+    format_aperture_range,
+    is_calibrated,
+)
 from module.redis_controller import ParameterKey, smpte_frame_base
 from module import sensor_settings
 from module.sensor_detect import (
     active_picture_size,
+    is_pi4_family,
     thumbnail_choice_labels,
     SensorDetect,
 )
-from module.tuning_files import tuning_json_problem
+from module.tuning_files import tuning_json_problem, tuning_target
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -348,35 +356,77 @@ def _current_thumbnail_editor_context(settings: dict) -> dict:
     }
 
 
+def _platform_tuning_target() -> str:
+    """The "target" a tuning file must carry on THIS machine: "bcm2835" on a
+    Pi 4 / CM4, "pisp" on a Pi 5 / CM5 (PLAN D19). The same platform decision
+    cinepi_multi's launch guard makes, so the picker, the upload route and the
+    launch can never disagree about which files are usable."""
+    return tuning_target(is_pi4_family())
+
+
+def _tuning_file_target(path: Path) -> str | None:
+    """The "target" a tuning file declares, or None when it cannot be read as
+    a JSON object that has one."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    target = data.get("target") if isinstance(data, dict) else None
+    return target if isinstance(target, str) else None
+
+
 def _list_tuning_files() -> list[dict]:
     """Directory listing behind both tuning-file pickers and
     GET /api/tuning-files (FINDINGS.md S3.3: the picker used to be two
     hardcoded <option> lists, so a file copied into resources/tuning_files/
     over SSH -- the documented procedure -- never appeared in it).
 
+    Every entry also says which platform it was tuned for and whether that is
+    this one (PLAN D19): a Pi 4 takes vc4 ("bcm2835") files, a Pi 5 takes
+    PiSP files, and libcamera refuses the other kind outright. `label` is the
+    picker's option text, so the template and the upload handler word it once.
+
     A missing directory means a broken checkout, not "no files" -- warn
     rather than let an empty picker pass as normal.
     """
     try:
-        names = sorted(p.name for p in TUNING_FILES_DIR.glob("*.json") if p.is_file())
+        files = sorted(p for p in TUNING_FILES_DIR.glob("*.json") if p.is_file())
     except OSError as exc:
         logger.warning("Tuning files directory unavailable (%s): %s", TUNING_FILES_DIR, exc)
         return []
-    return [{"name": name, "path": f"{TUNING_FILES_REL}/{name}"} for name in names]
+    platform = _platform_tuning_target()
+    return [_tuning_file_entry(p.name, _tuning_file_target(p), platform) for p in files]
+
+
+def _tuning_file_entry(name: str, target: str | None, platform: str) -> dict:
+    matches = target == platform
+    if target is None:
+        label = f"{name} (no target: not usable)"
+    elif matches:
+        label = f"{name} ({target})"
+    else:
+        label = f"{name} ({target}: not for this {'Pi 4' if platform == 'bcm2835' else 'Pi 5'})"
+    return {
+        "name": name,
+        "path": f"{TUNING_FILES_REL}/{name}",
+        "target": target,
+        "matches_platform": matches,
+        "label": label,
+    }
 
 
 def _validate_tuning_json(raw: bytes) -> str | None:
     """An uploaded tuning file must satisfy the same JSON-shape rule the
-    launch guard enforces (module.tuning_files.tuning_json_problem), so the
-    editor and the launch-time fallback can never disagree about what counts
-    as usable (PLAN.md S1.2). Returns an error message, or None if *raw* is
-    fine.
+    launch guard enforces (module.tuning_files.tuning_json_problem), against
+    the platform this machine is (PLAN D19), so the editor and the
+    launch-time fallback can never disagree about what counts as usable
+    (PLAN.md S1.2). Returns an error message, or None if *raw* is fine.
     """
     try:
         data = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, ValueError) as exc:
         return f"Not valid JSON: {exc}"
-    return tuning_json_problem(data)
+    return tuning_json_problem(data, _platform_tuning_target())
 
 
 @settings_editor_bp.route("/")
@@ -400,7 +450,12 @@ def index():
 
 @settings_editor_bp.route("/api/tuning-files", methods=["GET"])
 def list_tuning_files():
-    return jsonify({"ok": True, "dir": TUNING_FILES_REL, "files": _list_tuning_files()})
+    return jsonify({
+        "ok": True,
+        "dir": TUNING_FILES_REL,
+        "platform_target": _platform_tuning_target(),
+        "files": _list_tuning_files(),
+    })
 
 
 @settings_editor_bp.route("/api/tuning-files", methods=["POST"])
@@ -454,7 +509,10 @@ def upload_tuning_file():
     path = f"{TUNING_FILES_REL}/{name}"
     message = f"Uploaded {name} to {TUNING_FILES_REL}/"
     logger.info("tuning file uploaded via settings editor: %s (%d bytes)", path, len(raw))
-    return jsonify({"ok": True, "name": name, "path": path, "message": message})
+    # Validated against this platform above, so the target is the platform's.
+    entry = _tuning_file_entry(name, _platform_tuning_target(), _platform_tuning_target())
+    return jsonify({"ok": True, "name": name, "path": path, "message": message,
+                    "label": entry["label"], "target": entry["target"]})
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])
@@ -1023,7 +1081,13 @@ def get_actions():
         try:
             lens_status = lens_controller.status()
             if not lens_status.get("effective"):
-                lens_grey_reason = lens_status.get("message") or "Lens control is off"
+                # "found but switched off" must not borrow the status message,
+                # which describes the lens ("Sigma ready") rather than why the
+                # actions do nothing.
+                if lens_status.get("found"):
+                    lens_grey_reason = "Lens control is off"
+                else:
+                    lens_grey_reason = lens_status.get("message") or "Lens adapter not found"
         except Exception:
             logger.debug("actions: lens status unavailable", exc_info=True)
             lens_grey_reason = "Lens status unavailable"
@@ -1652,6 +1716,12 @@ def download_raw_takes():
 
 
 # ── i2c pane ─────────────────────────────────────────────────────────────
+def _lens_controller():
+    """The running LensController, or None when the camera app is not up (or
+    this blueprint is served on its own). Every lens route copes with None."""
+    return current_app.config.get("LENS_CONTROLLER")
+
+
 @settings_editor_bp.route("/api/hardware", methods=["GET"])
 def get_hardware():
     """What is on the bus right now, plus both clocks.
@@ -1667,10 +1737,21 @@ def get_hardware():
     peripherals = current_app.config.get("PERIPHERALS") or {}
     quad_rotary = peripherals.get("quad_rotary")
     quad_rotary_state = quad_rotary.state() if quad_rotary is not None else None
+    # The lens adapter row is answered by the running LensController when there
+    # is one (its snapshot, no bus traffic), the same shape as the quad rotary's
+    # driver-confirmed path; only a missing controller falls back to a read.
+    lens_controller = _lens_controller()
+    lens_status = None
+    if lens_controller is not None:
+        try:
+            lens_status = lens_controller.status()
+        except Exception:
+            logger.debug("hardware: lens status unavailable", exc_info=True)
     return jsonify({
         "ok": True,
         "bus": f"i2c-{hardware_probe.I2C_BUS}",
-        "devices": hardware_probe.detect_devices(oled_settings, quad_rotary_state),
+        "devices": hardware_probe.detect_devices(oled_settings, quad_rotary_state,
+                                                 lens_status=lens_status),
         "clocks": {
             "system": hardware_probe.system_time(),
             "rtc": hardware_probe.read_rtc_time(),
@@ -1692,6 +1773,179 @@ def sync_rtc():
     result = hardware_probe.sync_rtc_to_system()
     status = 200 if result["ok"] else 500
     return jsonify(result), status
+
+
+# ── Lens / Pinefeat pane ─────────────────────────────────────────────────
+# Reads and commands for the CEF168 adapter. Like the rest of this editor the
+# routes work with no camera and no Redis: LENS_CONTROLLER is None whenever the
+# camera app is not running (or this blueprint is served on its own), and then
+# the saved lenses are read straight from the database file and every command
+# answers "camera not running" instead of failing.
+
+_LENS_NOT_RUNNING = ("The camera is not running, so there is no lens controller to talk "
+                     "to. Saved lenses can still be read and deleted.")
+
+
+def _lens_database():
+    """The database the camera app writes, or -- when none was handed over --
+    one opened on the path settings.jsonc names. LensDatabase is stdlib-only
+    and re-reads its file only when it changed, so building one per request is
+    cheap and needs neither a camera nor Redis."""
+    database = current_app.config.get("LENS_DATABASE")
+    if database is not None:
+        return database
+    settings = current_app.config.get("SETTINGS") or {}
+    return LensDatabase((settings.get("lens_control") or {}).get("database_file"))
+
+
+def _lens_entry_summary(key: str, entry: dict) -> dict:
+    """One saved lens as the pane lists it: enough to fill the dropdown and to
+    show what the entry knows without opening it."""
+    focus = entry.get("focus") if isinstance(entry.get("focus"), dict) else None
+    return {
+        "key": key,
+        "name": str(entry.get("name") or key),
+        "lens_id": entry.get("lens_id"),
+        "last_used": entry.get("last_used"),
+        "aperture": format_aperture_range(entry),
+        "last_iris": entry.get("last_iris"),
+        "capabilities": capabilities_of(entry),
+        "calibrated": is_calibrated(entry),
+        "focus": ({
+            "calibrated_at": focus.get("calibrated_at"),
+            "position_min": focus.get("position_min"),
+            "position_max": focus.get("position_max"),
+            "mfd_m": focus.get("mfd_m"),
+            "distance_encoder": focus.get("distance_encoder"),
+            "points": len(focus.get("map") or []) // 2,
+        } if focus else None),
+    }
+
+
+@settings_editor_bp.route("/api/lens", methods=["GET"])
+def get_lens():
+    """Everything the Lens / Pinefeat pane draws, in one read: the controller's
+    status (None when the camera is not running), the saved lenses, and where
+    the database lives. Polled about once a second while the pane is open, so
+    it does no bus traffic -- the status is the controller's own snapshot."""
+    controller = _lens_controller()
+    status = None
+    if controller is not None:
+        try:
+            status = controller.status()
+        except Exception:
+            logger.exception("lens status failed")
+            return jsonify({"ok": False, "message": "The lens controller could not report its status"}), 500
+    database = _lens_database()
+    entries = database.entries()
+    return jsonify({
+        "ok": True,
+        "controller": controller is not None,
+        "message": "" if controller is not None else _LENS_NOT_RUNNING,
+        "status": status,
+        "entries": sorted((_lens_entry_summary(k, e) for k, e in entries.items()),
+                          key=lambda e: e["name"].lower()),
+        "database": {"path": str(database.path), "error": database.load_error},
+    })
+
+
+def _lens_command(call):
+    """Run one controller command and answer ``{ok, message}``.
+
+    A refusal (lens control off, recording, no lens...) is a normal answer, not
+    a server fault: it is 200 with ok false and the controller's own sentence,
+    which the pane shows as-is. 503 only when there is nobody to ask.
+    """
+    controller = _lens_controller()
+    if controller is None:
+        return jsonify({"ok": False, "message": _LENS_NOT_RUNNING}), 503
+    try:
+        ok, message = call(controller)
+    except Exception:
+        logger.exception("lens command failed")
+        return jsonify({"ok": False, "message": "The lens command failed; see the log"}), 500
+    return jsonify({"ok": bool(ok), "message": message})
+
+
+def _json_body() -> dict:
+    body = request.get_json(silent=True)
+    return body if isinstance(body, dict) else {}
+
+
+@settings_editor_bp.route("/api/lens/control", methods=["POST"])
+def set_lens_control():
+    """The one lens on/off toggle (D1). Switching on is refused by the
+    controller unless the adapter is found; the pane disables the toggle then
+    too, but this is the check that counts."""
+    enabled = _json_body().get("enabled")
+    if not isinstance(enabled, bool):
+        return jsonify({"ok": False, "message": "enabled must be true or false"}), 400
+    return _lens_command(lambda c: c.set_enabled(enabled))
+
+
+@settings_editor_bp.route("/api/lens/select", methods=["POST"])
+def select_lens():
+    key = _json_body().get("key")
+    if not isinstance(key, str) or not key:
+        return jsonify({"ok": False, "message": "Choose a saved lens"}), 400
+    return _lens_command(lambda c: c.select_lens(key))
+
+
+@settings_editor_bp.route("/api/lens/save", methods=["POST"])
+def save_lens():
+    """Save the working lens: as a new entry (no key) or over an existing one
+    (the pane asks for confirmation first). Nothing reaches the database any
+    other way (D6c)."""
+    body = _json_body()
+    name = body.get("name")
+    key = body.get("key")
+    if not isinstance(name, str) or not name.strip():
+        return jsonify({"ok": False, "message": "A lens needs a name"}), 400
+    if key is not None and not isinstance(key, str):
+        return jsonify({"ok": False, "message": "key must be a saved lens key"}), 400
+    return _lens_command(lambda c: c.save_lens(name, key or None))
+
+
+@settings_editor_bp.route("/api/lens/aperture", methods=["POST"])
+def set_lens_aperture():
+    """Enter (or, with both null, clear) the lens's widest and narrowest
+    f-number. The adapter cannot read them, so the operator types them; they
+    change the working lens until it is saved."""
+    body = _json_body()
+    return _lens_command(lambda c: c.set_aperture_range(body.get("min"), body.get("max")))
+
+
+@settings_editor_bp.route("/api/lens/calibrate", methods=["POST"])
+def calibrate_lens():
+    """Start a calibration sweep. Refused while recording and while lens
+    control is not effective; the refusal text is the controller's."""
+    mfd = _json_body().get("mfd_m")
+    if mfd in (None, ""):
+        mfd = None
+    else:
+        try:
+            mfd = float(mfd)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "message": "The minimum focus distance must be a number of metres"}), 400
+        if not 0.01 <= mfd <= 100.0:
+            return jsonify({"ok": False, "message": "The minimum focus distance must be between 0.01 and 100 metres"}), 400
+    return _lens_command(lambda c: c.request_calibration(mfd))
+
+
+@settings_editor_bp.route("/api/lens/entries/<key>", methods=["DELETE"])
+def delete_lens_entry(key):
+    """Remove a saved lens. Works with no camera running. If the running
+    controller has this entry selected it notices on its next poll and keeps
+    the lens as an unsaved entry, so a calibration is not lost with it."""
+    database = _lens_database()
+    try:
+        removed = database.delete(key)
+    except LensDatabaseError as exc:
+        logger.warning("lens delete failed: %s", exc)
+        return jsonify({"ok": False, "message": f"Could not update the lens database: {exc}"}), 500
+    if not removed:
+        return jsonify({"ok": False, "message": f"No saved lens '{key}'"}), 404
+    return jsonify({"ok": True, "message": f"Deleted '{key}'"})
 
 
 # ── live log ─────────────────────────────────────────────────────────────

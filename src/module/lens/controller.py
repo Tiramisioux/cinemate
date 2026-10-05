@@ -278,6 +278,12 @@ class LensController(threading.Thread):
             entry["key"] = self._selected_key
             return entry
 
+    def entries(self) -> dict[str, dict]:
+        """The saved lens entries (key -> entry), for the lens dropdowns. The
+        database re-reads its file only when it changed on disk, so this is
+        cheap to call once a second."""
+        return self._db.entries()
+
     def status(self) -> dict:
         """A JSON-friendly snapshot for the GUIs, the CLI and the settings editor."""
         with self._lock:
@@ -325,6 +331,7 @@ class LensController(threading.Thread):
                     "last": ({
                         "ok": last.ok, "reason": last.reason, "stats": dict(last.stats),
                         "duration_s": last.duration_s, "focus": copy.deepcopy(last.focus),
+                        "no_position_feedback": bool(last.no_position_feedback),
                     } if last else None),
                 },
                 "selftest": {"running": self._detector.running, "armed": self._detector.armed},

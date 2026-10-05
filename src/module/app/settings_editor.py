@@ -1074,7 +1074,13 @@ def get_actions():
         try:
             lens_status = lens_controller.status()
             if not lens_status.get("effective"):
-                lens_grey_reason = lens_status.get("message") or "Lens control is off"
+                # "found but switched off" must not borrow the status message,
+                # which describes the lens ("Sigma ready") rather than why the
+                # actions do nothing.
+                if lens_status.get("found"):
+                    lens_grey_reason = "Lens control is off"
+                else:
+                    lens_grey_reason = lens_status.get("message") or "Lens adapter not found"
         except Exception:
             logger.debug("actions: lens status unavailable", exc_info=True)
             lens_grey_reason = "Lens status unavailable"

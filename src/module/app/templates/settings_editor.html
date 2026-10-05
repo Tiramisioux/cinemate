@@ -395,6 +395,9 @@
   /* A tuning file made for the other Pi platform: still listed, still pickable
      (a saved value must render), but dimmed. The option text also says so. */
   option.tune-mismatch{ color: var(--muted); }
+  /* An action that exists but does nothing right now (lens control off): still
+     assignable, just dimmed -- see applyActionGrey(). */
+  option.action-greyed{ color: var(--muted); }
   .card-main{ min-width: 0; }
   .card-label{
     display:block; font-weight: 600; font-size: 14px; margin-bottom: 2px;
@@ -6869,6 +6872,7 @@
     order.forEach(function(g){
       var og = document.createElement('optgroup');
       og.label = g;
+      og.setAttribute('data-group', g);
       groups[g].forEach(function(m){
         var opt = document.createElement('option');
         opt.value = m.value;
@@ -6883,7 +6887,46 @@
       custom.value = currentMethod; custom.textContent = currentMethod + ' (custom)'; custom.selected = true;
       sel.insertBefore(custom, sel.firstChild.nextSibling);
     }
+    applyActionGrey(sel);
     return sel;
+  }
+
+  /* D11: some actions exist but do nothing right now -- the Lens (Pinefeat)
+     group while lens control is off or no adapter is fitted. They stay in the
+     list and stay assignable (a saved layout must keep pointing at them, and
+     a rig is often wired before the adapter arrives); /api/actions says which
+     are greyed and why, and the picker shows it rather than hiding them.
+     "Greyed" is advisory: the option is NOT disabled. */
+  var actionGrey = {};   /* method value -> reason */
+  function applyActionGrey(sel){
+    var groupReason = {};
+    Array.prototype.forEach.call(sel.querySelectorAll('option[value]'), function(opt){
+      var reason = actionGrey[opt.value];
+      opt.classList.toggle('action-greyed', !!reason);
+      if (reason){ opt.title = reason; } else { opt.removeAttribute('title'); }
+      var meta = ACTION_METHOD_MAP[opt.value];
+      if (reason && meta) groupReason[meta.group] = reason;
+    });
+    /* The reason goes in the group heading too: an <option>'s title is only a
+       tooltip, and a dropdown on a phone shows no tooltips. */
+    Array.prototype.forEach.call(sel.querySelectorAll('optgroup[data-group]'), function(og){
+      var g = og.getAttribute('data-group');
+      og.label = groupReason[g] ? g + ' \u2014 greyed: ' + groupReason[g] : g;
+    });
+  }
+  function refreshActionGrey(){
+    fetch('/settings-editor/api/actions', { cache: 'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok) return;
+        var next = {};
+        (res.actions || []).forEach(function(a){
+          if (a.greyed) next[a.value] = a.grey_reason || 'Not available right now';
+        });
+        actionGrey = next;
+        document.querySelectorAll('select.action-method').forEach(applyActionGrey);
+      })
+      .catch(function(){ /* advisory only: the picker works without it */ });
   }
 
   /* What the blank (no-argument) choice actually does, per command. Every
@@ -7417,6 +7460,9 @@
     /* Same reasoning as the config refetch above: what is plugged in can change
        while this page sits open, so the bus is re-probed on every arrival
        rather than once at load. */
+    /* Whether the lens actions are greyed follows lens control, which can change
+       while this tab sits open (the toggle on the Lens page, a CLI command). */
+    if (page === 'settings') refreshActionGrey();
     if (page === 'i2c'){ i2cRefresh(); i2cStartTicking(); }
     else { i2cStopTicking(); }
     activePage = page;
@@ -7763,6 +7809,7 @@
      finer than any scrollIntoView we could do. keepHash so this does not
      rewrite the URL it just read; keepScroll so it does not fight either of
      those; skipConfigLoad because config.txt is fetched unconditionally above. */
+  refreshActionGrey();
   setActivePage(pageFromHash(), { keepHash: true, keepScroll: true, skipConfigLoad: true });
   /* Probe once at load, so the settings pane already shows which boards are
      missing before the i2c tab has ever been opened. */

@@ -16,6 +16,12 @@ class i2cOledSettings(TypedDict):
 class I2cOled(threading.Thread):
     RECONNECT_INTERVAL = 5      # seconds
 
+    # Registry names whose Redis key has a different name, for the lens
+    # parameters a rig can also put on a dial (`setting_name: "focus"`): the
+    # OLED row `focus` reads the motor-position readback. `iris` needs no alias,
+    # its Redis key is `iris` and the commanded f-number prints as "IRIS: 2.8".
+    REDIS_KEY_ALIASES = {"focus": "focus_position"}
+
     # ──────────────────────────────────────────────────────────────────────
     # Constructor
     # ──────────────────────────────────────────────────────────────────────
@@ -132,7 +138,8 @@ class I2cOled(threading.Thread):
                 case "memory_usage":
                     lines.append(f"RAM: {Utils.memory_usage()}")
                 case _:
-                    v  = self.redis_controller.get_value(key, "N/A")
+                    v  = self.redis_controller.get_value(
+                        self.REDIS_KEY_ALIASES.get(key, key), "N/A")
                     lbl = texts.get(key, {}).get("label", key.upper())
                     suf = texts.get(key, {}).get("suffix", "")
                     lines.append(f"{lbl}: {v}{suf}")

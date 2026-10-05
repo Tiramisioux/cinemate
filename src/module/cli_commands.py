@@ -88,6 +88,27 @@ class CommandExecutor(threading.Thread):
             'inc hdr gain adder'     : (cinepi_controller.inc_hdr_gain_adder, None),
             'dec hdr gain adder'     : (cinepi_controller.dec_hdr_gain_adder, None),
 
+            # ── Lens: Pinefeat CEF168 adapter (iris, focus, calibration, database) ─
+            #  With lens control off, no adapter or no lens, each one does nothing
+            #  and logs why. `set iris` takes an f-number; `inc iris` steps one
+            #  third-stop towards a higher f-number (dec: lower). `inc focus` moves
+            #  one 1 % detent towards infinity. `set lens` selects a saved lens by
+            #  its key, or cycles the entries for the mounted lens with no key.
+            #  `save lens <name>` and `set lens aperture <min> <max>` read the rest
+            #  of the line as their argument (see _REST_OF_LINE), so names with
+            #  spaces and two-number ranges work.
+            'set iris'               : (cinepi_controller.set_iris,       float),
+            'inc iris'               : (cinepi_controller.inc_iris,       None),
+            'dec iris'               : (cinepi_controller.dec_iris,       None),
+            'set focus'              : (cinepi_controller.set_focus,      float),
+            'inc focus'              : (cinepi_controller.inc_focus,      None),
+            'dec focus'              : (cinepi_controller.dec_focus,      None),
+            'set lens control'       : (cinepi_controller.set_lens_control, [int, None]),
+            'calibrate lens'         : (cinepi_controller.calibrate_lens, [float, None]),
+            'set lens'               : (cinepi_controller.set_lens,       [str, None]),
+            'save lens'              : (cinepi_controller.save_lens,      [str, None]),
+            'set lens aperture'      : (cinepi_controller.set_lens_aperture_range, [str, None]),
+
             # ── CineMate Log (--log-encode) ───────────────────────────────────────
             #  "set log" toggles on/off, using each live camera's own bit-depth
             #  default target. "set log 10" / "set log 12" force that target where
@@ -176,6 +197,12 @@ class CommandExecutor(threading.Thread):
 
 
 
+    # Commands whose argument is the whole rest of the line, not its first word:
+    # a lens name may contain spaces ("save lens Sigma 18-35 f/1.8"), and an
+    # aperture range is two numbers ("set lens aperture 1.8 22"). Every other
+    # command takes one word, as before.
+    _REST_OF_LINE = frozenset({"save lens", "set lens aperture"})
+
     def display_time(self):
         """Displays the current system and RTC time."""
         logging.info(f"System Time: {datetime.datetime.now()}")  # Display current system time
@@ -222,7 +249,7 @@ class CommandExecutor(threading.Thread):
         only for parameters that have a canonical redis key to check.
         """
         param = _PARAM_BY_SETTER.get(getattr(func, "__name__", None))
-        if param is None:
+        if param is None or not param.confirm:
             return True, ""
 
         actual = self.cinepi_controller.redis_controller.get_value(param.redis_key)
@@ -270,6 +297,9 @@ class CommandExecutor(threading.Thread):
         if not command_name:
             logging.info(f"Command '{data.strip()}' not found")
             return False, "unknown command"
+
+        if command_name in self._REST_OF_LINE and command_args:
+            command_args = [" ".join(command_args)]
 
         if not self._dispatch_lock.acquire(timeout=2.0):
             logging.warning(f"Command '{data.strip()}' dropped: dispatch lock busy")

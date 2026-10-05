@@ -5,7 +5,8 @@ import logging
 import threading
 
 def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect,
-                command_executor, settings, peripherals=None):
+                command_executor, settings, peripherals=None,
+                lens_controller=None, lens_database=None):
     app = Flask(__name__)
     
     # Adjust the logging level for the internal Flask logger
@@ -79,6 +80,12 @@ def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect,
     # hardware_probe.py / handbook's probing-i2c-peripherals.md for why the
     # pane needs this rather than reusing a driver as its own probe.
     app.config['PERIPHERALS'] = peripherals or {}
+    # The Pinefeat lens adapter's thread and database (module.lens), for the
+    # settings editor's Lens / Pinefeat pane and the web GUI's lens dropdown.
+    # Both None when nothing was handed over; readers must cope with that, the
+    # same as for PERIPHERALS.
+    app.config['LENS_CONTROLLER'] = lens_controller
+    app.config['LENS_DATABASE'] = lens_database
 
     from .main.routes import main_routes
     from .main.events import register_events

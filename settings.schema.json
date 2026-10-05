@@ -217,6 +217,35 @@
       },
       "additionalProperties": false
     },
+    "lens_control": {
+      "type": "object",
+      "description": "Pinefeat CEF168 Canon EF lens adapter: iris, focus, calibration, lens database. Inert without the adapter. The on/off switch is the Redis key lens_control (`set lens control`), not a setting.",
+      "properties": {
+        "database_file": {
+          "type": "string",
+          "default": "resources/lenses.json",
+          "description": "The lens database CineMate writes, one entry per lens. Relative paths resolve from the repo root. A missing file is an empty database, created on the first save."
+        },
+        "poll_hz": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 20,
+          "default": 4,
+          "description": "How often the adapter is read while lens control is on, in Hz. 4 is fast enough to see the lens's own self-test gesture."
+        },
+        "calibrate_on_selftest": {
+          "type": "boolean",
+          "default": true,
+          "description": "Flip the lens's AF/MF switch three times within 15 s and the adapter runs its self-test. true: CineMate calibrates the lens when it ends. false: it only notes it saw it."
+        },
+        "autofocus": {
+          "type": "boolean",
+          "default": false,
+          "description": "Autofocus is PAUSED: leave false. Read but not yet useful; needs the optional kernel driver."
+        }
+      },
+      "additionalProperties": false
+    },
     "settings": {
       "type": "object",
       "description": "Frame-rate conform target, flicker-free input, and sync tolerances.",

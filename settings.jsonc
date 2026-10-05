@@ -130,6 +130,29 @@
     "database_file": "resources/sensors.json"
   },
 
+  // ── lens_control: Pinefeat CEF168 Canon EF lens adapter ───────────────────
+  // Iris, focus and calibration through the adapter board. Nothing here needs
+  // the adapter: with none fitted CineMate finds nothing and shows nothing.
+  // The on/off switch itself is not a setting -- it is `set lens control` and
+  // is remembered across restarts. See docs/pinefeat/index.md.
+  "lens_control": {
+    // The lens database CineMate writes: one entry per lens (name, aperture
+    // range, last iris, focus calibration). Relative paths resolve from the
+    // repo root. Missing file = empty database, created on the first save.
+    "database_file": "resources/lenses.json",
+    // How often the adapter is read while lens control is on (Hz). 4 is fast
+    // enough to see the lens's own self-test gesture; lower it to spend fewer
+    // I2C reads, raise it (max 20) for a livelier focus readback.
+    "poll_hz": 4,
+    // Flip the lens's AF/MF switch three times within 15 s and the adapter
+    // runs its self-test. true: CineMate calibrates the lens when it ends.
+    // false: it only notes that it saw it; use `calibrate lens` instead.
+    "calibrate_on_selftest": true,
+    // Autofocus is PAUSED: leave this false. It is read, but turning it on
+    // does nothing useful yet and needs the optional kernel driver.
+    "autofocus": false
+  },
+
   // ── settings: frame-rate conform + flicker-free input + sync tuning ──────
   "settings": {
     "conform_frame_rate": 25,
@@ -519,7 +542,8 @@
     // "None" means no pot wired for that setting -- set a real channel
     // number to enable it. "setting" must match a name in `arrays` above
     // (iso, shutter_a, fps, wb, hdr_threshold_low, hdr_threshold_high,
-    // hdr_blend, hdr_gain_adder).
+    // hdr_blend, hdr_gain_adder) or be "iris" (Pinefeat CEF168 lens iris; steps
+    // follow the selected lens, see lens_control above).
     "pots": [
       { "channel": "None", "setting": "iso" },
       { "channel": "None", "setting": "shutter_a" },
@@ -528,7 +552,8 @@
       { "channel": "None", "setting": "hdr_threshold_low" },
       { "channel": "None", "setting": "hdr_threshold_high" },
       { "channel": "None", "setting": "hdr_blend" },
-      { "channel": "None", "setting": "hdr_gain_adder" }
+      { "channel": "None", "setting": "hdr_gain_adder" },
+      { "channel": "None", "setting": "iris" }
     ],
     // Adafruit Quad Rotary Encoder (Neopixel I2C breakout).
     "quad_rotary_controller": {

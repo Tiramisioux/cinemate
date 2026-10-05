@@ -11,6 +11,7 @@ import os
 import shutil
 
 from module import lens_tuning, rp1_regime
+from module.lens.database import LensDatabase
 from module.config_loader import (
     load_settings,
     DEFAULT_SETTINGS_PATH,
@@ -43,6 +44,27 @@ def _settings() -> dict:
     if _SETTINGS is None:
         _SETTINGS = load_settings(SETTINGS_FILE)
     return _SETTINGS
+
+
+def _lens_entry(database_value, key):
+    """One entry of the lens database, or ``(None, reason)``.
+
+    Reads through ``module.lens.database.LensDatabase`` -- the same reader and
+    entry normalisation the running LensController uses -- so the launch and the
+    controller cannot disagree about what a lens entry is. (This replaced
+    ``lens_tuning.load_lens_entry``, the stand-alone reader WP5 wrote before the
+    database module landed.) The reasons keep that reader's wording; they end up
+    in one ERROR line when the tuning is not applied.
+    """
+    database = LensDatabase(database_value)
+    entry = database.get(key)
+    if entry is not None:
+        return entry, "ok"
+    if database.load_error:
+        return None, f"lens database is not readable: {database.load_error}"
+    if not database.path.exists():
+        return None, f"no lens database at {database.path}"
+    return None, f'no lens "{key}" in {database.path}'
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
@@ -503,7 +525,7 @@ class CinePiProcess(Thread):
             if autofocus:
                 logging.info("[%s] Autofocus enabled but not applied: %s", port, reason)
         else:
-            entry, reason = lens_tuning.load_lens_entry(lens_cfg.get("database_file"), lens_key)
+            entry, reason = _lens_entry(lens_cfg.get("database_file"), lens_key)
             if entry is None:
                 logging.error(
                     "[%s] Autofocus tuning NOT applied (%s); launching with %s",

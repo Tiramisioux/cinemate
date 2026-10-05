@@ -46,6 +46,12 @@
     },
     "database_file": "resources/sensors.json"
   },
+  "lens_control": {
+    "database_file": "resources/lenses.json",
+    "poll_hz": 4,
+    "calibrate_on_selftest": true,
+    "autofocus": false
+  },
   "settings": {
     "conform_frame_rate": 25,
     "light_hz": [50, 60],

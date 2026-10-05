@@ -48,6 +48,7 @@ from module.analog_controls import AnalogControls
 from module.mediator import Mediator
 from module.serial_handler import SerialHandler
 from module.cinepi_multi import CinePiManager as CinePi
+from module.lens.startup import seed_lens_defaults, start_lens_controller
 from module.i2c.i2c_oled import I2cOled
 from module.i2c.quad_rotary_controller import QuadRotaryController
 from module.console_display import (
@@ -876,6 +877,24 @@ def run_application(args, log_queue):
     # recorder starts with the filesystem-specific storage profile.
     ssd_monitor.refresh()
     
+    # Pinefeat CEF168 lens adapter. Before cinepi-raw is launched, because the
+    # launch reads the lens_* Redis keys. The restart callback is late-bound:
+    # cinepi_controller is built further down, and only the (paused) autofocus
+    # layer ever asks for a restart.
+    seed_lens_defaults(redis_controller)
+    lens_restart_target = {}
+
+    def restart_camera_for_lens(reason):
+        target = lens_restart_target.get("controller")
+        if target is None:
+            return          # asked before the controller exists: nothing to restart yet
+        logging.info("Camera restart requested for the lens: %s", reason)
+        target.restart_camera()
+
+    lens_controller, lens_database = start_lens_controller(
+        settings, redis_controller, restart_camera=restart_camera_for_lens,
+    )
+
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect, settings=settings)
     
@@ -923,6 +942,8 @@ def run_application(args, log_queue):
     # Back-reference so CinePiManager's ClearHDR self-heal can call the real
     # set_shutter_a() (see cinepi_multi.py's CinePiManager.__init__).
     cinepi.controller = cinepi_controller
+    cinepi_controller.attach_lens_controller(lens_controller)
+    lens_restart_target["controller"] = cinepi_controller
 
     storage_preroll = StoragePreroll(
         cinepi_controller=cinepi_controller,
@@ -1024,6 +1045,7 @@ def run_application(args, log_queue):
         hdr_threshold_high_pot=pot_channel_by_setting.get("hdr_threshold_high", "None"),
         hdr_blend_pot=pot_channel_by_setting.get("hdr_blend", "None"),
         hdr_gain_adder_pot=pot_channel_by_setting.get("hdr_gain_adder", "None"),
+        iris_pot=pot_channel_by_setting.get("iris", "None"),
         # F-268/F-285: share CommandExecutor's dispatch lock so pot writes
         # serialise against explicit CLI/serial/HTTP commands.
         dispatch_lock=command_executor._dispatch_lock,
@@ -1117,6 +1139,8 @@ def run_application(args, log_queue):
             redis_controller, cinepi_controller, simple_gui, sensor_detect,
             command_executor, settings,
             peripherals={"quad_rotary": quad_rotary},
+            lens_controller=lens_controller,
+            lens_database=lens_database,
         )
         run_kwargs = {'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True}
         # Flask-SocketIO's threading async mode forwards **kwargs to
@@ -1179,6 +1203,8 @@ def run_application(args, log_queue):
 
         if hasattr(dmesg_monitor, "stop"):
             dmesg_monitor.stop()
+        if lens_controller is not None:
+            lens_controller.stop()
         if hasattr(command_executor, "stop"):
             command_executor.stop()
         if status_broadcaster is not None:
@@ -1211,6 +1237,7 @@ def run_application(args, log_queue):
         if not shutdown_in_progress and not running_under_systemd_service():
             restore_local_console_prompt()
         join_thread(dmesg_monitor, "DmesgMonitor")
+        join_thread(lens_controller, "LensController")
         join_thread(command_executor, "CommandExecutor")
         join_thread(status_broadcaster, "StatusBroadcaster")
         if hasattr(cinepi, "shutdown"):

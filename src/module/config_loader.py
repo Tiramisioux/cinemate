@@ -565,6 +565,19 @@ def _apply_settings_defaults(settings: dict) -> dict:
     sensors_cfg.setdefault("database_file", "resources/sensors.json")
     settings["sensors"] = sensors_cfg
 
+    # ── lens_control: Pinefeat CEF168 Canon EF lens adapter ────────────────
+    # Same defaults as settings.jsonc and settings.schema.json (a test pins the
+    # three together, and pins poll_hz / database_file to the lens module's own
+    # constants -- they are literals here because config_loader is imported by
+    # nearly everything and must not import the lens package).
+    lens_cfg = settings.setdefault("lens_control", {})
+    lens_cfg.setdefault("database_file", "resources/lenses.json")
+    lens_cfg.setdefault("poll_hz", 4)
+    lens_cfg.setdefault("calibrate_on_selftest", True)
+    # Paused (PLAN banner, 2026-10-04): read by cinepi_multi, no controls.
+    lens_cfg.setdefault("autofocus", False)
+    settings["lens_control"] = lens_cfg
+
     # ── settings: frame-rate conform + flicker-free input + sync tuning ────
     settings_cfg = settings.setdefault("settings", {})
     settings_cfg.setdefault("conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)

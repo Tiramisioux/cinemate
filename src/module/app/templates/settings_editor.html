@@ -7111,7 +7111,28 @@
     return err.hint || err.name || null;
   }
 
+  /* The lens adapter sits on a camera's own bus (never bus 1), and which
+     number that is depends on the board, so it carries its own bus, port and
+     provenance instead of the pane's fixed one. Provenance is said in words
+     because "v4l2-subdev" alone does not tell an operator what answered. */
+  var LENS_PROVENANCE_WORDS = {
+    'v4l2-subdev': 'the cef168 kernel driver is bound and the board answered through it',
+    'i2c-raw': 'a raw read on the camera bus, no kernel driver involved'
+  };
+  function i2cLensDetail(d){
+    if (!d.present){
+      return 'Not found. ' + (d.reason || 'Nothing answered at ' + (d.expected || []).join(' or ') + ' on a camera bus.');
+    }
+    var text = 'Found at ' + i2cHex(d.address) + (d.bus ? ' on ' + d.bus : '')
+      + (d.port ? ' (' + d.port + ')' : '') + '.';
+    if (d.bus_description) text += ' Bus ' + d.bus_description + '.';
+    text += ' Provenance: ' + (LENS_PROVENANCE_WORDS[d.provenance] || d.provenance || 'unknown') + '.';
+    if (d.source === 'controller') text += ' Reported by the running lens controller — no bus probe issued.';
+    return text;
+  }
+
   function i2cDeviceDetail(d){
+    if (d.key === 'lens_adapter') return i2cLensDetail(d);
     var where = d.address !== null && d.address !== undefined
       ? i2cHex(d.address) + ' on ' + d.bus
       : null;

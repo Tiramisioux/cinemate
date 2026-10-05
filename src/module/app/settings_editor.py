@@ -1703,6 +1703,12 @@ def download_raw_takes():
 
 
 # ── i2c pane ─────────────────────────────────────────────────────────────
+def _lens_controller():
+    """The running LensController, or None when the camera app is not up (or
+    this blueprint is served on its own). Every lens route copes with None."""
+    return current_app.config.get("LENS_CONTROLLER")
+
+
 @settings_editor_bp.route("/api/hardware", methods=["GET"])
 def get_hardware():
     """What is on the bus right now, plus both clocks.
@@ -1718,10 +1724,21 @@ def get_hardware():
     peripherals = current_app.config.get("PERIPHERALS") or {}
     quad_rotary = peripherals.get("quad_rotary")
     quad_rotary_state = quad_rotary.state() if quad_rotary is not None else None
+    # The lens adapter row is answered by the running LensController when there
+    # is one (its snapshot, no bus traffic), the same shape as the quad rotary's
+    # driver-confirmed path; only a missing controller falls back to a read.
+    lens_controller = _lens_controller()
+    lens_status = None
+    if lens_controller is not None:
+        try:
+            lens_status = lens_controller.status()
+        except Exception:
+            logger.debug("hardware: lens status unavailable", exc_info=True)
     return jsonify({
         "ok": True,
         "bus": f"i2c-{hardware_probe.I2C_BUS}",
-        "devices": hardware_probe.detect_devices(oled_settings, quad_rotary_state),
+        "devices": hardware_probe.detect_devices(oled_settings, quad_rotary_state,
+                                                 lens_status=lens_status),
         "clocks": {
             "system": hardware_probe.system_time(),
             "rtc": hardware_probe.read_rtc_time(),

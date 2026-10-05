@@ -418,6 +418,31 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(cef168.PLATFORM_CAM_BUSES["pi4"], {"cam0": 0})
 
 
+class DetectPlatformTests(unittest.TestCase):
+    """A Compute Module 5 is "pi5" to pi_family() (tuning files, the RP1
+    receiver) but its camera I2C buses are per carrier, so for the lens bus table
+    it is its own platform."""
+
+    def detect(self, model_text):
+        from unittest import mock
+        from module import sensor_detect
+        with mock.patch.object(sensor_detect, "read_pi_model", lambda: model_text):
+            return cef168.detect_platform()
+
+    def test_a_compute_module_5_is_cm5(self):
+        self.assertEqual(self.detect("Raspberry Pi Compute Module 5 Rev 1.0\x00"), "cm5")
+
+    def test_a_pi_5_stays_pi5(self):
+        self.assertEqual(self.detect("Raspberry Pi 5 Model B Rev 1.0\x00"), "pi5")
+
+    def test_a_cm4_and_a_pi4_stay_pi4(self):
+        self.assertEqual(self.detect("Raspberry Pi Compute Module 4 Rev 1.1\x00"), "pi4")
+        self.assertEqual(self.detect("Raspberry Pi 4 Model B Rev 1.4\x00"), "pi4")
+
+    def test_an_unreadable_model_is_unknown(self):
+        self.assertEqual(self.detect(""), "unknown")
+
+
 class OpenAdapterTests(unittest.TestCase):
     """open_adapter: which bus, how it was derived, subdev before raw."""
 
@@ -541,6 +566,42 @@ class OpenAdapterTests(unittest.TestCase):
         self._open(names, port="cam1", cameras=cameras, platform="pi5")
         self.assertEqual(self.subdev_calls, [])
         self.assertEqual(self.raw_calls[0][0], 4)
+
+    # -- Compute Module 5 (WP3: never the Pi 5 row) -------------------------
+
+    def test_cm5_has_no_platform_row_to_fall_back_on(self):
+        self.assertNotIn("cm5", cef168.PLATFORM_CAM_BUSES)
+
+    def test_cm5_with_no_subdev_and_no_camera_list_probes_nothing(self):
+        # A CM5IO board has cam0 = i2c-6 and cam1 = i2c-0; the Pi 5 row says
+        # 6 and 4. With nothing to derive a bus from, guessing would probe
+        # i2c-4 on a carrier where that is somebody else's bus.
+        backend, reason = self._open({}, cameras=[], platform="cm5")
+        self.assertIsNone(backend)
+        self.assertEqual(self.raw_calls, [])
+        self.assertIn("not known", reason)
+
+    def test_cm5_cam1_comes_from_the_sensor_subdev_bus_zero(self):
+        cameras = [{"model": "imx585", "port": "cam1"}]
+        backend, reason = self._open({0: "imx585 0-001a"}, port="cam1", cameras=cameras,
+                                     platform="cm5")
+        self.assertEqual(reason, "")
+        self.assertEqual((backend.bus, backend.port, backend.bus_source),
+                         (0, "cam1", "sensor-subdev"))
+
+    def test_cm5_with_the_driver_bound_uses_the_bus_in_its_name(self):
+        backend, _ = self._open({0: "imx585 0-001a", 1: "cef168 0-000d"},
+                                cameras=[{"model": "imx585", "port": "cam1"}],
+                                platform="cm5")
+        self.assertEqual((backend.provenance, backend.bus, backend.port),
+                         ("v4l2-subdev", 0, "cam1"))
+
+    def test_two_identical_sensors_on_a_cm5_stay_unpaired(self):
+        cameras = [{"model": "imx585", "port": "cam0"}, {"model": "imx585", "port": "cam1"}]
+        names = {0: "imx585 6-001a", 1: "imx585 0-001a"}
+        backend, _ = self._open(names, port="cam1", cameras=cameras, platform="cm5")
+        self.assertIsNone(backend)
+        self.assertEqual(self.raw_calls, [])
 
     # -- failure shapes ------------------------------------------------------
 

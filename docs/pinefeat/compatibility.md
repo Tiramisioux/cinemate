@@ -6,7 +6,7 @@ Pinefeat reverse-engineered Canon's lens protocol. It states that it cannot guar
 
 | Lens | Board lens ID | Iris | Focus | Notes | Tested on |
 |---|---|---|---|---|---|
-| Sigma 18-35mm f/1.8 DC HSM Art (Canon EF) | 112 | Works | Not working | Iris: f/1.8 and f/11 confirmed engaging. An f/16 command did not engage (status unknown, possibly just outside the range the lens accepts). Focus: the board reports no focus position, always 0, so the board's own calibration finds a range of 0 to 0. The focus motor does not respond to the board's focus commands at all: 15 moves of +3000 showed no visible movement and the distance stayed at 0.28 m. Only the lens's own AF/MF self-test (switch flipped three times) moves focus. Under investigation with Pinefeat. **Iris only for this lens.** | CM4, imx477 on cam0, 2026-10-04 |
+| Sigma 18-35mm f/1.8 DC HSM Art (Canon EF) | 112 | Only slightly | Not working | Iris: the board accepts every value from f/1.8 to f/22 and reports a short motor burst for each, but the iris moves only slightly across the whole range, in absolute and relative steps alike. The operator attributes this to the lens, not the adapter or CineMate. Focus: the board reports no focus position, always 0, so the board's own calibration finds a range of 0 to 0. The focus motor does not respond to the board's focus commands at all: 15 moves of +3000 showed no visible movement and the distance stayed at 0.28 m. Only the lens's own AF/MF self-test (switch flipped three times) moves focus. Under investigation with Pinefeat. **Treat this lens as unsupported for iris and focus; try another lens.** | CM4, imx477 on cam0, 2026-10-04 |
 
 Reporting a lens that works, or does not, is welcome: [below](#reporting-a-lens).
 

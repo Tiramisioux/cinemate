@@ -119,6 +119,8 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Changelog</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#version-342">Version 3.4.2</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#version-341">Version 3.4.1</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#version-340">Version 3.4.0</a>
@@ -207,6 +209,13 @@
 <div class="markdown-body">
   <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <p>Release notes for CineMate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
+<h2 id="version-342">Version 3.4.2<a class="headerlink" href="#version-342" title="Permanent link">#</a></h2>
+<p><strong>Raspberry Pi 4 / CM4</strong>
+- Pi 4-family cameras now launch with the vc4 tuning file for their sensor. Before, they got no tuning file at all and read the Pi 5 white-balance curve.
+- <code>tuning_file_override</code> now works on Pi 4 too. A tuning file made for the other ISP is rejected with an error line, in both directions.</p>
+<p><strong>Settings editor</strong>
+- The tuning-file picker shows which platform each file was made for, and marks the ones this Pi cannot load.
+- Tuning-file upload checks the file against the Pi it is running on, instead of always against the Pi 5.</p>
 <h2 id="version-341">Version 3.4.1<a class="headerlink" href="#version-341" title="Permanent link">#</a></h2>
 <p><strong>Sensors and modes</strong></p>
 <ul>

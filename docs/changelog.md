@@ -2,6 +2,16 @@
 
 Release notes for CineMate. For downloads, see the [releases page](https://github.com/Tiramisioux/cinemate/releases).
 
+## Version 3.4.2
+
+**Raspberry Pi 4 / CM4**
+- Pi 4-family cameras now launch with the vc4 tuning file for their sensor. Before, they got no tuning file at all and read the Pi 5 white-balance curve.
+- `tuning_file_override` now works on Pi 4 too. A tuning file made for the other ISP is rejected with an error line, in both directions.
+
+**Settings editor**
+- The tuning-file picker shows which platform each file was made for, and marks the ones this Pi cannot load.
+- Tuning-file upload checks the file against the Pi it is running on, instead of always against the Pi 5.
+
 ## Version 3.4.1
 
 **Sensors and modes**
